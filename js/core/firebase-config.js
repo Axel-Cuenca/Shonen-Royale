@@ -8,18 +8,23 @@
  *
  * Si se pone a null, el juego funciona en modo local (sólo en el navegador).
  */
-// Proyecto pokesurvivor-free (desde el 12-10-2026): autenticación normal de Firebase,
-// SIN Identity Platform, así las cuentas son gratis sin límite. ¡No pulsar nunca
-// "Actualizar a Identity Platform" en su consola! (El viejo era pokesurvivor-jpter.)
+// Proyecto propio pokesurvivor-amigos (plan Spark, gratis). Sin Identity Platform:
+// ¡no pulsar nunca "Actualizar para habilitar" en Authentication!
 G.FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyB1LpJcsnT7gj7c8cpRMGjhswLPr8-dnBw',
-  authDomain: 'pokesurvivor-free.firebaseapp.com',
-  projectId: 'pokesurvivor-free',
-  storageBucket: 'pokesurvivor-free.firebasestorage.app',
-  messagingSenderId: '798271504277',
-  appId: '1:798271504277:web:dcac4409f969239e87009c',
-  databaseURL: 'https://pokesurvivor-free-default-rtdb.europe-west1.firebasedatabase.app'
+  apiKey: 'AIzaSyDDebAPbQK-JUPEGd27TWUKQZqknrCAr6A',
+  authDomain: 'pokesurvivor-amigos.firebaseapp.com',
+  projectId: 'pokesurvivor-amigos',
+  storageBucket: 'pokesurvivor-amigos.firebasestorage.app',
+  messagingSenderId: '102305833983',
+  appId: '1:102305833983:web:e2f02d19f0d2a740a37dca',
+  databaseURL: 'https://pokesurvivor-amigos-default-rtdb.firebaseio.com'
 };
+
+/* Servidores TURN para el cooperativo (puente cuando dos redes no pueden conectar
+ * directo). Se pega aquí la lista "iceServers" que da el proveedor (p. ej. Metered).
+ * Vacío = sólo conexión directa (STUN de Google). Estos datos acaban visibles en la
+ * web: usa un plan gratuito y no reutilices la clave en otro sitio. */
+G.TURN_SERVERS = [];
 
 /* Ejemplo de cómo debe quedar:
 G.FIREBASE_CONFIG = {
