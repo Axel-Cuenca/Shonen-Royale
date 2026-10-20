@@ -484,55 +484,50 @@ html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none;
 .card .cs b + b { border-left: 1px solid #fff6; }
 .hand .card .cs { font-size: .8em; }
 
-/* ---- 3 y 4 jugadores: fichas de los demás, sala de espera y clasificación ---- */
-.hud-top.multi { align-items: flex-start; }
-.plist { display: flex; gap: 8px; flex: 1 1 auto; min-width: 0; justify-content: flex-start; }
-.pcard.ptile { min-width: 0; flex: 1 1 0; max-width: 250px; padding: 5px 10px 5px 6px; gap: 8px; cursor: pointer; border-radius: 10px 22px 10px 22px; transition: transform .15s, border-color .2s, box-shadow .2s, filter .3s; }
-.pcard.ptile:hover { transform: translateY(1px); border-color: #fff6; }
-.pcard.ptile .av { width: 34px; height: 34px; font-size: 16px; }
-.pcard.ptile .pn { font-size: 14px; display: flex; align-items: center; gap: 6px; }
-.pcard.ptile .lp { font-size: 19px; min-width: 52px; }
-.pcard.ptile .lpbar { height: 9px; }
-.pcard.ptile .pm { gap: 8px; font-size: 12px; }
-.pcard.ptile .pm button { padding: 0 6px; font-size: 12px; }
+/* ---- 3 y 4 jugadores: todos los campos a la vez ---- */
 .pcard.ally .av { background: radial-gradient(circle at 35% 30%, #d6ffe6, #4fe0a0 55%, #1c966a); box-shadow: 0 0 12px #4fe0a077; }
 .pcard.ally .lpbar i { background: linear-gradient(#8af0c0, #1fae6a); box-shadow: 0 0 8px #3be08a99; }
-.pcard.focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 16px #f2c86255, 0 4px 16px #000a; }
-.pcard.turn::after { content: ''; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #7df0ff; box-shadow: 0 0 14px #7df0ffaa; animation: turnPulse 1.4s ease-in-out infinite; pointer-events: none; }
 .pcard { position: relative; }
+.pcard.turn::after { content: ''; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #7df0ff; box-shadow: 0 0 14px #7df0ffaa; animation: turnPulse 1.4s ease-in-out infinite; pointer-events: none; }
 @keyframes turnPulse { 50% { opacity: .35; } }
 .pcard.dead { filter: grayscale(1) brightness(.6); }
 .pcard.dead .pn { text-decoration: line-through; }
-.pcard .pns { display: none; }
-.pcard .pnm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ptag { flex: none; font: 700 10px var(--ui); letter-spacing: .5px; padding: 1px 6px; border-radius: 999px; text-transform: uppercase; }
+.ptag { flex: none; font: 700 8px var(--ui); letter-spacing: .4px; padding: 0 5px; border-radius: 999px; text-transform: uppercase; font-style: normal; line-height: 12px; }
 .ptag.ally { background: #1fae6a; color: #02140b; } .ptag.foe { background: #d8553a; color: #1b0600; }
-.mini { display: flex; align-items: center; gap: 3px; margin: 1px 0; }
-.mini i { width: 12px; height: 15px; border-radius: 2px; border: 1px solid #fff3; background: #0006; }
-.mini i.at { background: linear-gradient(#ffb36b, #d8553a); border-color: #ffd7a8; }
-.mini i.df { background: linear-gradient(#8fc6ff, #3b72c6); border-color: #cfe6ff; }
-.mini i.dn { background: linear-gradient(#5b6cc0, #26337e); border-color: #aab6ff88; }
-.mini em { font-style: normal; font-size: 12px; color: #b9c5e8; margin-left: 4px; }
-.viewing { font: 700 12px var(--ui); letter-spacing: .6px; color: #ffe9a8; background: #000a; border: 1px solid #f2c86277; border-radius: 999px; padding: 1px 10px; }
-.game.foe-dead .zone.opp { opacity: .35; filter: grayscale(1); }
+.slab.multi { padding: 12px 14px; }
+.zrows.multi { justify-content: space-around; align-items: center; }
+.frow { display: flex; gap: 14px; justify-content: center; align-items: flex-start; transform-style: preserve-3d; width: 100%; }
+.frow.bot { align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 2px; transform-style: preserve-3d; font-size: 10px; position: relative; transition: opacity .3s, filter .3s; }
+.field.small { font-size: 6.6px; }
+.field .zrow { gap: .5em; }
+.plate { font-family: var(--ui); font-size: 9px; line-height: 1.15; color: #e8eeff; background: linear-gradient(#0b1230d9, #060a1ee6); border: 1px solid #ff9a7a88; border-radius: 6px 12px 6px 12px; padding: 2px 8px 3px; width: 39.5em; max-width: 100%; box-sizing: border-box; font-size: 9px; position: relative; }
+.field { --pw: 39.5em; }
+.plate { width: calc(5 * 7.5em + 4 * .5em); }
+.field.small .plate { width: 260px; font-size: 9px; }
+.field:not(.small) .plate { width: 395px; font-size: 11px; }
+.field.mine .plate { border-color: #7df0ffaa; } .field.ally .plate { border-color: #4fe0a0cc; }
+.pl1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.pl1 .pnm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.plp { margin-left: auto; font-weight: 800; font-size: 1.25em; letter-spacing: .3px; position: relative; flex: none; }
+.plp .fl, .pcard .lp .fl { position: absolute; right: 0; top: -1.1em; font-weight: 800; animation: fl 1.3s ease-out forwards; pointer-events: none; }
+.plp .fl.neg { color: #ff6b5a; } .plp .fl.pos { color: #6bffa8; }
+.plate .lpbar { height: 5px; margin: 1px 0 2px; }
+.pl2 { display: flex; gap: 8px; font-size: .95em; color: #b9c5e8; }
+.pl2 button { background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; margin-left: auto; }
+.pl2 button:hover { color: #fff; }
+.field.turn .plate { border-color: #7df0ff; box-shadow: 0 0 10px #7df0ffcc; animation: turnPulse 1.4s ease-in-out infinite; }
+.field.dead { opacity: .4; filter: grayscale(1); }
+.field.dead .plate { text-decoration: line-through; }
+.board3d .zone.opp.ally { border-color: rgba(90, 230, 160, .7); background: linear-gradient(160deg, rgba(20, 90, 60, .38), rgba(10, 44, 32, .5)); box-shadow: inset 0 0 14px rgba(70, 230, 150, .28), 0 0 8px rgba(70, 230, 150, .35), 0 3px 4px #0007; }
+.board3d .zone.atkr.opp.lowrow .card { animation: lungeUp3 .8s ease-in-out; }
 .hud-top.multi { flex-wrap: wrap; row-gap: 4px; }
-.hud-top.multi .plist { order: 1; flex: 1 1 0; }
-.hud-top.multi .tools { order: 2; }
-.hud-top.multi .turnbox { order: 3; flex: 1 1 100%; flex-direction: row; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.hud-top.multi .turnbox { flex: 1 1 auto; flex-direction: row; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .hud-top.multi .turnpill { padding: 3px 16px; font-size: 14px; flex: none; }
 .hud-top.multi .logline { flex: 0 1 auto; min-width: 0; font-size: 13px; padding: 1px 10px; }
-.hud-top.multi .viewing { flex: none; }
-.hud-top.multi .opphand { display: none; }
 @media (max-width: 900px) {
   .hud-top.multi .logline { display: none; }
-  .pcard.ptile .pnm { display: none; } .pcard.ptile .pns { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hud-top.multi .plist { flex-basis: 100%; }
-  .hud-top.multi .turnbox { order: 2; flex: 1 1 0; justify-content: flex-start; min-width: 0; }
   .hud-top.multi .turnpill { font-size: 12px; padding: 3px 10px; }
-  .hud-top.multi .viewing { display: none; }
-  .pcard.ptile .pm span:first-child, .pcard.ptile .mini em { display: none; }
-  .pcard.ptile .av { display: none; }
-  .pcard.ptile .lp { font-size: 16px; min-width: 40px; }
 }
 
 /* sala de espera */

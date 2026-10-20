@@ -443,7 +443,7 @@
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
-    let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, focus = 0, outShown = false;
+    let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map();
     let gameEl = null, zrowsEl = null;
     let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
@@ -452,8 +452,6 @@
     const shortOf = q => { const m = /^Computadora(?: (\d))?/.exec(nameOf(q)); return m ? 'Compu' + (m[1] ? ' ' + m[1] : '') : nameOf(q); };
     const multi = () => !!v && v.n > 2;
     const isAlly = q => q !== v.seat && v.team[q] === v.team[v.seat];
-    const seatOf = side => (side === 'me' ? v.seat : focus);
-    const Pv = side => v.players[seatOf(side)];
     const place = q => v.n - v.rank.indexOf(q);
 
     function act(a) {
@@ -464,25 +462,6 @@
     }
     const L = () => (v ? v.legal : []);
     const myTurn = () => v && v.actor === v.seat && v.winner === null;
-    function setFocus(q) {
-      if (q === focus || !v.players[q] || q === v.seat) return;
-      focus = q; sel = null; S.play('select'); render();
-    }
-
-    // ----- a quién mirar (el campo de arriba) -----
-    function autoFocus(pv) {
-      if (!multi()) { focus = v.opp.seat; return; }
-      const valid = q => q != null && q !== v.seat && v.players[q] && v.players[q].alive;
-      if (!pv) focus = valid(v.current) ? v.current : v.opp.seat;
-      else if (v.current !== pv.current || v.turn !== pv.turn) {
-        if (valid(v.current)) focus = v.current;
-        else if (v.current === v.seat && (!valid(focus) || isAlly(focus))) focus = v.opp.seat;
-      }
-      if (v.atk && v.atk.vs === v.seat && valid(v.atk.p)) focus = v.atk.p;
-      if (v.pending && v.pending.player === v.seat && valid(v.pending.by)) focus = v.pending.by;
-      if (!valid(focus)) { const f = v.players.find(q => q.seat !== v.seat && q.alive); focus = f ? f.seat : v.opp.seat; }
-    }
-
     // ----- acciones al tocar -----
     function sheet(card, acts, hint) {
       const box = h('div', { class: 'box' }, detailBox(card, hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null),
@@ -490,8 +469,9 @@
         btn('Cerrar', closeModal, 'ghost'));
       modal(box);
     }
-    function pickTargets(zones, side, area, done, text, direct) {
-      sel = { kind: 'target', zones, side, area, done, text, direct }; render();
+    /** Elegir una casilla entre varias de cualquier campo: targets = [{seat, area, z}]; done(t). */
+    function pickTargets(targets, done, text, direct) {
+      sel = { kind: 'target', targets, done, text, direct }; render();
     }
     function sameSet(a, b) { return a.length === b.length && a.slice().sort().join() === b.slice().sort().join(); }
     function startTribute(i, type, opts2) {
@@ -515,11 +495,8 @@
         return vsList.length === 1 ? act(list[0]) : pickFoe(vsList, q => act(list.find(a => a.target.vs === q)), '¿A quién le haces daño?');
       }
       const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST', area = d.fx === 'destroyST' ? 'st' : 'mz';
-      if (!toFoe) return pickTargets(list.map(a => a.target.z), 'me', area, z => act(list.find(a => a.target.z === z)), 'Elige el objetivo');
-      const vsOf = a => (a.target.vs != null ? a.target.vs : focus);
-      const go = q => { focus = q; const sub = list.filter(a => vsOf(a) === q); pickTargets(sub.map(a => a.target.z), 'opp', area, z => act(sub.find(a => a.target.z === z)), 'Elige el objetivo'); };
-      const seats = [...new Set(list.map(vsOf))];
-      return seats.length === 1 ? go(seats[0]) : pickFoe(seats, go, '¿Sobre qué rival?');
+      const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
+      return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
     }
     function handClick(i) {
       const c = v.me.hand[i], d = C.get(c.id);
@@ -544,17 +521,10 @@
       let hint = null;
       if (myTurn() && !v.pending) {
         const all = L().filter(a => a.t === 'attack' && a.zone === z);
-        const at = all.filter(a => a.vs == null || a.vs === focus);
-        if (at.length) {
-          const dir = at.find(a => a.target === 'direct');
-          const who = multi() ? ` a ${nameOf(focus)}` : '';
-          if (dir) acts.push({ label: 'Atacar directamente' + who, run: () => act(dir) });
-          else acts.push({ label: 'Atacar…', run: () => pickTargets(at.map(a => a.target), 'opp', 'mz', tz => act(at.find(a => a.target === tz)), 'Elige a quién atacar' + who) });
-        } else if (all.length && multi()) hint = `Para atacar con él, toca antes la ficha de un rival (arriba) y elige su campo. Ahora miras el de ${nameOf(focus)}${isAlly(focus) ? ' (tu compañero)' : ''}.`;
-        if (at.length && multi()) {
-          const others = [...new Set(all.filter(a => a.vs !== focus).map(a => a.vs))];
-          if (others.length) hint = 'También puedes atacar a ' + others.map(nameOf).join(' o ') + ': toca su ficha arriba.';
-        }
+        const vsOf = a => (a.vs != null ? a.vs : v.opp.seat);
+        for (const a of all.filter(a => a.target === 'direct')) acts.push({ label: 'Atacar directamente' + (multi() ? ' a ' + shortOf(vsOf(a)) : ''), run: () => act(a) });
+        const onZone = all.filter(a => a.target !== 'direct');
+        if (onZone.length) acts.push({ label: 'Atacar…', run: () => pickTargets(onZone.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(onZone.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Elige a quién atacar') });
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });
       }
@@ -569,16 +539,16 @@
       }
       sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : null);
     }
-    function oppClick(area, z) {
-      const s = Pv('opp')[area][z];
+    function oppClick(seat, area, z) {
+      const s = v.players[seat][area][z];
       if (!s) return;
       if (s.down) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const d = C.get(s.c.id);
       sheet(d, [], d.kind === 'monster' ? `${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}` : null);
     }
-    function zoneClick(side, area, z) {
+    function zoneClick(seat, area, z) {
       S.play('select');
-      if (sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.allowed.includes(z)) {
+      if (sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.allowed.includes(z)) {
         const k = sel.chosen.indexOf(z);
         if (k >= 0) sel.chosen.splice(k, 1); else sel.chosen.push(z);
         if (sel.chosen.length === sel.need) {
@@ -587,9 +557,9 @@
         }
         return render();
       }
-      if (sel && sel.kind === 'target' && side === sel.side && area === sel.area && sel.zones.includes(z)) { const f = sel.done; return f(z); }
-      if (side === 'me') return area === 'mz' ? myMzClick(z) : myStClick(z);
-      return oppClick(area, z);
+      if (sel && sel.kind === 'target') { const t = sel.targets.find(x => x.seat === seat && x.area === area && x.z === z); if (t) return sel.done(t); }
+      if (seat === v.seat) return area === 'mz' ? myMzClick(z) : myStClick(z);
+      return oppClick(seat, area, z);
     }
 
     // ----- ventanas de decisión (trampas, elegir carta, descarte) -----
@@ -614,14 +584,15 @@
 
     // ----- dibujo -----
     const curOf = (s, area) => (s ? { uid: s.c ? s.c.uid : 'hidden', id: s.c ? s.c.id : null, down: !!s.down, pos: s.pos, area } : null);
-    function zoneEl(side, area, z) {
-      const seat = seatOf(side), s = v.players[seat][area][z];
+    /** low = el campo está en la fila de abajo del tablero (el mío, o el de un compañero/rival que se sienta abajo). */
+    function zoneEl(seat, area, z, low) {
+      const side = seat === v.seat ? 'me' : 'opp', s = v.players[seat][area][z];
       const key = 's' + seat + '-' + area + '-' + z, old = zoneMem.get(key);
-      const hl = (sel && sel.kind === 'target' && sel.side === side && sel.area === area && sel.zones.includes(z)) ||
-        (sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.allowed.includes(z));
-      const chosen = sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.chosen.includes(z);
+      const hl = (sel && sel.kind === 'target' && sel.targets.some(t => t.seat === seat && t.area === area && t.z === z)) ||
+        (sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.allowed.includes(z));
+      const chosen = sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.chosen.includes(z);
       const attacking = v.atk && area === 'mz' && v.atk.z === z && v.atk.p === seat;
-      const el = h('div', { class: 'zone ' + area + ' ' + side + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(side, area, z) });
+      const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       let cur = null, landing = false;
       if (s) {
         let c;
@@ -640,42 +611,58 @@
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       return el;
     }
-    /** Los campos que no se ven también se recuerdan, para no inventar efectos al cambiar de rival. */
-    function rememberHidden() {
-      for (const q of v.players) {
-        if (q.seat === v.seat || q.seat === focus) continue;
-        for (const area of ['mz', 'st']) q[area].forEach((s, z) => {
-          const key = 's' + q.seat + '-' + area + '-' + z;
-          if (s) zoneMem.set(key, curOf(s, area)); else zoneMem.delete(key);
-        });
-      }
-    }
-    /** Ficha de un jugador: grande (1 contra 1 y la mía) o compacta (los demás en 3-4 jugadores). */
-    function pcard(seat, tile) {
-      const p = v.players[seat], mine = seat === v.seat, nm = nameOf(seat);
-      const lp = h('span', { class: 'lp' }, p.alive ? String(p.lp) : '☠');
-      if (fresh && prevLps && prevLps[seat] !== p.lp && !(prevLps[seat] === 0 && !p.alive)) {
+    /** Cambios de PV desde la vista anterior: sonidos y efectos una sola vez; las fichas sólo pintan el número flotante. */
+    function lpEvents() {
+      lpDelta = {};
+      if (!prevLps) return;
+      v.players.forEach((p, seat) => {
         const dlt = p.lp - prevLps[seat];
-        if (dlt) {
-          lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt));
-          S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : mine ? 'hurt' : 'hit', 250);
-          if (dlt < 0 && lastFam) fx.push({ pc: seat, type: 'pc', fam: lastFam });
-          if (dlt <= -1000) needShake = true;
-        }
-      }
+        if (!dlt || (prevLps[seat] === 0 && !p.alive)) return;
+        lpDelta[seat] = dlt;
+        S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : seat === v.seat ? 'hurt' : 'hit', 250);
+        if (dlt < 0 && lastFam) fx.push({ pc: seat, type: 'pc', fam: lastFam });
+        if (dlt <= -1000) needShake = true;
+      });
+    }
+    const lpFloat = seat => (lpDelta[seat] ? h('span', { class: 'fl ' + (lpDelta[seat] < 0 ? 'neg' : 'pos') }, (lpDelta[seat] > 0 ? '+' : '') + lpDelta[seat]) : null);
+    /** Ficha grande de un jugador (1 contra 1, y la mía abajo). */
+    function pcard(seat) {
+      const p = v.players[seat], mine = seat === v.seat, nm = nameOf(seat);
+      const lp = h('span', { class: 'lp' }, p.alive ? String(p.lp) : '☠', lpFloat(seat));
       const pct = Math.max(0, Math.min(100, p.lp / 80));
       const ini = (nm || '?').trim().charAt(0).toUpperCase();
-      const cls = 'pcard ' + (mine ? 'mine' : isAlly(seat) ? 'ally' : 'theirs') + (tile ? ' ptile' : '') + (!p.alive ? ' dead' : '') +
-        (v.current === seat && v.winner === null && p.alive ? ' turn' : '') + (tile && seat === focus ? ' focus' : '');
-      const mini = tile ? h('div', { class: 'mini', title: 'Monstruos en su campo' }, p.mz.map(m => h('i', { class: m ? (m.down ? 'dn' : m.pos === 'atk' ? 'at' : 'df') : '' })), h('em', null, `${p.st.filter(Boolean).length}▫`)) : null;
-      const tag = tile && v.mode === 'teams' ? h('span', { class: 'ptag ' + (isAlly(seat) ? 'ally' : 'foe') }, isAlly(seat) ? 'Aliado' : 'Rival') : null;
-      return h('div', { class: cls, 'data-seat': seat, onclick: tile && p.alive ? () => setFocus(seat) : (tile ? () => setFocus(seat) : null), title: tile ? 'Ver su campo' : null },
+      const cls = 'pcard ' + (mine ? 'mine' : isAlly(seat) ? 'ally' : 'theirs') + (!p.alive ? ' dead' : '') + (v.current === seat && v.winner === null && p.alive ? ' turn' : '');
+      return h('div', { class: cls, 'data-seat': seat },
         h('div', { class: 'av' }, ini),
         h('div', { class: 'pi' },
-          h('div', { class: 'pn', title: nm }, h('span', { class: 'pnm' }, nm), h('span', { class: 'pns' }, shortOf(seat)), tag),
+          h('div', { class: 'pn', title: nm }, nm),
           h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
-          mini,
           h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`))));
+    }
+    /** Placa de nombre sobre cada campo del tablero (3-4 jugadores). */
+    function plate(seat) {
+      const p = v.players[seat], nm = nameOf(seat);
+      const pct = Math.max(0, Math.min(100, p.lp / 80));
+      const tag = v.mode === 'teams' && seat !== v.seat ? h('em', { class: 'ptag ' + (isAlly(seat) ? 'ally' : 'foe') }, isAlly(seat) ? 'Aliado' : 'Rival') : null;
+      return h('div', { class: 'plate', 'data-seat': seat, title: nm },
+        h('div', { class: 'pl1' }, h('b', { class: 'pnm' }, seat === v.seat ? 'Tú' : nm), tag,
+          h('span', { class: 'plp' }, p.alive ? String(p.lp) : '☠ fuera', lpFloat(seat))),
+        h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })),
+        h('div', { class: 'pl2' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`)));
+    }
+    /** Un campo completo: placa + fila de monstruos + fila de magias/trampas. top = fila de arriba (la placa va por fuera). */
+    function fieldEl(seat, top, big) {
+      const p = v.players[seat], order = top ? ['st', 'mz'] : ['mz', 'st'];
+      const rows = order.map(area => h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(seat, area, z, !top))));
+      const cls = 'field' + (big ? '' : ' small') + (seat === v.seat ? ' mine' : isAlly(seat) ? ' ally' : ' foe') + (!p.alive ? ' dead' : '') + (v.current === seat && v.winner === null && p.alive ? ' turn' : '');
+      return h('div', { class: cls, 'data-seat': seat }, top ? plate(seat) : null, ...rows, top ? null : plate(seat));
+    }
+    /** Dónde se sienta cada uno: arriba los rivales (y en 2 contra 2, abajo mi compañero). */
+    function layout() {
+      const s0 = v.seat, at = k => (s0 + k) % v.n;
+      if (v.n === 3) return { top: [at(1), at(2)], bot: [s0] };
+      if (v.mode === 'teams') return { top: [at(1), at(3)], bot: [s0, at(2)] };
+      return { top: [at(1), at(2)], bot: [s0, at(3)] };
     }
     function showGrave(seat) {
       const g = v.players[seat].grave;
@@ -777,7 +764,7 @@
       pops = [];
       for (const f of fx) {
         if (f.type === 'pc') {
-          const pc = document.querySelector('.pcard[data-seat="' + f.pc + '"]');
+          const pc = document.querySelector('.plate[data-seat="' + f.pc + '"], .pcard[data-seat="' + f.pc + '"]');
           if (pc) { const r = pc.getBoundingClientRect(); elemFx(r.left + r.width / 2, r.top + r.height / 2, Math.max(r.width, 220), f.fam, true); pc.classList.add('hurt'); setTimeout(() => pc.classList.remove('hurt'), 600); }
           continue;
         }
@@ -824,12 +811,12 @@
       fresh = newView; newView = false;
       if (fresh) {
         logEvents();
+        lpEvents();
         if (!firstView && prevHandN != null && v.me.handCount > prevHandN) S.play('draw');
         prevHandN = v.me.handCount;
         // música más tensa con poca vida
         const low = Math.min(...v.players.filter(q => q.alive).map(q => q.lp)) <= 2500 && v.winner === null;
         if (low !== lowTrack) { lowTrack = low; S.setTrack(low ? 'tense' : 'battle'); }
-        rememberHidden();
       }
       const my = myTurn();
       const dis = v.pending && v.pending.player === v.seat;
@@ -842,7 +829,7 @@
         el.onclick = () => { if (discarding) return act({ t: 'discard', hand: i }); if (sel) { sel = null; render(); } handClick(i); };
         hand.append(el);
       });
-      const fan = h('div', { class: 'opphand' }, Array.from({ length: Math.min(Pv('opp').handCount, 9) }, (_, i) => h('i', { style: `--r:${(i - 4) * 3}deg` })));
+      const fan = h('div', { class: 'opphand' }, multi() ? null : Array.from({ length: Math.min(v.opp.handCount, 9) }, (_, i) => h('i', { style: `--r:${(i - 4) * 3}deg` })));
       const meOut = !v.me.alive && v.winner === null;
       let banner = null;
       if (sel) banner = h('div', { class: 'banner' }, sel.text, sel.kind === 'tribute' ? ` (${sel.chosen.length}/${sel.need})` : '',
@@ -856,19 +843,24 @@
       const whose = v.current === v.seat ? 'Tu turno' : multi() ? 'Turno de ' + shortOf(v.current) : 'Turno rival';
       const turnTxt = `Turno ${v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
-      const others = multi() ? Array.from({ length: v.n - 1 }, (_, i) => (v.seat + 1 + i) % v.n) : [];
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
-        multi() ? h('div', { class: 'plist' }, others.map(q => pcard(q, true))) : pcard(focus, false),
-        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt),
-          multi() ? h('div', { class: 'viewing' }, `Campo de ${shortOf(focus)}${isAlly(focus) ? ' (compañero)' : ''}`) : null, fan),
+        multi() ? null : pcard(v.opp.seat),
+        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
           h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
-      const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pcard(v.seat, false), acts), hand);
-      const rows = [];
-      for (const [side, areas] of [['opp', ['st', 'mz']], ['me', ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(side, area, z))));
+      const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pcard(v.seat), acts), hand);
+      let rows;
+      if (multi()) {
+        const lay = layout();
+        rows = [h('div', { class: 'frow top' }, lay.top.map(q => fieldEl(q, true, false))), h('div', { class: 'frow bot' }, lay.bot.map(q => fieldEl(q, false, lay.bot.length === 1)))];
+      } else {
+        rows = [];
+        for (const [seat, areas] of [[v.opp.seat, ['st', 'mz']], [v.seat, ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(seat, area, z, seat === v.seat))));
+      }
+      if (zrowsEl) zrowsEl.className = 'zrows' + (multi() ? ' multi' : '');
       if (!gameEl) {
         zrowsEl = h('div', { class: 'zrows' });
         const slab = h('div', { class: 'slab' }, zrowsEl);
@@ -876,7 +868,7 @@
         gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))));
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
-      gameEl.classList.toggle('foe-dead', !v.players[focus].alive);
+      gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);
       const hud = h('div', { class: 'hud' }, hudTop, hudBot);
       const oldHud = gameEl.querySelector(':scope > .hud');
@@ -888,11 +880,9 @@
     }
 
     match.onView(nv => {
-      const pv = v;
       prevLps = v ? v.players.map(q => q.lp) : null;
       v = nv; newView = true;
       if (sel && !myTurn()) sel = null;
-      autoFocus(pv);
       prepare();
       render();
     });
@@ -902,7 +892,7 @@
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
     match.start();
-    window.__duelo = { match, view: () => v, elemFx, focus: () => focus, setFocus };
+    window.__duelo = { match, view: () => v, elemFx };
   }
 
   mount(h('p', { class: 'loading' }, 'Cargando…'));
