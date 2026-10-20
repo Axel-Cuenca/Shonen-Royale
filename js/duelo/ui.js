@@ -5,7 +5,30 @@
   const app = document.getElementById('app');
   const S = D.Sound;
   S.init();
-  document.addEventListener('click', e => { if (e.target.closest('.btn, .menu-btn, .li, .back')) S.play('click'); }, true);
+  // un clic = un sonido, según el tipo de control
+  document.addEventListener('click', e => {
+    const t = e.target.closest('.btn, .menu-btn, .li, .back, .ib, .tab');
+    if (!t || t.disabled) return;
+    S.play(t.classList.contains('endturn') ? 'turn_end' : t.classList.contains('tab') || t.classList.contains('tog') ? 'tab' : t.classList.contains('ghost') || t.classList.contains('back') ? 'back'
+      : t.classList.contains('gold') || t.classList.contains('teal') ? 'confirm' : 'click');
+  }, true);
+  // hover: sólo al entrar en un control nuevo y con un mínimo entre sonidos
+  let hoverEl = null, hoverT = 0;
+  document.addEventListener('pointerover', e => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    const t = e.target.closest && e.target.closest('.btn, .menu-btn, .li, .ib, .hand .card');
+    if (!t || t === hoverEl) { if (!t) hoverEl = null; return; }
+    hoverEl = t; const now = performance.now();
+    if (now - hoverT < 90 || t.disabled) return;
+    hoverT = now; S.play(t.classList.contains('card') ? 'inspect' : 'hover');
+  });
+  // efectos visuales reducidos (preferencia propia o del sistema)
+  const RM = 'duelo.rm';
+  const rmGet = () => { try { const v = localStorage.getItem(RM); return v == null ? (matchMedia('(prefers-reduced-motion: reduce)').matches) : v === '1'; } catch (e) { return false; } };
+  const rmSet = on => { try { localStorage.setItem(RM, on ? '1' : '0'); } catch (e) { /* nada */ } document.documentElement.classList.toggle('rm', on); };
+  document.documentElement.classList.toggle('rm', rmGet());
+  const FAM = { fire: 'fire', water: 'water', electric: 'electric', ice: 'ice', grass: 'nature', bug: 'nature', poison: 'nature', psychic: 'mystic', ghost: 'mystic', dark: 'mystic', fairy: 'mystic', dragon: 'mystic' };
+  const famOf = d => (d && FAM[d.type]) || 'phys';
   const byName = {};
   C.all().forEach(c => { byName[c.name] = c; });
 
@@ -79,7 +102,7 @@
     if (d.kind === 'monster') {
       const atk = o.atk != null ? o.atk : d.atk, def = o.def != null ? o.def : d.def;
       const cls = (v, base) => v > base ? 'up' : v < base ? 'dn' : '';
-      return h('div', { class: 'card m' + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
+      return h('div', { class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' mid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
         h('div', { class: 'cn' }, d.name), sprite(d),
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
@@ -107,9 +130,9 @@
 
   // ---------------- ventanas ----------------
   let modalEl = null;
-  function closeModal() { if (modalEl) { modalEl.remove(); modalEl = null; } }
+  function closeModal(silent) { if (modalEl) { modalEl.remove(); modalEl = null; if (silent !== true) S.play('close'); } }
   function modal(box, onClose) {
-    closeModal();
+    const had = !!modalEl; closeModal(true); if (!had) S.play('open');
     const m = h('div', { class: 'modal', onclick: e => { if (e.target === m && onClose !== false) { closeModal(); if (typeof onClose === 'function') onClose(); } } }, box);
     document.body.append(m); modalEl = m; return m;
   }
@@ -121,15 +144,20 @@
     sndEl.style.display = show ? '' : 'none';
   }
   function soundPanel() {
-    const row = (label, key, on, setOn, vol) => {
-      const t = h('button', { class: 'btn tog' + (on() ? ' on' : ''), onclick: () => { setOn(!on()); t.classList.toggle('on', on()); t.textContent = label + (on() ? ': sí' : ': no'); } }, label + (on() ? ': sí' : ': no'));
-      const r = h('input', { type: 'range', min: 0, max: 100, value: Math.round(S.volume(vol) * 100), oninput: () => S.setVolume(vol, r.value / 100) });
-      return h('div', { class: 'sndrow' }, t, r);
-    };
-    modal(h('div', { class: 'box' }, h('h2', null, 'Sonido'),
-      row('Música', 'm', () => S.musicOn, v => S.setMusic(v), 'music'),
-      row('Efectos', 'e', () => S.sfxOn, v => S.setSfx(v), 'sfx'),
-      h('p', { class: 'sub' }, 'Los volúmenes son los mismos que en los ajustes del juego.'), btn('Cerrar', closeModal, 'ghost')));
+    const LBL = { master: 'Volumen general', music: 'Música', ui: 'Interfaz y cartas', combat: 'Combate', amb: 'Ambiente', notify: 'Avisos' };
+    const rows = S.CATS.map(k => {
+      const r = h('input', { type: 'range', min: 0, max: 100, value: Math.round(S.volume(k) * 100), 'aria-label': LBL[k], oninput: () => { S.setVolume(k, r.value / 100); val.textContent = r.value; }, onchange: () => S.sample(k) });
+      const val = h('span', { class: 'sv' }, String(Math.round(S.volume(k) * 100)));
+      return h('div', { class: 'sndrow' }, h('label', null, LBL[k]), r, val);
+    });
+    const tog = (label, get, set) => { const t = h('button', { class: 'btn tog' + (get() ? ' on' : ''), onclick: () => { set(!get()); t.classList.toggle('on', get()); t.textContent = label + (get() ? ': sí' : ': no'); } }, label + (get() ? ': sí' : ': no')); return t; };
+    const gfx = h('select', { onchange: () => { D.Floor.setQuality(gfx.value); note.textContent = 'Se aplica al recargar la página.'; } },
+      h('option', { value: 'auto' }, 'Gráficos: automático'), h('option', { value: 'low' }, 'Gráficos: ligeros'), h('option', { value: 'off' }, 'Gráficos: sin WebGL'));
+    gfx.value = D.Floor.quality();
+    const note = h('p', { class: 'sub' }, '');
+    modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Sonido y efectos'), ...rows,
+      h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
+      h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
@@ -138,7 +166,7 @@
 
   function menu() {
     endCurrent(); showBg(true);
-    S.setTrack('village'); sndButton(true);
+    S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids);
     mount(h('div', { class: 'scr' },
       h('a', { class: 'back', href: 'index.html' }, '← Volver a PokéSurvivor'),
@@ -152,6 +180,7 @@
   }
 
   function rules() {
+    S.setTrack('menu');
     sndButton(true);
     mount(h('div', { class: 'scr rules' },
       h('button', { class: 'back', onclick: menu }, '← Menú'),
@@ -179,6 +208,7 @@
 
   // ---------------- contra la computadora ----------------
   function setupAI() {
+    S.setTrack('prep');
     const lvl = h('select', null, h('option', { value: 'normal' }, 'Normal'), h('option', { value: 'easy' }, 'Fácil'));
     const rt = h('select', null, h('option', { value: '' }, 'Al azar'), C.PRESET_TYPES.map(t => h('option', { value: t }, 'Mazo de ' + C.TYPE_ES[t])));
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Contra la computadora'),
@@ -194,6 +224,7 @@
 
   // ---------------- online ----------------
   function onlineMenu() {
+    S.setTrack('prep');
     const box = h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'), h('p', { class: 'sub' }, 'Conectando con tu cuenta…'));
     mount(box);
     D.Online.init().then(me => {
@@ -215,6 +246,7 @@
   const LOSTMSG = 'Vuestras conexiones no logran verse directamente (pasa con algunos Wi‑Fi). Probad con datos móviles en uno de los dos.';
 
   async function hostRoom() {
+    S.setTrack('prep');
     const status = h('div', { class: 'msg' }, 'Creando sala…');
     const codeEl = h('div', { class: 'code' }, '·····');
     let room = null, match = null, failTimer = 0;
@@ -235,6 +267,7 @@
   }
 
   async function joinRoom(code, errBox) {
+    S.setTrack('prep');
     errBox.replaceChildren(h('div', { class: 'msg' }, 'Entrando…'));
     let room = null, failTimer = 0;
     try {
@@ -254,7 +287,7 @@
 
   // ---------------- constructor de mazos ----------------
   function deckBuilder() {
-    endCurrent();
+    endCurrent(); S.setTrack('prep');
     let q = '', kind = 'all', type = '', shown = 60;
     const cnt = ids => { const n = {}; ids.forEach(i => { n[i] = (n[i] || 0) + 1; }); return n; };
     const root = h('div', { class: 'scr', style: 'max-width:980px' });
@@ -318,11 +351,11 @@
     endCurrent();
     current = { match, cleanup: opts.cleanup };
     sndButton(false); showBg(false);
-    S.setTrack('volcano');
+    S.setTrack('battle'); S.setAmbient(true);
     let v = null, prev = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false;
     const zoneMem = new Map();
     let gameEl = null, zrowsEl = null;
-    let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false;
+    let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
     const seatNames = () => match.names;
 
     function act(a) {
@@ -466,7 +499,7 @@
           const d = cur.id ? C.get(cur.id) : null;
           fx.push({ k: key, type: cur.down && !cur.id ? 'small' : cur.down ? 'small' : (d && d.kind === 'monster' && d.level >= 7 ? 'epic' : d && d.kind !== 'monster' ? 'spell' : 'normal') });
         }
-      } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old });
+      } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       return el;
     }
@@ -476,7 +509,8 @@
       if (fresh && prev && prev[side] !== p.lp) {
         const dlt = p.lp - prev[side];
         lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt));
-        S.play(dlt > 0 ? 'heal' : mine ? 'hurt' : 'hit', 250);
+        S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : mine ? 'hurt' : 'hit', 250);
+        if (dlt < 0 && lastFam) fx.push({ pc: side, type: 'pc', fam: lastFam });
         if (dlt <= -1000) needShake = true;
       }
       const pct = Math.max(0, Math.min(100, p.lp / 80));
@@ -499,11 +533,16 @@
     }
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.play(v.winner === v.seat ? 'win' : 'lose'); }
       const won = v.winner === v.seat, draw = v.winner === 'draw' || v.winner === -1;
-      const box = h('div', { class: 'box end ' + (won ? 'win' : 'lose') }, h('h2', null, draw ? 'Empate' : won ? '¡Ganaste!' : 'Perdiste'), h('p', { class: 'sub', style: 'text-align:center' }, v.reason || ''),
-        opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold') : null, btn('Menú', menu, opts.rematch ? 'ghost' : 'gold'));
-      modal(box, false); modalEl.dataset.end = 1;
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); }
+      const parts = [];
+      for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
+      const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
+        h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
+        h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, v.reason || ''),
+          h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
+      modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
 
     // ----- sonidos y efectos de lo que acaba de pasar -----
@@ -511,7 +550,7 @@
       const fresh2 = v.log.filter(l => l.n > lastLogN);
       if (v.log.length) lastLogN = Math.max(lastLogN, v.log[v.log.length - 1].n);
       if (firstView) return;
-      let i = 0;
+      let i = 0; lastFam = null;
       for (const l of fresh2) {
         const t = l.t; let snd = null;
         if (/^Turno/.test(t)) snd = 'turn';
@@ -522,19 +561,55 @@
         else if (/cambia a/.test(t)) snd = 'pos';
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cut.push({ d, kind: 'trap' }); }
         else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) cut.push({ d, kind: 'spell' }); }
-        else if (/No es muy eficaz/.test(t)) snd = 'noteff';
-        else if (/muy eficaz/.test(t)) snd = 'eff';
-        else if (/ataca/.test(t)) snd = 'attack';
+        else if (/No es muy eficaz/.test(t)) { snd = 'noteff'; pops.push({ t: 'No es muy eficaz…', cls: 'weak' }); }
+        else if (/muy eficaz/.test(t)) { snd = 'crit'; pops.push({ t: '¡Es muy eficaz!', cls: 'strong' }); needShake = true; }
+        else if (/ataca/.test(t)) {
+          const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
+          if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
+        }
+        else if (/Todos los monstruos son destruidos/.test(t)) { snd = 'explosion'; needShake = true; }
         else if (/destruid|destruye/.test(t)) snd = 'destroy';
+        else if (/ataque es negado|refleja el ataque/.test(t)) snd = 'shield';
         else if (/negado|anulada/.test(t)) snd = 'negate';
         else if (/agrega un monstruo|^roba |^descarta|se revela|fase de batalla/.test(t)) snd = 'select';
         if (snd) { S.play(snd, i * 170); i++; }
       }
     }
     const rectOf = k => { const z = document.querySelector('.zone[data-k="' + k + '"]'); return z ? z.getBoundingClientRect() : null; };
+    function elemFx(cx, cy, size, fam, big) {
+      if (document.documentElement.classList.contains('rm')) return;
+      const e = h('div', { class: 'efx ' + fam + (big ? ' big' : ''), style: `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px` });
+      const n = { fire: 7, water: 3, electric: 3, ice: 7, nature: 9, mystic: 4, phys: 3 }[fam] || 3;
+      for (let i = 0; i < n; i++) {
+        const k = h('i', { style: `--i:${i};--r:${(i * 360 / n + Math.random() * 20) | 0}deg;--d:${(Math.random() * .25).toFixed(2)}s;--s:${(.7 + Math.random() * .6).toFixed(2)}` });
+        if (fam === 'electric') k.innerHTML = `<svg viewBox="0 0 40 100"><polyline points="${boltPts()}"/></svg>`;
+        e.append(k);
+      }
+      e.append(h('b', { class: 'core' }));
+      document.body.append(e); setTimeout(() => e.remove(), 1300);
+    }
+    const boltPts = () => { let x = 20, y = 0, a = ''; while (y < 100) { a += `${x.toFixed(0)},${y} `; x = 20 + (Math.random() - .5) * 30; y += 14 + Math.random() * 10; } return a + '20,100'; };
     function runFx() {
+      // preparación del atacante (efecto del elemento)
+      for (const a of atkFx) {
+        const side = a.p === v.seat ? 'me' : 'opp';
+        const zi = v[side].mz.findIndex(z => z && z.c && C.get(z.c.id).name === a.name);
+        const r = zi >= 0 ? rectOf(side + '-mz-' + zi) : null;
+        if (r) elemFx(r.left + r.width / 2, r.top + r.height / 2, r.width * 2.1, a.fam, false);
+      }
+      atkFx = [];
+      for (const p of pops) {
+        const el = h('div', { class: 'effpop ' + p.cls }, p.t); document.body.append(el); setTimeout(() => el.remove(), 1500);
+      }
+      pops = [];
       for (const f of fx) {
+        if (f.type === 'pc') {
+          const pc = document.querySelector('.pcard.' + (f.pc === 'me' ? 'mine' : 'theirs'));
+          if (pc) { const r = pc.getBoundingClientRect(); elemFx(r.left + r.width / 2, r.top + r.height / 2, Math.max(r.width, 220), f.fam, true); pc.classList.add('hurt'); setTimeout(() => pc.classList.remove('hurt'), 600); }
+          continue;
+        }
         const r = rectOf(f.k); if (!r) continue;
+        if (f.type === 'gone' && f.fam) elemFx(r.left + r.width / 2, r.top + r.height / 2, r.width * 2.6, f.fam, true);
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zel = document.querySelector('.zone[data-k="' + f.k + '"]'), zs = (parseFloat(getComputedStyle(zel).fontSize) || 10) * (r.width / zel.offsetWidth);
         if (f.type === 'gone') {
           const c = f.card, g = h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
@@ -580,7 +655,7 @@
         prevHandN = v.me.handCount;
         // música más tensa con poca vida
         const low = Math.min(v.me.lp, v.opp.lp) <= 2500 && v.winner === null;
-        if (low !== lowTrack) { lowTrack = low; S.setTrack(low ? 'boss' : 'volcano'); }
+        if (low !== lowTrack) { lowTrack = low; S.setTrack(low ? 'tense' : 'battle'); }
       }
       const my = myTurn();
       const dis = v.pending && v.pending.player === v.seat;
@@ -610,7 +685,7 @@
           h('button', { class: 'ib', onclick: () => { if (confirm('¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
-        canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big') : null);
+        canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
       const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pbar('me'), acts), hand);
       const rows = [];
       for (const [side, areas] of [['opp', ['st', 'mz']], ['me', ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(side, area, z))));
@@ -638,7 +713,7 @@
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
     match.start();
-    window.__duelo = { match, view: () => v };
+    window.__duelo = { match, view: () => v, elemFx };
   }
 
   mount(h('p', { class: 'loading' }, 'Cargando…'));

@@ -1,0 +1,30 @@
+AUDIO DEL DUELO — inventario
+============================
+Todos los archivos son ORIGINALES, sintetizados por código con tools/make_duelo_audio.py
+(numpy + scipy + ffmpeg). No contienen muestras, melodías ni sonidos de terceros.
+Licencia: los de este proyecto (mismo uso que el resto del repositorio).
+
+IMPORTANTE: es síntesis por software (cuerdas, metales y coro "de sintetizador", percusión y reverb),
+no una grabación orquestal. Para una banda sonora profesional, reemplaza los .mp3 por otros con
+el MISMO NOMBRE (mp3 estéreo, bucle sin silencio al final en las pistas "music_*" y "amb_*");
+el código no cambia. Si un archivo falta, el juego sigue con el sintetizador del juego principal.
+
+MÚSICA (bucle)                      cuándo suena
+ music_menu.mp3    55 s  menú principal, reglas (misterio / aventura, 70 bpm, Re menor)
+ music_prep.mp3    46 s  elegir partida, mazos y salas (preparación, tensión creciente, 84 bpm)
+ music_battle.mp3  50 s  combate (épica, 116 bpm: taiko, cuerdas, metales, coro)
+ music_tense.mp3   44 s  combate con poca vida (misma obra, 132 bpm)
+ amb_arena.mp3     31 s  ambiente de la arena: viento, fuego, pájaros (categoría Ambiente)
+ jingle_win.mp3     9 s  victoria   ·   jingle_lose.mp3  9 s  derrota
+
+EFECTOS (sfx_*.mp3, 0,1–2,4 s)      evento
+ ui_hover, ui_click, ui_confirm, ui_cancel, ui_open, ui_close, ui_tab, notify, error   interfaz
+ card_select, card_inspect, card_place, card_set, card_flip, flip_pos, draw            cartas
+ card_summon, card_epic (nivel ≥ 7)                                                    invocaciones
+ turn_start, turn_end                                                                  turnos
+ atk_phys, atk_fire, atk_water, atk_electric, atk_ice, atk_nature, atk_mystic          ataque según el tipo del monstruo
+ hit, hit_heavy (≥ 2000 de daño), crit (muy eficaz), hurt, shield, destroy, explosion  daño y destrucción
+ heal, spell, trap, negate, eff, noteff                                                 curación, magias, trampas, efectividad
+
+CATEGORÍAS DE VOLUMEN: general · música · interfaz y cartas · combate · ambiente · avisos
+(ajustes en el botón 🔊 del Duelo; se guardan en el navegador).
