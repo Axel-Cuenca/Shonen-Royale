@@ -23,6 +23,9 @@ G.CHANGELOG = [
      'The Duel now has sound on every move (summoning, attacking, spells, traps, damage…), background music and a 🔊 button to turn it off or change the volume. Cards are bigger, appear with a flash when played, and spells and traps are shown full screen when activated.'],
     ['Constructor de mazos de 30 cartas (máximo 2 copias de cada una) con 18 mazos de estreno, uno por tipo. La ventaja de tipo suma o resta ATK en combate.',
      'Deck builder for 30-card decks (max 2 copies of each) with 18 starter decks, one per type. Type advantage adds or subtracts ATK in combat.']
+  ], fix: [
+    ['Duelo: el ATK y la DEF de las cartas ya no se ven pegados, y vuelven a verse las imágenes de los Pokémon en las listas del constructor de mazos.',
+     'Duel: card ATK and DEF no longer run together, and the Pokémon pictures are back in the deck builder lists.']
   ] },
   { d: '2026-10-18', title: ['Físico y especial, mando, botón Guardar y rankings desde cero', 'Physical and special, controller, Save button and fresh leaderboards'], new: [
     ['Ataques físicos y especiales, como en los juegos: cada Pokémon tiene su Ataque, Ataque Especial, Defensa y Defensa Especial. Los ataques físicos pegan con su Ataque y los especiales con su Ataque Especial: Machamp pega fuerte con Golpe Kárate y flojo con Bola Sombra. Con los de su lado bueno pega lo mismo que antes. Al subir de nivel, cada carta dice si el ataque es físico o especial y cuánto rinde con tu Pokémon, y en la colección se ven todas sus estadísticas.',

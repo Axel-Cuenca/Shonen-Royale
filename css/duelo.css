@@ -373,8 +373,8 @@ html.gl .river { display: none; }
 .wl.pr-front { background: linear-gradient(#0000, #0008), var(--t-wall, #8a8070) 0 0 / 256px 128px; }
 .tw.pr-top { background: linear-gradient(135deg, #fff3, #0004), var(--t-tower, #8a8070) 0 0 / 200px 100px; border: 0; box-shadow: inset 0 0 8px #000b; }
 .tw.pr-front { background: linear-gradient(#0000, #000a), var(--t-tower, #8a8070) 0 0 / 200px 100px; }
-.spr { position: absolute; inset: 0; background-size: 100% 100%; background-repeat: no-repeat; filter: drop-shadow(2px 3px 3px #0006); }
-.bbi .spr { pointer-events: none; }
+.tspr { position: absolute; inset: 0; background-size: 100% 100%; background-repeat: no-repeat; filter: drop-shadow(2px 3px 3px #0006); }
+.bbi .tspr { pointer-events: none; }
 .flamec { position: absolute; left: 50%; bottom: -4px; width: 80px; height: 120px; transform: translateX(-50%); pointer-events: none; }
 .flame { display: none; }
 .pot { background: linear-gradient(90deg, #15110d, #4d4237 45%, #15110d); border-radius: 3px 3px 10px 10px; border-top: 3px solid #7a6a58; }
@@ -477,3 +477,9 @@ html.gl .river { display: none; }
 html.rm .efx, html.rm .fxburst, html.rm .cutin, html.rm .effpop, html.rm .endscr .parts, html.rm .endscr .rays { display: none !important; }
 html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none; }
 @media (max-width: 760px) { .sndrow { grid-template-columns: 110px 1fr 30px; } .effpop { font-size: 30px; } }
+
+/* ATK / DEF siempre separados */
+.card .cs { gap: 0; padding: .1em 0; }
+.card .cs b { flex: 1; text-align: center; white-space: nowrap; min-width: 0; }
+.card .cs b + b { border-left: 1px solid #fff6; }
+.hand .card .cs { font-size: .8em; }

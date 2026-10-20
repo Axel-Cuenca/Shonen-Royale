@@ -190,9 +190,9 @@
   let treeN = 0;
   function tree(x, y, s) {
     const k = (treeN++) % 3;
-    return billboard(x, y, s, s * 1.17, [el('spr', `background-image:${SPR.trees[k]}`)]);
+    return billboard(x, y, s, s * 1.17, [el('tspr', `background-image:${SPR.trees[k]}`)]);
   }
-  function rock(x, y, s) { return billboard(x, y, s * 1.5, s * 1.1, [el('spr', `background-image:${SPR.rock}`)]); }
+  function rock(x, y, s) { return billboard(x, y, s * 1.5, s * 1.1, [el('tspr', `background-image:${SPR.rock}`)]); }
   const fires = [];
   function torch(x, y, idx) {
     const cv = document.createElement('canvas'); cv.width = 112; cv.height = 168; cv.className = 'flamec';
