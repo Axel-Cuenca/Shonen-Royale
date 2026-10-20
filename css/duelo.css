@@ -362,3 +362,8 @@ select, input[type=text], input[type=search] { font-family: var(--ui); backgroun
 .board3d { width: 575px; height: 440px; }
 
 @media (max-width: 760px) { .row-bot { flex-direction: column-reverse; align-items: stretch; gap: 6px; } .acts-bot { justify-content: center; } .pcard.mine { max-width: none; } }
+
+/* ---- suelo WebGL (floor.js) ---- */
+.floorgl { position: absolute; transform: translateZ(-2px); pointer-events: none; image-rendering: auto; }
+html.gl .slab { background: none; }
+html.gl .river { display: none; }

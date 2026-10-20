@@ -13,7 +13,7 @@
   const bgEl = h('div', { id: 'bg' }, h('div', { class: 'vig' }));
   document.body.prepend(bgEl);
   D.Scene.backdrop(bgEl);
-  const showBg = on => { bgEl.style.display = on ? '' : 'none'; };
+  const showBg = on => { bgEl.style.display = on ? '' : 'none'; if (on) D.Scene.toBackdrop(); };
 
   // ---------------- vista previa al pasar el mouse ----------------
   let prevEl = null;

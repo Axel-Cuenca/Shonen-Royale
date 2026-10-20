@@ -129,9 +129,14 @@
   }
   function bowl(x, y) { return billboard(x, y, 22, 20, [el('bowl', '')], 10); }
 
+  const TREES = [[-250, -150, 120], [-330, 40, 140], [-270, 230, 120], [-360, 420, 150], [-240, 600, 130], [W + 240, -170, 130], [W + 330, 30, 150], [W + 260, 250, 120], [W + 350, 440, 140],
+    [W + 230, 620, 120], [120, -250, 110], [330, -300, 130], [520, -240, 110], [60, H + 250, 120], [300, H + 290, 140], [520, H + 240, 120], [-130, -240, 90], [W + 110, -250, 90]];
+  const ROCKS = [[-170, 120, 40], [W + 160, 330, 46], [-150, 480, 36], [W + 130, 90, 34], [200, H + 150, 38], [420, -170, 36]];
+
   /** Rodea a `slab` (el suelo de juego de W×H) con la arena. */
   function build(slab) {
     textures();
+    if (D.Floor && !D.Floor.tried()) D.Floor.init(TREES.map(t => [t[0], t[1], t[2], 0]).concat(ROCKS.map(r => [r[0], r[1], r[2], 1])));
     const parts = [];
     parts.push(el('ground', ''));
     parts.push(el('river r1', ''), el('river r2', ''));
@@ -142,18 +147,20 @@
     // antorchas + cuencos
     [[-32, -34], [W + 32, -34], [-32, H + 38], [W + 32, H + 38]].forEach(([x, y]) => parts.push(torch(x, y)));
     for (let i = 0; i < 8; i++) { const y = 34 + i * 50; parts.push(bowl(-17, y), bowl(W + 17, y)); }
-    // vegetación y rocas
-    const trees = [[-250, -150, 120], [-330, 40, 140], [-270, 230, 120], [-360, 420, 150], [-240, 600, 130], [W + 240, -170, 130], [W + 330, 30, 150], [W + 260, 250, 120], [W + 350, 440, 140],
-      [W + 230, 620, 120], [120, -250, 110], [330, -300, 130], [520, -240, 110], [60, H + 250, 120], [300, H + 290, 140], [520, H + 240, 120], [-130, -240, 90], [W + 110, -250, 90]];
-    trees.forEach(t => parts.push(tree(t[0], t[1], t[2])));
-    [[-170, 120, 40], [W + 160, 330, 46], [-150, 480, 36], [W + 130, 90, 34], [200, H + 150, 38], [420, -170, 36]].forEach(r => parts.push(rock(r[0], r[1], r[2])));
+    TREES.forEach(t => parts.push(tree(t[0], t[1], t[2])));
+    ROCKS.forEach(r => parts.push(rock(r[0], r[1], r[2])));
     parts.forEach(p => slab.prepend(p));
+    if (D.Floor && D.Floor.ok) D.Floor.attach(slab);
   }
+
+  let bgSlab = null;
+  /** Devuelve el suelo WebGL al fondo de los menús (cuando se sale de la partida). */
+  function toBackdrop() { if (bgSlab && D.Floor && D.Floor.ok) D.Floor.attach(bgSlab); }
 
   /** Fondo para los menús: la misma arena, de lejos, con el tablero vacío. */
   function backdrop(host) {
     const slab = el('slab', ''), board = el('board3d menuboard', '', [slab]), persp = el('persp', '', [board]);
-    host.append(persp); build(slab);
+    host.append(persp); build(slab); bgSlab = slab;
     function fit() {
       const sw = host.clientWidth, sh = host.clientHeight;
       const k = Math.min(sw / (W * 1.5), sh / (H * 0.95));
@@ -163,5 +170,5 @@
     fit(); window.addEventListener('resize', fit);
   }
 
-  D.Scene = { build, backdrop, TILT, W, H };
+  D.Scene = { build, backdrop, toBackdrop, TILT, W, H };
 })();
