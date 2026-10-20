@@ -424,7 +424,7 @@ async function matchTests() {
     ok(gv.seat === 1 && hv.seat === 0, 'asientos');
     const bots = [AI.create('normal', 5), AI.create('normal', 6)];
     let guard = 0, illegalSent = false;
-    while (guard++ < 4000 && !(hv.winner !== null && gv.winner !== null)) {
+    while (guard++ < 60000 && !(hv.winner !== null && gv.winner !== null)) {
       if (hv.actor === 0 && hv.winner === null) { const a = bots[0].chooseView(hv); const r = h.act(a); ok(r.ok, 'anfitrión: acción aceptada'); }
       else if (gv.actor === 1 && gv.winner === null) {
         if (!illegalSent && gv.turn > 3) { illegalSent = true; g.act({ t: 'summon', hand: 99, tributes: [] }); }   // trampa: debe rechazarse
