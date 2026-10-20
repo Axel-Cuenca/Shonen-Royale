@@ -62,22 +62,94 @@
     noiseOver(x, n, 16);
     return c.toDataURL('image/jpeg', .88);
   }
-  function wallTex() {                                    // bloques de piedra
-    const n = 256, c = mk(n), x = c.getContext('2d'), rows = 4, bh = n / rows;
-    x.fillStyle = '#4f4a44'; x.fillRect(0, 0, n, n);
+  function vnoise(x, y) {                                 // ruido de valor con vuelta (para texturas que encajan)
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const h = (i, j) => { let n = (i * 374761393 + j * 668265263) | 0; n = (n ^ (n >>> 13)) * 1274126177 | 0; return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+    return (h(xi, yi) * (1 - sx) + h(xi + 1, yi) * sx) * (1 - sy) + (h(xi, yi + 1) * (1 - sx) + h(xi + 1, yi + 1) * sx) * sy;
+  }
+  /** Sillería: bloques desiguales con relieve, juntas, astillas, musgo y luz calculada píxel a píxel. */
+  function wallTex(big) {
+    const w = 512, hh = 256, c = document.createElement('canvas'); c.width = w; c.height = hh;
+    const x = c.getContext('2d'), rows = big ? 3 : 5, rh = hh / rows;
+    const hgt = new Float32Array(w * hh), col = new Float32Array(w * hh * 3);
     for (let r = 0; r < rows; r++) {
-      let px = -(r % 2) * 32;
-      while (px < n) {
-        const bw = 56 + rnd() * 40, t = rnd(), L = 132 + t * 40;
-        const g = x.createLinearGradient(0, r * bh, 0, (r + 1) * bh);
-        g.addColorStop(0, rgb(L + 22, L + 16, L)); g.addColorStop(1, rgb(L - 18, L - 22, L - 34));
-        x.fillStyle = g; x.fillRect(px + 2, r * bh + 2, bw - 4, bh - 4);
+      let px = -rnd() * 60;
+      const y0 = r * rh;
+      while (px < w) {
+        const bw = (big ? 110 : 70) + rnd() * (big ? 90 : 80), tone = rnd(), tilt = (rnd() - .5) * .35, lvl = .6 + (rnd() - .5) * .12;
+        const base = [.52 + tone * .16, .50 + tone * .13, .46 + tone * .09];
+        for (let yy = Math.max(0, Math.floor(y0)); yy < Math.min(hh, y0 + rh); yy++) for (let xx = Math.floor(px); xx < px + bw; xx++) {
+          const X = (xx + w) % w, i = yy * w + X;
+          let dx = Math.min(xx - px, px + bw - xx), dy = Math.min(yy - y0, y0 + rh - yy);
+          let d = Math.min(dx, dy) + (vnoise(xx * .22, yy * .22) - .5) * 4 + (vnoise(xx * .9, yy * .9) - .5) * 1.4;
+          const gap = Math.min(1, Math.max(0, (d - .5) / 2.6)), bev = Math.min(1, Math.max(0, d / 7));
+          let h = (lvl + tilt * ((xx - px) / bw - .5) + (vnoise(xx * .05, yy * .05) - .5) * .12 + (vnoise(xx * .3, yy * .3) - .5) * .06 + (vnoise(xx * 1.1, yy * 1.1) - .5) * .03) * gap - (1 - bev) * .08 * gap + (1 - gap) * .05;
+          hgt[i] = h;
+          const m = .8 + vnoise(xx * .035 + tone * 9, yy * .035) * .4, g = .93 + vnoise(xx * 1.2, yy * 1.2) * .14;
+          let moss = Math.max(0, vnoise(xx * .06 + 40, yy * .06) - .6) * 2.4 * (1 - bev * .5) + Math.max(0, .35 - (dy / rh)) * Math.max(0, vnoise(xx * .1, yy * .1) - .55) * 3;
+          moss = Math.min(.85, moss);
+          for (let k = 0; k < 3; k++) { let v = base[k] * m * g * (gap * .85 + .15 * .35); const mc = [.17, .29, .08][k]; col[i * 3 + k] = v * (1 - moss) + mc * moss; }
+        }
         px += bw;
       }
     }
-    noiseOver(x, n, 22);
-    return c.toDataURL('image/jpeg', .88);
+    const img = x.createImageData(w, hh), d = img.data, lx = -.55, ly = -.5, lz = .68;
+    for (let yy = 0; yy < hh; yy++) for (let xx = 0; xx < w; xx++) {
+      const i = yy * w + xx, hl = hgt[yy * w + (xx + w - 1) % w], hr = hgt[yy * w + (xx + 1) % w], hu = hgt[((yy + hh - 1) % hh) * w + xx], hd = hgt[((yy + 1) % hh) * w + xx];
+      let nx = -(hr - hl) * 26, ny = -(hd - hu) * 26, nz = 1; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+      const ndl = Math.max(0, nx * lx + ny * ly + nz * lz) / .68;
+      let ao = 1; for (const [ox, oy] of [[3, 0], [-3, 0], [0, 3], [0, -3], [6, 6], [-6, -6]]) { const hn = hgt[((yy + oy + hh) % hh) * w + (xx + ox + w) % w]; ao -= Math.max(0, hn - hgt[i]) * .55; }
+      ao = Math.max(.15, ao);
+      const L = .42 * ao + .78 * ndl * (.45 + .55 * ao);
+      for (let k = 0; k < 3; k++) d[i * 4 + k] = Math.min(255, Math.pow(col[i * 3 + k] * L * (k === 2 ? .96 : 1.04), 1 / 2.2) * 255);
+      d[i * 4 + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    return c.toDataURL('image/jpeg', .9);
   }
+  /** Árbol dibujado con luz desde arriba-izquierda: copa de muchas hojas, tronco con corteza. kind: 0 y 1 frondosos, 2 pino. */
+  function treeSprite(kind) {
+    const w = 256, hh = 300, c = document.createElement('canvas'); c.width = w; c.height = hh; const x = c.getContext('2d');
+    const tk = x.createLinearGradient(100, 0, 156, 0); tk.addColorStop(0, '#3a2412'); tk.addColorStop(.35, '#7d5632'); tk.addColorStop(.7, '#5a3a1e'); tk.addColorStop(1, '#2a180a');
+    x.fillStyle = tk; x.beginPath(); x.moveTo(112, 292); x.lineTo(118, 170); x.lineTo(138, 170); x.lineTo(150, 292); x.closePath(); x.fill();
+    for (let i = 0; i < 40; i++) { x.strokeStyle = `rgba(20,10,4,${.15 + rnd() * .25})`; const px = 114 + rnd() * 32; x.beginPath(); x.moveTo(px, 290); x.lineTo(px + (rnd() - .5) * 8, 180 + rnd() * 40); x.stroke(); }
+    const pal = kind === 1 ? [[78, 104, 30], [128, 160, 52], [176, 196, 84]] : kind === 2 ? [[16, 52, 36], [30, 88, 52], [70, 128, 76]] : [[22, 72, 28], [52, 118, 40], [112, 170, 66]];
+    const blobs = [];
+    if (kind === 2) {
+      for (let t = 0; t < 6; t++) { const cy = 250 - t * 38, rw = 108 - t * 17; for (let i = 0; i < 26; i++) blobs.push([128 + (rnd() - .5) * rw * 1.7, cy - rnd() * 34, 15 + rnd() * 12 - t]); }
+    } else {
+      for (let i = 0; i < 170; i++) { const a = rnd() * 6.283, r = Math.sqrt(rnd()); blobs.push([128 + Math.cos(a) * r * 112, 110 + Math.sin(a) * r * 82 + (kind === 1 ? 14 : 0), 16 + rnd() * 20]); }
+    }
+    blobs.sort((p, q) => p[1] - q[1]);
+    for (const [bx, by, br] of blobs) {
+      const lit = Math.max(0, Math.min(1, .55 - (bx - 128) / 300 - (by - 110) / 260 + (rnd() - .5) * .3));
+      const mix = (a, b, t) => a + (b - a) * t, cc = i => lit < .5 ? mix(pal[0][i], pal[1][i], lit * 2) : mix(pal[1][i], pal[2][i], (lit - .5) * 2);
+      const g = x.createRadialGradient(bx - br * .3, by - br * .35, 1, bx, by, br);
+      g.addColorStop(0, `rgb(${cc(0) * 1.15 | 0},${cc(1) * 1.15 | 0},${cc(2) * 1.1 | 0})`); g.addColorStop(.7, `rgb(${cc(0) | 0},${cc(1) | 0},${cc(2) | 0})`); g.addColorStop(1, `rgb(${cc(0) * .55 | 0},${cc(1) * .55 | 0},${cc(2) * .55 | 0})`);
+      x.fillStyle = g; x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill();
+    }
+    x.globalCompositeOperation = 'source-atop';
+    for (let i = 0; i < 1400; i++) { const px = rnd() * w, py = 10 + rnd() * 260; x.fillStyle = rnd() < .5 ? `rgba(220,240,130,${.1 + rnd() * .25})` : `rgba(8,30,10,${.15 + rnd() * .3})`; x.beginPath(); x.ellipse(px, py, 1.5 + rnd() * 3, .8 + rnd() * 1.6, rnd() * 3, 0, 7); x.fill(); }
+    x.globalCompositeOperation = 'source-over';
+    return c.toDataURL('image/png');
+  }
+  function rockSprite() {
+    const w = 160, hh = 120, c = document.createElement('canvas'); c.width = w; c.height = hh; const x = c.getContext('2d');
+    const pts = []; for (let i = 0; i < 11; i++) { const a = i / 11 * 6.283, r = .8 + rnd() * .2; pts.push([80 + Math.cos(a) * 66 * r, 70 + Math.sin(a) * 40 * r - (Math.sin(a) < 0 ? 10 : 0)]); }
+    const ctr = [80, 56];
+    x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.save(); x.clip();
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], q = pts[(i + 1) % pts.length], mx = (p[0] + q[0]) / 2 - ctr[0], my = (p[1] + q[1]) / 2 - ctr[1], l = Math.hypot(mx, my) || 1;
+      const lit = Math.max(0, Math.min(1, .5 - (mx / l) * .45 - (my / l) * .4 + (rnd() - .5) * .2)), v = 70 + lit * 120;
+      x.fillStyle = `rgb(${v * 1.02 | 0},${v | 0},${v * .92 | 0})`; x.beginPath(); x.moveTo(ctr[0], ctr[1]); x.lineTo(p[0], p[1]); x.lineTo(q[0], q[1]); x.closePath(); x.fill();
+    }
+    for (let i = 0; i < 700; i++) { x.fillStyle = rnd() < .5 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.1)'; x.fillRect(rnd() * w, rnd() * hh, 1 + rnd() * 3, 1 + rnd() * 3); }
+    for (let i = 0; i < 5; i++) { x.strokeStyle = 'rgba(20,18,14,.55)'; x.lineWidth = 1; x.beginPath(); let px = 40 + rnd() * 80, py = 30 + rnd() * 50; x.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (rnd() - .5) * 22; py += 5 + rnd() * 9; x.lineTo(px, py); } x.stroke(); }
+    const mg = x.createLinearGradient(0, 20, 0, 70); mg.addColorStop(0, 'rgba(70,120,30,.55)'); mg.addColorStop(1, 'rgba(70,120,30,0)'); x.fillStyle = mg; x.fillRect(0, 0, w, 80);
+    x.restore();
+    return c.toDataURL('image/png');
+  }
+
   function waterTex() {
     const n = 256, c = mk(n), x = c.getContext('2d');
     const g = x.createLinearGradient(0, 0, n, n); g.addColorStop(0, '#2a7fa6'); g.addColorStop(.5, '#3fa3bd'); g.addColorStop(1, '#25709a');
@@ -90,13 +162,15 @@
     return c.toDataURL('image/jpeg', .85);
   }
 
+  const SPR = { trees: [], rock: '' };
   let texDone = false;
   function textures() {
     if (texDone) return;
     texDone = true;
     const r = document.documentElement.style;
     r.setProperty('--t-grass', `url(${grassTex()})`); r.setProperty('--t-stone', `url(${stoneTex()})`);
-    r.setProperty('--t-wall', `url(${wallTex()})`); r.setProperty('--t-water', `url(${waterTex()})`);
+    r.setProperty('--t-wall', `url(${wallTex(false)})`); r.setProperty('--t-tower', `url(${wallTex(true)})`);
+    SPR.trees = [0, 1, 2].map(k => `url(${treeSprite(k)})`); SPR.rock = `url(${rockSprite()})`; r.setProperty('--t-water', `url(${waterTex()})`);
   }
 
   // ---------------- piezas ----------------
@@ -113,19 +187,53 @@
     const i = el('bbi', `width:${w}px;height:${h}px;transform:rotateX(-${TILT}deg)`, inner);
     return el('bb', `left:${x - w / 2}px;top:${y}px;width:${w}px;transform:translateZ(${z || 0}px)`, [i]);
   }
+  let treeN = 0;
   function tree(x, y, s) {
-    const f = [];
-    const cols = ['#1f5a24', '#2e7a2b', '#3f9a36', '#5fb84a'];
-    [[.5, .38, .9], [.28, .5, .62], [.72, .5, .62], [.5, .22, .6], [.38, .3, .5], [.62, .3, .5]].forEach((p, i) => {
-      f.push(el('lf', `left:${(p[0] - p[2] / 2) * 100}%;top:${(p[1] - p[2] / 2) * 100}%;width:${p[2] * 100}%;height:${p[2] * 100}%;background:radial-gradient(circle at 35% 30%, ${cols[Math.min(3, i % 4 + 1)]}, ${cols[0]} 78%)`));
-    });
-    f.unshift(el('trunk', ''));
-    return billboard(x, y, s, s * 1.15, f);
+    const k = (treeN++) % 3;
+    return billboard(x, y, s, s * 1.17, [el('spr', `background-image:${SPR.trees[k]}`)]);
   }
-  function rock(x, y, s) { return billboard(x, y, s, s * .7, [el('rk', '')]); }
-  function torch(x, y) {
-    const flame = el('flame', ''), glow = el('fglow', '');
-    return billboard(x, y, 26, 40, [glow, el('pot', ''), flame], 36);
+  function rock(x, y, s) { return billboard(x, y, s * 1.5, s * 1.1, [el('spr', `background-image:${SPR.rock}`)]); }
+  const fires = [];
+  function torch(x, y, idx) {
+    const cv = document.createElement('canvas'); cv.width = 112; cv.height = 168; cv.className = 'flamec';
+    fires.push({ cv, idx, parts: [] });
+    startFire();
+    return billboard(x, y, 26, 40, [el('fglow', ''), el('pot', ''), cv], 36);
+  }
+  /** Fuego de las antorchas: llama, chispas y humo, con el mismo parpadeo que la luz del suelo. */
+  let fireRaf = 0, fireT = 0;
+  function startFire() {
+    if (fireRaf) return;
+    const step = now => {
+      fireRaf = requestAnimationFrame(step);
+      if (document.hidden || now - fireT < 33) return;
+      const dt = Math.min(.06, (now - fireT) / 1000); fireT = now;
+      const t = now / 1000;
+      for (let i = fires.length - 1; i >= 0; i--) if (fires[i].gone) fires.splice(i, 1);
+      for (const f of fires) {
+        if (!f.cv.isConnected) { if (f.seen) f.gone = true; continue; }
+        f.seen = true;
+        const g = f.cv.getContext('2d'), fl = D.Floor ? D.Floor.flicker(f.idx, t) : 1;
+        g.clearRect(0, 0, 112, 168);
+        if (Math.random() < 30 * dt) f.parts.push({ k: 0, x: 56 + (Math.random() - .5) * 10, y: 146, vx: (Math.random() - .5) * 8, vy: -(40 + Math.random() * 30), l: 0, life: .55 + Math.random() * .3, r: 18 + Math.random() * 10 });
+        if (Math.random() < 2.2 * dt) f.parts.push({ k: 1, x: 56 + (Math.random() - .5) * 14, y: 136, vx: (Math.random() - .5) * 30, vy: -(50 + Math.random() * 50), l: 0, life: .9 + Math.random() * .9, r: 1.6 });
+        if (Math.random() < 3 * dt) f.parts.push({ k: 2, x: 56 + (Math.random() - .5) * 8, y: 110, vx: 6 + Math.random() * 6, vy: -(14 + Math.random() * 10), l: 0, life: 1.6 + Math.random(), r: 8 });
+        f.parts = f.parts.filter(p => (p.l += dt) < p.life);
+        for (const p of f.parts) {
+          const u = p.l / p.life;
+          p.x += (p.vx + Math.sin(t * 9 + p.y * .1) * (p.k === 0 ? 10 : 4)) * dt; p.y += p.vy * dt;
+          if (p.k === 2) { g.globalCompositeOperation = 'source-over'; const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * (1 + u * 2)); gr.addColorStop(0, `rgba(60,55,50,${.16 * (1 - u)})`); gr.addColorStop(1, 'rgba(60,55,50,0)'); g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r * (1 + u * 2), 0, 7); g.fill(); }
+          else if (p.k === 1) { g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(255,${170 - u * 80 | 0},60,${1 - u})`; g.beginPath(); g.arc(p.x, p.y, p.r * (1 - u * .5), 0, 7); g.fill(); }
+          else {
+            g.globalCompositeOperation = 'lighter'; const r = p.r * fl * (1 - u * .75);
+            const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r); gr.addColorStop(0, `rgba(255,${235 - u * 120 | 0},${150 - u * 140 | 0},${.85 * (1 - u * .6)})`); gr.addColorStop(.5, `rgba(255,${130 - u * 80 | 0},20,${.5 * (1 - u)})`); gr.addColorStop(1, 'rgba(200,40,0,0)');
+            g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, r, 0, 7); g.fill();
+          }
+        }
+        g.globalCompositeOperation = 'source-over';
+      }
+    };
+    fireRaf = requestAnimationFrame(step);
   }
   function bowl(x, y) { return billboard(x, y, 22, 20, [el('bowl', '')], 10); }
 
@@ -145,7 +253,7 @@
     // torres de las esquinas
     [[-58, -60], [W + 6, -60], [-58, H + 12], [W + 6, H + 12]].forEach(([x, y]) => { parts.push(prism(x, y, 52, 52, 30, 'wl tw')); });
     // antorchas + cuencos
-    [[-32, -34], [W + 32, -34], [-32, H + 38], [W + 32, H + 38]].forEach(([x, y]) => parts.push(torch(x, y)));
+    [[-32, -34], [W + 32, -34], [-32, H + 38], [W + 32, H + 38]].forEach(([x, y], i) => parts.push(torch(x, y, i)));
     for (let i = 0; i < 8; i++) { const y = 34 + i * 50; parts.push(bowl(-17, y), bowl(W + 17, y)); }
     TREES.forEach(t => parts.push(tree(t[0], t[1], t[2])));
     ROCKS.forEach(r => parts.push(rock(r[0], r[1], r[2])));
