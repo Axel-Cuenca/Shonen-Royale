@@ -9,17 +9,11 @@
   const byName = {};
   C.all().forEach(c => { byName[c.name] = c; });
 
-  // ---------------- fondo animado (arena flotante en el cielo) ----------------
-  (function makeBg() {
-    const bg = h('div', { id: 'bg' }, h('div', { class: 'aura a1' }), h('div', { class: 'aura a2' }), h('div', { class: 'cloud c1' }), h('div', { class: 'cloud c2' }), h('div', { class: 'cloud c3' }),
-      h('div', { class: 'circle' }, h('i'), h('i'), h('i')), h('div', { class: 'isle' }));
-    for (let i = 0; i < 38; i++) {
-      const m = h('span', { class: 'mote' });
-      m.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;--d:${6 + Math.random() * 12}s;--s:${2 + Math.random() * 4}px;animation-delay:-${Math.random() * 14}s;opacity:${.3 + Math.random() * .6}`;
-      bg.append(m);
-    }
-    document.body.prepend(bg);
-  })();
+  // ---------------- fondo de los menús: la arena de lejos ----------------
+  const bgEl = h('div', { id: 'bg' }, h('div', { class: 'vig' }));
+  document.body.prepend(bgEl);
+  D.Scene.backdrop(bgEl);
+  const showBg = on => { bgEl.style.display = on ? '' : 'none'; };
 
   // ---------------- vista previa al pasar el mouse ----------------
   let prevEl = null;
@@ -143,7 +137,7 @@
   function endCurrent() { if (current) { try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   function menu() {
-    endCurrent();
+    endCurrent(); showBg(true);
     S.setTrack('village'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids);
     mount(h('div', { class: 'scr' },
@@ -323,10 +317,11 @@
     opts = opts || {};
     endCurrent();
     current = { match, cleanup: opts.cleanup };
-    sndButton(false);
+    sndButton(false); showBg(false);
     S.setTrack('volcano');
     let v = null, prev = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false;
     const zoneMem = new Map();
+    let gameEl = null, zrowsEl = null;
     let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false;
     const seatNames = () => match.names;
 
@@ -484,10 +479,14 @@
         S.play(dlt > 0 ? 'heal' : mine ? 'hurt' : 'hit', 250);
         if (dlt <= -1000) needShake = true;
       }
-      return h('div', null, h('div', { class: 'pbar ' + (mine ? 'mine' : 'theirs') },
-        h('span', { class: 'nm' }, nm), h('span', { class: 'mini' }, `🂠${p.deckCount} ✋${p.handCount}`),
-        h('button', { onclick: () => showGrave(side), title: 'Cementerio' }, '☠ ' + p.grave.length), lp),
-      h('div', { class: 'lpbar' }, h('i', { style: `width:${Math.max(0, Math.min(100, p.lp / 80))}%` })));
+      const pct = Math.max(0, Math.min(100, p.lp / 80));
+      const ini = (nm || '?').trim().charAt(0).toUpperCase();
+      return h('div', { class: 'pcard ' + (mine ? 'mine' : 'theirs') },
+        h('div', { class: 'av' }, ini),
+        h('div', { class: 'pi' },
+          h('div', { class: 'pn' }, nm),
+          h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
+          h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: () => showGrave(side), title: 'Cementerio' }, `☠ ${p.grave.length}`))));
     }
     function showGrave(side) {
       const g = v[side].grave;
@@ -556,13 +555,17 @@
       if (needShake) { const g = document.querySelector('.game'); if (g) { g.classList.add('shake'); setTimeout(() => g.classList.remove('shake'), 500); } needShake = false; }
     }
 
-    const TILT = 40;
+    const TILT = D.Scene.TILT;
     function fitBoard() {
-      const st = document.querySelector('.stage'), b = document.querySelector('.board3d'), pr = document.querySelector('.persp');
+      if (!gameEl) return;
+      const q = sel2 => gameEl.querySelector(sel2);
+      const st = q('.stage'), b = q('.board3d'), pr = q('.persp'), top = q('.hud-top'), bot = q('.hud-bot');
       if (!st || !b) return;
       const sw = st.clientWidth, sh = st.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
-      const k = Math.max(0.2, Math.min(sw / (bw * 1.13), (sh - 6) / (bh * Math.cos(TILT * Math.PI / 180) * 1.04 + 8)));
+      const rt = top ? Math.max(0, top.offsetHeight - 34) : 0, rb = bot ? Math.max(0, bot.offsetHeight - 40) : 0, avail = sh - rt - rb;
+      const k = Math.max(0.2, Math.min(sw / ((bw + 150) * 1.12), (avail - 4) / (bh * Math.cos(TILT * Math.PI / 180) * 1.06 + 6)));
       b.style.setProperty('--k', k.toFixed(3));
+      b.style.top = Math.round(rt + avail / 2) + 'px';
       pr.style.perspective = Math.round(bw * k * 2.6) + 'px';
     }
     window.addEventListener('resize', fitBoard);
@@ -599,19 +602,29 @@
       const lastLog = v.log.length ? v.log[v.log.length - 1] : null;
       const canBattle = my && !v.pending && L().some(a => a.t === 'toBattle');
       const canEnd = my && !v.pending && L().some(a => a.t === 'endTurn');
-      const mid = h('div', { class: 'mid' },
-        h('span', { class: 'turn' }, `T${v.turn} · ${v.current === v.seat ? 'Tu turno' : 'Rival'} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`),
-        h('span', { class: 'logline' }, lastLog ? (lastLog.p >= 0 ? seatNames()[lastLog.p] + ' ' : '') + lastLog.t : ''),
-        h('button', { class: 'btn ghost', onclick: showLog }, '📜'),
-        h('button', { class: 'btn ghost', onclick: soundPanel, title: 'Sonido' }, '🔊'),
-        canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold') : null,
-        canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar', () => act(L().find(a => a.t === 'endTurn')), canBattle ? 'ghost' : 'gold') : null,
-        btn('🏳', () => { if (confirm('¿Rendirte?')) match.resign(); }, 'ghost'));
+      const turnTxt = `Turno ${v.turn} · ${v.current === v.seat ? 'Tu turno' : 'Turno rival'} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
+      const logTxt = lastLog ? (lastLog.p >= 0 ? seatNames()[lastLog.p] + ' ' : '') + lastLog.t : '';
+      const hudTop = h('div', { class: 'hud-top' }, pbar('opp'),
+        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt), fan),
+        h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
+          h('button', { class: 'ib', onclick: () => { if (confirm('¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
+      const acts = h('div', { class: 'acts-bot' },
+        canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
+        canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big') : null);
+      const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pbar('me'), acts), hand);
       const rows = [];
       for (const [side, areas] of [['opp', ['st', 'mz']], ['me', ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(side, area, z))));
-      const stage = h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, h('div', { class: 'slab' }, h('div', { class: 'rune' }), rows))));
-      const g = h('div', { class: 'game' }, pbar('opp'), fan, stage, banner, mid, pbar('me'), hand);
-      app.replaceChildren(g);
+      if (!gameEl) {
+        zrowsEl = h('div', { class: 'zrows' });
+        const slab = h('div', { class: 'slab' }, zrowsEl);
+        D.Scene.build(slab);
+        gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))));
+      }
+      if (!gameEl.isConnected) app.replaceChildren(gameEl);
+      zrowsEl.replaceChildren(...rows);
+      const hud = h('div', { class: 'hud' }, hudTop, hudBot);
+      const oldHud = gameEl.querySelector(':scope > .hud');
+      if (oldHud) oldHud.replaceWith(hud); else gameEl.append(hud);
       fitBoard();
       pendingUI();
       if (fresh) { runFx(); firstView = false; }
