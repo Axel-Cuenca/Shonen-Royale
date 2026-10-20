@@ -9,6 +9,8 @@ G.CHANGELOG = [
   { d: '2026-10-19', title: ['Duelo de cartas: los Pokémon como monstruos', 'Card duel: Pokémon as monsters'], new: [
     ['Nuevo modo «Duelo de cartas» (en el menú): duelos de cartas por turnos con 8000 PV, monstruos con nivel, ATK y DEF sacados de cada Pokémon, 12 magias y 5 trampas. Juega contra la computadora (fácil o normal) o online con un amigo con un código de sala.',
      'New “Card duel” mode (in the menu): turn-based card duels with 8000 LP, monsters whose level, ATK and DEF come from each Pokémon, 12 spells and 5 traps. Play against the computer (easy or normal) or online with a friend using a room code.'],
+    ['El Duelo tiene sonido en cada jugada (invocar, atacar, magias, trampas, daño…), música de fondo y un botón 🔊 para apagarla o subir y bajar el volumen. Las cartas se ven más grandes, aparecen con un destello al ponerlas y las magias y trampas se muestran a pantalla grande al activarse.',
+     'The Duel now has sound on every move (summoning, attacking, spells, traps, damage…), background music and a 🔊 button to turn it off or change the volume. Cards are bigger, appear with a flash when played, and spells and traps are shown full screen when activated.'],
     ['Constructor de mazos de 30 cartas (máximo 2 copias de cada una) con 18 mazos de estreno, uno por tipo. La ventaja de tipo suma o resta ATK en combate.',
      'Deck builder for 30-card decks (max 2 copies of each) with 18 starter decks, one per type. Type advantage adds or subtracts ATK in combat.']
   ] },

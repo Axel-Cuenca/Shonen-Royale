@@ -3,6 +3,11 @@
   'use strict';
   const D = window.Duelo, C = D.Cards, E = D.Engine;
   const app = document.getElementById('app');
+  const S = D.Sound;
+  S.init();
+  document.addEventListener('click', e => { if (e.target.closest('.btn, .menu-btn, .li, .back')) S.play('click'); }, true);
+  const byName = {};
+  C.all().forEach(c => { byName[c.name] = c; });
 
   // ---------------- utilidades ----------------
   function h(tag, attrs, ...kids) {
@@ -88,12 +93,31 @@
     document.body.append(m); modalEl = m; return m;
   }
 
+  // ---------------- sonido ----------------
+  let sndEl = null;
+  function sndButton(show) {
+    if (!sndEl) { sndEl = h('button', { class: 'sndbtn', title: 'Sonido y música', onclick: soundPanel }, '🔊'); document.body.append(sndEl); }
+    sndEl.style.display = show ? '' : 'none';
+  }
+  function soundPanel() {
+    const row = (label, key, on, setOn, vol) => {
+      const t = h('button', { class: 'btn tog' + (on() ? ' on' : ''), onclick: () => { setOn(!on()); t.classList.toggle('on', on()); t.textContent = label + (on() ? ': sí' : ': no'); } }, label + (on() ? ': sí' : ': no'));
+      const r = h('input', { type: 'range', min: 0, max: 100, value: Math.round(S.volume(vol) * 100), oninput: () => S.setVolume(vol, r.value / 100) });
+      return h('div', { class: 'sndrow' }, t, r);
+    };
+    modal(h('div', { class: 'box' }, h('h2', null, 'Sonido'),
+      row('Música', 'm', () => S.musicOn, v => S.setMusic(v), 'music'),
+      row('Efectos', 'e', () => S.sfxOn, v => S.setSfx(v), 'sfx'),
+      h('p', { class: 'sub' }, 'Los volúmenes son los mismos que en los ajustes del juego.'), btn('Cerrar', closeModal, 'ghost')));
+  }
+
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
   function endCurrent() { if (current) { try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } current = null; } closeModal(); }
 
   function menu() {
     endCurrent();
+    S.setTrack('village'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids);
     mount(h('div', { class: 'scr' },
       h('a', { class: 'back', href: 'index.html' }, '← Volver a PokéSurvivor'),
@@ -107,6 +131,7 @@
   }
 
   function rules() {
+    sndButton(true);
     mount(h('div', { class: 'scr rules' },
       h('button', { class: 'back', onclick: menu }, '← Menú'),
       h('h1', null, 'Reglas'),
@@ -271,11 +296,15 @@
     opts = opts || {};
     endCurrent();
     current = { match, cleanup: opts.cleanup };
-    let v = null, prev = null, sel = null, shownLog = 0, shell = null;
+    sndButton(false);
+    S.setTrack('volcano');
+    let v = null, prev = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false;
+    const zoneMem = new Map();
+    let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false;
     const seatNames = () => match.names;
 
     function act(a) {
-      if (!v || v.actor !== v.seat) return;
+      if (!v || v.actor !== v.seat) { S.play('error'); return; }
       sel = null; closeModal();
       const r = match.act(a);
       if (r && r.ok === false && r.error) console.warn(r.error);
@@ -302,6 +331,7 @@
     }
     function handClick(i) {
       const c = v.me.hand[i], d = C.get(c.id);
+      S.play('select');
       if (!myTurn() || v.pending) { sheet(d, [], null); return; }
       const mine = L().filter(a => a.hand === i), acts = [];
       for (const t of ['summon', 'set']) {
@@ -359,6 +389,7 @@
       sheet(d, [], d.kind === 'monster' ? `${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}` : null);
     }
     function zoneClick(side, area, z) {
+      S.play('select');
       if (sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.allowed.includes(z)) {
         const k = sel.chosen.indexOf(z);
         if (k >= 0) sel.chosen.splice(k, 1); else sel.chosen.push(z);
@@ -393,27 +424,39 @@
     // ----- dibujo -----
     function zoneEl(side, area, z) {
       const s = v[side][area][z];
+      const key = side + '-' + area + '-' + z, old = zoneMem.get(key);
       const hl = (sel && sel.kind === 'target' && sel.side === side && sel.area === area && sel.zones.includes(z)) ||
         (sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.allowed.includes(z));
       const chosen = sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.chosen.includes(z);
-      const el = h('div', { class: 'zone ' + area + (hl ? ' hl' : '') + (v.atk && area === 'mz' && v.atk.z === z && ((v.atk.p === v.seat) === (side === 'me')) ? ' atkr' : ''), onclick: () => zoneClick(side, area, z) });
+      const attacking = v.atk && area === 'mz' && v.atk.z === z && ((v.atk.p === v.seat) === (side === 'me'));
+      const el = h('div', { class: 'zone ' + area + ' ' + side + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(side, area, z) });
+      let cur = null, landing = false;
       if (s) {
         let c;
         if (area === 'mz') c = s.c ? cardEl(C.get(s.c.id), { down: s.down, pos: s.pos, atk: s.atk, def: s.def }) : cardEl(null, { down: true, pos: 'def' });
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
-        if (s.c && s.c.uid !== undefined && lastUids.has(side + area + z) && lastUids.get(side + area + z) !== s.c.uid) c.classList.add('pop');
         el.append(c);
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
-        lastUids.set(side + area + z, s.c ? s.c.uid : 'x');
-      } else lastUids.delete(side + area + z);
+        cur = { uid: s.c ? s.c.uid : 'hidden', id: s.c ? s.c.id : null, down: !!s.down, pos: s.pos, area };
+        if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
+          landing = true; c.classList.add('landing');
+          const d = cur.id ? C.get(cur.id) : null;
+          fx.push({ k: key, type: cur.down && !cur.id ? 'small' : cur.down ? 'small' : (d && d.kind === 'monster' && d.level >= 7 ? 'epic' : d && d.kind !== 'monster' ? 'spell' : 'normal') });
+        }
+      } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old });
+      if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       return el;
     }
-    const lastUids = new Map();
     function pbar(side) {
       const p = v[side], mine = side === 'me', nm = seatNames()[mine ? v.seat : 1 - v.seat];
       const lp = h('span', { class: 'lp' }, String(p.lp));
-      if (prev && prev[side] !== p.lp) { const dlt = p.lp - prev[side]; lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt)); }
+      if (fresh && prev && prev[side] !== p.lp) {
+        const dlt = p.lp - prev[side];
+        lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt));
+        S.play(dlt > 0 ? 'heal' : mine ? 'hurt' : 'hit', 250);
+        if (dlt <= -1000) needShake = true;
+      }
       return h('div', null, h('div', { class: 'pbar ' + (mine ? 'mine' : 'theirs') },
         h('span', { class: 'nm' }, nm), h('span', { class: 'mini' }, `🂠${p.deckCount} ✋${p.handCount}`),
         h('button', { onclick: () => showGrave(side), title: 'Cementerio' }, '☠ ' + p.grave.length), lp),
@@ -430,14 +473,73 @@
     }
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.play(v.winner === v.seat ? 'win' : 'lose'); }
       const won = v.winner === v.seat, draw = v.winner === 'draw' || v.winner === -1;
       const box = h('div', { class: 'box end ' + (won ? 'win' : 'lose') }, h('h2', null, draw ? 'Empate' : won ? '¡Ganaste!' : 'Perdiste'), h('p', { class: 'sub', style: 'text-align:center' }, v.reason || ''),
         opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold') : null, btn('Menú', menu, opts.rematch ? 'ghost' : 'gold'));
       modal(box, false); modalEl.dataset.end = 1;
     }
 
+    // ----- sonidos y efectos de lo que acaba de pasar -----
+    function logEvents() {
+      const fresh2 = v.log.filter(l => l.n > lastLogN);
+      if (v.log.length) lastLogN = Math.max(lastLogN, v.log[v.log.length - 1].n);
+      if (firstView) return;
+      let i = 0;
+      for (const l of fresh2) {
+        const t = l.t; let snd = null;
+        if (/^Turno/.test(t)) snd = 'turn';
+        else if (/^invoca a/.test(t)) { const m = /^invoca a (.+) \(ATK/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; }
+        else if (/^revive a/.test(t)) snd = 'summon';
+        else if (/boca abajo/.test(t)) snd = 'set';
+        else if (/^voltea/.test(t)) snd = 'flip';
+        else if (/cambia a/.test(t)) snd = 'pos';
+        else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cut.push({ d, kind: 'trap' }); }
+        else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) cut.push({ d, kind: 'spell' }); }
+        else if (/No es muy eficaz/.test(t)) snd = 'noteff';
+        else if (/muy eficaz/.test(t)) snd = 'eff';
+        else if (/ataca/.test(t)) snd = 'attack';
+        else if (/destruid|destruye/.test(t)) snd = 'destroy';
+        else if (/negado|anulada/.test(t)) snd = 'negate';
+        else if (/agrega un monstruo|^roba |^descarta|se revela|fase de batalla/.test(t)) snd = 'select';
+        if (snd) { S.play(snd, i * 170); i++; }
+      }
+    }
+    const rectOf = k => { const z = document.querySelector('.zone[data-k="' + k + '"]'); return z ? z.getBoundingClientRect() : null; };
+    function runFx() {
+      for (const f of fx) {
+        const r = rectOf(f.k); if (!r) continue;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zs = parseFloat(getComputedStyle(document.querySelector('.zone')).fontSize) || 12;
+        if (f.type === 'gone') {
+          const c = f.card, g = h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
+          document.body.append(g); setTimeout(() => g.remove(), 800);
+        } else {
+          const size = r.width * (f.type === 'epic' ? 3.8 : f.type === 'small' ? 2 : 3);
+          const b = h('div', { class: 'fxburst ' + f.type, style: `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px` }, h('div', { class: 'glow' }), h('div', { class: 'rays' }));
+          document.body.append(b); setTimeout(() => b.remove(), 1400);
+        }
+      }
+      fx = [];
+      const c = cut.shift(); cut = [];
+      if (c) {
+        const el = h('div', { class: 'cutin ' + c.kind }, h('div', { class: 'cc' }, cardEl(c.d), h('div', { class: 'tag' }, c.kind === 'trap' ? '¡Trampa activada!' : 'Magia activada')));
+        const cd = el.querySelector('.card'); cd.style.fontSize = '24px';
+        document.body.append(el); setTimeout(() => el.remove(), 1600);
+      }
+      if (needShake) { const g = document.querySelector('.game'); if (g) { g.classList.add('shake'); setTimeout(() => g.classList.remove('shake'), 500); } needShake = false; }
+    }
+
     function render() {
       if (!v) return;
+      fresh = newView; newView = false;
+      if (fresh) {
+        logEvents();
+        if (!firstView && prevHandN != null && v.me.handCount > prevHandN) S.play('draw');
+        prevHandN = v.me.handCount;
+        // música más tensa con poca vida
+        const low = Math.min(v.me.lp, v.opp.lp) <= 2500 && v.winner === null;
+        if (low !== lowTrack) { lowTrack = low; S.setTrack(low ? 'boss' : 'volcano'); }
+      }
       const my = myTurn();
       const dis = v.pending && v.pending.player === v.seat;
       const hand = h('div', { class: 'hand' + (v.me.hand.length <= 5 ? ' few' : '') });
@@ -462,6 +564,7 @@
         h('span', { class: 'turn' }, `T${v.turn} · ${v.current === v.seat ? 'Tu turno' : 'Rival'} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`),
         h('span', { class: 'logline' }, lastLog ? (lastLog.p >= 0 ? seatNames()[lastLog.p] + ' ' : '') + lastLog.t : ''),
         h('button', { class: 'btn ghost', onclick: showLog }, '📜'),
+        h('button', { class: 'btn ghost', onclick: soundPanel, title: 'Sonido' }, '🔊'),
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar', () => act(L().find(a => a.t === 'endTurn')), canBattle ? 'ghost' : 'gold') : null,
         btn('🏳', () => { if (confirm('¿Rendirte?')) match.resign(); }, 'ghost'));
@@ -470,10 +573,11 @@
       const g = h('div', { class: 'game' }, pbar('opp'), fan, h('div', { class: 'field' }, rows), banner, mid, pbar('me'), hand);
       app.replaceChildren(g);
       pendingUI();
+      if (fresh) { runFx(); firstView = false; }
       if (v.winner !== null) showEnd();
     }
 
-    match.onView(nv => { prev = v ? { me: v.me.lp, opp: v.opp.lp } : null; v = nv; if (sel && !myTurn()) sel = null; render(); });
+    match.onView(nv => { prev = v ? { me: v.me.lp, opp: v.opp.lp } : null; v = nv; newView = true; if (sel && !myTurn()) sel = null; render(); });
     match.onStatus(s => {
       if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
       if (s.k === 'rejected' && !v) { alert('No se pudo empezar: ' + s.why); menu(); }
