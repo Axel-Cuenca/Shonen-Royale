@@ -24,7 +24,12 @@ G.FIREBASE_CONFIG = {
  * directo). Se pega aquí la lista "iceServers" que da el proveedor (p. ej. Metered).
  * Vacío = sólo conexión directa (STUN de Google). Estos datos acaban visibles en la
  * web: usa un plan gratuito y no reutilices la clave en otro sitio. */
-G.TURN_SERVERS = [];
+G.TURN_SERVERS = [
+  { urls: 'turn:global.relay.metered.ca:80', username: '2ca9d32f1339982851a71bf1', credential: 'DbMMrIR/V5M2f0dV' },
+  { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: '2ca9d32f1339982851a71bf1', credential: 'DbMMrIR/V5M2f0dV' },
+  { urls: 'turn:global.relay.metered.ca:443', username: '2ca9d32f1339982851a71bf1', credential: 'DbMMrIR/V5M2f0dV' },
+  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '2ca9d32f1339982851a71bf1', credential: 'DbMMrIR/V5M2f0dV' }
+];
 
 /* Ejemplo de cómo debe quedar:
 G.FIREBASE_CONFIG = {
