@@ -6,6 +6,12 @@
  * Cada línea en español y en inglés.
  */
 G.CHANGELOG = [
+  { d: '2026-10-19', title: ['Duelo de cartas: los Pokémon como monstruos', 'Card duel: Pokémon as monsters'], new: [
+    ['Nuevo modo «Duelo de cartas» (en el menú): duelos de cartas por turnos con 8000 PV, monstruos con nivel, ATK y DEF sacados de cada Pokémon, 12 magias y 5 trampas. Juega contra la computadora (fácil o normal) o online con un amigo con un código de sala.',
+     'New “Card duel” mode (in the menu): turn-based card duels with 8000 LP, monsters whose level, ATK and DEF come from each Pokémon, 12 spells and 5 traps. Play against the computer (easy or normal) or online with a friend using a room code.'],
+    ['Constructor de mazos de 30 cartas (máximo 2 copias de cada una) con 18 mazos de estreno, uno por tipo. La ventaja de tipo suma o resta ATK en combate.',
+     'Deck builder for 30-card decks (max 2 copies of each) with 18 starter decks, one per type. Type advantage adds or subtracts ATK in combat.']
+  ] },
   { d: '2026-10-18', title: ['Físico y especial, mando, botón Guardar y rankings desde cero', 'Physical and special, controller, Save button and fresh leaderboards'], new: [
     ['Ataques físicos y especiales, como en los juegos: cada Pokémon tiene su Ataque, Ataque Especial, Defensa y Defensa Especial. Los ataques físicos pegan con su Ataque y los especiales con su Ataque Especial: Machamp pega fuerte con Golpe Kárate y flojo con Bola Sombra. Con los de su lado bueno pega lo mismo que antes. Al subir de nivel, cada carta dice si el ataque es físico o especial y cuánto rinde con tu Pokémon, y en la colección se ven todas sus estadísticas.',
      'Physical and special moves, like in the games: every Pokémon has its Attack, Special Attack, Defense and Special Defense. Physical moves use its Attack and special moves its Special Attack: Machamp hits hard with Karate Chop and weakly with Shadow Ball. With moves on its strong side it hits as hard as before. When leveling up, each card says whether the move is physical or special and how well it works with your Pokémon, and the collection shows all its stats.'],

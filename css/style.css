@@ -881,3 +881,6 @@ a.btn { text-decoration: none; display: inline-block; color: var(--ink); }
   #dex-detail .btn { position: sticky; bottom: 0; order: 9; margin-top: auto; padding: 8px 6px; font-size: 15px;
     box-shadow: 0 -6px 10px rgba(5,10,25,.6); }
 }
+
+a.menu-item { color: inherit; text-decoration: none; }
+.mi-ico { font-size: 22px; align-items: center; justify-content: center; }
