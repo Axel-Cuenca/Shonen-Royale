@@ -9,6 +9,33 @@
   const byName = {};
   C.all().forEach(c => { byName[c.name] = c; });
 
+  // ---------------- fondo animado (arena flotante en el cielo) ----------------
+  (function makeBg() {
+    const bg = h('div', { id: 'bg' }, h('div', { class: 'aura a1' }), h('div', { class: 'aura a2' }), h('div', { class: 'cloud c1' }), h('div', { class: 'cloud c2' }), h('div', { class: 'cloud c3' }),
+      h('div', { class: 'circle' }, h('i'), h('i'), h('i')), h('div', { class: 'isle' }));
+    for (let i = 0; i < 38; i++) {
+      const m = h('span', { class: 'mote' });
+      m.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;--d:${6 + Math.random() * 12}s;--s:${2 + Math.random() * 4}px;animation-delay:-${Math.random() * 14}s;opacity:${.3 + Math.random() * .6}`;
+      bg.append(m);
+    }
+    document.body.prepend(bg);
+  })();
+
+  // ---------------- vista previa al pasar el mouse ----------------
+  let prevEl = null;
+  function hidePreview() { if (prevEl) { prevEl.remove(); prevEl = null; } }
+  document.addEventListener('mouseover', e => {
+    if (!window.matchMedia || !matchMedia('(hover: hover) and (min-width: 900px)').matches) return;
+    const el = e.target.closest && e.target.closest('[data-cid]');
+    if (!el) { hidePreview(); return; }
+    const d = C.get(el.dataset.cid); if (!d) return;
+    hidePreview();
+    const big = cardEl(d); big.classList.add('big');
+    prevEl = h('div', { class: 'preview' }, big, h('div', { class: 'pv-t' }, h('b', null, d.name), d.kind === 'monster' ? h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`) : h('div', null, d.text)));
+    document.body.append(prevEl);
+  });
+  document.addEventListener('mouseleave', hidePreview);
+
   // ---------------- utilidades ----------------
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -58,12 +85,12 @@
     if (d.kind === 'monster') {
       const atk = o.atk != null ? o.atk : d.atk, def = o.def != null ? o.def : d.def;
       const cls = (v, base) => v > base ? 'up' : v < base ? 'dn' : '';
-      return h('div', { class: 'card m' + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), style: '--tc:' + C.TYPE_COLOR[d.type] },
+      return h('div', { class: 'card m' + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
         h('div', { class: 'cn' }, d.name), sprite(d),
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
     }
-    return h('div', { class: 'card ' + d.kind + (o.down ? ' dis' : '') },
+    return h('div', { class: 'card ' + d.kind + (o.down ? ' dis' : ''), 'data-cid': d.id },
       h('div', { class: 'cn' }, d.name), h('div', { class: 'art ico' }, d.icon),
       h('div', { class: 'ck' }, d.kind === 'spell' ? (d.sub === 'equip' ? 'Magia · Equipo' : 'Magia') : 'Trampa'));
   }
@@ -113,7 +140,7 @@
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } current = null; } closeModal(); }
+  function endCurrent() { if (current) { try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   function menu() {
     endCurrent();
@@ -509,7 +536,7 @@
     function runFx() {
       for (const f of fx) {
         const r = rectOf(f.k); if (!r) continue;
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zs = parseFloat(getComputedStyle(document.querySelector('.zone')).fontSize) || 12;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zel = document.querySelector('.zone[data-k="' + f.k + '"]'), zs = (parseFloat(getComputedStyle(zel).fontSize) || 10) * (r.width / zel.offsetWidth);
         if (f.type === 'gone') {
           const c = f.card, g = h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
           document.body.append(g); setTimeout(() => g.remove(), 800);
@@ -528,6 +555,18 @@
       }
       if (needShake) { const g = document.querySelector('.game'); if (g) { g.classList.add('shake'); setTimeout(() => g.classList.remove('shake'), 500); } needShake = false; }
     }
+
+    const TILT = 40;
+    function fitBoard() {
+      const st = document.querySelector('.stage'), b = document.querySelector('.board3d'), pr = document.querySelector('.persp');
+      if (!st || !b) return;
+      const sw = st.clientWidth, sh = st.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
+      const k = Math.max(0.2, Math.min(sw / (bw * 1.13), (sh - 6) / (bh * Math.cos(TILT * Math.PI / 180) * 1.04 + 8)));
+      b.style.setProperty('--k', k.toFixed(3));
+      pr.style.perspective = Math.round(bw * k * 2.6) + 'px';
+    }
+    window.addEventListener('resize', fitBoard);
+    current.cleanup0 = () => window.removeEventListener('resize', fitBoard);
 
     function render() {
       if (!v) return;
@@ -570,8 +609,10 @@
         btn('🏳', () => { if (confirm('¿Rendirte?')) match.resign(); }, 'ghost'));
       const rows = [];
       for (const [side, areas] of [['opp', ['st', 'mz']], ['me', ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(side, area, z))));
-      const g = h('div', { class: 'game' }, pbar('opp'), fan, h('div', { class: 'field' }, rows), banner, mid, pbar('me'), hand);
+      const stage = h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, h('div', { class: 'slab' }, h('div', { class: 'rune' }), rows))));
+      const g = h('div', { class: 'game' }, pbar('opp'), fan, stage, banner, mid, pbar('me'), hand);
       app.replaceChildren(g);
+      fitBoard();
       pendingUI();
       if (fresh) { runFx(); firstView = false; }
       if (v.winner !== null) showEnd();
