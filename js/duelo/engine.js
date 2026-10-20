@@ -14,6 +14,12 @@
  *   · las trampas se colocan boca abajo y se activan al turno siguiente, como
  *     respuesta a un ataque, una magia o una invocación del rival
  *   · pierdes con 0 PV o si no puedes robar
+ *   · 3-4 jugadores: «todos contra todos» (ffa) o «2 contra 2» (teams, 4 asientos:
+ *     0 y 2 contra 1 y 3). Cada uno tiene su campo y sus PV. Se juega en orden de
+ *     asiento; el que cae queda fuera (su campo y mano van al cementerio) y se
+ *     salta su turno. Gana el último jugador (o equipo) en pie. En la primera
+ *     ronda nadie ataca. Las trampas las pueden activar todos los rivales del que
+ *     actúa (en un ataque, sólo el atacado), por orden de turno.
  *
  * API:  newGame(decks, opts) · actor(st) · legal(st, p) · apply(st, p, action)
  *       view(st, seat)
@@ -47,25 +53,29 @@
   }
 
   function mkPlayer() {
-    return { lp: START_LP, deck: [], hand: [], grave: [], mz: new Array(ZONES).fill(null), st: new Array(ZONES).fill(null), normalUsed: false };
+    return { alive: true, lp: START_LP, deck: [], hand: [], grave: [], mz: new Array(ZONES).fill(null), st: new Array(ZONES).fill(null), normalUsed: false };
   }
 
   // ---------------- partida nueva ----------------
   function newGame(decks, opts) {
     opts = opts || {};
+    const n = decks.length;
+    if (n < 2 || n > 4) throw new Error('El duelo es de 2 a 4 jugadores.');
+    const mode = n === 2 ? 'duel' : (opts.mode === 'teams' && n === 4 ? 'teams' : 'ffa');
     const st = {
+      n, mode, team: mode === 'teams' ? [0, 1, 0, 1] : decks.map((_, i) => i),
       turn: 0, phase: 'main', current: 0, first: 0, nextUid: 1,
       seed: (opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff)) | 0,
-      players: [mkPlayer(), mkPlayer()],
+      players: decks.map(() => mkPlayer()),
       pending: null, chain: null, atk: null, summon: null,
-      winner: null, reason: '', log: [], logN: 0
+      winner: null, reason: '', rank: [], log: [], logN: 0
     };
-    for (let p = 0; p < 2; p++) {
+    for (let p = 0; p < n; p++) {
       const P = st.players[p];
       P.deck = shuffle(st, decks[p].map(id => ({ uid: st.nextUid++, id })));
       for (let i = 0; i < START_HAND; i++) P.hand.push(P.deck.shift());
     }
-    st.current = opts.first != null ? opts.first : (rnd(st) < 0.5 ? 0 : 1);
+    st.current = opts.first != null ? opts.first : Math.floor(rnd(st) * n);
     st.first = st.current;
     log(st, -1, '¡Comienza el duelo!');
     startTurn(st);
@@ -81,11 +91,23 @@
     log(st, st.current, `Turno ${st.turn}`);
     if (st.turn > 1) drawCards(st, st.current, 1);
   }
+  /** Siguiente asiento con vida, en orden. */
+  function nextAlive(st, p) {
+    for (let i = 1; i <= st.n; i++) { const q = (p + i) % st.n; if (st.players[q].alive) return q; }
+    return p;
+  }
+  /** Rivales vivos de p (de otro equipo), en orden de turno a partir de p. */
+  function foes(st, p) {
+    const r = [];
+    for (let i = 1; i < st.n; i++) { const q = (p + i) % st.n; if (st.players[q].alive && st.team[q] !== st.team[p]) r.push(q); }
+    return r;
+  }
+  const multi = st => st.n > 2;
 
   function drawCards(st, p, n) {
     const P = st.players[p];
     for (let i = 0; i < n; i++) {
-      if (!P.deck.length) { setWinner(st, 1 - p, 'No le quedan cartas para robar.'); return false; }
+      if (!P.deck.length) { eliminate(st, p, 'No le quedan cartas para robar.'); checkWin(st); return false; }
       P.hand.push(P.deck.shift());
     }
     return true;
@@ -96,14 +118,28 @@
     st.winner = w; st.reason = reason; st.pending = null; st.chain = null; st.atk = null;
     log(st, -1, w === 'draw' ? 'Empate.' : 'Fin del duelo.');
   }
+  /** Un jugador queda fuera: su mano y su campo van al cementerio. */
+  function eliminate(st, p, why) {
+    const P = st.players[p];
+    if (!P.alive) return;
+    P.alive = false; P.lp = 0;
+    for (let z = 0; z < ZONES; z++) { if (P.mz[z]) { P.grave.push(P.mz[z].c); P.mz[z] = null; } }
+    for (let z = 0; z < ZONES; z++) { if (P.st[z]) { P.grave.push(P.st[z].c); P.st[z] = null; } }
+    while (P.hand.length) P.grave.push(P.hand.shift());
+    st.rank.push(p);
+    st.reason = why;
+    if (multi(st)) log(st, p, 'queda fuera del duelo');
+  }
   function checkWin(st) {
-    const a = st.players[0].lp <= 0, b = st.players[1].lp <= 0;
-    if (a && b) setWinner(st, 'draw', 'Los dos llegaron a 0 PV.');
-    else if (a) setWinner(st, 1, 'Se quedó sin PV.');
-    else if (b) setWinner(st, 0, 'Se quedó sin PV.');
+    if (st.winner !== null) return;
+    st.players.forEach((P, p) => { if (P.alive && P.lp <= 0) eliminate(st, p, 'Se quedó sin PV.'); });
+    const live = st.players.map((P, p) => p).filter(p => st.players[p].alive);
+    if (!live.length) { st.reason = st.n === 2 ? 'Los dos llegaron a 0 PV.' : 'Todos quedaron fuera a la vez.'; setWinner(st, 'draw', st.reason); }
+    else if (live.every(p => st.team[p] === st.team[live[0]])) setWinner(st, st.team[live[0]], st.reason);
   }
   function lose(st, p, n) {
     const P = st.players[p];
+    if (!P.alive) return;
     P.lp = Math.max(0, P.lp - Math.max(0, n));
     checkWin(st);
   }
@@ -163,34 +199,36 @@
       }
     },
     destroyOne: {
-      targets: (st, p, d) => st.players[p].lp > d.self ? zonesWith(st.players[1 - p].mz).map(z => ({ z })) : [],
+      targets: (st, p, d) => st.players[p].lp > d.self ? zoneTargets(st, p, 'mz') : [],
       resolve: (st, p, d, t) => {
-        const o = st.players[1 - p];
+        const e = foeOf(st, p, t), o = st.players[e];
         if (!t || !o.mz[t.z]) { log(st, p, 'no tiene objetivo'); return; }
         log(st, p, `destruye a ${def(o.mz[t.z].c).name}`);
-        removeMonster(st, 1 - p, t.z);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        removeMonster(st, e, t.z);
         lose(st, p, d.self);
       }
     },
     destroyAll: {
-      targets: st => (zonesWith(st.players[0].mz).length + zonesWith(st.players[1].mz).length) ? [null] : [],
+      targets: st => st.players.some(P => zonesWith(P.mz).length) ? [null] : [],
       resolve: st => {
-        for (let p = 0; p < 2; p++) for (let z = 0; z < ZONES; z++) removeMonster(st, p, z);
+        for (let p = 0; p < st.n; p++) for (let z = 0; z < ZONES; z++) removeMonster(st, p, z);
         log(st, -1, 'Todos los monstruos son destruidos');
       }
     },
     destroyST: {
-      targets: (st, p) => zonesWith(st.players[1 - p].st).map(z => ({ z })),
+      targets: (st, p) => zoneTargets(st, p, 'st'),
       resolve: (st, p, d, t) => {
-        const o = st.players[1 - p];
+        const e = foeOf(st, p, t), o = st.players[e];
         if (!t || !o.st[t.z]) { log(st, p, 'no tiene objetivo'); return; }
         log(st, p, 'destruye una carta de magia/trampa del rival');
-        removeST(st, 1 - p, t.z);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        removeST(st, e, t.z);
       }
     },
     burn: {
-      targets: () => [null],
-      resolve: (st, p, d) => { log(st, p, `inflige ${d.n} de daño directo`); lose(st, 1 - p, d.n); }
+      targets: (st, p) => multi(st) ? foes(st, p).map(vs => ({ vs })) : [null],
+      resolve: (st, p, d, t) => { const e = foeOf(st, p, t); log(st, p, `inflige ${d.n} de daño directo`); if (multi(st)) st.log[st.log.length - 1].q = e; lose(st, e, d.n); }
     },
     boost: {
       targets: (st, p) => zonesUp(st.players[p]).map(z => ({ z })),
@@ -206,6 +244,18 @@
       resolve: () => { /* se coloca en continueSpell */ }
     }
   };
+  /** Rival elegido por un objetivo ({vs}) o, en duelo de dos, el único rival. */
+  function foeOf(st, p, t) {
+    if (t && t.vs != null) return t.vs;
+    const f = foes(st, p);
+    return f.length ? f[0] : (p + 1) % st.n;
+  }
+  /** Zonas ocupadas de los rivales: [{z}] en duelo de dos, [{vs, z}] con más jugadores. */
+  function zoneTargets(st, p, area) {
+    const out = [];
+    for (const e of foes(st, p)) for (const z of zonesWith(st.players[e][area])) out.push(multi(st) ? { vs: e, z } : { z });
+    return out;
+  }
   function zonesWith(arr) { const r = []; arr.forEach((s, i) => { if (s) r.push(i); }); return r; }
   function zonesUp(P) { const r = []; P.mz.forEach((s, i) => { if (s && !s.down) r.push(i); }); return r; }
   function searchCands(st, p, d) {
@@ -252,18 +302,30 @@
       if (d.kind !== 'trap' || d.trigger !== trigger) return;
       if (trigger === 'attack' && !st.atk) return;
       if (trigger === 'spell' && !st.chain) return;
-      if (trigger === 'summon' && !st.summon) return;
+      if (trigger === 'summon' && !(st.summon && st.players[st.summon.p].mz[st.summon.z])) return;
       r.push(z);
     });
     return r;
   }
-  /** Abre una ventana para que el rival active una trampa. Devuelve true si hay que esperar su respuesta. */
+  /** Quién puede responder: en un ataque, el atacado; si no, los rivales del que actúa por orden de turno. */
+  function responders(st, trigger, by) {
+    if (trigger === 'attack' && st.atk && st.atk.vs != null) return [st.atk.vs];
+    return foes(st, by);
+  }
+  function nextWindow(st, trigger, cont, list) {
+    for (let i = 0; i < list.length; i++) {
+      const resp = list[i];
+      if (!st.players[resp].alive) continue;
+      const cands = trapCands(st, resp, trigger);
+      if (!cands.length) continue;
+      st.pending = { k: 'respond', player: resp, trigger, by: cont.by, cands, cont, rest: list.slice(i + 1) };
+      return true;
+    }
+    return false;
+  }
+  /** Abre una ventana para que un rival active una trampa. Devuelve true si hay que esperar su respuesta. */
   function openWindow(st, trigger, cont) {
-    const resp = 1 - cont.by;
-    const cands = trapCands(st, resp, trigger);
-    if (!cands.length) return false;
-    st.pending = { k: 'respond', player: resp, trigger, cands, cont };
-    return true;
+    return nextWindow(st, trigger, cont, responders(st, trigger, cont.by));
   }
   function applyTrap(st, resp, d) {
     switch (d.fx) {
@@ -276,7 +338,7 @@
         }
         break;
       case 'mirror':
-        if (st.atk) { st.atk.negated = true; log(st, resp, 'refleja el ataque: el rival pierde 800 PV'); lose(st, 1 - resp, 800); }
+        if (st.atk) { st.atk.negated = true; log(st, resp, 'refleja el ataque: el rival pierde 800 PV'); lose(st, st.atk.p, 800); }
         break;
       case 'negateSpell': if (st.chain) st.chain.negated = true; break;
       case 'destroySummoned':
@@ -310,31 +372,33 @@
   }
 
   // ---------------- batalla ----------------
-  function declareAttack(st, p, z, target) {
+  function declareAttack(st, p, z, target, vs) {
     const m = st.players[p].mz[z];
     m.attacked = true;
-    st.atk = { p, z, target, negated: false };
+    if (vs == null) vs = foeOf(st, p, null);
+    st.atk = { p, z, target, vs, negated: false };
     log(st, p, target === 'direct' ? `${def(m.c).name} ataca directamente` : `${def(m.c).name} ataca`);
+    if (multi(st)) st.log[st.log.length - 1].q = vs;
     if (openWindow(st, 'attack', { k: 'attack', by: p })) return;
     continueAttack(st);
   }
   function continueAttack(st) {
     const a = st.atk; st.atk = null;
     if (!a || a.negated || st.winner !== null) return;
-    const me = st.players[a.p], op = st.players[1 - a.p], at = me.mz[a.z];
-    if (!at) return;
+    const vs = a.vs, me = st.players[a.p], op = st.players[vs], at = me.mz[a.z];
+    if (!at || !op.alive) return;
     const ad = def(at.c);
     if (a.target === 'direct') {
       if (zonesWith(op.mz).length) return;
       const dmg = atkOf(me, a.z);
       log(st, a.p, `${ad.name} inflige ${dmg} de daño directo`);
-      lose(st, 1 - a.p, dmg);
+      lose(st, vs, dmg);
       return;
     }
     const dm = op.mz[a.target];
     if (!dm) return;
     const dd = def(dm.c);
-    if (dm.down) { dm.down = false; log(st, 1 - a.p, `se revela: ${dd.name}`); }
+    if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); }
     const bonus = C().typeBonus(ad.type, dd.types);
     let A = atkOf(me, a.z) + bonus;
     A = Math.max(0, A);
@@ -342,12 +406,12 @@
     else if (bonus < 0) log(st, -1, `No es muy eficaz… ${ad.name} ${bonus} ATK`);
     if (dm.pos === 'atk') {
       const B = atkOf(op, a.target);
-      if (A > B) { removeMonster(st, 1 - a.p, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, 1 - a.p, A - B); }
-      else if (A === B) { removeMonster(st, a.p, a.z); removeMonster(st, 1 - a.p, a.target); log(st, -1, 'Los dos monstruos son destruidos'); }
+      if (A > B) { removeMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, vs, A - B); }
+      else if (A === B) { removeMonster(st, a.p, a.z); removeMonster(st, vs, a.target); log(st, -1, 'Los dos monstruos son destruidos'); }
       else { removeMonster(st, a.p, a.z); log(st, -1, `${ad.name} es destruido`); lose(st, a.p, B - A); }
     } else {
       const B = defOf(op, a.target);
-      if (A > B) { removeMonster(st, 1 - a.p, a.target); log(st, -1, `${dd.name} es destruido`); }
+      if (A > B) { removeMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); }
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
@@ -362,8 +426,28 @@
   function finishTurn(st) {
     const P = st.players[st.current];
     for (const s of P.mz) if (s) s.atkMod = 0;
-    st.current = 1 - st.current;
+    st.current = nextAlive(st, st.current);
     startTurn(st);
+  }
+  /** Primer turno (de la partida) en que se puede atacar: tras la primera ronda si hay más de dos. */
+  const canAttackNow = st => st.turn > (st.n > 2 ? st.n : 1);
+  /** Deja la partida en un estado jugable tras una acción o una baja: salta turnos y respuestas de quien ya no está. */
+  function settle(st) {
+    for (let guard = 0; st.winner === null && guard < 16; guard++) {
+      const pd = st.pending;
+      if (pd && !st.players[pd.player].alive) {
+        st.pending = null;
+        if (pd.k === 'respond') afterRespond(st, pd.cont);
+        continue;
+      }
+      if (!st.players[st.current].alive) {
+        if (st.chain) { st.players[st.chain.p].grave.push(st.chain.inst); st.chain = null; }
+        st.pending = null; st.atk = null; st.summon = null;
+        finishTurn(st);
+        continue;
+      }
+      break;
+    }
   }
 
   // ---------------- acciones legales ----------------
@@ -431,14 +515,17 @@
         if (m.down && m.summonedTurn < st.turn) out.push({ t: 'flip', zone: z });
         if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn) out.push({ t: 'pos', zone: z });
       });
-      if (st.turn > 1 && P.mz.some(m => m && !m.down && m.pos === 'atk')) out.push({ t: 'toBattle' });
+      if (canAttackNow(st) && P.mz.some(m => m && !m.down && m.pos === 'atk')) out.push({ t: 'toBattle' });
       out.push({ t: 'endTurn' });
     } else if (st.phase === 'battle') {
-      const O = st.players[1 - p], targets = zonesWith(O.mz);
+      const mu = multi(st), fl = foes(st, p);
       P.mz.forEach((m, z) => {
         if (!m || m.down || m.pos !== 'atk' || m.attacked) return;
-        if (!targets.length) out.push({ t: 'attack', zone: z, target: 'direct' });
-        else for (const tz of targets) out.push({ t: 'attack', zone: z, target: tz });
+        for (const e of fl) {
+          const targets = zonesWith(st.players[e].mz);
+          if (!targets.length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
+          else for (const tz of targets) out.push(mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz });
+        }
       });
       out.push({ t: 'endTurn' });
     }
@@ -478,7 +565,7 @@
         break;
       }
       case 'toBattle': st.phase = 'battle'; log(st, p, 'pasa a la fase de batalla'); break;
-      case 'attack': declareAttack(st, p, a.zone, a.target); break;
+      case 'attack': declareAttack(st, p, a.zone, a.target, a.vs); break;
       case 'endTurn': endTurn(st); break;
       case 'respond': {
         const pd = st.pending; st.pending = null;
@@ -488,7 +575,10 @@
           applyTrap(st, p, d);
           P.st[a.zone] = null; P.grave.push(s.c);
         }
-        if (st.winner === null) afterRespond(st, pd.cont);
+        if (st.winner === null) {
+          const more = !(pd.trigger === 'spell' && st.chain && st.chain.negated) && pd.rest && pd.rest.length && nextWindow(st, pd.trigger, pd.cont, pd.rest);
+          if (!more) afterRespond(st, pd.cont);
+        }
         break;
       }
       case 'pick': {
@@ -518,6 +608,7 @@
         break;
       }
     }
+    settle(st);
     return { ok: true };
   }
 
@@ -537,7 +628,7 @@
   function playerView(st, p, own) {
     const P = st.players[p];
     return {
-      lp: P.lp, deckCount: P.deck.length, normalUsed: P.normalUsed,
+      seat: p, team: st.team[p], alive: P.alive, lp: P.lp, deckCount: P.deck.length, normalUsed: P.normalUsed,
       hand: own ? P.hand.map(i => ({ uid: i.uid, id: i.id })) : P.hand.map(() => null),
       handCount: P.hand.length,
       grave: P.grave.map(i => ({ uid: i.uid, id: i.id })),
@@ -551,6 +642,7 @@
     let pending = null;
     if (pd) {
       pending = { k: pd.k, player: pd.player };
+      if (pd.by != null) pending.by = pd.by;
       if (pd.player === seat) {
         if (pd.k === 'respond') { pending.trigger = pd.trigger; pending.cands = pd.cands.slice(); }
         if (pd.k === 'pick') {
@@ -561,13 +653,17 @@
         if (pd.k === 'discard') pending.excess = st.players[seat].hand.length - HAND_MAX;
       } else if (pd.k === 'respond') pending.trigger = pd.trigger;
     }
+    const players = st.players.map((_, i) => playerView(st, i, i === seat));
+    const fl = foes(st, seat);
+    const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {
-      seat, turn: st.turn, phase: st.phase, current: st.current, first: st.first,
+      seat, n: st.n, mode: st.mode, team: st.team.slice(), rank: st.rank.slice(),
+      turn: st.turn, phase: st.phase, current: st.current, first: st.first,
       winner: st.winner, reason: st.reason, actor: actor(st),
-      me: playerView(st, seat, true), opp: playerView(st, 1 - seat, false),
+      me: players[seat], opp: players[oppSeat], players,
       pending,
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
-      atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target } : null,
+      atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
       log: st.log.slice(-60),
       legal: legal(st, seat)
     };
@@ -584,8 +680,13 @@
   }
 
   /** Un jugador se rinde (o se desconecta). */
-  function resign(st, p, why) { setWinner(st, 1 - p, why || 'Se rindió.'); }
+  function resign(st, p, why) {
+    if (st.winner !== null || !st.players[p].alive) return;
+    eliminate(st, p, why || 'Se rindió.');
+    checkWin(st);
+    settle(st);
+  }
 
-  D.Engine = { newGame, actor, legal, apply, view, resign, countCards, START_LP, HAND_MAX, ZONES };
+  D.Engine = { newGame, actor, legal, apply, view, resign, countCards, foes, START_LP, HAND_MAX, ZONES };
   if (!isBrowser) module.exports = D.Engine;
 })();

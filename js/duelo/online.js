@@ -1,4 +1,4 @@
-/* ============ duelo/online.js — salas para duelos entre dos personas ============
+/* ============ duelo/online.js — salas para duelos de 2 a 4 personas ============
  * Usa el mismo Firebase y la misma sesión que el juego principal (mismo sitio, así
  * que si ya iniciaste sesión allí, aquí también). La sala vive en la Realtime
  * Database (rooms/<código>) sólo para encontrarse y negociar la conexión directa
@@ -74,10 +74,13 @@
     return () => { G.Net.off(onMsg); /* onPeer no tiene off: se ignora tras cerrar */ tr._peer = () => {}; };
   }
 
-  /** Crea una sala y espera a un invitado. cb: { onGuest(name), onState(state), onClosed() } */
+  /** Crea una sala de 2 a 4 asientos y espera invitados.
+   *  cb: { seats, onJoin(uid, name, transport), onLeave(uid, name), onState(uid, state), onClosed() }
+   *  Cada invitado trae su propio canal (transport) para Duelo.Match.host().addGuest(). */
   async function createRoom(cb) {
     const me = await init();
     if (!me) throw new Error('login');
+    const seats = Math.max(2, Math.min(4, (cb && cb.seats) | 0 || 2));
     let code = '', ok = false;
     for (let i = 0; i < 5 && !ok; i++) {
       code = genCode();
@@ -85,25 +88,37 @@
       ok = !snap.exists();
     }
     const ref = rtdb.ref('rooms/' + code);
-    await ref.set({ host: uid, open: true, t: Date.now(), m: { [uid]: { n: name } } });
+    await ref.set({ host: uid, open: true, seats, t: Date.now(), m: { [uid]: { n: name } } });
     ref.onDisconnect().remove();
     G.Net.open(code, true, uid);
-    let guest = null, gname = '';
-    const tr = makeTransport(() => guest);
-    const unwire = wire(tr, (u, st) => { if (u === guest && cb.onState) cb.onState(st); });
+    const guests = new Map();        // uid -> { name, tr, unwire }
+    let locked = false, gone = false;
+    const publishOpen = () => { if (!gone) ref.child('open').set(!locked && guests.size < seats - 1).catch(() => {}); };
     ref.child('m').on('value', s => {
       const m = s.val() || {}, uids = Object.keys(m);
-      if (!guest) {
-        const g = uids.find(u => u !== uid);
-        if (g) { guest = g; gname = String((m[g] && m[g].n) || 'Rival'); ref.child('open').set(false); }
-      } else if (!m[guest]) { tr._close(); if (cb.onClosed) cb.onClosed(); return; }
-      G.Net.syncMembers(uids);
-      if (guest && cb.onGuest && !tr._announced) { tr._announced = true; cb.onGuest(gname); }
+      for (const [u, g] of [...guests]) {
+        if (m[u]) continue;
+        g.tr._close(); g.unwire(); guests.delete(u);
+        if (cb.onLeave) cb.onLeave(u, g.name);
+      }
+      for (const u of uids) {
+        if (u === uid || guests.has(u)) continue;
+        if (locked || guests.size >= seats - 1) { ref.child('m/' + u).remove().catch(() => {}); continue; }   // llegó tarde: no hay sitio
+        const tr = makeTransport(() => u), gname = String((m[u] && m[u].n) || 'Rival').slice(0, 24);
+        const unwire = wire(tr, (pu, st) => { if (pu === u && cb.onState) cb.onState(u, st); });
+        guests.set(u, { name: gname, tr, unwire });
+        if (cb.onJoin) cb.onJoin(u, gname, tr);
+      }
+      G.Net.syncMembers([uid].concat([...guests.keys()]));
+      publishOpen();
     });
-    session = { code, ref, unwire };
+    session = { code, ref };
     return {
-      code, name, transport: tr,
-      close() { try { ref.child('m').off(); ref.remove(); } catch (e) { /* nada */ } G.Net.close(); unwire(); session = null; }
+      code, name, seats,
+      /** Cierra la sala a nuevos invitados (ya empezó el duelo). */
+      lock() { locked = true; publishOpen(); },
+      guestCount() { return guests.size; },
+      close() { gone = true; try { ref.child('m').off(); ref.remove(); } catch (e) { /* nada */ } G.Net.close(); for (const g of guests.values()) g.unwire(); guests.clear(); session = null; }
     };
   }
 
@@ -125,9 +140,15 @@
     const tr = makeTransport(() => hostUid);
     const unwire = wire(tr, (u, st) => { if (u === hostUid && cb && cb.onState) cb.onState(st); });
     rr.child('host').on('value', s => { if (!s.exists()) { tr._close(); if (cb && cb.onClosed) cb.onClosed(); } });
+    // si el anfitrión nos saca (llegamos tarde y no había sitio), lo avisamos
+    let seenMe = false;
+    mine.on('value', s => {
+      if (s.exists()) { seenMe = true; return; }
+      if (seenMe) { seenMe = false; rr.child('host').once('value').then(h => { if (h.exists()) { tr._close(); if (cb && cb.onKicked) cb.onKicked(); } }).catch(() => {}); }
+    });
     return {
       code, name, transport: tr,
-      close() { try { rr.child('host').off(); mine.remove(); } catch (e) { /* nada */ } G.Net.close(); unwire(); }
+      close() { try { rr.child('host').off(); mine.off(); mine.remove(); } catch (e) { /* nada */ } G.Net.close(); unwire(); }
     };
   }
 

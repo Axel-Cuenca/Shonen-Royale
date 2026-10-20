@@ -173,8 +173,8 @@
       h('h1', null, 'Duelo Pokémon'),
       h('p', { class: 'sub' }, 'Duelos de cartas con los Pokémon como monstruos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
       h('div', { class: 'panel' }, h('div', null, 'Mazo activo: ', h('b', null, dk.name)), bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null),
-      h('button', { class: 'menu-btn', disabled: !!bad, onclick: setupAI }, 'Contra la computadora', h('small', null, 'Práctica rápida, dos dificultades')),
-      h('button', { class: 'menu-btn', disabled: !!bad, onclick: onlineMenu }, 'Duelo online con un amigo', h('small', null, 'Crea una sala y comparte el código')),
+      h('button', { class: 'menu-btn', disabled: !!bad, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
+      h('button', { class: 'menu-btn', disabled: !!bad, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
       h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega'))));
   }
@@ -199,6 +199,14 @@
           h('li', null, 'Ataque contra ataque: gana el mayor ATK; el perdedor se destruye y su dueño pierde la diferencia en PV. Si empatan, se destruyen los dos.'),
           h('li', null, 'Ataque contra defensa: si el ATK supera a la DEF, el defensor se destruye (sin daño). Si no, el atacante pierde la diferencia en PV.'),
           h('li', null, 'Ventaja de tipo: el tipo principal del atacante suma o resta 500 o 1000 de ATK según la tabla de tipos del juego.')),
+        h('h2', null, '3 o 4 jugadores'),
+        h('ul', null,
+          h('li', null, 'Todos contra todos (3 o 4): cada uno tiene su campo y sus 8000 PV. Se juega por turnos en orden; quien llega a 0 PV (o no puede robar) queda fuera y su mano y su campo van al cementerio. Gana el último en pie.'),
+          h('li', null, '2 contra 2 (4 jugadores): los asientos 1.º y 3.º juegan contra el 2.º y el 4.º. Cada uno conserva sus PV; el equipo gana cuando caen los dos rivales. Nunca se ataca ni se apunta a un compañero.'),
+          h('li', null, 'Al atacar eliges a quién. Un monstruo sólo ataca directo al rival que no tiene monstruos. En la primera ronda nadie ataca.'),
+          h('li', null, 'Trampas: si te atacan, sólo puede responder el atacado. Con una magia o una invocación, pueden responder todos los rivales de quien actúa, por orden de turno.'),
+          h('li', null, 'Magias con rival (destruir un monstruo, destruir una magia/trampa, daño directo) te dejan elegir el rival. «Destruir todos los monstruos» afecta a todos, también a los tuyos y a los de tu equipo.'),
+          h('li', null, 'En la pantalla, toca la ficha de un rival para ver su campo. Si te sacan del duelo puedes seguir mirando hasta el final.')),
         h('h2', null, 'Magias y trampas'),
         h('ul', null,
           h('li', null, 'Las magias se activan desde la mano o boca abajo, en tu fase principal.'),
@@ -207,18 +215,37 @@
   }
 
   // ---------------- contra la computadora ----------------
+  // formatos de duelo: id → { n asientos, mode, título, descripción }
+  const FORMATS = {
+    duel: { n: 2, mode: 'duel', t: '1 contra 1', d: 'El duelo de siempre.' },
+    ffa3: { n: 3, mode: 'ffa', t: 'Todos contra todos · 3', d: 'Tres jugadores, cada uno por su cuenta. Gana el último en pie.' },
+    ffa4: { n: 4, mode: 'ffa', t: 'Todos contra todos · 4', d: 'Cuatro jugadores, cada uno por su cuenta. Gana el último en pie.' },
+    teams: { n: 4, mode: 'teams', t: '2 contra 2', d: 'Dos equipos de dos. Gana el equipo que deje sin PV a los dos rivales.' }
+  };
+  const fmtSelect = (onchange, aiNote) => {
+    const sel = h('select', { onchange: () => { note.textContent = FORMATS[sel.value].d + (aiNote ? aiNote(sel.value) : ''); if (onchange) onchange(sel.value); } },
+      Object.keys(FORMATS).map(k => h('option', { value: k }, FORMATS[k].t)));
+    const note = h('div', { class: 'sub' }, FORMATS.duel.d);
+    return { sel, note };
+  };
   function setupAI() {
     S.setTrack('prep');
     const lvl = h('select', null, h('option', { value: 'normal' }, 'Normal'), h('option', { value: 'easy' }, 'Fácil'));
     const rt = h('select', null, h('option', { value: '' }, 'Al azar'), C.PRESET_TYPES.map(t => h('option', { value: t }, 'Mazo de ' + C.TYPE_ES[t])));
+    const rtLabel = h('label', null, 'Mazo rival ', rt);
+    const f = fmtSelect(k => { rtLabel.style.display = k === 'duel' ? '' : 'none'; }, k => k === 'teams' ? ' Tu compañero y los dos rivales los juega la computadora.' : k === 'duel' ? '' : ' Los rivales los juega la computadora, cada uno con un mazo distinto.');
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Contra la computadora'),
-      h('div', { class: 'panel' }, h('label', null, 'Dificultad ', lvl), h('label', null, 'Mazo rival ', rt),
+      h('div', { class: 'panel' }, h('label', null, 'Formato ', f.sel), f.note, h('label', null, 'Dificultad ', lvl), rtLabel,
         h('div', { class: 'sub' }, 'Tu mazo: ' + activeDeck().name),
-        btn('¡A duelear!', () => startAI({ level: lvl.value, rival: rt.value }), 'gold'))));
+        btn('¡A duelear!', () => startAI({ level: lvl.value, rival: rt.value, fmt: f.sel.value }), 'gold'))));
   }
   function startAI(o) {
-    const type = o.rival || C.PRESET_TYPES[Math.floor(Math.random() * C.PRESET_TYPES.length)];
-    const match = D.Match.local({ deck: activeDeck().ids.slice(), aiDeck: C.presetDeck(type), aiLevel: o.level, name: 'Tú', aiName: 'Computadora (' + C.TYPE_ES[type] + ')' });
+    const fm = FORMATS[o.fmt || 'duel'];
+    let match;
+    if (fm.n === 2) {
+      const type = o.rival || C.PRESET_TYPES[Math.floor(Math.random() * C.PRESET_TYPES.length)];
+      match = D.Match.local({ deck: activeDeck().ids.slice(), aiDeck: C.presetDeck(type), aiLevel: o.level, name: 'Tú', aiName: 'Computadora (' + C.TYPE_ES[type] + ')' });
+    } else match = D.Match.local({ deck: activeDeck().ids.slice(), n: fm.n, mode: fm.mode, aiLevel: o.level, name: 'Tú', delay: 600 });
     game(match, { rematch: () => startAI(o) });
   }
 
@@ -236,34 +263,95 @@
       }
       const inp = h('input', { type: 'text', maxlength: 5, placeholder: 'CÓDIGO', style: 'text-transform:uppercase;width:8em;font-size:20px;text-align:center', autocomplete: 'off' });
       const err = h('div');
+      const f = fmtSelect(null, k => k === 'duel' ? '' : ' Si falta gente, los asientos libres los juega la computadora.');
       box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'),
         h('p', { class: 'sub' }, `Hola, ${me.name}. Mazo: ${activeDeck().name}.`),
-        h('div', { class: 'panel' }, h('h2', null, 'Crear sala'), h('p', { class: 'sub' }, 'Te da un código de 5 letras para pasarle a tu amigo.'), btn('Crear sala', hostRoom, 'gold')),
+        h('div', { class: 'panel' }, h('h2', null, 'Crear sala'), h('label', null, 'Formato ', f.sel), f.note,
+          h('p', { class: 'sub' }, 'Te da un código de 5 letras para pasarles a tus amigos.'), btn('Crear sala', () => hostRoom(f.sel.value), 'gold')),
         h('div', { class: 'panel' }, h('h2', null, 'Unirme a una sala'), h('div', { class: 'row' }, inp, btn('Entrar', () => joinRoom(inp.value, err)))), err);
     }).catch(e => box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('div', { class: 'msg err' }, 'No se pudo conectar: ' + e.message)));
   }
 
   const LOSTMSG = 'Vuestras conexiones no logran verse directamente (pasa con algunos Wi‑Fi). Probad con datos móviles en uno de los dos.';
 
-  async function hostRoom() {
+  /** Sala del anfitrión: código, asientos, quién entró, y «Empezar» (los asientos libres los juega la computadora). */
+  async function hostRoom(fmtId) {
     S.setTrack('prep');
+    const fm = FORMATS[fmtId || 'duel'], single = fm.n === 2;
     const status = h('div', { class: 'msg' }, 'Creando sala…');
     const codeEl = h('div', { class: 'code' }, '·····');
-    let room = null, match = null, failTimer = 0;
-    const cancel = () => { clearTimeout(failTimer); if (room) room.close(); if (match) match.close(); menu(); };
+    const seatsEl = h('div', { class: 'seats' });
+    const startBtn = btn('Empezar ahora', () => { if (match) match.begin(); }, 'gold big');
+    startBtn.style.display = 'none';
+    let room = null, match = null;
+    const conn = new Map();      // idx de invitado -> { state, timer, failed }
+    const byUid = new Map();     // uid -> idx
+    const queued = [];
+    const cancel = () => { conn.forEach(c => clearTimeout(c.timer)); if (room) room.close(); if (match) match.close(); menu(); };
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: cancel }, '← Cancelar'), h('h1', null, 'Tu sala'), codeEl,
-      h('p', { class: 'sub', style: 'text-align:center' }, 'Pásale este código a tu amigo. Que abra esta misma página, entre en «Duelo online» y pulse «Entrar».'), status));
+      h('p', { class: 'sub', style: 'text-align:center' }, `${fm.t}. Pásales este código a tus amigos: que abran esta misma página, entren en «Duelo online» y pulsen «Entrar».`),
+      single ? null : seatsEl, status, single ? null : h('div', { class: 'row', style: 'justify-content:center' }, startBtn),
+      single ? null : h('p', { class: 'sub', style: 'text-align:center' }, 'Tú decides cuándo empezar. Los asientos que queden libres los juega la computadora.')));
+
+    function renderSeats() {
+      if (single || !match) return;
+      const guests = match.lobby().filter(x => !x.left);
+      const rows = [];
+      rows.push(h('div', { class: 'seat me' }, h('b', null, 'Tú'), h('span', null, activeDeck().name)));
+      for (let i = 0; i < fm.n - 1; i++) {
+        const g = guests[i];
+        if (!g) { rows.push(h('div', { class: 'seat empty' }, h('b', null, 'Esperando…'), h('span', null, 'o la computadora'))); continue; }
+        const c = conn.get(g.idx) || {};
+        const st = !g.ready ? (c.state === 'direct' ? 'Conectado, recibiendo mazo…' : 'Conectando…') : c.failed ? 'Sin conexión directa' : 'Listo';
+        const row = h('div', { class: 'seat ' + (g.ready ? 'ok' : c.failed ? 'bad' : '') }, h('b', null, g.name), h('span', null, st));
+        if (fm.mode === 'teams') {
+          const sel = h('select', { onchange: () => { match.setPref(g.idx, sel.value); renderSeats(); } }, h('option', { value: 'ally' }, 'Mi compañero'), h('option', { value: 'foe' }, 'Rival'));
+          sel.value = g.pref; row.append(sel);
+        }
+        rows.push(row);
+      }
+      seatsEl.replaceChildren(...rows);
+      const nReady = guests.filter(g => g.ready).length;
+      startBtn.style.display = nReady >= 1 ? '' : 'none';
+      startBtn.textContent = nReady >= fm.n - 1 ? 'Empezar el duelo' : 'Empezar ahora (la computadora llena los asientos libres)';
+      if (nReady) { status.className = 'msg ok'; status.textContent = nReady >= fm.n - 1 ? 'Sala completa. Cuando todos estén listos, pulsa «Empezar el duelo».' : `${nReady + 1} de ${fm.n} en la sala.`; }
+      else { status.className = 'msg'; status.textContent = 'Esperando a tus amigos…'; }
+    }
+    function onJoin(uid, name, tr) {
+      if (!match) { queued.push([uid, name, tr]); return; }
+      const idx = match.addGuest(tr);
+      byUid.set(uid, idx);
+      const c = { state: 'connecting', failed: false, timer: 0 };
+      c.timer = setTimeout(() => { if (c.state !== 'direct') { c.failed = true; status.className = 'msg err'; status.textContent = LOSTMSG; renderSeats(); } }, 20000);
+      conn.set(idx, c);
+      if (single) { status.className = 'msg ok'; status.textContent = `${name} entró. Conectando…`; }
+      renderSeats();
+    }
     try {
       room = await D.Online.createRoom({
-        onGuest: n => { status.className = 'msg ok'; status.textContent = `${n} entró. Conectando…`; failTimer = setTimeout(() => { status.className = 'msg err'; status.textContent = LOSTMSG; }, 20000); },
-        onState: st => { if (st === 'direct') { clearTimeout(failTimer); status.className = 'msg ok'; status.textContent = 'Conectados. Preparando el duelo…'; } else if (st === 'failed') { status.className = 'msg err'; status.textContent = LOSTMSG; } },
-        onClosed: () => { if (!current) { status.className = 'msg err'; status.textContent = 'Tu amigo salió de la sala.'; } }
+        seats: fm.n,
+        onJoin,
+        onLeave: uid => { const idx = byUid.get(uid); if (idx != null) { const c = conn.get(idx); if (c) clearTimeout(c.timer); } if (single && !current) { status.className = 'msg err'; status.textContent = 'Tu amigo salió de la sala.'; } renderSeats(); },
+        onState: (uid, st) => {
+          const idx = byUid.get(uid), c = conn.get(idx);
+          if (!c) return;
+          c.state = st;
+          if (st === 'direct') { clearTimeout(c.timer); c.failed = false; if (single) { status.className = 'msg ok'; status.textContent = 'Conectados. Preparando el duelo…'; } }
+          else if (st === 'failed') { c.failed = true; status.className = 'msg err'; status.textContent = LOSTMSG; }
+          renderSeats();
+        }
       });
     } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
-    codeEl.textContent = room.code; status.textContent = 'Esperando a tu amigo…';
-    match = D.Match.host({ deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
-    match.onStatus(s => { if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; } });
-    game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
+    codeEl.textContent = room.code; status.textContent = single ? 'Esperando a tu amigo…' : 'Esperando a tus amigos…';
+    match = D.Match.host({ deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
+    match.onStatus(s => {
+      if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
+      else if (s.k === 'started') room.lock();
+      renderSeats();
+    });
+    game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); room.close(); }, online: true, wait: true });
+    queued.splice(0).forEach(q => onJoin(...q));
+    renderSeats();
   }
 
   async function joinRoom(code, errBox) {
@@ -273,14 +361,15 @@
     try {
       room = await D.Online.joinRoom(code, {
         onState: st => { if (st === 'direct') clearTimeout(failTimer); else if (st === 'failed') errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)); },
-        onClosed: () => { if (!current) errBox.replaceChildren(h('div', { class: 'msg err' }, 'El anfitrión cerró la sala.')); }
+        onClosed: () => { if (!current || !current.started) errBox.replaceChildren(h('div', { class: 'msg err' }, 'El anfitrión cerró la sala.')); },
+        onKicked: () => { if (!current || !current.started) { errBox.replaceChildren(h('div', { class: 'msg err' }, 'La sala se llenó antes de que entraras.')); menu(); } }
       });
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
-    errBox.replaceChildren(h('div', { class: 'msg ok' }, 'Dentro de la sala. Conectando con el anfitrión…'));
+    errBox.replaceChildren(h('div', { class: 'msg ok' }, 'Dentro de la sala. Conectando con el anfitrión… Cuando empiece el duelo entrarás solo.'));
     failTimer = setTimeout(() => errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)), 20000);
     const match = D.Match.guest({ deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
     match.onStatus(s => {
-      if (s.k === 'rejected') errBox.replaceChildren(h('div', { class: 'msg err' }, 'Tu mazo no es válido: ' + s.why));
+      if (s.k === 'rejected') errBox.replaceChildren(h('div', { class: 'msg err' }, s.why && /empez/.test(s.why) ? s.why : 'Tu mazo no es válido: ' + s.why));
     });
     game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
   }
@@ -349,14 +438,23 @@
   function game(match, opts) {
     opts = opts || {};
     endCurrent();
-    current = { match, cleanup: opts.cleanup };
-    sndButton(false); showBg(false);
-    S.setTrack('battle'); S.setAmbient(true);
-    let v = null, prev = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false;
+    const cur = current = { match, cleanup: opts.cleanup, started: false };
+    let prepared = false;
+    // en una sala de espera no se pone todavía el fondo de combate ni su música
+    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
+    if (!opts.wait) prepare();
+    let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, focus = 0, outShown = false;
     const zoneMem = new Map();
     let gameEl = null, zrowsEl = null;
     let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
     const seatNames = () => match.names;
+    const nameOf = q => seatNames()[q] || ('Jugador ' + (q + 1));
+    const shortOf = q => { const m = /^Computadora(?: (\d))?/.exec(nameOf(q)); return m ? 'Compu' + (m[1] ? ' ' + m[1] : '') : nameOf(q); };
+    const multi = () => !!v && v.n > 2;
+    const isAlly = q => q !== v.seat && v.team[q] === v.team[v.seat];
+    const seatOf = side => (side === 'me' ? v.seat : focus);
+    const Pv = side => v.players[seatOf(side)];
+    const place = q => v.n - v.rank.indexOf(q);
 
     function act(a) {
       if (!v || v.actor !== v.seat) { S.play('error'); return; }
@@ -366,6 +464,24 @@
     }
     const L = () => (v ? v.legal : []);
     const myTurn = () => v && v.actor === v.seat && v.winner === null;
+    function setFocus(q) {
+      if (q === focus || !v.players[q] || q === v.seat) return;
+      focus = q; sel = null; S.play('select'); render();
+    }
+
+    // ----- a quién mirar (el campo de arriba) -----
+    function autoFocus(pv) {
+      if (!multi()) { focus = v.opp.seat; return; }
+      const valid = q => q != null && q !== v.seat && v.players[q] && v.players[q].alive;
+      if (!pv) focus = valid(v.current) ? v.current : v.opp.seat;
+      else if (v.current !== pv.current || v.turn !== pv.turn) {
+        if (valid(v.current)) focus = v.current;
+        else if (v.current === v.seat && (!valid(focus) || isAlly(focus))) focus = v.opp.seat;
+      }
+      if (v.atk && v.atk.vs === v.seat && valid(v.atk.p)) focus = v.atk.p;
+      if (v.pending && v.pending.player === v.seat && valid(v.pending.by)) focus = v.pending.by;
+      if (!valid(focus)) { const f = v.players.find(q => q.seat !== v.seat && q.alive); focus = f ? f.seat : v.opp.seat; }
+    }
 
     // ----- acciones al tocar -----
     function sheet(card, acts, hint) {
@@ -384,6 +500,27 @@
       sel = { kind: 'tribute', need, allowed, chosen: [], opts: opts2, text: `Elige ${need} monstruo(s) para sacrificar` };
       render();
     }
+    /** Pregunta a qué rival (ventana) y llama a done(asiento). */
+    function pickFoe(seats, done, text) {
+      const box = h('div', { class: 'box' }, h('h2', null, text || '¿Sobre qué rival?'),
+        h('div', { class: 'acts' }, seats.map(q => btn(`${nameOf(q)} · ${v.players[q].lp} PV`, () => { closeModal(); done(q); }, 'gold'))),
+        btn('Cancelar', closeModal, 'ghost'));
+      modal(box);
+    }
+    /** Activar una magia: elegir rival y/o objetivo si hace falta. `list` = las acciones legales de esa carta. */
+    function spellFlow(list, d) {
+      if (!list[0].target) return act(list[0]);
+      if (d.fx === 'burn') {
+        const vsList = list.map(a => a.target.vs);
+        return vsList.length === 1 ? act(list[0]) : pickFoe(vsList, q => act(list.find(a => a.target.vs === q)), '¿A quién le haces daño?');
+      }
+      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST', area = d.fx === 'destroyST' ? 'st' : 'mz';
+      if (!toFoe) return pickTargets(list.map(a => a.target.z), 'me', area, z => act(list.find(a => a.target.z === z)), 'Elige el objetivo');
+      const vsOf = a => (a.target.vs != null ? a.target.vs : focus);
+      const go = q => { focus = q; const sub = list.filter(a => vsOf(a) === q); pickTargets(sub.map(a => a.target.z), 'opp', area, z => act(sub.find(a => a.target.z === z)), 'Elige el objetivo'); };
+      const seats = [...new Set(list.map(vsOf))];
+      return seats.length === 1 ? go(seats[0]) : pickFoe(seats, go, '¿Sobre qué rival?');
+    }
     function handClick(i) {
       const c = v.me.hand[i], d = C.get(c.id);
       S.play('select');
@@ -397,47 +534,43 @@
         else acts.push({ label: label + ` · sacrificar ${os[0].tributes.length}`, run: () => startTribute(i, t, os) });
       }
       const sp = mine.filter(a => a.t === 'activate');
-      if (sp.length) {
-        const run = () => {
-          if (!sp[0].target) return act(sp[0]);
-          const side = (d.fx === 'destroyOne' || d.fx === 'destroyST') ? 'opp' : 'me', area = d.fx === 'destroyST' ? 'st' : 'mz';
-          pickTargets(sp.map(a => a.target.z), side, area, z => act(sp.find(a => a.target.z === z)), 'Elige el objetivo');
-        };
-        acts.push({ label: 'Activar', run });
-      }
+      if (sp.length) acts.push({ label: 'Activar', run: () => spellFlow(sp, d) });
       const st = mine.find(a => a.t === 'setst');
       if (st) acts.push({ label: d.kind === 'trap' ? 'Colocar boca abajo' : 'Colocar boca abajo (para después)', run: () => act(st), cls: sp.length ? 'ghost' : 'gold' });
       sheet(d, acts, acts.length ? null : (v.me.normalUsed && d.kind === 'monster' ? 'Ya usaste tu invocación del turno.' : v.phase === 'battle' ? 'Solo se puede en la fase principal.' : 'No se puede jugar ahora.'));
     }
     function myMzClick(z) {
       const s = v.me.mz[z], d = C.get(s.c.id), acts = [];
+      let hint = null;
       if (myTurn() && !v.pending) {
-        const at = L().filter(a => a.t === 'attack' && a.zone === z);
+        const all = L().filter(a => a.t === 'attack' && a.zone === z);
+        const at = all.filter(a => a.vs == null || a.vs === focus);
         if (at.length) {
           const dir = at.find(a => a.target === 'direct');
-          if (dir) acts.push({ label: 'Atacar directamente', run: () => act(dir) });
-          else acts.push({ label: 'Atacar…', run: () => pickTargets(at.map(a => a.target), 'opp', 'mz', tz => act(at.find(a => a.target === tz)), 'Elige a quién atacar') });
+          const who = multi() ? ` a ${nameOf(focus)}` : '';
+          if (dir) acts.push({ label: 'Atacar directamente' + who, run: () => act(dir) });
+          else acts.push({ label: 'Atacar…', run: () => pickTargets(at.map(a => a.target), 'opp', 'mz', tz => act(at.find(a => a.target === tz)), 'Elige a quién atacar' + who) });
+        } else if (all.length && multi()) hint = `Para atacar con él, toca antes la ficha de un rival (arriba) y elige su campo. Ahora miras el de ${nameOf(focus)}${isAlly(focus) ? ' (tu compañero)' : ''}.`;
+        if (at.length && multi()) {
+          const others = [...new Set(all.filter(a => a.vs !== focus).map(a => a.vs))];
+          if (others.length) hint = 'También puedes atacar a ' + others.map(nameOf).join(' o ') + ': toca su ficha arriba.';
         }
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });
       }
-      const info = h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`);
+      const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null);
       modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null, btn('Cerrar', closeModal, 'ghost')));
     }
     function myStClick(z) {
       const s = v.me.st[z], d = C.get(s.c.id), acts = [];
       if (myTurn() && !v.pending) {
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
-        if (os.length) acts.push({ label: 'Activar', run: () => {
-          if (!os[0].target) return act(os[0]);
-          const side = (d.fx === 'destroyOne' || d.fx === 'destroyST') ? 'opp' : 'me', area = d.fx === 'destroyST' ? 'st' : 'mz';
-          pickTargets(os.map(a => a.target.z), side, area, tz => act(os.find(a => a.target.z === tz)), 'Elige el objetivo');
-        } });
+        if (os.length) acts.push({ label: 'Activar', run: () => spellFlow(os, d) });
       }
       sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : null);
     }
     function oppClick(area, z) {
-      const s = v.opp[area][z];
+      const s = Pv('opp')[area][z];
       if (!s) return;
       if (s.down) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const d = C.get(s.c.id);
@@ -460,12 +593,15 @@
     }
 
     // ----- ventanas de decisión (trampas, elegir carta, descarte) -----
-    const TRG = { attack: 'El rival declara un ataque.', spell: 'El rival activa una magia.', summon: 'El rival invoca un monstruo.' };
+    function trgText(pd) {
+      const who = multi() && pd.by != null ? nameOf(pd.by) : 'El rival';
+      return { attack: `${who} declara un ataque.`, spell: `${who} activa una magia.`, summon: `${who} invoca un monstruo.` }[pd.trigger] || '';
+    }
     function pendingUI() {
       const pd = v.pending;
       if (!pd || pd.player !== v.seat || v.winner !== null) { if (modalEl && modalEl.dataset.pend) closeModal(); return; }
       if (pd.k === 'respond') {
-        const box = h('div', { class: 'box' }, h('h2', null, '¿Activar una trampa?'), h('p', { class: 'sub' }, TRG[pd.trigger] || ''),
+        const box = h('div', { class: 'box' }, h('h2', null, '¿Activar una trampa?'), h('p', { class: 'sub' }, trgText(pd)),
           h('div', { class: 'acts' }, pd.cands.map(z => { const d = C.get(v.me.st[z].c.id); return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text)); })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));
         modal(box, false); modalEl.dataset.pend = 1;
@@ -477,13 +613,14 @@
     }
 
     // ----- dibujo -----
+    const curOf = (s, area) => (s ? { uid: s.c ? s.c.uid : 'hidden', id: s.c ? s.c.id : null, down: !!s.down, pos: s.pos, area } : null);
     function zoneEl(side, area, z) {
-      const s = v[side][area][z];
-      const key = side + '-' + area + '-' + z, old = zoneMem.get(key);
+      const seat = seatOf(side), s = v.players[seat][area][z];
+      const key = 's' + seat + '-' + area + '-' + z, old = zoneMem.get(key);
       const hl = (sel && sel.kind === 'target' && sel.side === side && sel.area === area && sel.zones.includes(z)) ||
         (sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.allowed.includes(z));
       const chosen = sel && sel.kind === 'tribute' && side === 'me' && area === 'mz' && sel.chosen.includes(z);
-      const attacking = v.atk && area === 'mz' && v.atk.z === z && ((v.atk.p === v.seat) === (side === 'me'));
+      const attacking = v.atk && area === 'mz' && v.atk.z === z && v.atk.p === seat;
       const el = h('div', { class: 'zone ' + area + ' ' + side + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(side, area, z) });
       let cur = null, landing = false;
       if (s) {
@@ -493,7 +630,7 @@
         if (chosen) c.classList.add('sel');
         el.append(c);
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
-        cur = { uid: s.c ? s.c.uid : 'hidden', id: s.c ? s.c.id : null, down: !!s.down, pos: s.pos, area };
+        cur = curOf(s, area);
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');
           const d = cur.id ? C.get(cur.id) : null;
@@ -503,44 +640,80 @@
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       return el;
     }
-    function pbar(side) {
-      const p = v[side], mine = side === 'me', nm = seatNames()[mine ? v.seat : 1 - v.seat];
-      const lp = h('span', { class: 'lp' }, String(p.lp));
-      if (fresh && prev && prev[side] !== p.lp) {
-        const dlt = p.lp - prev[side];
-        lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt));
-        S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : mine ? 'hurt' : 'hit', 250);
-        if (dlt < 0 && lastFam) fx.push({ pc: side, type: 'pc', fam: lastFam });
-        if (dlt <= -1000) needShake = true;
+    /** Los campos que no se ven también se recuerdan, para no inventar efectos al cambiar de rival. */
+    function rememberHidden() {
+      for (const q of v.players) {
+        if (q.seat === v.seat || q.seat === focus) continue;
+        for (const area of ['mz', 'st']) q[area].forEach((s, z) => {
+          const key = 's' + q.seat + '-' + area + '-' + z;
+          if (s) zoneMem.set(key, curOf(s, area)); else zoneMem.delete(key);
+        });
+      }
+    }
+    /** Ficha de un jugador: grande (1 contra 1 y la mía) o compacta (los demás en 3-4 jugadores). */
+    function pcard(seat, tile) {
+      const p = v.players[seat], mine = seat === v.seat, nm = nameOf(seat);
+      const lp = h('span', { class: 'lp' }, p.alive ? String(p.lp) : '☠');
+      if (fresh && prevLps && prevLps[seat] !== p.lp && !(prevLps[seat] === 0 && !p.alive)) {
+        const dlt = p.lp - prevLps[seat];
+        if (dlt) {
+          lp.append(h('span', { class: 'fl ' + (dlt < 0 ? 'neg' : 'pos') }, (dlt > 0 ? '+' : '') + dlt));
+          S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : mine ? 'hurt' : 'hit', 250);
+          if (dlt < 0 && lastFam) fx.push({ pc: seat, type: 'pc', fam: lastFam });
+          if (dlt <= -1000) needShake = true;
+        }
       }
       const pct = Math.max(0, Math.min(100, p.lp / 80));
       const ini = (nm || '?').trim().charAt(0).toUpperCase();
-      return h('div', { class: 'pcard ' + (mine ? 'mine' : 'theirs') },
+      const cls = 'pcard ' + (mine ? 'mine' : isAlly(seat) ? 'ally' : 'theirs') + (tile ? ' ptile' : '') + (!p.alive ? ' dead' : '') +
+        (v.current === seat && v.winner === null && p.alive ? ' turn' : '') + (tile && seat === focus ? ' focus' : '');
+      const mini = tile ? h('div', { class: 'mini', title: 'Monstruos en su campo' }, p.mz.map(m => h('i', { class: m ? (m.down ? 'dn' : m.pos === 'atk' ? 'at' : 'df') : '' })), h('em', null, `${p.st.filter(Boolean).length}▫`)) : null;
+      const tag = tile && v.mode === 'teams' ? h('span', { class: 'ptag ' + (isAlly(seat) ? 'ally' : 'foe') }, isAlly(seat) ? 'Aliado' : 'Rival') : null;
+      return h('div', { class: cls, 'data-seat': seat, onclick: tile && p.alive ? () => setFocus(seat) : (tile ? () => setFocus(seat) : null), title: tile ? 'Ver su campo' : null },
         h('div', { class: 'av' }, ini),
         h('div', { class: 'pi' },
-          h('div', { class: 'pn' }, nm),
+          h('div', { class: 'pn', title: nm }, h('span', { class: 'pnm' }, nm), h('span', { class: 'pns' }, shortOf(seat)), tag),
           h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
-          h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: () => showGrave(side), title: 'Cementerio' }, `☠ ${p.grave.length}`))));
+          mini,
+          h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`))));
     }
-    function showGrave(side) {
-      const g = v[side].grave;
-      modal(h('div', { class: 'box' }, h('h2', null, 'Cementerio'), g.length ? h('div', { class: 'cands' }, g.map(c => h('div', { style: 'cursor:pointer;text-align:center', onclick: () => modal(h('div', { class: 'box' }, detailBox(c.id), btn('Cerrar', closeModal))) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))) : h('p', { class: 'sub' }, 'Vacío.'), btn('Cerrar', closeModal, 'ghost')));
+    function showGrave(seat) {
+      const g = v.players[seat].grave;
+      modal(h('div', { class: 'box' }, h('h2', null, seat === v.seat ? 'Tu cementerio' : 'Cementerio de ' + nameOf(seat)), g.length ? h('div', { class: 'cands' }, g.map(c => h('div', { style: 'cursor:pointer;text-align:center', onclick: () => modal(h('div', { class: 'box' }, detailBox(c.id), btn('Cerrar', closeModal))) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))) : h('p', { class: 'sub' }, 'Vacío.'), btn('Cerrar', closeModal, 'ghost')));
     }
+    const fmtLog = l => (l.p >= 0 ? nameOf(l.p) + ' ' : '') + l.t + (l.q != null ? ' → ' + nameOf(l.q) : '');
     function showLog() {
-      const names = seatNames();
       modal(h('div', { class: 'box' }, h('h2', null, 'Registro'),
-        h('div', { class: 'logbox' }, v.log.slice().reverse().map(l => h('div', { class: l.p < 0 ? 'lx' : (l.p === v.seat ? 'l0' : 'l1') }, (l.p >= 0 ? names[l.p] + ' ' : '') + l.t))), btn('Cerrar', closeModal, 'ghost')));
+        h('div', { class: 'logbox' }, v.log.slice().reverse().map(l => h('div', { class: l.p < 0 ? 'lx' : (l.p === v.seat ? 'l0' : 'l1') }, fmtLog(l)))), btn('Cerrar', closeModal, 'ghost')));
+    }
+    /** Orden final: ganadores primero y luego, de último a primero en caer. */
+    function standings() {
+      const win = v.winner;
+      if (win === 'draw' || win == null || win === -1) return v.players.map(q => q.seat);
+      const winners = v.players.filter(q => v.team[q.seat] === win).map(q => q.seat);
+      return winners.concat(v.rank.slice().reverse().filter(q => !winners.includes(q)));
     }
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
-      const won = v.winner === v.seat, draw = v.winner === 'draw' || v.winner === -1;
+      const myTeam = v.team[v.seat], won = v.winner === myTeam, draw = v.winner === 'draw' || v.winner === -1;
       if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); }
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
+      let sub = v.reason || '', list = null;
+      if (multi() && !draw) {
+        const order = standings(), winners = order.filter(q => v.team[q] === v.winner);
+        if (v.mode === 'teams') {
+          sub = 'Equipo ganador: ' + winners.map(nameOf).join(' y ');
+          list = h('div', { class: 'standings' }, order.map((q, i) => h('div', { class: 'st' + (v.team[q] === v.winner ? ' w' : '') + (q === v.seat ? ' me' : '') }, h('b', null, v.team[q] === v.winner ? '🏆' : '·'), nameOf(q), h('small', null, v.team[q] === v.winner ? 'Ganó' : 'Cayó'))));
+        } else {
+          sub = won ? `Eres el último en pie.` : `Ganó ${nameOf(winners[0])}. Quedaste ${order.indexOf(v.seat) + 1}.º de ${v.n}.`;
+          list = h('div', { class: 'standings' }, order.map((q, i) => h('div', { class: 'st' + (i === 0 ? ' w' : '') + (q === v.seat ? ' me' : '') }, h('b', null, i === 0 ? '🏆' : (i + 1) + '.º'), nameOf(q))));
+        }
+      }
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
         h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
-          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, v.reason || ''),
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), list,
           h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
       modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
@@ -553,7 +726,8 @@
       let i = 0; lastFam = null;
       for (const l of fresh2) {
         const t = l.t; let snd = null;
-        if (/^Turno/.test(t)) snd = 'turn';
+        if (/^Turno/.test(t)) snd = (!multi() || l.p === v.seat) ? 'turn' : null;
+        else if (/^queda fuera/.test(t)) { snd = 'destroy'; needShake = true; pops.push({ t: l.p === v.seat ? 'Quedaste fuera' : nameOf(l.p) + ' queda fuera', cls: 'weak' }); }
         else if (/^invoca a/.test(t)) { const m = /^invoca a (.+) \(ATK/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; }
         else if (/^revive a/.test(t)) snd = 'summon';
         else if (/boca abajo/.test(t)) snd = 'set';
@@ -592,9 +766,8 @@
     function runFx() {
       // preparación del atacante (efecto del elemento)
       for (const a of atkFx) {
-        const side = a.p === v.seat ? 'me' : 'opp';
-        const zi = v[side].mz.findIndex(z => z && z.c && C.get(z.c.id).name === a.name);
-        const r = zi >= 0 ? rectOf(side + '-mz-' + zi) : null;
+        const zi = a.p >= 0 && v.players[a.p] ? v.players[a.p].mz.findIndex(z => z && z.c && C.get(z.c.id).name === a.name) : -1;
+        const r = zi >= 0 ? rectOf('s' + a.p + '-mz-' + zi) : null;
         if (r) elemFx(r.left + r.width / 2, r.top + r.height / 2, r.width * 2.1, a.fam, false);
       }
       atkFx = [];
@@ -604,7 +777,7 @@
       pops = [];
       for (const f of fx) {
         if (f.type === 'pc') {
-          const pc = document.querySelector('.pcard.' + (f.pc === 'me' ? 'mine' : 'theirs'));
+          const pc = document.querySelector('.pcard[data-seat="' + f.pc + '"]');
           if (pc) { const r = pc.getBoundingClientRect(); elemFx(r.left + r.width / 2, r.top + r.height / 2, Math.max(r.width, 220), f.fam, true); pc.classList.add('hurt'); setTimeout(() => pc.classList.remove('hurt'), 600); }
           continue;
         }
@@ -644,7 +817,7 @@
       pr.style.perspective = Math.round(bw * k * 2.6) + 'px';
     }
     window.addEventListener('resize', fitBoard);
-    current.cleanup0 = () => window.removeEventListener('resize', fitBoard);
+    cur.cleanup0 = () => window.removeEventListener('resize', fitBoard);
 
     function render() {
       if (!v) return;
@@ -654,8 +827,9 @@
         if (!firstView && prevHandN != null && v.me.handCount > prevHandN) S.play('draw');
         prevHandN = v.me.handCount;
         // música más tensa con poca vida
-        const low = Math.min(v.me.lp, v.opp.lp) <= 2500 && v.winner === null;
+        const low = Math.min(...v.players.filter(q => q.alive).map(q => q.lp)) <= 2500 && v.winner === null;
         if (low !== lowTrack) { lowTrack = low; S.setTrack(low ? 'tense' : 'battle'); }
+        rememberHidden();
       }
       const my = myTurn();
       const dis = v.pending && v.pending.player === v.seat;
@@ -668,25 +842,31 @@
         el.onclick = () => { if (discarding) return act({ t: 'discard', hand: i }); if (sel) { sel = null; render(); } handClick(i); };
         hand.append(el);
       });
-      const fan = h('div', { class: 'opphand' }, Array.from({ length: Math.min(v.opp.handCount, 9) }, (_, i) => h('i', { style: `--r:${(i - 4) * 3}deg` })));
+      const fan = h('div', { class: 'opphand' }, Array.from({ length: Math.min(Pv('opp').handCount, 9) }, (_, i) => h('i', { style: `--r:${(i - 4) * 3}deg` })));
+      const meOut = !v.me.alive && v.winner === null;
       let banner = null;
       if (sel) banner = h('div', { class: 'banner' }, sel.text, sel.kind === 'tribute' ? ` (${sel.chosen.length}/${sel.need})` : '',
         sel.direct ? btn('Directo', sel.direct, 'gold') : null, btn('Cancelar', () => { sel = null; render(); }, 'ghost'));
       else if (discarding) banner = h('div', { class: 'banner' }, `Tienes demasiadas cartas: descarta ${v.pending.excess}. Toca una de tu mano.`);
-      else if (!my && v.winner === null) banner = h('div', { class: 'banner wait' }, v.actor === 1 - v.seat ? 'El rival está jugando…' : '…');
+      else if (meOut) banner = h('div', { class: 'banner wait' }, `Quedaste fuera (${place(v.seat)}.º). Sigues viendo la partida.`, btn('Salir', menu, 'ghost'));
+      else if (!my && v.winner === null) banner = h('div', { class: 'banner wait' }, multi() ? `${shortOf(v.actor)} está jugando…` : v.actor === 1 - v.seat ? 'El rival está jugando…' : '…');
       const lastLog = v.log.length ? v.log[v.log.length - 1] : null;
       const canBattle = my && !v.pending && L().some(a => a.t === 'toBattle');
       const canEnd = my && !v.pending && L().some(a => a.t === 'endTurn');
-      const turnTxt = `Turno ${v.turn} · ${v.current === v.seat ? 'Tu turno' : 'Turno rival'} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
-      const logTxt = lastLog ? (lastLog.p >= 0 ? seatNames()[lastLog.p] + ' ' : '') + lastLog.t : '';
-      const hudTop = h('div', { class: 'hud-top' }, pbar('opp'),
-        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt), fan),
+      const whose = v.current === v.seat ? 'Tu turno' : multi() ? 'Turno de ' + shortOf(v.current) : 'Turno rival';
+      const turnTxt = `Turno ${v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
+      const logTxt = lastLog ? fmtLog(lastLog) : '';
+      const others = multi() ? Array.from({ length: v.n - 1 }, (_, i) => (v.seat + 1 + i) % v.n) : [];
+      const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
+        multi() ? h('div', { class: 'plist' }, others.map(q => pcard(q, true))) : pcard(focus, false),
+        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt),
+          multi() ? h('div', { class: 'viewing' }, `Campo de ${shortOf(focus)}${isAlly(focus) ? ' (compañero)' : ''}`) : null, fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
-          h('button', { class: 'ib', onclick: () => { if (confirm('¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
+          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
-      const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pbar('me'), acts), hand);
+      const hudBot = h('div', { class: 'hud-bot' }, banner, h('div', { class: 'row-bot' }, pcard(v.seat, false), acts), hand);
       const rows = [];
       for (const [side, areas] of [['opp', ['st', 'mz']], ['me', ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(side, area, z))));
       if (!gameEl) {
@@ -696,6 +876,7 @@
         gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))));
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
+      gameEl.classList.toggle('foe-dead', !v.players[focus].alive);
       zrowsEl.replaceChildren(...rows);
       const hud = h('div', { class: 'hud' }, hudTop, hudBot);
       const oldHud = gameEl.querySelector(':scope > .hud');
@@ -706,14 +887,22 @@
       if (v.winner !== null) showEnd();
     }
 
-    match.onView(nv => { prev = v ? { me: v.me.lp, opp: v.opp.lp } : null; v = nv; newView = true; if (sel && !myTurn()) sel = null; render(); });
+    match.onView(nv => {
+      const pv = v;
+      prevLps = v ? v.players.map(q => q.lp) : null;
+      v = nv; newView = true;
+      if (sel && !myTurn()) sel = null;
+      autoFocus(pv);
+      prepare();
+      render();
+    });
     match.onStatus(s => {
       if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
-      if (s.k === 'rejected' && !v) { alert('No se pudo empezar: ' + s.why); menu(); }
+      if (s.k === 'rejected' && !v && !opts.wait) { alert('No se pudo empezar: ' + s.why); menu(); }
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
     match.start();
-    window.__duelo = { match, view: () => v, elemFx };
+    window.__duelo = { match, view: () => v, elemFx, focus: () => focus, setFocus };
   }
 
   mount(h('p', { class: 'loading' }, 'Cargando…'));

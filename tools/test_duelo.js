@@ -464,7 +464,292 @@ async function matchTests() {
   }
 }
 
-matchTests().then(() => {
+
+// ---------- 3 y 4 jugadores ----------
+function checkMulti(st, tag) {
+  for (let p = 0; p < st.n; p++) {
+    if (E.countCards(st, p) !== 30) throw new Error(`${tag}: el jugador ${p} tiene ${E.countCards(st, p)} cartas`);
+    const P = st.players[p];
+    if (P.lp < 0) throw new Error(tag + ': PV negativos');
+    if (!P.alive && (P.hand.length || P.mz.some(Boolean) || P.st.some(Boolean))) throw new Error(`${tag}: el eliminado ${p} conserva cartas`);
+    if (P.alive && P.lp <= 0) throw new Error(`${tag}: ${p} con 0 PV sigue vivo`);
+  }
+  if (st.winner === null && !st.players[st.current].alive) throw new Error(tag + ': le toca a un eliminado');
+  if (st.winner === null && E.actor(st) >= 0 && !st.players[E.actor(st)].alive) throw new Error(tag + ': actúa un eliminado');
+  // ninguna vista enseña lo oculto de los demás
+  for (let seat = 0; seat < st.n; seat++) {
+    const v = JSON.stringify(E.view(st, seat));
+    for (let q = 0; q < st.n; q++) {
+      if (q === seat) continue;
+      const O = st.players[q];
+      const hidden = O.hand.map(c => c.uid).concat(O.deck.map(c => c.uid));
+      for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid);
+      for (const s of O.st) if (s && s.down) hidden.push(s.c.uid);
+      for (const u of hidden) if (v.includes(`"uid":${u},`) || v.includes(`"uid":${u}}`)) throw new Error(`${tag}: la vista del asiento ${seat} filtra la carta ${u} de ${q}`);
+    }
+  }
+}
+function multiGame(n, mode, seed, opts) {
+  const decks = []; for (let i = 0; i < n; i++) decks.push(Cards.presetDeck(types[(seed + i * 3) % types.length]));
+  return E.newGame(decks, Object.assign({ seed, mode, first: 0 }, opts));
+}
+
+async function multiTests() {
+  section('3 y 4 jugadores: reglas');
+  {
+    const st = multiGame(4, 'ffa', 3);
+    eq([st.n, st.mode, st.team], [4, 'ffa', [0, 1, 2, 3]], 'todos contra todos: cada uno su equipo');
+    ok(E.view(st, 2).players.length === 4 && E.view(st, 2).me.seat === 2, 'la vista trae a los 4 jugadores');
+    ok(!E.view(st, 0).players[1].hand.some(Boolean), 'la mano ajena va oculta');
+    const t = multiGame(4, 'teams', 3);
+    eq(t.team, [0, 1, 0, 1], '2 contra 2: equipos 0-2 y 1-3');
+    eq(multiGame(3, 'teams', 3).mode, 'ffa', 'con 3 no hay equipos');
+    eq(multiGame(2, 'teams', 3).mode, 'duel', 'con 2 es un duelo');
+    let threw = false; try { E.newGame([Cards.presetDeck('fire')], {}); } catch (e) { threw = true; }
+    ok(threw, 'una persona sola no es un duelo');
+  }
+  {
+    // primera ronda sin ataques; orden de turnos
+    const st = multiGame(3, 'ffa', 5);
+    const mons = [mon('Pikachu'), mon('Pikachu'), mon('Pikachu'), mon('Pikachu'), mon('Pikachu')];
+    const order = [];
+    for (let i = 0; i < 3; i++) {
+      const p = E.actor(st); order.push(p);
+      give(st, p, mons);
+      act(st, p, find(st, p, x => x.t === 'summon'));
+      ok(!find(st, p, x => x.t === 'toBattle'), `ronda 1, asiento ${p}: sin combate`);
+      act(st, p, find(st, p, x => x.t === 'endTurn'));
+    }
+    eq(order, [0, 1, 2], 'turnos en orden de asiento');
+    eq(E.actor(st), 0, 'vuelve al primero');
+    ok(!!find(st, 0, x => x.t === 'toBattle'), 'ronda 2: ya hay combate');
+  }
+  {
+    // objetivos: todos los rivales; directo sólo contra quien no tiene monstruos
+    const st = multiGame(3, 'ffa', 6);
+    const big = mon('Mewtwo'), low = mon('Pikachu');
+    for (const p of [0, 1, 2]) { give(st, p, [low, low, low, low, low]); }
+    st.turn = 5;
+    const place = (p, z, id, pos) => { st.players[p].mz[z] = { c: { uid: st.nextUid++, id }, pos: pos || 'atk', down: false, summonedTurn: 1, attacked: false, moved: false, atkMod: 0 }; };
+    place(0, 0, big); place(1, 0, low); // el asiento 2 sin monstruos
+    st.current = 0; st.phase = 'battle';
+    const at = E.legal(st, 0).filter(a => a.t === 'attack');
+    ok(at.some(a => a.vs === 1 && a.target === 0), 'puede atacar el monstruo del asiento 1');
+    ok(at.some(a => a.vs === 2 && a.target === 'direct'), 'ataque directo al asiento 2, que no tiene monstruos');
+    ok(!at.some(a => a.vs === 1 && a.target === 'direct'), 'no directo contra quien sí tiene monstruos');
+    const lp2 = st.players[2].lp;
+    act(st, 0, at.find(a => a.vs === 2 && a.target === 'direct'));
+    eq(st.players[2].lp, lp2 - E.view(st, 0).me.mz[0].atk, 'el daño directo lo recibe el atacado');
+    ok(!E.legal(st, 0).some(a => a.t === 'attack' && a.zone === 0), 'cada monstruo ataca una vez');
+  }
+  {
+    // 2 contra 2: no se ataca ni se apunta al compañero
+    const st = multiGame(4, 'teams', 7);
+    st.turn = 9; st.current = 0; st.phase = 'battle';
+    const mk = (p, z, id) => { st.players[p].mz[z] = { c: { uid: st.nextUid++, id }, pos: 'atk', down: false, summonedTurn: 1, attacked: false, moved: false, atkMod: 0 }; };
+    for (const p of [0, 1, 2, 3]) mk(p, 0, mon('Charizard'));
+    const at = E.legal(st, 0).filter(a => a.t === 'attack');
+    ok(at.length > 0 && at.every(a => a.vs === 1 || a.vs === 3), 'sólo se ataca a los rivales (1 y 3), nunca al compañero (2)');
+    eq(E.foes(st, 0), [1, 3], 'rivales del asiento 0');
+    eq(E.foes(st, 1), [2, 0], 'rivales del asiento 1: 2 y 0, por orden de turno');
+  }
+  {
+    // magias con varios rivales
+    const st = multiGame(3, 'ffa', 8);
+    st.turn = 5; st.current = 0;
+    const burn = Cards.all().find(c => c.fx === 'burn').id;
+    st.players[0].hand = [{ uid: st.nextUid++, id: burn }];
+    const acts = E.legal(st, 0).filter(a => a.t === 'activate');
+    eq(acts.map(a => a.target.vs).sort(), [1, 2], 'daño directo: se elige a quién');
+    const d = Cards.get(burn);
+    const before = [st.players[1].lp, st.players[2].lp];
+    act(st, 0, acts.find(a => a.target.vs === 2));
+    eq([st.players[1].lp, st.players[2].lp], [before[0], before[1] - d.n], 'el daño va sólo al elegido');
+  }
+  {
+    // eliminación: sus cosas van al cementerio, se salta su turno y gana el último
+    const st = multiGame(3, 'ffa', 9);
+    st.turn = 5; st.current = 0; st.phase = 'battle';
+    const mk = (p, z, id) => { st.players[p].mz[z] = { c: { uid: st.nextUid++, id }, pos: 'atk', down: false, summonedTurn: 1, attacked: false, moved: false, atkMod: 0 }; };
+    mk(0, 0, mon('Mewtwo')); mk(1, 0, mon('Pikachu'));
+    st.players[1].lp = 100;
+    act(st, 0, find(st, 0, a => a.t === 'attack' && a.vs === 1));
+    ok(!st.players[1].alive, 'el asiento 1 cae con 0 PV');
+    ok(st.winner === null, 'quedan dos: sigue el duelo');
+    eq(st.rank, [1], 'orden de caídas');
+    ok(st.players[1].hand.length === 0 && st.players[1].mz.every(x => !x), 'su mano y su campo se van');
+    eq(E.countCards(st, 1), 31, 'ninguna carta se pierde (30 + la que puse a mano)');
+    ok(st.players[1].grave.length >= 6, 'su mano y su monstruo están en el cementerio');
+    act(st, 0, find(st, 0, a => a.t === 'endTurn'));
+    eq(E.actor(st), 2, 'se salta al eliminado');
+    ok(E.foes(st, 0).length === 1 && E.foes(st, 0)[0] === 2, 'ya sólo hay un rival');
+    // último rival cae
+    st.players[2].lp = 10; st.current = 0; st.phase = 'battle';
+    st.players[0].mz[0].attacked = false;
+    st.turn = 9;
+    act(st, 0, find(st, 0, a => a.t === 'attack' && a.target === 'direct'));
+    eq(st.winner, 0, 'gana el último en pie');
+    eq(st.rank, [1, 2], 'ranking');
+  }
+  {
+    // 2 contra 2: el equipo gana cuando caen los dos rivales; el aliado puede seguir solo
+    const st = multiGame(4, 'teams', 10);
+    st.turn = 9; st.current = 0;
+    E.resign(st, 1, 'x'); ok(st.winner === null, 'cae un rival: sigue');
+    E.resign(st, 2, 'x'); ok(st.winner === null, 'cae un compañero: el equipo sigue con el otro');
+    E.resign(st, 3, 'x');
+    eq(st.winner, 0, 'cayeron los dos rivales: gana el equipo 0');
+    eq(E.actor(st), -1, 'partida cerrada');
+  }
+  {
+    // rendirse o desconectarse en mitad de todo
+    for (let g = 0; g < 80; g++) {
+      const rng = mulberry(7000 + g), n = 3 + (g % 2), mode = n === 4 && g % 4 === 1 ? 'teams' : 'ffa';
+      const st = multiGame(n, mode, 40 + g);
+      let steps = 0, quit = 20 + Math.floor(rng() * 200);
+      try {
+        while (st.winner === null && steps++ < 6000) {
+          if (steps === quit || steps === quit + 25) {
+            const alive = st.players.map((P, i) => i).filter(i => st.players[i].alive);
+            E.resign(st, alive[Math.floor(rng() * alive.length)], 'se fue');
+            checkMulti(st, `resign ${g}`);
+            if (st.winner !== null) break;
+          }
+          const p = E.actor(st);
+          act(st, p, randomBot(st, p, rng));
+          if (steps % 6 === 0) checkMulti(st, `partida ${g} paso ${steps}`);
+        }
+        checkMulti(st, `partida ${g} final`);
+        if (st.winner === null) ok(false, `partida multi ${g} no termina`);
+        else if (st.winner !== 'draw') ok(st.players.filter(P => P.alive).every((P, i, a) => st.team[st.players.indexOf(P)] === st.winner), `partida ${g}: el ganador es el equipo de los que quedan`);
+      } catch (e) { ok(false, e.message); break; }
+    }
+  }
+  section('3 y 4 jugadores: partidas al azar');
+  {
+    let ended = 0, turns = 0;
+    const wins = {};
+    for (let g = 0; g < 100; g++) {
+      const rng = mulberry(9000 + g), n = 3 + (g % 2), mode = n === 4 && g % 3 === 0 ? 'teams' : 'ffa';
+      const st = multiGame(n, mode, 300 + g, { first: g % n });
+      let steps = 0;
+      try {
+        while (st.winner === null && steps++ < 9000) {
+          const p = E.actor(st);
+          act(st, p, randomBot(st, p, rng));
+          if (steps % 9 === 0) checkMulti(st, `azar ${g} paso ${steps}`);
+        }
+        checkMulti(st, `azar ${g} final`);
+      } catch (e) { ok(false, e.message); break; }
+      if (st.winner !== null) { ended++; turns += st.turn; wins[st.winner] = (wins[st.winner] || 0) + 1; } else ok(false, `azar ${g} no termina`);
+    }
+    ok(ended === 100, 'todas las partidas de 3-4 terminan');
+    console.log(`  ${ended} partidas · ${(turns / Math.max(1, ended)).toFixed(1)} turnos de media · ganadores ${JSON.stringify(wins)}`);
+  }
+  if (AI) {
+    section('3 y 4 jugadores: IA');
+    const t0 = Date.now(); let ended = 0, open = 0, steps = 0; const seatWins = {};
+    for (let g = 0; g < 60; g++) {
+      const n = 3 + (g % 2), mode = n === 4 && g % 2 === 0 ? 'teams' : 'ffa', seed = 600 + g;
+      const st = multiGame(n, mode, seed, { first: g % n });
+      const ais = []; for (let i = 0; i < n; i++) ais.push(AI.create(i % 2 ? 'easy' : 'normal', seed + i));
+      let k = 0;
+      try {
+        while (st.winner === null && k++ < 12000) {
+          const p = E.actor(st);
+          const a = ais[p].choose(st, p);
+          const r = E.apply(st, p, a);
+          if (!r.ok) throw new Error('la IA eligió una acción ilegal: ' + JSON.stringify(a));
+          if (k % 11 === 0) checkMulti(st, `IA multi ${g} paso ${k}`);
+        }
+        checkMulti(st, `IA multi ${g} final`);
+      } catch (e) { ok(false, e.message); break; }
+      steps += k;
+      if (st.winner === null) open++; else { ended++; seatWins[st.winner] = (seatWins[st.winner] || 0) + 1; }
+    }
+    console.log(`  60 partidas de IA (${Date.now() - t0} ms): terminadas ${ended} · sin terminar ${open} · ganadores ${JSON.stringify(seatWins)}`);
+    ok(open === 0, 'las partidas de la IA de 3-4 terminan');
+  }
+
+  section('3 y 4 jugadores: partida local y sala online');
+  {
+    const m = Match.local({ deck: Cards.presetDeck('fire'), n: 4, mode: 'teams', aiLevel: 'normal', delay: 0, seed: 13 });
+    ok(m.names.length === 4 && m.names.slice(1).every(x => /^Computadora/.test(x)), 'local 2v2: tres computadoras con nombre');
+    let v = null; m.onView(x => { v = x; });
+    m.start();
+    const bot = AI.create('normal', 99);
+    let k = 0;
+    while (k++ < 6000 && !(v && v.winner !== null)) {
+      if (v && v.actor === 0) { const r = m.act(bot.chooseView(v)); if (!r.ok) { ok(false, 'acción rechazada en local multi'); break; } }
+      else await sleep(1);
+    }
+    ok(v && v.winner !== null, 'la partida local 2v2 termina');
+    ok(v.players.every((p, i) => i === 0 || p.hand.every(x => x === null)), 'no se ven las manos de los demás');
+    m.close();
+  }
+  {
+    // todos contra todos de 3 humanos por canales simulados, y un cuarto asiento de la computadora
+    const [h1, g1] = Match.memoryPair(0), [h2, g2] = Match.memoryPair(0);
+    const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', n: 4, mode: 'ffa', seed: 31, delay: 0, autoStart: false });
+    h.addGuest(h1); h.addGuest(h2);
+    const a = Match.guest({ deck: Cards.presetDeck('fire'), name: 'Ana', transport: g1, helloMs: 20 });
+    const b = Match.guest({ deck: Cards.presetDeck('grass'), name: 'Beto', transport: g2, helloMs: 20 });
+    let hv = null, av = null, bv = null;
+    h.onView(x => { hv = x; }); a.onView(x => { av = x; }); b.onView(x => { bv = x; });
+    h.start(); a.start(); b.start();
+    ok(await until(() => h.lobby().filter(x => x.ready).length === 2, 1000), 'la sala ve a los dos invitados');
+    ok(!hv, 'no empieza sola con autoStart apagado');
+    ok(h.begin(), 'el anfitrión empieza con 3 personas');
+    ok(await until(() => hv && av && bv, 1000), 'todos reciben su vista');
+    eq([hv.seat, av.seat, bv.seat], [0, 1, 2], 'asientos 0,1,2');
+    ok(hv.n === 4 && /^Computadora/.test(h.names[3]), 'el cuarto asiento lo juega la computadora');
+    eq(a.names.slice(0, 3), ['Axel', 'Ana', 'Beto'], 'los nombres llegan al invitado');
+    const bots = [AI.create('normal', 1), AI.create('normal', 2), AI.create('normal', 3)];
+    const views = [() => hv, () => av, () => bv], ms = [h, a, b];
+    let guard = 0, illegal = false;
+    while (guard++ < 40000 && !(hv.winner !== null && av.winner !== null && bv.winner !== null)) {
+      let moved = false;
+      for (let i = 0; i < 3; i++) {
+        const v = views[i]();
+        if (v.actor === i && v.winner === null) {
+          if (i === 1 && !illegal && v.turn > 5) { illegal = true; a.act({ t: 'attack', zone: 0, vs: 1, target: 'direct' }); }   // atacarse a sí mismo: rechazado
+          const before = v; ms[i].act(bots[i].chooseView(v)); moved = true;
+          await until(() => views[i]() !== before, 500);
+        }
+      }
+      if (!moved) await sleep(1);
+    }
+    ok(hv.winner !== null && hv.winner === av.winner && hv.winner === bv.winner, `los tres ven el mismo ganador (${hv.winner})`);
+    ok(av.players.every((p, i) => i === av.seat || p.hand.every(x => x === null)), 'un invitado no ve las manos ajenas');
+    h.close(); a.close(); b.close();
+  }
+  {
+    // 2 contra 2 online con un invitado de compañero y desconexión
+    const [h1, g1] = Match.memoryPair(0);
+    const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', n: 4, mode: 'teams', seed: 32, delay: 5, autoStart: false });
+    h.addGuest(h1);
+    const a = Match.guest({ deck: Cards.presetDeck('fire'), name: 'Ana', transport: g1, helloMs: 20 });
+    let hv = null, av = null; h.onView(x => { hv = x; }); a.onView(x => { av = x; });
+    h.start(); a.start();
+    await until(() => h.lobby().filter(x => x.ready).length === 1, 1000);
+    h.begin();
+    await until(() => hv && av, 1000);
+    eq(av.seat, 2, 'el primer invitado es el compañero (asiento 2)');
+    eq(hv.team, [0, 1, 0, 1], 'equipos');
+    g1.close();
+    ok(await until(() => hv.players[2].alive === false, 1000), 'si el compañero se desconecta, queda fuera');
+    ok(hv.winner === null, 'el resto sigue jugando');
+    h.close(); a.close();
+  }
+  {
+    eq(Match.assignSeats('ffa', 4, [{}, {}, {}]), [1, 2, 3], 'asientos todos contra todos');
+    eq(Match.assignSeats('teams', 4, [{ pref: 'ally' }, { pref: 'foe' }, { pref: 'foe' }]), [2, 1, 3], 'asientos 2v2: compañero y rivales');
+    eq(Match.assignSeats('teams', 4, [{ pref: 'foe' }, { pref: 'foe' }]), [1, 3], '2v2: dos humanos rivales');
+    eq(Match.assignSeats('teams', 4, [{ pref: 'ally' }, { pref: 'ally' }]), [2, 1], '2v2: si ya hay compañero, el otro va de rival');
+  }
+}
+
+matchTests().then(multiTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);
 });

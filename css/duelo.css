@@ -483,3 +483,70 @@ html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none;
 .card .cs b { flex: 1; text-align: center; white-space: nowrap; min-width: 0; }
 .card .cs b + b { border-left: 1px solid #fff6; }
 .hand .card .cs { font-size: .8em; }
+
+/* ---- 3 y 4 jugadores: fichas de los demás, sala de espera y clasificación ---- */
+.hud-top.multi { align-items: flex-start; }
+.plist { display: flex; gap: 8px; flex: 1 1 auto; min-width: 0; justify-content: flex-start; }
+.pcard.ptile { min-width: 0; flex: 1 1 0; max-width: 250px; padding: 5px 10px 5px 6px; gap: 8px; cursor: pointer; border-radius: 10px 22px 10px 22px; transition: transform .15s, border-color .2s, box-shadow .2s, filter .3s; }
+.pcard.ptile:hover { transform: translateY(1px); border-color: #fff6; }
+.pcard.ptile .av { width: 34px; height: 34px; font-size: 16px; }
+.pcard.ptile .pn { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.pcard.ptile .lp { font-size: 19px; min-width: 52px; }
+.pcard.ptile .lpbar { height: 9px; }
+.pcard.ptile .pm { gap: 8px; font-size: 12px; }
+.pcard.ptile .pm button { padding: 0 6px; font-size: 12px; }
+.pcard.ally .av { background: radial-gradient(circle at 35% 30%, #d6ffe6, #4fe0a0 55%, #1c966a); box-shadow: 0 0 12px #4fe0a077; }
+.pcard.ally .lpbar i { background: linear-gradient(#8af0c0, #1fae6a); box-shadow: 0 0 8px #3be08a99; }
+.pcard.focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 16px #f2c86255, 0 4px 16px #000a; }
+.pcard.turn::after { content: ''; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #7df0ff; box-shadow: 0 0 14px #7df0ffaa; animation: turnPulse 1.4s ease-in-out infinite; pointer-events: none; }
+.pcard { position: relative; }
+@keyframes turnPulse { 50% { opacity: .35; } }
+.pcard.dead { filter: grayscale(1) brightness(.6); }
+.pcard.dead .pn { text-decoration: line-through; }
+.pcard .pns { display: none; }
+.pcard .pnm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ptag { flex: none; font: 700 10px var(--ui); letter-spacing: .5px; padding: 1px 6px; border-radius: 999px; text-transform: uppercase; }
+.ptag.ally { background: #1fae6a; color: #02140b; } .ptag.foe { background: #d8553a; color: #1b0600; }
+.mini { display: flex; align-items: center; gap: 3px; margin: 1px 0; }
+.mini i { width: 12px; height: 15px; border-radius: 2px; border: 1px solid #fff3; background: #0006; }
+.mini i.at { background: linear-gradient(#ffb36b, #d8553a); border-color: #ffd7a8; }
+.mini i.df { background: linear-gradient(#8fc6ff, #3b72c6); border-color: #cfe6ff; }
+.mini i.dn { background: linear-gradient(#5b6cc0, #26337e); border-color: #aab6ff88; }
+.mini em { font-style: normal; font-size: 12px; color: #b9c5e8; margin-left: 4px; }
+.viewing { font: 700 12px var(--ui); letter-spacing: .6px; color: #ffe9a8; background: #000a; border: 1px solid #f2c86277; border-radius: 999px; padding: 1px 10px; }
+.game.foe-dead .zone.opp { opacity: .35; filter: grayscale(1); }
+.hud-top.multi { flex-wrap: wrap; row-gap: 4px; }
+.hud-top.multi .plist { order: 1; flex: 1 1 0; }
+.hud-top.multi .tools { order: 2; }
+.hud-top.multi .turnbox { order: 3; flex: 1 1 100%; flex-direction: row; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.hud-top.multi .turnpill { padding: 3px 16px; font-size: 14px; flex: none; }
+.hud-top.multi .logline { flex: 0 1 auto; min-width: 0; font-size: 13px; padding: 1px 10px; }
+.hud-top.multi .viewing { flex: none; }
+.hud-top.multi .opphand { display: none; }
+@media (max-width: 900px) {
+  .hud-top.multi .logline { display: none; }
+  .pcard.ptile .pnm { display: none; } .pcard.ptile .pns { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hud-top.multi .plist { flex-basis: 100%; }
+  .hud-top.multi .turnbox { order: 2; flex: 1 1 0; justify-content: flex-start; min-width: 0; }
+  .hud-top.multi .turnpill { font-size: 12px; padding: 3px 10px; }
+  .hud-top.multi .viewing { display: none; }
+  .pcard.ptile .pm span:first-child, .pcard.ptile .mini em { display: none; }
+  .pcard.ptile .av { display: none; }
+  .pcard.ptile .lp { font-size: 16px; min-width: 40px; }
+}
+
+/* sala de espera */
+.seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.seat { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--glass); border: 1.5px dashed var(--line); font-family: var(--ui); }
+.seat b { font-size: 18px; color: #fff; } .seat span { font-size: 13px; color: var(--muted); }
+.seat.me { border-style: solid; border-color: var(--gold); } .seat.ok { border-style: solid; border-color: var(--green); } .seat.bad { border-style: solid; border-color: var(--red); }
+.seat.empty b { color: var(--muted); font-weight: 600; }
+.seat select { margin-top: 2px; }
+
+/* clasificación final */
+.standings { display: flex; flex-direction: column; gap: 4px; margin: 8px auto 4px; min-width: min(300px, 80vw); }
+.standings .st { display: flex; align-items: center; gap: 10px; padding: 5px 12px; border-radius: 10px; background: #0007; border: 1px solid #fff2; font: 700 16px var(--ui); color: #dfe7ff; }
+.standings .st b { min-width: 2.2em; text-align: center; color: var(--gold); }
+.standings .st small { margin-left: auto; color: var(--muted); font-weight: 600; }
+.standings .st.w { border-color: var(--gold); background: #2a2008cc; color: #fff; }
+.standings .st.me { box-shadow: 0 0 0 2px #7df0ff77; }

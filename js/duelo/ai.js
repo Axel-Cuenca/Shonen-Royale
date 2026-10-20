@@ -18,6 +18,10 @@
   const ZONES = 5;
   const cardOf = c => c && C().get(c.id);
   const valueOf = d => d.kind === 'monster' ? d.atk / 100 : 15;
+  /** Rivales vivos de mi vista (con 3-4 jugadores hay varios). */
+  const foesOf = v => v.players.filter(q => q.alive && q.team !== v.team[v.seat]);
+  /** El rival al que apunta una acción (o el único rival en un duelo de dos). */
+  const targetOf = (v, a) => (a.vs != null ? v.players[a.vs] : a.target && a.target.vs != null ? v.players[a.target.vs] : v.opp);
 
   function create(level, seed) {
     const rnd = mulberry((seed == null ? Date.now() : seed) | 0);
@@ -35,7 +39,7 @@
           const d = cardOf(v.me.st[a.zone].c);
           let s = 0;
           if (pd.trigger === 'attack') {
-            const atkr = v.atk && v.opp.mz[v.atk.z];
+            const atkr = v.atk && v.players[v.atk.p].mz[v.atk.z];
             s = d.fx === 'destroyAttacker' ? 90 : d.fx === 'mirror' ? 80 : 60;
             if (atkr && atkr.atk < 500 && d.fx !== 'destroyAttacker') s = 20;
           } else if (pd.trigger === 'spell') s = 70;
@@ -72,7 +76,7 @@
     // fuerza del campo rival visible
     function oppInfo(v) {
       let maxAtk = 0, faceDown = 0, count = 0, power = 0;
-      for (const m of v.opp.mz) {
+      for (const q of foesOf(v)) for (const m of q.mz) {
         if (!m) continue;
         count++;
         if (m.down) { faceDown++; power += 1400; continue; }
@@ -84,7 +88,8 @@
     }
 
     function scoreMain(v, a, info) {
-      const me = v.me, opp = v.opp;
+      const me = v.me, opp = targetOf(v, a);
+      const allFoes = foesOf(v);
       const myMons = me.mz.filter(Boolean);
       const myBest = myMons.reduce((n, m) => Math.max(n, m.atk || 0), 0);
       const myPower = myMons.reduce((n, m) => n + (m.pos === 'atk' ? m.atk : m.def), 0);
@@ -96,7 +101,7 @@
           for (const m of me.mz) {
             if (!m || m.down || m.pos !== 'atk') continue;
             if (!info.count) good = true;
-            else for (const t of opp.mz) { if (t && !t.down && ((t.pos === 'atk' && m.atk > t.atk) || (t.pos === 'def' && m.atk > t.def))) good = true; }
+            else for (const q of allFoes) for (const t of q.mz) { if (t && !t.down && ((t.pos === 'atk' && m.atk > t.atk) || (t.pos === 'def' && m.atk > t.def))) good = true; }
             if (info.faceDown && m.atk >= 1800) good = true;
           }
           return good ? 20 : -1;
@@ -141,13 +146,16 @@
               const tv = t.down ? 1400 : (t.pos === 'atk' ? t.atk : t.def);
               return (tv > myBest * 0.8 || tv >= 1800) ? 40 + tv / 60 : -1;
             }
-            case 'destroyAll': return (info.power > myPower + 600 && info.count >= 2) ? 62 : -1;
+            case 'destroyAll': {
+              const ally = v.players.filter(q => q.seat !== v.seat && q.alive && q.team === v.team[v.seat]).reduce((n, q) => n + q.mz.reduce((k, m) => k + (m ? (m.down ? 1400 : m.pos === 'atk' ? m.atk : m.def) : 0), 0), 0);
+              return (info.power > myPower + ally + 600 && info.count >= 2) ? 62 : -1;
+            }
             case 'destroyST': return opp.st.filter(Boolean).length ? 44 : -1;
-            case 'burn': return opp.lp <= d.n ? 120 : 33;
+            case 'burn': return opp.lp <= d.n ? 120 : 33 + (8000 - opp.lp) / 500;
             case 'boost': {
               const m = me.mz[a.target.z];
               if (!m || m.pos !== 'atk') return -1;
-              for (const t of opp.mz) {
+              for (const t of allFoes.flatMap(q => q.mz)) {
                 if (!t || t.down) continue;
                 const th = t.pos === 'atk' ? t.atk : t.def;
                 if (m.atk <= th && m.atk + d.n > th) return 54;
@@ -168,8 +176,8 @@
 
     function scoreBattle(v, a, info) {
       if (a.t === 'endTurn') return 0;
-      const m = v.me.mz[a.zone], opp = v.opp;
-      if (a.target === 'direct') return (m.atk >= opp.lp ? 200 : 70) + m.atk / 100;
+      const m = v.me.mz[a.zone], opp = targetOf(v, a);
+      if (a.target === 'direct') return (m.atk >= opp.lp ? 200 : 70) + m.atk / 100 + (8000 - opp.lp) / 400;
       const t = opp.mz[a.target];
       if (t.down) return m.atk >= 1800 ? 38 : -1;
       const att = cardOf(m.c), tgt = cardOf(t.c);
