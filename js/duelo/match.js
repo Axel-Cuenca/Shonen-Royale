@@ -236,7 +236,12 @@
       send(msg) {
         const copy = JSON.parse(JSON.stringify(msg));
         const go = () => other.fns.forEach(fn => fn(copy));
-        if (latency) setTimeout(go, Math.random() * latency); else Promise.resolve().then(go);
+        if (latency) {
+          // como el canal real (ordenado): un mensaje nunca llega antes que uno enviado antes
+          const at = Math.max(Date.now() + Math.random() * latency, me.last || 0);
+          me.last = at;
+          setTimeout(go, Math.max(0, at - Date.now()));
+        } else Promise.resolve().then(go);
       },
       onMessage(fn) { me.fns.push(fn); },
       onClose(fn) { me.closers.push(fn); },
