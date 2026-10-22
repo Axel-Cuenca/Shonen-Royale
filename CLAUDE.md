@@ -41,3 +41,12 @@ servidores, base de datos o costes NO van ahí.
   `saves/{uid}` campo `save.duelo` de Firestore: las reglas actuales ya lo permiten, no hay que
   volver a publicarlas. Se conserva lo demás que hubiera en ese documento.
 - La nube sólo funciona desde `axel-cuenca.github.io` (y localhost); la lista está en `HOSTS` de `account.js`.
+
+## Cartas
+- El catálogo del juego (`js/duelo/cards.js`) son sólo las cartas propias del array `CUSTOM` (Popeye y Creeper hoy):
+  el dueño pasa las cartas de a una. El catálogo antiguo (Pokémon, 12 magias, 5 trampas) vive en
+  `tools/legacy_catalog.js` y lo usan SÓLO las pruebas. Con menos de 15 cartas distintas no se puede armar un
+  mazo (30 cartas, 2 copias): el juego avisa «aún no hay cartas suficientes» y bloquea jugar. Las reglas del mazo
+  no se tocan.
+- Tablero: 3 zonas de monstruo + 3 de magia/trampa por jugador (`ZONES` en `engine.js`).
+- Las imágenes de las cartas van en `assets/cards/` y las voces de habilidad en `assets/voices/` (las pone el dueño).

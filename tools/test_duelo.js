@@ -8,6 +8,7 @@ require('../js/data/pokedex.js');
 require('../js/data/types.js');
 const root = path.join(__dirname, '..', 'js', 'duelo');
 const Cards = require(path.join(root, 'cards.js'));
+require('./legacy_catalog.js')(Cards, global.G);   // el catálogo antiguo, sólo para las pruebas
 const E = require(path.join(root, 'engine.js'));
 let AI = null;
 try { AI = require(path.join(root, 'ai.js')); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
@@ -278,6 +279,17 @@ section('trampas');
 }
 
 // ---------- Popeye (habilidad «¡A comer espinaca!») ----------
+section('tablero 3+3 y catálogo');
+{
+  const st = game();
+  ok(st.players[0].mz.length === 3 && st.players[0].st.length === 3, 'el tablero tiene 3 zonas de monstruo y 3 de magia/trampa');
+  ok(E.ZONES === 3, 'ZONES = 3');
+  ok(typeof Cards.canPlay === 'function', 'Cards.canPlay existe');
+  // el catálogo de producción (sin el legado de pruebas) sólo tiene las cartas propias
+  ok(Cards.custom.length === 2 && Cards.custom.map(c => c.id).sort().join() === 'c_creeper,c_popeye', 'las cartas propias son Popeye y Creeper');
+  const v = E.view(st, 0);
+  ok(typeof v.opp.handCount === 'number' && v.opp.handCount === 5, 'la vista dice cuántas cartas tiene el rival en la mano');
+}
 section('Popeye');
 {
   const P = Cards.get('c_popeye');

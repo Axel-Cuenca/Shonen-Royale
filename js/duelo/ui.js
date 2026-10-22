@@ -76,11 +76,13 @@
   // navegador y otra en la nube (js/duelo/account.js); gana la más reciente.
   const KEY = 'duelo.v1';
   let storeKey = KEY;
-  const defaultStore = () => ({ decks: [{ name: 'Fuego', ids: C.presetDeck('fire') }], active: 0, updated: 0 });
+  const defaultStore = () => ({ decks: [{ name: 'Mi mazo', ids: [] }], active: 0, updated: 0 });
+  /** Quita de los mazos guardados las cartas que ya no existen en el catálogo. */
+  function clean(s) { if (s && Array.isArray(s.decks)) for (const d of s.decks) if (Array.isArray(d.ids)) d.ids = d.ids.filter(id => C.get(id)); return s; }
   function readStore(key) {
     try {
       const s = JSON.parse(localStorage.getItem(key));
-      if (s && Array.isArray(s.decks) && s.decks.length) { s.active = Math.min(s.active | 0, s.decks.length - 1); return s; }
+      if (s && Array.isArray(s.decks) && s.decks.length) { s.active = Math.min(s.active | 0, s.decks.length - 1); return clean(s); }
     } catch (e) { /* nada */ }
     return null;
   }
@@ -107,7 +109,7 @@
       pick.updated = Date.now();
     }
     pick.active = Math.min(pick.active | 0, pick.decks.length - 1);
-    store = pick;
+    store = clean(pick);
     try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
     if (pick !== rem) D.Account.push(store);
   }
@@ -202,14 +204,15 @@
   function menu() {
     endCurrent(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
-    const dk = activeDeck(), bad = C.checkDeck(dk.ids);
+    const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
     mount(h('div', { class: 'scr' },
       acctBar(),
       h('h1', null, 'Duelo Pokémon'),
-      h('p', { class: 'sub' }, 'Duelos de cartas con los Pokémon como monstruos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
+      h('p', { class: 'sub' }, 'Duelos de cartas por turnos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
+      few ? h('div', { class: 'panel' }, h('div', { class: 'msg err' }, `Todavía no hay cartas suficientes para jugar: hay ${C.all().length} y hacen falta al menos ${Math.ceil(C.DECK_SIZE / C.MAX_COPIES)} distintas para armar un mazo. Se van añadiendo de a poco; mientras tanto puedes ver las cartas en «Mis mazos».`)) : null,
       h('div', { class: 'panel' }, h('div', null, 'Mazo activo: ', h('b', null, dk.name)), bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null),
-      h('button', { class: 'menu-btn', disabled: !!bad, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
-      h('button', { class: 'menu-btn', disabled: !!bad, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
+      h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
+      h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
       h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
       h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
@@ -247,7 +250,7 @@
         h('ul', null,
           h('li', null, 'Las magias se activan desde la mano o boca abajo, en tu fase principal.'),
           h('li', null, 'Las trampas se colocan boca abajo y pueden responder (ataque, magia rival, invocación) a partir del turno siguiente.'),
-          h('li', null, 'Hay 12 magias y 5 trampas distintas: toca cualquier carta para leerla.')))));
+          h('li', null, `Cartas disponibles ahora: ${C.all().length}. Toca cualquier carta para leerla.`)))));
   }
 
   // ---------------- contra la computadora ----------------
@@ -431,7 +434,7 @@
       const dk = activeDeck(), n = cnt(dk.ids), bad = C.checkDeck(dk.ids);
       // cabecera
       const sel = h('select', { onchange: () => { store.active = +sel.value; save(); refresh(); } }, store.decks.map((d, i) => h('option', { value: i, selected: i === store.active }, d.name)));
-      const pre = h('select', null, h('option', { value: '' }, 'Nuevo mazo de estreno…'), C.PRESET_TYPES.map(t => h('option', { value: t }, 'Tipo ' + C.TYPE_ES[t])));
+      const pre = h('select', { style: C.PRESET_TYPES.length ? '' : 'display:none' }, h('option', { value: '' }, 'Nuevo mazo de estreno…'), C.PRESET_TYPES.map(t => h('option', { value: t }, 'Tipo ' + C.TYPE_ES[t])));
       pre.onchange = () => {
         if (!pre.value) return;
         if (store.decks.length >= 6) { alert('Máximo 6 mazos.'); pre.value = ''; return; }
@@ -682,7 +685,7 @@
         h('div', { class: 'pi' },
           h('div', { class: 'pn', title: nm }, nm),
           h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
-          h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null)));
+          h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null)));
     }
     /** Placa de nombre sobre cada campo del tablero (3-4 jugadores). */
     function plate(seat) {
@@ -693,12 +696,12 @@
         h('div', { class: 'pl1' }, h('b', { class: 'pnm' }, seat === v.seat ? 'Tú' : nm), tag,
           h('span', { class: 'plp' }, p.alive ? String(p.lp) : '☠ fuera', lpFloat(seat))),
         h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })),
-        h('div', { class: 'pl2' }, h('span', null, `🂠 ${p.deckCount}`), h('span', null, `✋ ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null));
+        h('div', { class: 'pl2' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null));
     }
     /** Un campo completo: placa + fila de monstruos + fila de magias/trampas. top = fila de arriba (la placa va por fuera). */
     function fieldEl(seat, top, big) {
       const p = v.players[seat], order = top ? ['st', 'mz'] : ['mz', 'st'];
-      const rows = order.map(area => h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(seat, area, z, !top))));
+      const rows = order.map(area => h('div', { class: 'zrow' }, [0, 1, 2].map(z => zoneEl(seat, area, z, !top))));
       const cls = 'field' + (big ? '' : ' small') + (seat === v.seat ? ' mine' : isAlly(seat) ? ' ally' : ' foe') + (!p.alive ? ' dead' : '') + (v.current === seat && v.winner === null && p.alive ? ' turn' : '');
       return h('div', { class: cls, 'data-seat': seat }, top ? plate(seat) : null, ...rows, top ? null : plate(seat));
     }
@@ -712,6 +715,25 @@
     function showGrave(seat) {
       const g = v.players[seat].grave;
       modal(h('div', { class: 'box' }, h('h2', null, seat === v.seat ? 'Tu cementerio' : 'Cementerio de ' + nameOf(seat)), g.length ? h('div', { class: 'cands' }, g.map(c => h('div', { style: 'cursor:pointer;text-align:center', onclick: () => modal(h('div', { class: 'box' }, detailBox(c.id), btn('Cerrar', closeModal))) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))) : h('p', { class: 'sub' }, 'Vacío.'), btn('Cerrar', closeModal, 'ghost')));
+    }
+    /** Icono de una línea del registro, según lo que pasó. */
+    const logIcon = t => /^Turno/.test(t) ? '⏳' : /come espinaca/.test(t) ? '🥬' : /explota/.test(t) ? '💣' : /ataca/.test(t) ? '⚔️' : /negado|anulada|rebota/.test(t) ? '🛡️' :
+      /destruid|destruye/.test(t) ? '💥' : /daño|pierde|refleja/.test(t) ? '🔥' : /recupera/.test(t) ? '💚' : /^invoca|^revive|queda en/.test(t) ? '✨' : /boca abajo/.test(t) ? '🂠' :
+      /^voltea/.test(t) ? '🔄' : /cambia a/.test(t) ? '🔁' : /trampa/.test(t) ? '🪤' : /^activa|equipa/.test(t) ? '🔮' : /^roba|agrega/.test(t) ? '🃏' : /descarta/.test(t) ? '🗑️' :
+      /fase de batalla|ofrece/.test(t) ? '⚔' : /fuera|Fin del duelo|Empate/.test(t) ? '🏁' : '•';
+    /** Lista fija con las últimas acciones: la más nueva arriba y más grande; las viejas se van apagando. */
+    let feedLastN = null;
+    function feedEl() {
+      const items = v.log.slice(-6).reverse();
+      const top = v.log.length ? v.log[v.log.length - 1].n : 0;
+      const box = h('div', { class: 'feed', 'aria-live': 'polite' }, items.map((l, i) => {
+        const who = l.p < 0 ? 'x' : l.p === v.seat ? 'me' : isAlly(l.p) ? 'ally' : 'foe';
+        const isNew = feedLastN != null && l.n > feedLastN;
+        return h('div', { class: 'fe ' + who + (i === 0 ? ' top' : '') + (isNew ? ' new' : '') + (/^Turno/.test(l.t) ? ' turn' : ''), style: `opacity:${[1, .9, .78, .66, .54, .42][i]}` },
+          h('i', null, logIcon(l.t)), h('span', null, l.p >= 0 ? h('b', null, nameOf(l.p) + ' ') : null, l.t + (l.q != null ? ' → ' + nameOf(l.q) : '')));
+      }));
+      feedLastN = top;
+      return box;
     }
     const fmtLog = l => (l.p >= 0 ? nameOf(l.p) + ' ' : '') + l.t + (l.q != null ? ' → ' + nameOf(l.q) : '');
     function showLog() {
@@ -909,7 +931,7 @@
         rows = [h('div', { class: 'frow top' }, lay.top.map(q => fieldEl(q, true, false))), h('div', { class: 'frow bot' }, lay.bot.map(q => fieldEl(q, false, lay.bot.length === 1)))];
       } else {
         rows = [];
-        for (const [seat, areas] of [[v.opp.seat, ['st', 'mz']], [v.seat, ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2, 3, 4].map(z => zoneEl(seat, area, z, seat === v.seat))));
+        for (const [seat, areas] of [[v.opp.seat, ['st', 'mz']], [v.seat, ['mz', 'st']]]) for (const area of areas) rows.push(h('div', { class: 'zrow' }, [0, 1, 2].map(z => zoneEl(seat, area, z, seat === v.seat))));
       }
       if (zrowsEl) zrowsEl.className = 'zrows' + (multi() ? ' multi' : '');
       if (!gameEl) {
@@ -921,7 +943,7 @@
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
       gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);
-      const hud = h('div', { class: 'hud' }, hudTop, hudBot);
+      const hud = h('div', { class: 'hud' }, hudTop, feedEl(), hudBot);
       const oldHud = gameEl.querySelector(':scope > .hud');
       if (oldHud) oldHud.replaceWith(hud); else gameEl.append(hud);
       fitBoard();

@@ -6,7 +6,7 @@
  *
  * Reglas (resumen en docs/DUELO.md):
  *   · 8000 PV · mazo de 30 · mano inicial 5 · límite de mano 7
- *   · 5 zonas de monstruo + 5 de magia/trampa
+ *   · 3 zonas de monstruo + 3 de magia/trampa
  *   · una invocación normal (o colocar) por turno; nivel 5-6: 1 tributo, 7+: 2
  *   · colocar un monstruo = boca abajo en defensa; se puede voltear a otro turno
  *   · el primer turno de la partida no se roba ni se ataca
@@ -30,7 +30,7 @@
   const D = isBrowser ? (window.Duelo = window.Duelo || {}) : (global.Duelo = global.Duelo || {});
   const C = () => D.Cards;
 
-  const START_LP = 8000, START_HAND = 5, HAND_MAX = 7, ZONES = 5;
+  const START_LP = 8000, START_HAND = 5, HAND_MAX = 7, ZONES = 3;
 
   // ---------------- utilidades ----------------
   function rnd(st) {
