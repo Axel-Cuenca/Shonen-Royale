@@ -162,15 +162,72 @@
     return c.toDataURL('image/jpeg', .85);
   }
 
-  const SPR = { trees: [], rock: '' };
-  let texDone = false;
+  // Las texturas se dibujan por partes (una por turno del navegador) para no congelarlo al abrir el juego;
+  // se ponen como variables CSS según van estando listas. Con el suelo WebGL no hacen falta ni la hierba, ni
+  // la piedra, ni el agua.
+  // Caché en el navegador (IndexedDB): las texturas son siempre iguales, así que sólo se dibujan la primera vez.
+  const TEX_VER = 'tex1';
+  const idb = (mode, fn) => new Promise(res => {
+    try {
+      const rq = indexedDB.open('duelo-arena', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('t');
+      rq.onerror = () => res(null);
+      rq.onsuccess = () => {
+        try { const tx = rq.result.transaction('t', mode), r = fn(tx.objectStore('t')); tx.oncomplete = () => { res(r && r.result !== undefined ? r.result : null); rq.result.close(); }; tx.onerror = tx.onabort = () => res(null); }
+        catch (e) { res(null); }
+      };
+    } catch (e) { res(null); }
+  });
+  let texStarted = false;
   function textures() {
-    if (texDone) return;
-    texDone = true;
+    if (texStarted) return;
+    texStarted = true;
     const r = document.documentElement.style;
-    r.setProperty('--t-grass', `url(${grassTex()})`); r.setProperty('--t-stone', `url(${stoneTex()})`);
-    r.setProperty('--t-wall', `url(${wallTex(false)})`); r.setProperty('--t-tower', `url(${wallTex(true)})`);
-    SPR.trees = [0, 1, 2].map(k => `url(${treeSprite(k)})`); SPR.rock = `url(${rockSprite()})`; r.setProperty('--t-water', `url(${waterTex()})`);
+    const apply = o => { for (const k in o) r.setProperty(k, o[k]); };
+    idb('readonly', st => st.get(TEX_VER)).then(hit => {
+      if (hit && hit.main) {
+        apply(hit.main);
+        if (hit.extra) apply(hit.extra);
+        // sin suelo WebGL hacen falta también la hierba, la piedra y el agua
+        if (!hit.extra) whenFloorKnown(() => { if (!(D.Floor && D.Floor.ok)) generate(true, hit); });
+        return;
+      }
+      generate(false, null);
+    });
+  }
+  function whenFloorKnown(fn) { if (D.Floor && !D.Floor.tried()) setTimeout(() => whenFloorKnown(fn), 200); else fn(); }
+  /** Dibuja las texturas por partes (una por turno del navegador, para no congelarlo) y las pone todas a la vez. */
+  function generate(onlyExtra, prev) {
+    const r = document.documentElement.style, main = {}, extra = {};
+    const mk = (o, k, fn) => () => { o[k] = `url(${fn()})`; };
+    const steps = onlyExtra ? [] : [
+      mk(main, '--t-wall', () => wallTex(false)), mk(main, '--t-tower', () => wallTex(true)),
+      mk(main, '--t-tree0', () => treeSprite(0)), mk(main, '--t-tree1', () => treeSprite(1)), mk(main, '--t-tree2', () => treeSprite(2)),
+      mk(main, '--t-rock', rockSprite)
+    ];
+    const fallback = [mk(extra, '--t-water', waterTex), mk(extra, '--t-grass', grassTex), mk(extra, '--t-stone', stoneTex)];
+    let asked = onlyExtra;
+    if (onlyExtra) steps.push.apply(steps, fallback.splice(0));
+    const next = () => {
+      if (!steps.length && !asked) {
+        asked = true;
+        whenFloorKnown(() => { if (!(D.Floor && D.Floor.ok)) steps.push.apply(steps, fallback.splice(0)); next(); });
+        return;
+      }
+      if (steps.length) {
+        try { steps.shift()(); } catch (e) { /* esa textura se queda con su color liso */ }
+        setTimeout(next, 16);
+        return;
+      }
+      // todas a la vez: un solo recálculo de estilos en vez de uno por textura
+      const m = onlyExtra ? prev.main : main;
+      for (const k in m) r.setProperty(k, m[k]);
+      for (const k in extra) r.setProperty(k, extra[k]);
+      const rec = { main: m };
+      if (Object.keys(extra).length) rec.extra = extra;
+      idb('readwrite', st => st.put(rec, TEX_VER));
+    };
+    setTimeout(next, 0);
   }
 
   // ---------------- piezas ----------------
@@ -190,9 +247,9 @@
   let treeN = 0;
   function tree(x, y, s) {
     const k = (treeN++) % 3;
-    return billboard(x, y, s, s * 1.17, [el('tspr', `background-image:${SPR.trees[k]}`)]);
+    return billboard(x, y, s, s * 1.17, [el('tspr', `background-image:var(--t-tree${k})`)]);
   }
-  function rock(x, y, s) { return billboard(x, y, s * 1.5, s * 1.1, [el('tspr', `background-image:${SPR.rock}`)]); }
+  function rock(x, y, s) { return billboard(x, y, s * 1.5, s * 1.1, [el('tspr', `background-image:var(--t-rock)`)]); }
   const fires = [];
   function torch(x, y, idx) {
     const cv = document.createElement('canvas'); cv.width = 112; cv.height = 168; cv.className = 'flamec';
@@ -244,7 +301,6 @@
   /** Rodea a `slab` (el suelo de juego de W×H) con la arena. */
   function build(slab) {
     textures();
-    if (D.Floor && !D.Floor.tried()) D.Floor.init(TREES.map(t => [t[0], t[1], t[2], 0]).concat(ROCKS.map(r => [r[0], r[1], r[2], 1])));
     const parts = [];
     parts.push(el('ground', ''));
     parts.push(el('river r1', ''), el('river r2', ''));
@@ -258,7 +314,20 @@
     TREES.forEach(t => parts.push(tree(t[0], t[1], t[2])));
     ROCKS.forEach(r => parts.push(rock(r[0], r[1], r[2])));
     parts.forEach(p => slab.prepend(p));
-    if (D.Floor && D.Floor.ok) D.Floor.attach(slab);
+    floorFor(slab);
+  }
+  /** El suelo WebGL se prepara un momento después de pintar la pantalla (así el menú no espera a la tarjeta gráfica). */
+  let floorWant = null, floorSched = false;
+  function floorFor(slab) {
+    floorWant = slab;
+    if (!D.Floor) return;
+    if (D.Floor.tried()) { if (D.Floor.ok) D.Floor.attach(slab); return; }
+    if (floorSched) return;
+    floorSched = true;
+    setTimeout(() => {
+      D.Floor.init(TREES.map(t => [t[0], t[1], t[2], 0]).concat(ROCKS.map(r => [r[0], r[1], r[2], 1])));
+      if (D.Floor.ok && floorWant) D.Floor.attach(floorWant);
+    }, 350);
   }
 
   let bgSlab = null;

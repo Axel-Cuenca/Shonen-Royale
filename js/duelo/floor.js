@@ -363,17 +363,42 @@ void main(){
     return 1 + a * .13 + n * .07;
   }
 
+  /** Calidad máxima según el equipo (el suelo se calcula en la tarjeta gráfica: en equipos justos congela el navegador). */
+  function maxScale() {
+    if (st.q === 'low') return 0.7;
+    if (st.q === 'high') return 1.4;
+    const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 4;
+    return cores >= 8 && mem >= 8 ? 1.4 : cores >= 4 ? 1.0 : 0.75;
+  }
+  /** Prueba a poca resolución cuánto tarda la tarjeta; sólo sube la resolución si va sobrada. */
   function init(trees) {
     if (st.tried) return st.ok;
     st.tried = true;
     st.trees = trees || [];
     st.q = pref();
     if (st.q === 'off') return false;
+    if (!make(0.5)) return false;
+    const ms = st.bakeMs, top = maxScale();
+    if (ms > 1500 && st.q !== 'high') {            // ni a un cuarto de resolución va bien: sin suelo 3D (queda el suelo sencillo)
+      try { const x = st.gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { /* nada */ }
+      st.ok = false; st.canvas = null; st.gl = null;
+      if (st.q === 'auto') { try { localStorage.setItem('duelo.gfx', 'off'); } catch (e) { /* nada */ } }
+      return false;
+    }
+    const want = Math.min(top, 0.5 * Math.sqrt(500 / Math.max(ms, 1)));   // a ~0,5 s de preparación como mucho
+    if (want > 0.62) {
+      const keep = { gl: st.gl, canvas: st.canvas, S: st.S, draw: st.draw };
+      if (make(want)) { try { const x = keep.gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { /* nada */ } }
+      else { st.gl = keep.gl; st.canvas = keep.canvas; st.S = keep.S; st.draw = keep.draw; st.ok = true; }
+    }
+    return st.ok;
+  }
+  function make(S) {
+    st.ok = false;
     try {
       const cv = document.createElement('canvas');
       const gl = cv.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
       if (!gl) return false;
-      let S = st.q === 'low' ? 0.9 : 1.4;
       const mx = gl.getParameter(gl.MAX_TEXTURE_SIZE);
       while (R.w * S > mx || R.h * S > mx) S *= .85;
       const TW = Math.round(R.w * S), TH = Math.round(R.h * S);
@@ -392,6 +417,7 @@ void main(){
       const f1 = fbo(gl, [tA, tB]), f2 = fbo(gl, [tN, tL]);
       const rect = [R.x, R.y, R.w, R.h];
 
+      const tBake = performance.now();
       gl.disable(gl.BLEND); gl.viewport(0, 0, TW, TH);
       gl.bindFramebuffer(gl.FRAMEBUFFER, f1); gl.useProgram(pA.p); gl.uniform4fv(pA.u.uR, rect); gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -405,6 +431,7 @@ void main(){
       gl.uniform1fv(pB.u.uWallH, new Float32Array(WALLS.map(w => w[4])));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.deleteTexture(tB);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); st.bakeMs = performance.now() - tBake;   // leer un píxel obliga a esperar a la tarjeta
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tA);
@@ -421,7 +448,7 @@ void main(){
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       };
       st.gl = gl; st.canvas = cv; st.S = S;
-      cv.addEventListener('webglcontextlost', e => { e.preventDefault(); st.ok = false; stop(); document.documentElement.classList.remove('gl'); });
+      cv.addEventListener('webglcontextlost', e => { e.preventDefault(); if (st.canvas !== cv) return; st.ok = false; stop(); document.documentElement.classList.remove('gl'); });
       st.draw(0);
       st.ok = true;
       return true;
