@@ -13,7 +13,7 @@ HTML + CSS + JavaScript sin dependencias ni paso de compilación. Gratis y sin a
 
 ## Jugar
 
-- Web publicada: <https://axel-cuenca.github.io/pokesurvivor/>
+- Web publicada: <https://axel-cuenca.github.io/duelo-pokemon/>
 - En local: `python3 -m http.server` en esta carpeta y abrir <http://localhost:8000>. Sin la web
   publicada no hay nube: no hay cuentas y los mazos se guardan sólo en el navegador.
 

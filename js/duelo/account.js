@@ -30,7 +30,7 @@
   const NAME_DOMAIN = 'jugadores.pokesurvivor.net';   // sólo para el email interno
   const VALID = /^[A-Za-z0-9_ñÑáéíóúÁÉÍÓÚ]{3,16}$/;
   // La nube sólo desde la web propia (una copia en otra web guardaría sus cuentas en NUESTRO proyecto).
-  const HOSTS = ['axel-cuenca.github.io', 'pokesurvivor.com', 'www.pokesurvivor.com', 'localhost', '127.0.0.1'];
+  const HOSTS = ['axel-cuenca.github.io', 'localhost', '127.0.0.1'];
   const PUSH_WAIT = 8000;       // los cambios de mazos suben 8 s después del último
   const SCHEMA = 3;             // campo "v" del documento (como el del juego anterior)
 
