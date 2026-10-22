@@ -31,7 +31,7 @@ servidores, base de datos o costes NO van ahí.
 - Firebase: proyecto **pokesurvivor-free** (autenticación normal: cuentas gratis sin límite).
   **Nunca** activar "Identity Platform" ni nada que lo active (funciones de bloqueo, MFA,
   "Actualizar para habilitar"): cobra por usuario. El proyecto viejo pokesurvivor-jpter se borró el 13-10-2026 (con su facturación).
-- Dominio: el sitio vive en `axel-cuenca.github.io/duelo-pokemon/` (GitHub Pages; el repo se llama `duelo-pokemon` desde el 22-10-2026). `pokesurvivor.com` NO es nuestro (es de otra persona): no usarlo. El Worker y el TURN
+- Dominio: el sitio vive en `axel-cuenca.github.io/duelo/` (GitHub Pages; el repo se llama `duelo` desde el 22-10-2026). `pokesurvivor.com` NO es nuestro (es de otra persona): no usarlo. El Worker y el TURN
   (Cloudflare Realtime) se quitaron el 15-10-2026: el cooperativo va sólo con conexión directa
   (STUN gratis de Google). No volver a añadir nada de pago.
 
