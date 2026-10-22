@@ -1,8 +1,5 @@
-# PokéSurvivor
+# Duelo Pokémon
 User-agent: *
 Allow: /
 Disallow: /tools/
 Disallow: /docs/
-Disallow: /dev.html
-
-Sitemap: https://pokesurvivor.com/sitemap.xml

@@ -31,7 +31,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn.ghost { background: transparent; border-color: var(--edge); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .row.grow > * { flex: 1; }
-select, input[type=text], input[type=search] { font: inherit; color: var(--ink); background: #081030; border: 2px solid var(--edge); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+select, input[type=text], input[type=search], input[type=password] { font: inherit; color: var(--ink); background: #081030; border: 2px solid var(--edge); border-radius: 8px; padding: 7px 10px; min-width: 0; }
 .msg { padding: 8px 12px; border-radius: 8px; background: #0006; border: 1px solid var(--edge); }
 .msg.err { border-color: var(--red); color: #ffc4c4; }
 .msg.ok { border-color: var(--green); color: #c8ffd8; }
@@ -545,3 +545,11 @@ html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none;
 .standings .st small { margin-left: auto; color: var(--muted); font-weight: 600; }
 .standings .st.w { border-color: var(--gold); background: #2a2008cc; color: #fff; }
 .standings .st.me { box-shadow: 0 0 0 2px #7df0ff77; }
+
+/* ---- cuenta, entrar y crear cuenta ---- */
+.acct { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; font-family: var(--ui); }
+.btn.sm { padding: 4px 12px; font-size: 14px; }
+.tabs { display: flex; gap: 6px; }
+.tab { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--edge); background: transparent; font: 700 15px var(--ui); letter-spacing: .5px; }
+.tab.on { background: linear-gradient(#2a4a9a, #14275f); border-color: #7fa0ff; }
+.panel form, form.panel input { width: 100%; box-sizing: border-box; }

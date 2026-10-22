@@ -72,16 +72,45 @@
   const mount = (...kids) => { app.replaceChildren(...kids); window.scrollTo(0, 0); };
 
   // ---------------- mazos guardados ----------------
+  // Sin cuenta (invitado o sin nube): en este navegador. Con cuenta: una copia por cuenta en este
+  // navegador y otra en la nube (js/duelo/account.js); gana la más reciente.
   const KEY = 'duelo.v1';
-  function loadStore() {
+  let storeKey = KEY;
+  const defaultStore = () => ({ decks: [{ name: 'Fuego', ids: C.presetDeck('fire') }], active: 0, updated: 0 });
+  function readStore(key) {
     try {
-      const s = JSON.parse(localStorage.getItem(KEY));
+      const s = JSON.parse(localStorage.getItem(key));
       if (s && Array.isArray(s.decks) && s.decks.length) { s.active = Math.min(s.active | 0, s.decks.length - 1); return s; }
     } catch (e) { /* nada */ }
-    return { decks: [{ name: 'Fuego', ids: C.presetDeck('fire') }], active: 0 };
+    return null;
   }
-  const store = loadStore();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* nada */ } }
+  let store = readStore(KEY) || defaultStore();
+  const cloudUser = () => { const u = D.Account.user; return D.Account.cloud && u && !u.guest ? u : null; };
+  function save() {
+    store.updated = Date.now();
+    try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
+    if (cloudUser()) D.Account.push(store);
+  }
+  /** Carga los mazos de quien acaba de entrar (null = invitado / sin nube). */
+  async function openStore(u) {
+    if (!u || u.guest) { storeKey = KEY; store = readStore(KEY) || defaultStore(); return; }
+    storeKey = KEY + '.' + u.uid;
+    const local = readStore(storeKey), remote = await D.Account.pull();
+    const ok = r => r && Array.isArray(r.decks) && r.decks.length ? r : null;
+    const rem = ok(remote);
+    let pick = rem && local ? ((rem.updated || 0) >= (local.updated || 0) ? rem : local) : rem || local;
+    const fresh = !pick;
+    if (fresh) {                                    // cuenta nueva: la primera de este navegador se queda los mazos que ya había aquí
+      let claimed = null; try { claimed = localStorage.getItem(KEY + '.claimed'); } catch (e) { /* nada */ }
+      pick = (!claimed && readStore(KEY)) || defaultStore();
+      if (!claimed) { try { localStorage.setItem(KEY + '.claimed', u.uid); } catch (e) { /* nada */ } }
+      pick.updated = Date.now();
+    }
+    pick.active = Math.min(pick.active | 0, pick.decks.length - 1);
+    store = pick;
+    try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
+    if (pick !== rem) D.Account.push(store);
+  }
   const activeDeck = () => store.decks[store.active];
 
   // ---------------- dibujo de cartas ----------------
@@ -169,14 +198,15 @@
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids);
     mount(h('div', { class: 'scr' },
-      h('a', { class: 'back', href: 'index.html' }, '← Volver a PokéSurvivor'),
+      acctBar(),
       h('h1', null, 'Duelo Pokémon'),
       h('p', { class: 'sub' }, 'Duelos de cartas con los Pokémon como monstruos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
       h('div', { class: 'panel' }, h('div', null, 'Mazo activo: ', h('b', null, dk.name)), bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null),
       h('button', { class: 'menu-btn', disabled: !!bad, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
       h('button', { class: 'menu-btn', disabled: !!bad, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
-      h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega'))));
+      h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
+      h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
   }
 
   function rules() {
@@ -206,7 +236,7 @@
           h('li', null, 'Al atacar eliges a quién. Un monstruo sólo ataca directo al rival que no tiene monstruos. En la primera ronda nadie ataca.'),
           h('li', null, 'Trampas: si te atacan, sólo puede responder el atacado. Con una magia o una invocación, pueden responder todos los rivales de quien actúa, por orden de turno.'),
           h('li', null, 'Magias con rival (destruir un monstruo, destruir una magia/trampa, daño directo) te dejan elegir el rival. «Destruir todos los monstruos» afecta a todos, también a los tuyos y a los de tu equipo.'),
-          h('li', null, 'En la pantalla, toca la ficha de un rival para ver su campo. Si te sacan del duelo puedes seguir mirando hasta el final.')),
+          h('li', null, 'En el tablero ves los campos de todos a la vez; para atacar o elegir objetivo, toca directamente en el campo del rival. Si te sacan del duelo puedes seguir mirando hasta el final.')),
         h('h2', null, 'Magias y trampas'),
         h('ul', null,
           h('li', null, 'Las magias se activan desde la mano o boca abajo, en tu fase principal.'),
@@ -257,8 +287,8 @@
     D.Online.init().then(me => {
       if (!me) {
         box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'),
-          h('div', { class: 'msg err' }, 'Para jugar online necesitas haber iniciado sesión en PokéSurvivor (con el mismo navegador).'),
-          h('a', { class: 'btn gold', href: 'index.html', style: 'text-align:center;text-decoration:none' }, 'Ir a iniciar sesión'));
+          h('div', { class: 'msg err' }, D.Account.cloud ? 'Para jugar online necesitas una cuenta: entra o créala (es gratis). Como invitado sólo puedes jugar contra la computadora.' : 'Jugar online necesita la versión publicada del juego (no funciona abriendo el archivo ni en copias de otra web).'),
+          D.Account.cloud ? btn('Entrar o crear cuenta', async () => { await D.Account.logout(); D.Online.reset(); loginScreen(); }, 'gold') : null);
         return;
       }
       const inp = h('input', { type: 'text', maxlength: 5, placeholder: 'CÓDIGO', style: 'text-transform:uppercase;width:8em;font-size:20px;text-align:center', autocomplete: 'off' });
@@ -895,6 +925,108 @@
     window.__duelo = { match, view: () => v, elemFx };
   }
 
+  // ---------------- cuenta ----------------
+  /** Barra de arriba del menú: quién eres y cómo cambiar de cuenta. */
+  function acctBar() {
+    const u = D.Account.user;
+    if (!D.Account.cloud) return h('div', { class: 'acct' }, h('span', { class: 'sub' }, 'Sin conexión con la nube: tus mazos se guardan sólo en este navegador.'));
+    if (u && !u.guest) return h('div', { class: 'acct' }, h('span', null, '👤 ', h('b', null, u.name)), btn('Cuenta', accountModal, 'ghost sm'));
+    return h('div', { class: 'acct' }, h('span', { class: 'sub' }, 'Invitado: sin guardar en la nube ni jugar online.'),
+      btn('Entrar o crear cuenta', async () => { await D.Account.logout(); D.Online.reset(); loginScreen(); }, 'gold sm'));
+  }
+
+  async function afterLogin(isNew) {
+    mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Cargando tus mazos…')));
+    D.Online.reset();
+    await openStore(D.Account.user);
+    menu();
+    if (!D.Account.user.guest && D.Account.isNameAccount() && !D.Account.hasGoogle()) offerRecovery();
+  }
+
+  function loginScreen() {
+    endCurrent(); showBg(true); S.setTrack('menu'); sndButton(true);
+    let mode = 'login';
+    const err = h('div', { class: 'msg err', style: 'display:none' });
+    const showErr = t => { err.textContent = t; err.style.display = t ? '' : 'none'; };
+    const nameI = h('input', { type: 'text', placeholder: 'Tu nombre', autocomplete: 'username', maxlength: 16, 'aria-label': 'Nombre' });
+    const passI = h('input', { type: 'password', placeholder: 'Contraseña', autocomplete: 'current-password', 'aria-label': 'Contraseña' });
+    const go = h('button', { class: 'btn gold big', type: 'submit' }, 'Entrar');
+    const tabs = ['login', 'register'].map(m => h('button', { type: 'button', class: 'tab' + (m === mode ? ' on' : ''), onclick: () => setMode(m) }, m === 'login' ? 'Entrar' : 'Crear cuenta'));
+    function setMode(m) {
+      mode = m; tabs.forEach((t, i) => t.classList.toggle('on', ['login', 'register'][i] === m));
+      go.textContent = m === 'login' ? 'Entrar' : 'Crear cuenta';
+      passI.autocomplete = m === 'login' ? 'current-password' : 'new-password'; showErr('');
+    }
+    const forgot = h('p', { class: 'sub', style: 'display:none' }, 'Si vinculaste tu Gmail a la cuenta, pulsa «Entrar con Google»: es la misma cuenta. Si no lo hiciste, no hay forma de recuperarla: crea una cuenta nueva.');
+    const busy = on => { go.disabled = on; };
+    const finish = async r => { busy(false); if (!r.ok) { showErr(r.error); return; } passI.value = ''; afterLogin(r.isNew); };
+    const form = h('form', { class: 'panel', onsubmit: async e => {
+      e.preventDefault(); showErr(''); busy(true);
+      finish(await (mode === 'login' ? D.Account.login(nameI.value, passI.value) : D.Account.register(nameI.value, passI.value)));
+    } }, h('div', { class: 'tabs' }, tabs), nameI, passI, err, go,
+      h('a', { href: '#', class: 'sub', onclick: e => { e.preventDefault(); forgot.style.display = forgot.style.display ? '' : 'none'; } }, '¿Olvidaste la contraseña?'), forgot);
+    const googleBtn = D.Account.cloud ? btn('Entrar con Google', async () => { showErr(''); finish(await D.Account.google()); }, '') : null;
+    mount(h('div', { class: 'scr' }, h('h1', null, 'Duelo Pokémon'),
+      h('p', { class: 'sub' }, 'Entra o crea tu cuenta gratis para guardar tus mazos en la nube y jugar online con tus amigos.'),
+      form, googleBtn,
+      btn('Jugar como invitado', () => { D.Account.guest(); afterLogin(false); }, 'ghost'),
+      h('p', { class: 'sub' }, 'Como invitado juegas contra la computadora; los mazos se quedan sólo en este navegador.')));
+    setTimeout(() => nameI.focus(), 50);
+  }
+
+  /** Una vez por sesión: «¿te da miedo perder tu cuenta?» (vincular el Gmail). */
+  let offered = false;
+  function offerRecovery() {
+    const u = D.Account.user;
+    if (offered || !u || u.guest) return;
+    try { if (localStorage.getItem('duelo.recover.no.' + u.uid) || sessionStorage.getItem('duelo.recover.seen')) return; sessionStorage.setItem('duelo.recover.seen', '1'); } catch (e) { /* nada */ }
+    offered = true;
+    const err = h('div', { class: 'msg err', style: 'display:none' });
+    modal(h('div', { class: 'box' }, h('h2', null, '¿Te da miedo perder tu cuenta?'),
+      h('p', null, 'Tu cuenta de nombre y contraseña no tiene un correo real, así que si olvidas la contraseña no se puede recuperar. Vincula tu Gmail y, si te pasa, entras con Google y es la misma cuenta.'),
+      err,
+      btn('Vincular mi Gmail', async () => { const r = await D.Account.linkGoogle(); if (!r.ok) { err.textContent = r.error; err.style.display = ''; return; } closeModal(); }, 'gold'),
+      btn('Ahora no', () => closeModal(), 'ghost'),
+      btn('No volver a preguntar', () => { try { localStorage.setItem('duelo.recover.no.' + u.uid, '1'); } catch (e) { /* nada */ } closeModal(); }, 'ghost')));
+  }
+
+  function accountModal() {
+    const u = D.Account.user;
+    const msg = h('div', { class: 'msg', style: 'display:none' });
+    const say = (t, bad) => { msg.textContent = t; msg.className = 'msg ' + (bad ? 'err' : 'ok'); msg.style.display = t ? '' : 'none'; };
+    const pw = h('input', { type: 'password', placeholder: 'Tu contraseña para confirmar', autocomplete: 'current-password', style: 'display:none' });
+    const rows = [h('h2', null, 'Tu cuenta'), h('div', null, 'Nombre: ', h('b', null, u.name))];
+    if (D.Account.isNameAccount() && !D.Account.hasGoogle())
+      rows.push(btn('Vincular mi Gmail (para recuperar la cuenta)', async () => { const r = await D.Account.linkGoogle(); say(r.ok ? '¡Gmail vinculado!' : r.error, !r.ok); }, ''));
+    rows.push(btn('Cerrar sesión', async () => { closeModal(); await D.Account.logout(); D.Online.reset(); await openStore(null); loginScreen(); }, ''));
+    let armed = false;
+    rows.push(pw, msg, btn('Borrar mi cuenta', async () => {
+      if (!armed) { armed = true; say('Se borrarán tu cuenta y tus mazos de la nube. Pulsa otra vez para confirmar.', true); if (D.Account.isNameAccount()) pw.style.display = ''; return; }
+      const r = await D.Account.deleteAccount(pw.value);
+      if (!r.ok) { say(r.error, true); return; }
+      closeModal(); D.Online.reset(); await openStore(null); loginScreen();
+    }, 'red'), btn('Cerrar', () => closeModal(), 'ghost'));
+    modal(h('div', { class: 'box' }, ...rows));
+  }
+
+  // ---------------- novedades ----------------
+  function news() {
+    S.setTrack('menu');
+    const en = /^en/i.test(navigator.language || '') ? 1 : 0;
+    const SEC = [['new', 'Nuevo', 'New'], ['chg', 'Cambios', 'Changes'], ['fix', 'Arreglos', 'Fixes']];
+    const items = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').map(e => h('div', { class: 'panel' },
+      h('h2', null, e.title[en]), h('div', { class: 'sub' }, e.d),
+      ...SEC.filter(x => e[x[0]] && e[x[0]].length).map(x => h('div', null, h('b', null, x[1 + en]), h('ul', null, e[x[0]].map(l => h('li', null, l[en])))))));
+    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Novedades'), ...items));
+  }
+
+  // lo que mira el actualizador automático (js/core/updater.js)
+  D.UI = { inMatch: () => !!current, forceLeave: () => { if (current) endCurrent(); } };
+
   mount(h('p', { class: 'loading' }, 'Cargando…'));
-  menu();
+  D.Account.ready().then(async st => {
+    if (st.user) return afterLogin(false);
+    if (st.mode === 'cloud') return loginScreen();
+    await openStore(null); menu();
+  }).catch(async e => { console.warn(e); await openStore(null); menu(); });
 })();

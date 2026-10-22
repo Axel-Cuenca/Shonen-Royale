@@ -1,50 +1,33 @@
 /* ============ duelo/online.js — salas para duelos de 2 a 4 personas ============
- * Usa el mismo Firebase y la misma sesión que el juego principal (mismo sitio, así
- * que si ya iniciaste sesión allí, aquí también). La sala vive en la Realtime
+ * Usa la sesión de la cuenta (js/duelo/account.js). La sala vive en la Realtime
  * Database (rooms/<código>) sólo para encontrarse y negociar la conexión directa
  * (G.Net, WebRTC); las jugadas van de navegador a navegador.
  */
 (function () {
   'use strict';
   const D = (window.Duelo = window.Duelo || {});
-  const SDK = 'https://www.gstatic.com/firebasejs/13.0.0/';
   const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let fb = null, rtdb = null, uid = null, name = 'Entrenador', ready = null, session = null;
 
-  function loadScript(src) {
-    return new Promise((ok, no) => {
-      const s = document.createElement('script');
-      s.src = src; s.onload = ok; s.onerror = () => no(new Error('No se pudo cargar ' + src));
-      document.head.appendChild(s);
-    });
-  }
-  function cleanName(u) {
-    const raw = (u.displayName || '').trim().split(/\s+/)[0] || 'Entrenador';
-    return raw.replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 14) || 'Entrenador';
-  }
-
-  /** Conecta con Firebase. Devuelve { uid, name } o null si no hay sesión iniciada. */
+  /** Conecta con la sesión de la cuenta. Devuelve { uid, name } o null si no hay una cuenta con sesión (invitado o sin nube). */
   function init() {
     if (ready) return ready;
     ready = (async () => {
-      const cfg = G.FIREBASE_CONFIG;
-      if (!cfg) throw new Error('Firebase no está configurado.');
-      await loadScript(SDK + 'firebase-app-compat.js');
-      await loadScript(SDK + 'firebase-auth-compat.js');
-      await loadScript(SDK + 'firebase-database-compat.js');
-      fb = window.firebase;
-      const app = fb.apps.length ? fb.app() : fb.initializeApp(cfg);
-      const auth = fb.auth(app);
-      rtdb = fb.database(app);
-      const user = await new Promise(res => { const off = auth.onAuthStateChanged(u => { off(); res(u); }); });
-      if (!user) return null;
-      uid = user.uid; name = cleanName(user);
+      const st = await D.Account.ready();
+      const u = D.Account.user;
+      if (st.mode !== 'cloud' || !u || u.guest) return null;
+      const f = D.Account.firebase();
+      fb = f.fb; rtdb = f.rtdb;
+      if (!rtdb) throw new Error('La base de datos en tiempo real no está configurada.');
+      uid = u.uid; name = u.name;
       G.DB = { get fb() { return { rtdb, uid }; } };
       return { uid, name };
     })();
     ready.catch(() => { ready = null; });
     return ready;
   }
+  /** Al cambiar de cuenta hay que volver a conectar. */
+  function reset() { ready = null; }
 
   const genCode = () => Array.from({ length: 5 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
 
@@ -152,5 +135,5 @@
     };
   }
 
-  D.Online = { init, createRoom, joinRoom, get name() { return name; } };
+  D.Online = { init, reset, createRoom, joinRoom, get name() { return name; } };
 })();

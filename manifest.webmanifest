@@ -1,12 +1,12 @@
 {
-  "name": "PokéSurvivor",
-  "short_name": "PokéSurvivor",
-  "description": "Fan game gratuito: sobrevive a las hordas con tu compañero Pokémon. Sin anuncios.",
+  "name": "Duelo Pokémon",
+  "short_name": "Duelo Pokémon",
+  "description": "Duelos de cartas con los Pokémon como monstruos. Contra la computadora o online con amigos, hasta 4 jugadores. Gratis.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
+  "display": "standalone",
+  "orientation": "any",
   "background_color": "#0a1430",
   "theme_color": "#0a1430",
   "icons": [

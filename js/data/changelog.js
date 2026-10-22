@@ -6,6 +6,13 @@
  * Cada línea en español y en inglés.
  */
 G.CHANGELOG = [
+  { d: '2026-10-22', title: ['Ahora el sitio es sólo el Duelo', 'The site is now only the Duel'], new: [
+    ['El juego ahora es únicamente el Duelo Pokémon: se abre directo en el duelo de cartas. Puedes crear una cuenta (nombre y contraseña o Google) o jugar como invitado. Con cuenta, tus mazos se guardan en la nube y los tienes en cualquier aparato, y puedes jugar online con amigos. Las cuentas que ya tenías siguen funcionando. Como invitado puedes jugar contra la computadora.',
+     'The game is now only Pokémon Duel: it opens straight into the card duel. You can create an account (name and password, or Google) or play as a guest. With an account your decks are saved in the cloud so you have them on any device, and you can play online with friends. Your existing accounts keep working. As a guest you can play against the computer.']
+  ], chg: [
+    ['Se quitó el juego anterior (PokéSurvivor); el Duelo ocupa su lugar y la dirección de siempre. El menú tiene un botón «Novedades» y la ventana «Cuenta» para cerrar sesión, vincular tu Gmail o borrar la cuenta.',
+     'The previous game (PokéSurvivor) was removed; the Duel takes its place at the same address. The menu has a “News” button and an “Account” window to sign out, link your Gmail or delete the account.']
+  ] },
   { d: '2026-10-20', title: ['Duelo de cartas para 3 y 4 jugadores', 'Card duel for 3 and 4 players'], new: [
     ['El Duelo ya se puede jugar de 3 o 4: «todos contra todos» (cada uno con sus 8000 PV, gana el último en pie) y «2 contra 2» (dos equipos; gana el que deja sin PV a los dos rivales). Al atacar eliges a quién; quien cae queda fuera y sigue mirando. Funciona contra la computadora y online: crea la sala, elige el formato, tus amigos entran con el código y, si falta gente, los asientos libres los juega la computadora. En el tablero se ven los campos de todos a la vez (con su nombre, vida y cartas); para atacar o elegir objetivo, toca directamente en el campo del rival.',
      'The Duel can now be played with 3 or 4: “free for all” (everyone has their own 8000 LP, last one standing wins) and “2 vs 2” (two teams; the team that leaves both rivals at 0 LP wins). When attacking you choose the target; whoever falls is out and keeps watching. It works against the computer and online: create the room, pick the format, your friends join with the code and, if someone is missing, free seats are played by the computer. The board shows everyone’s field at once (with name, life and cards); to attack or choose a target, tap directly on the rival’s field.']
