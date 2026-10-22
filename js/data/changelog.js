@@ -22,6 +22,10 @@ G.CHANGELOG = [
     ['Se quitó el juego anterior (PokéSurvivor); el Duelo ocupa su lugar y la dirección de siempre. El menú tiene un botón «Novedades» y la ventana «Cuenta» para cerrar sesión, vincular tu Gmail o borrar la cuenta.',
      'The previous game (PokéSurvivor) was removed; the Duel takes its place at the same address. The menu has a “News” button and an “Account” window to sign out, link your Gmail or delete the account.']
   ], fix: [
+    ['Las cartas de 5 y 6 estrellas se veían más grandes que las demás en el campo; ahora tienen el mismo tamaño.',
+     'Cards of 5 and 6 stars looked bigger than the others on the field; they are now the same size.'],
+    ['La ventana de información de una carta ahora muestra lo que hace su habilidad.',
+     'The card information window now shows what its ability does.'],
     ['El juego tardaba y podía colgar el navegador unos segundos al abrirse en equipos modestos. Ahora el menú sale enseguida, la arena se dibuja por partes y se guarda en el navegador (las siguientes veces carga al instante), y el suelo 3D ajusta su calidad al equipo o se desactiva si no puede.',
      'The game could be slow and freeze the browser for a few seconds when opening on modest computers. Now the menu shows right away, the arena is drawn in pieces and saved in the browser (later visits load instantly), and the 3D floor adjusts its quality to the computer or turns itself off if it can’t cope.'],
     ['Si un jugador se rendía justo cuando su carta se estaba activando y eso terminaba la partida, esa carta desaparecía.',

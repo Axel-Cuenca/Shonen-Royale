@@ -136,7 +136,7 @@
     if (d.kind === 'monster') {
       const atk = o.atk != null ? o.atk : d.atk, def = o.def != null ? o.def : d.def;
       const cls = (v, base) => v > base ? 'up' : v < base ? 'dn' : '';
-      return h('div', { class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' mid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
+      return h('div', { class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' lvmid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
         h('div', { class: 'cn' }, d.name), sprite(d),
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
@@ -152,6 +152,7 @@
     if (d.kind === 'monster') {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
         h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`),
+        d.text ? h('div', { class: 'abil' }, h('b', null, 'Habilidad'), h('div', null, d.text)) : null,
         h('div', { class: 'sub' }, C.tributesFor(d.level) ? `Para invocarlo hay que sacrificar ${C.tributesFor(d.level)} monstruo(s) tuyo(s).` : 'Se invoca sin sacrificios.'),
         h('div', { class: 'sub' }, 'No hay ventajas de tipo: el combate sólo compara ATK y DEF.'));
     } else {

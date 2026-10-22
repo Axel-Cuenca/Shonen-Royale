@@ -433,7 +433,7 @@ html.gl .river { display: none; }
 @keyframes pop { 0% { opacity: 0; transform: translateX(-50%) scale(1.8); } 14% { opacity: 1; transform: translateX(-50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(.95); } }
 
 /* cartas: brillos de rareza y selección */
-.card.m.mid { box-shadow: 0 0 0 1px #d9a93a, 0 0 8px #d9a93a88; }
+.card.m.lvmid { box-shadow: 0 0 0 1px #d9a93a, 0 0 8px #d9a93a88; }
 .card.m.hi { position: relative; box-shadow: 0 0 0 2px #f4d36a, 0 0 14px #ffd24a99; }
 .card.m.hi::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: screen;
   background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .6) 44%, rgba(150, 225, 255, .4) 51%, rgba(255, 180, 255, .35) 58%, transparent 70%); background-size: 260% 100%; animation: foil 3.4s linear infinite; }
@@ -563,3 +563,6 @@ html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none;
 @keyframes spin-pop { 0% { transform: scale(.2) rotate(-40deg); opacity: 0 } 60% { transform: scale(1.3) rotate(10deg); opacity: 1 } 100% { transform: scale(1) rotate(0) } }
 @keyframes spin-fade { 0%,70% { opacity: 1 } 100% { opacity: 0 } }
 html.rm .spinach { display: none; }
+
+.detail .abil { margin: 6px 0; padding: 6px 8px; border-left: 3px solid var(--gold); background: #ffffff10; border-radius: 4px; font-size: 13px; line-height: 1.35; }
+.detail .abil b { color: var(--gold); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
