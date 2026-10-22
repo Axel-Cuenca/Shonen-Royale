@@ -67,7 +67,7 @@
       turn: 0, phase: 'main', current: 0, first: 0, nextUid: 1,
       seed: (opts.seed != null ? opts.seed : (Date.now() & 0x7fffffff)) | 0,
       players: decks.map(() => mkPlayer()),
-      pending: null, chain: null, atk: null, summon: null,
+      pending: null, chain: null, atk: null, summon: null, trig: [],
       winner: null, reason: '', rank: [], log: [], logN: 0
     };
     for (let p = 0; p < n; p++) {
@@ -116,7 +116,7 @@
   function setWinner(st, w, reason) {
     if (st.winner !== null) return;
     if (st.chain) { st.players[st.chain.p].grave.push(st.chain.inst); }      // la carta que estaba activándose no se pierde
-    st.winner = w; st.reason = reason; st.pending = null; st.chain = null; st.atk = null;
+    st.winner = w; st.reason = reason; st.pending = null; st.chain = null; st.atk = null; st.trig = [];
     log(st, -1, w === 'draw' ? 'Empate.' : 'Fin del duelo.');
   }
   /** Un jugador queda fuera: su mano y su campo van al cementerio. */
@@ -152,8 +152,9 @@
     for (const s of P.st) if (s && !s.down && s.equipTo === z) n += (def(s.c)[key] || 0);
     return n;
   }
-  function atkOf(P, z) { const m = P.mz[z]; return Math.max(0, def(m.c).atk + (m.atkMod || 0) + equipBonus(P, z, 'eAtk')); }
-  function defOf(P, z) { const m = P.mz[z]; return Math.max(0, def(m.c).def + equipBonus(P, z, 'eDef')); }
+  // m.base: valores propios de esta aparición en el campo (p. ej. Popeye revivido con 1500/1500)
+  function atkOf(P, z) { const m = P.mz[z]; return Math.max(0, (m.base ? m.base.atk : def(m.c).atk) + (m.atkMod || 0) + equipBonus(P, z, 'eAtk')); }
+  function defOf(P, z) { const m = P.mz[z]; return Math.max(0, (m.base ? m.base.def : def(m.c).def) + equipBonus(P, z, 'eDef')); }
 
   /** Un monstruo sale del campo (destruido o tributado): va al cementerio junto con sus equipos. */
   function removeMonster(st, p, z) {
@@ -164,6 +165,23 @@
     for (let i = 0; i < ZONES; i++) {
       const s = P.st[i];
       if (s && !s.down && s.equipTo === z) { P.grave.push(s.c); P.st[i] = null; }
+    }
+  }
+  /** Destruir (en combate o por un efecto): igual que removeMonster, y avisa a las habilidades «al ser destruido». */
+  function destroyMonster(st, p, z) {
+    const m = st.players[p].mz[z];
+    if (!m) return;
+    removeMonster(st, p, z);
+    if (def(m.c).ability === 'spinach' && !m.c.spent) st.trig.push({ p, uid: m.c.uid });
+  }
+  /** Habilidades pendientes: si hay que preguntar al dueño, deja un pending 'ability'. */
+  function runTriggers(st) {
+    while (st.winner === null && !st.pending && st.trig && st.trig.length) {
+      const t = st.trig.shift(), P = st.players[t.p];
+      const inst = P.grave.find(c => c.uid === t.uid);
+      if (!inst || !P.alive || inst.spent) continue;
+      if (freeCount(P.mz) < 1) { log(st, t.p, `${def(inst).name}: no hay espacio en el campo, pierde su habilidad`); continue; }
+      st.pending = { k: 'ability', player: t.p, uid: t.uid, stage: 'ask' };
     }
   }
   function removeST(st, p, z) {
@@ -206,14 +224,14 @@
         if (!t || !o.mz[t.z]) { log(st, p, 'no tiene objetivo'); return; }
         log(st, p, `destruye a ${def(o.mz[t.z].c).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
-        removeMonster(st, e, t.z);
+        destroyMonster(st, e, t.z);
         lose(st, p, d.self);
       }
     },
     destroyAll: {
       targets: st => st.players.some(P => zonesWith(P.mz).length) ? [null] : [],
       resolve: st => {
-        for (let p = 0; p < st.n; p++) for (let z = 0; z < ZONES; z++) removeMonster(st, p, z);
+        for (let p = 0; p < st.n; p++) for (let z = 0; z < ZONES; z++) destroyMonster(st, p, z);
         log(st, -1, 'Todos los monstruos son destruidos');
       }
     },
@@ -334,7 +352,7 @@
       case 'destroyAttacker':
         if (st.atk) {
           const a = st.atk;
-          if (st.players[a.p].mz[a.z]) { log(st, resp, `destruye a ${def(st.players[a.p].mz[a.z].c).name}`); removeMonster(st, a.p, a.z); }
+          if (st.players[a.p].mz[a.z]) { log(st, resp, `destruye a ${def(st.players[a.p].mz[a.z].c).name}`); destroyMonster(st, a.p, a.z); }
           a.negated = true;
         }
         break;
@@ -345,7 +363,7 @@
       case 'destroySummoned':
         if (st.summon) {
           const s = st.summon, m = st.players[s.p].mz[s.z];
-          if (m) { log(st, resp, `destruye a ${def(m.c).name}`); removeMonster(st, s.p, s.z); }
+          if (m) { log(st, resp, `destruye a ${def(m.c).name}`); destroyMonster(st, s.p, s.z); }
         }
         break;
     }
@@ -360,6 +378,7 @@
   function placeMonster(st, p, handIdx, tributes, faceDown) {
     const P = st.players[p];
     const inst = P.hand.splice(handIdx, 1)[0];
+    inst.spent = false;
     for (const z of tributes) removeMonster(st, p, z);
     const z = firstFree(P.mz);
     P.mz[z] = { c: inst, pos: faceDown ? 'def' : 'atk', down: !!faceDown, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 };
@@ -403,12 +422,12 @@
     const A = atkOf(me, a.z);
     if (dm.pos === 'atk') {
       const B = atkOf(op, a.target);
-      if (A > B) { removeMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, vs, A - B); }
-      else if (A === B) { removeMonster(st, a.p, a.z); removeMonster(st, vs, a.target); log(st, -1, 'Los dos monstruos son destruidos'); }
-      else { removeMonster(st, a.p, a.z); log(st, -1, `${ad.name} es destruido`); lose(st, a.p, B - A); }
+      if (A > B) { destroyMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, vs, A - B); }
+      else if (A === B) { destroyMonster(st, a.p, a.z); destroyMonster(st, vs, a.target); log(st, -1, 'Los dos monstruos son destruidos'); }
+      else { destroyMonster(st, a.p, a.z); log(st, -1, `${ad.name} es destruido`); lose(st, a.p, B - A); }
     } else {
       const B = defOf(op, a.target);
-      if (A > B) { removeMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); }
+      if (A > B) { destroyMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); }
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
@@ -474,6 +493,9 @@
         for (const z of pd.cands) out.push({ t: 'respond', activate: true, zone: z });
       } else if (pd.k === 'pick') {
         for (const u of pd.cands) out.push({ t: 'pick', uid: u });
+      } else if (pd.k === 'ability') {
+        if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
+        else { out.push({ t: 'ability', pos: 'atk' }); out.push({ t: 'ability', pos: 'def' }); }
       } else if (pd.k === 'discard') {
         P.hand.forEach((_, i) => out.push({ t: 'discard', hand: i }));
       }
@@ -589,11 +611,29 @@
         } else if (pd.cont === 'revive') {
           const i = P.grave.findIndex(c => c.uid === a.uid);
           const c = P.grave.splice(i, 1)[0];
+          c.spent = false;
           const z = firstFree(P.mz);
           if (z >= 0) {
             P.mz[z] = { c, pos: 'atk', down: false, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 };
             log(st, p, `revive a ${def(c).name}`);
           } else P.grave.push(c);
+        }
+        break;
+      }
+      case 'ability': {
+        const pd = st.pending; st.pending = null;
+        if (pd.stage === 'ask') {
+          const i = P.grave.findIndex(c => c.uid === pd.uid), z = firstFree(P.mz);
+          if (!a.use || i < 0 || z < 0) { if (!a.use) log(st, p, 'decide no usar la habilidad'); break; }
+          const c = P.grave.splice(i, 1)[0];
+          c.spent = true;
+          P.mz[z] = { c, pos: 'atk', down: false, summonedTurn: st.turn, attacked: true, moved: false, atkMod: 0, base: { atk: 1500, def: 1500 } };
+          log(st, p, `¡${def(c).name} come espinaca!`);
+          log(st, p, `${def(c).name} revive con 1500 ATK y 1500 DEF`);
+          st.pending = { k: 'ability', player: p, uid: c.uid, stage: 'pos', zone: z };
+        } else {
+          const m = P.mz[pd.zone];
+          if (m) { m.pos = a.pos; log(st, p, `${def(m.c).name} queda en ${a.pos === 'atk' ? 'ataque' : 'defensa'}`); }
         }
         break;
       }
@@ -605,6 +645,7 @@
         break;
       }
     }
+    runTriggers(st);
     settle(st);
     return { ok: true };
   }
@@ -647,6 +688,7 @@
           const P = st.players[seat], src = pd.zone === 'deck' ? P.deck : P.grave;
           pending.cands = pd.cands.map(u => { const c = src.find(x => x.uid === u); return { uid: c.uid, id: c.id }; });
         }
+        if (pd.k === 'ability') { pending.stage = pd.stage; pending.card = { uid: pd.uid, id: (st.players[seat].grave.concat(st.players[seat].mz.filter(Boolean).map(s => s.c)).find(c => c.uid === pd.uid) || {}).id }; }
         if (pd.k === 'discard') pending.excess = st.players[seat].hand.length - HAND_MAX;
       } else if (pd.k === 'respond') pending.trigger = pd.trigger;
     }

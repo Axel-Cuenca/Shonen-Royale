@@ -115,6 +115,11 @@
 
   // ---------------- dibujo de cartas ----------------
   function sprite(card, px) {
+    if (card.img) {                       // carta propia con ilustración (no es de la Pokédex)
+      const b = h('div', { class: 'art', style: px ? `font-size:${px}px;width:1em;height:1em;flex:none;margin:0` : '' });
+      b.append(h('img', { class: 'cimg', src: card.img, alt: card.name, draggable: 'false' }));
+      return b;
+    }
     const m = window.G.SPRITE_META && G.SPRITE_META[card.dex], a = m && m.a && m.a.Idle;
     const box = h('div', { class: 'art', style: px ? `font-size:${px}px;width:1em;height:1em;flex:none;margin:0` : '' });
     if (!a) { box.textContent = '?'; return box; }
@@ -454,7 +459,7 @@
     }
     const search = h('input', { type: 'search', placeholder: 'Buscar carta…', oninput: () => { q = search.value; shown = 60; renderPool(); } });
     const kindSel = h('select', { onchange: () => { kind = kindSel.value; shown = 60; renderPool(); } }, [['all', 'Todas'], ['monster', 'Monstruos'], ['spell', 'Magias'], ['trap', 'Trampas']].map(([v, t]) => h('option', { value: v }, t)));
-    const typeSel = h('select', { onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.map(t => h('option', { value: t }, C.TYPE_ES[t])));
+    const typeSel = h('select', { onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(['popeye']).map(t => h('option', { value: t }, C.TYPE_ES[t])));
     root.append(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Mis mazos'),
       h('p', { class: 'sub' }, 'Toca una carta de la colección para añadirla; toca una del mazo para quitarla. Se guarda solo.'),
       head,
@@ -605,6 +610,15 @@
           h('div', { class: 'acts' }, pd.cands.map(z => { const d = C.get(v.me.st[z].c.id); return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text)); })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));
         modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability') {
+        const d = pd.card && pd.card.id ? C.get(pd.card.id) : null, nm = d ? d.name : 'Popeye';
+        const box = pd.stage === 'ask'
+          ? h('div', { class: 'box' }, h('h2', null, '¿Comer espinaca?'), h('p', { class: 'sub' }, `${nm} fue destruido. Puedes revivirlo con 1500 ATK y 1500 DEF (una sola vez).`),
+            d ? h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(d)) : null,
+            h('div', { class: 'acts' }, btn('🥬 Sí, comer espinaca', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')))
+          : h('div', { class: 'box' }, h('h2', null, `${nm} revive`), h('p', { class: 'sub' }, '¿En qué posición lo dejas?'),
+            h('div', { class: 'acts' }, btn('⚔️ Ataque', () => act({ t: 'ability', pos: 'atk' }), 'gold'), btn('🛡️ Defensa', () => act({ t: 'ability', pos: 'def' }), 'gold')));
+        modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'pick') {
         const box = h('div', { class: 'box' }, h('h2', null, pd.zone === 'grave' ? 'Elige un monstruo de tu cementerio' : 'Elige un monstruo de tu mazo'),
           h('div', { class: 'cands' }, pd.cands.map(c => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => act({ t: 'pick', uid: c.uid }) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))));
@@ -736,6 +750,12 @@
     }
 
     // ----- sonidos y efectos de lo que acaba de pasar -----
+    /** Animación de Popeye: destello verde con una hoja de espinaca. */
+    function spinachFx() {
+      if (document.documentElement.classList.contains('rm')) return;
+      const e = h('div', { class: 'spinach' }, h('span', null, '🥬'), h('b', null, '¡A comer espinaca!'));
+      document.body.append(e); setTimeout(() => e.remove(), 1700);
+    }
     function logEvents() {
       const fresh2 = v.log.filter(l => l.n > lastLogN);
       if (v.log.length) lastLogN = Math.max(lastLogN, v.log[v.log.length - 1].n);
@@ -747,6 +767,7 @@
         else if (/^queda fuera/.test(t)) { snd = 'destroy'; needShake = true; pops.push({ t: l.p === v.seat ? 'Quedaste fuera' : nameOf(l.p) + ' queda fuera', cls: 'weak' }); }
         else if (/^invoca a/.test(t)) { const m = /^invoca a (.+) \(ATK/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; }
         else if (/^revive a/.test(t)) snd = 'summon';
+        else if (/come espinaca/.test(t)) { snd = 'epic'; spinachFx(); }
         else if (/boca abajo/.test(t)) snd = 'set';
         else if (/^voltea/.test(t)) snd = 'flip';
         else if (/cambia a/.test(t)) snd = 'pos';

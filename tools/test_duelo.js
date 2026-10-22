@@ -277,6 +277,132 @@ section('trampas');
   ok(st.players[1].st[0] && st.players[1].st[0].down, 'la trampa sigue boca abajo');
 }
 
+// ---------- Popeye (habilidad «¡A comer espinaca!») ----------
+section('Popeye');
+{
+  const P = Cards.get('c_popeye');
+  ok(P && P.name === 'Popeye El Marinero' && P.level === 4 && P.atk === 1200 && P.def === 1200 && P.type === 'popeye', 'carta Popeye: 4★ 1200/1200 tipo Popeye');
+  ok(P.img && Cards.all().some(c => c.id === 'c_popeye') && !Cards.monsters.some(c => c.id === 'c_popeye'), 'Popeye está en el catálogo pero no en los mazos de estreno');
+  ok(Cards.TYPE_ES.popeye === 'Popeye', 'el tipo Popeye tiene nombre');
+  eq(Cards.checkDeck(Cards.presetDeck('fire').slice(0, 28).concat(['c_popeye', 'c_popeye'])), '', 'se puede meter en un mazo (2 copias)');
+  const total = st => st.players.reduce((n, _, p) => n + E.countCards(st, p), 0);
+  // p1 destruye a Popeye con Hiperrayo en su turno 2
+  const setup = () => {
+    const st = game();
+    give(st, 0, ['c_popeye']); give(st, 1, ['s_beam']);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] });
+    nextTurn(st);
+    return st;
+  };
+  const beam = st => { const a = find(st, 1, x => x.t === 'activate'); act(st, 1, a); };
+  {
+    const st = setup(), n0 = total(st);
+    beam(st);
+    ok(st.pending && st.pending.k === 'ability' && st.pending.player === 0 && E.actor(st) === 0, 'al ser destruido por un efecto se le ofrece la habilidad a su dueño');
+    ok(st.players[0].grave.some(c => c.id === 'c_popeye'), 'mientras decide, Popeye está en el cementerio');
+    const v1 = E.view(st, 1);
+    ok(v1.pending && v1.pending.k === 'ability' && !v1.pending.card, 'el rival ve que hay una pregunta pero no los datos');
+    act(st, 0, { t: 'ability', use: true });
+    ok(st.pending && st.pending.stage === 'pos', 'luego elige la posición');
+    ok(!E.legal(st, 1).length, 'nadie más puede actuar mientras elige');
+    act(st, 0, { t: 'ability', pos: 'def' });
+    const m = st.players[0].mz[0];
+    ok(!st.pending && m && m.pos === 'def' && !m.down, 'revive boca arriba en la posición elegida');
+    const v = E.view(st, 0).me.mz[0];
+    ok(v.atk === 1500 && v.def === 1500, 'revive con 1500/1500');
+    ok(st.players[0].lp === 8000 && st.players[1].lp === 8000 - 1000, 'el Hiperrayo costó 1000 PV al que lo usó (no cambia)');
+    eq(total(st), n0, 'no se pierde ni se duplica ninguna carta');
+    ok(!st.players[0].grave.some(c => c.id === 'c_popeye'), 'sale del cementerio');
+    ok(st.players[1].normalUsed === false, 'no consume la invocación normal de nadie');
+    // segunda destrucción: ya no se puede
+    give(st, 1, ['s_beam']);
+    nextTurn(st); nextTurn(st);   // vuelve a p1 (turno 4)
+    ok(E.actor(st) === 1, 'turno del rival');
+    st.players[1].lp = 8000;
+    beam(st);
+    ok(!st.pending && st.players[0].grave.some(c => c.id === 'c_popeye') && !st.players[0].mz[0], 'sólo una vez: la segunda destrucción lo deja en el cementerio');
+    eq(total(st), n0, 'cartas íntegras tras la segunda destrucción');
+  }
+  {
+    // el revivido no puede atacar ese turno
+    const st = setup();
+    beam(st);
+    act(st, 0, { t: 'ability', use: true }); act(st, 0, { t: 'ability', pos: 'atk' });
+    ok(st.players[0].mz[0].attacked === true, 'marcado como que ya atacó este turno');
+    nextTurn(st); // p1 termina turno
+    ok(E.actor(st) === 0 && !find(st, 0, x => x.t === 'attack'), 'sin ataques de Popeye antes de que acabe el turno de revivir');
+  }
+  {
+    // rechazar pierde la oportunidad
+    const st = setup(), n0 = total(st);
+    beam(st);
+    act(st, 0, { t: 'ability', use: false });
+    ok(!st.pending && !st.players[0].mz[0] && st.players[0].grave.some(c => c.id === 'c_popeye'), 'si rechaza, se queda en el cementerio');
+    eq(total(st), n0, 'cartas íntegras tras rechazar');
+    nextTurn(st); nextTurn(st);
+    ok(E.actor(st) === 1 && !st.pending, 'la partida sigue con normalidad');
+  }
+  {
+    // en combate
+    const st = game();
+    const strong = Cards.monsters.filter(m => m.level <= 4).sort((a, b) => b.atk - a.atk)[0];
+    give(st, 0, ['c_popeye']); give(st, 1, [strong.id]);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    act(st, 1, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    nextTurn(st);
+    act(st, 1, { t: 'toBattle' });
+    const a = find(st, 1, x => x.t === 'attack' && x.target === 0);
+    ok(!!a, 'el rival puede atacar a Popeye');
+    act(st, 1, a);
+    ok(st.pending && st.pending.k === 'ability' && st.pending.player === 0, 'destruido en combate: se ofrece la habilidad');
+    act(st, 0, { t: 'ability', use: true }); act(st, 0, { t: 'ability', pos: 'atk' });
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_popeye', 'revive tras el combate');
+    ok(E.actor(st) === 1 && !st.pending, 'el turno sigue siendo del atacante');
+  }
+  {
+    // reinicio: invocarlo desde la mano o revivirlo con otra carta
+    const st = game();
+    give(st, 0, ['c_popeye']); st.players[0].hand[0].spent = true;
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] });
+    ok(!st.players[0].mz[0].c.spent, 'invocado desde la mano: la habilidad vuelve a estar disponible');
+    const st2 = game();
+    give(st2, 0, ['c_popeye']); give(st2, 1, ['s_beam']);
+    act(st2, 0, { t: 'set', hand: 0, tributes: [] }); nextTurn(st2);
+    ok(st2.players[0].mz[0].down && !st2.players[0].mz[0].c.spent, 'colocado boca abajo también la deja disponible');
+    // revivir con la magia Revivir reinicia
+    const st3 = game();
+    const c = { uid: st3.nextUid++, id: 'c_popeye', spent: true };
+    st3.players[0].grave.push(c);
+    give(st3, 0, ['s_revive']);
+    act(st3, 0, find(st3, 0, x => x.t === 'activate'));
+    act(st3, 0, { t: 'pick', uid: c.uid });
+    ok(st3.players[0].mz[0].c.id === 'c_popeye' && !st3.players[0].mz[0].c.spent && !st3.players[0].mz[0].base, 'Revivir lo trae con 1200/1200 y la habilidad disponible');
+  }
+  {
+    // Terremoto con dos Popeye (uno de cada lado) y varios monstruos: todos pueden volver, sin bucles
+    const st = game();
+    give(st, 0, ['c_popeye', 's_quake']); give(st, 1, ['c_popeye']);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    act(st, 1, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    const n0 = total(st);
+    act(st, 0, find(st, 0, x => x.t === 'activate'));
+    ok(st.pending && st.pending.player === 0, 'primero decide el que activó la magia');
+    act(st, 0, { t: 'ability', use: true }); act(st, 0, { t: 'ability', pos: 'atk' });
+    ok(st.pending && st.pending.player === 1, 'luego decide el otro dueño');
+    act(st, 1, { t: 'ability', use: true }); act(st, 1, { t: 'ability', pos: 'def' });
+    ok(!st.pending && st.players[0].mz[0] && st.players[1].mz[0], 'los dos vuelven');
+    eq(total(st), n0, 'cartas íntegras');
+  }
+  if (AI) {
+    const st = setup();
+    beam(st);
+    const bot = AI.create('normal', 3);
+    act(st, 0, bot.choose(st, 0));
+    act(st, 0, bot.choose(st, 0));
+    ok(!st.pending && st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_popeye', 'la computadora la activa sola');
+  }
+}
+
 // ---------- fin de turno y victoria ----------
 section('fin de turno y victoria');
 {
@@ -356,6 +482,29 @@ for (let g = 0; g < 120; g++) {
 }
 ok(ended === 120, 'todas las partidas terminan');
 console.log(`  ${ended} partidas · ${(turns / Math.max(1, ended)).toFixed(1)} turnos de media · victorias ${wins} · empates ${draws}`);
+
+// partidas al azar con Popeye en los dos mazos (2 copias cada uno): nada se pierde ni se duplica y no hay bucles
+{
+  let usedSpinach = 0, endedP = 0;
+  for (let g = 0; g < 80; g++) {
+    const rng = mulberry(7000 + g);
+    const mk = t => { const d = Cards.presetDeck(t).slice(); d[0] = 'c_popeye'; d[1] = 'c_popeye'; d[28] = 's_beam'; d[29] = 's_quake'; return d; };
+    const st = E.newGame([mk(types[g % types.length]), mk(types[(g * 5 + 2) % types.length])], { seed: 900 + g });
+    let steps = 0;
+    try {
+      while (st.winner === null && steps++ < 4000) {
+        const p = E.actor(st);
+        act(st, p, randomBot(st, p, rng));
+        if (steps % 5 === 0) checkInvariants(st, `Popeye partida ${g} paso ${steps}`);
+      }
+      checkInvariants(st, `Popeye partida ${g} final`);
+    } catch (e) { ok(false, e.message); break; }
+    if (st.winner !== null) endedP++;
+    if (st.log.some(l => /come espinaca/.test(l.t))) usedSpinach++;
+  }
+  ok(endedP === 80, 'las partidas con Popeye terminan');
+  console.log(`  80 partidas con Popeye · espinaca usada en ${usedSpinach}`);
+}
 
 // ---------- IA ----------
 if (AI) {

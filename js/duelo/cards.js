@@ -3,7 +3,7 @@
  *   nivel  según sus stats base totales (1-8)
  *   ATK    ≈ su mejor ataque (físico o especial)
  *   DEF    ≈ su mejor defensa
- *   tipo   el primero de sus tipos (la tabla de tipos da ±ATK en combate)
+ *   tipo   el primero de sus tipos (sólo decorativo: no hay ventajas de tipo)
  * Más cartas de MAGIA y TRAMPA propias. Reglas inspiradas en los juegos de
  * cartas de monstruos, con cartas y nombres propios.
  *
@@ -18,12 +18,14 @@
   const TYPE_ES = {
     normal: 'Normal', fire: 'Fuego', water: 'Agua', electric: 'Eléctrico', grass: 'Planta', ice: 'Hielo',
     fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra', flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho',
-    rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada'
+    rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada',
+    popeye: 'Popeye'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
     fighting: '#c22e28', poison: '#a33ea1', ground: '#e2bf65', flying: '#a98ff3', psychic: '#f95587', bug: '#a6b91a',
-    rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad'
+    rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad',
+    popeye: '#2e5aa8'
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -43,6 +45,21 @@
     };
     MONSTERS.push(card); BY_ID.set(card.id, card);
   }
+
+  // ---------------- cartas propias (no son de la Pokédex) ----------------
+  // img: ilustración de la carta (se cambia sustituyendo el archivo). ability: la interpreta engine.js.
+  // Regla de tipo: las cartas nuevas llevan como tipo el nombre de su serie; los Pokémon no cambian.
+  const CUSTOM = [
+    {
+      id: 'c_popeye', kind: 'monster', dex: 0, name: 'Popeye El Marinero', types: ['popeye'], type: 'popeye',
+      level: 4, atk: 1200, def: 1200, rarity: 'rare', leg: false, gen: 0, bst: 0,
+      img: 'assets/cards/popeye.png', ability: 'spinach',
+      text: '¡A comer espinaca!: una vez, cuando sea destruido en combate o por un efecto y vaya al cementerio, ' +
+        'puedes revivirlo en tu campo (en ataque o defensa) con 1500 ATK y 1500 DEF. No ataca el turno en que revive. ' +
+        'Si lo invocas o lo revives con otra carta, la habilidad vuelve a estar disponible.'
+    }
+  ];
+  for (const c of CUSTOM) BY_ID.set(c.id, c);
 
   // ---------------- magias ----------------
   // fx: lo que hace (lo interpreta engine.js)
@@ -118,7 +135,8 @@
   D.Cards = {
     get: id => BY_ID.get(id),
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
-    all: () => MONSTERS.concat(SPELLS, TRAPS),
+    custom: CUSTOM,
+    all: () => MONSTERS.concat(CUSTOM, SPELLS, TRAPS),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck,
     tributesFor: level => level >= 7 ? 2 : level >= 5 ? 1 : 0

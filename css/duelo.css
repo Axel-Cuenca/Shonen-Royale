@@ -553,3 +553,13 @@ html.rm .card.m.hi::after, html.rm .card.sel, html.rm .flamec { animation: none;
 .tab { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--edge); background: transparent; font: 700 15px var(--ui); letter-spacing: .5px; }
 .tab.on { background: linear-gradient(#2a4a9a, #14275f); border-color: #7fa0ff; }
 .panel form, form.panel input { width: 100%; box-sizing: border-box; }
+
+/* ---- cartas con ilustración propia y animación de Popeye ---- */
+.art .cimg { width: 92%; height: 92%; object-fit: contain; pointer-events: none; }
+.spinach { position: fixed; inset: 0; z-index: 300; display: grid; place-content: center; justify-items: center; gap: 8px; pointer-events: none;
+  background: radial-gradient(circle, #5fe07a88 0%, #1c8c3a55 40%, transparent 70%); animation: spin-fade 1.7s ease-out forwards; }
+.spinach span { font-size: 96px; animation: spin-pop 1.2s cubic-bezier(.2,1.6,.4,1) both; }
+.spinach b { font-size: 26px; color: #fff; text-shadow: 0 2px 0 #145a28, 0 0 14px #5fe07a; }
+@keyframes spin-pop { 0% { transform: scale(.2) rotate(-40deg); opacity: 0 } 60% { transform: scale(1.3) rotate(10deg); opacity: 1 } 100% { transform: scale(1) rotate(0) } }
+@keyframes spin-fade { 0%,70% { opacity: 1 } 100% { opacity: 0 } }
+html.rm .spinach { display: none; }

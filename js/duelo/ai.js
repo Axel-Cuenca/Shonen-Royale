@@ -59,6 +59,7 @@
         }
         return best;
       }
+      if (pd.k === 'ability') return L.find(a => a.use === true || a.pos === 'atk') || L[0];
       if (pd.k === 'discard') {
         let best = L[0], bs = 1e9;
         const myMons = v.me.mz.filter(Boolean).length;
