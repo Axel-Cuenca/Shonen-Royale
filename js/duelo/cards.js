@@ -19,13 +19,13 @@
     normal: 'Normal', fire: 'Fuego', water: 'Agua', electric: 'Eléctrico', grass: 'Planta', ice: 'Hielo',
     fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra', flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho',
     rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada',
-    popeye: 'Popeye'
+    popeye: 'Popeye', minecraft: 'Minecraft'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
     fighting: '#c22e28', poison: '#a33ea1', ground: '#e2bf65', flying: '#a98ff3', psychic: '#f95587', bug: '#a6b91a',
     rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad',
-    popeye: '#2e5aa8'
+    popeye: '#2e5aa8', minecraft: '#4a9a3a'
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -56,7 +56,17 @@
       img: 'assets/cards/popeye.png', ability: 'spinach',
       text: '¡A comer espinaca!: una vez, cuando sea destruido en combate o por un efecto y vaya al cementerio, ' +
         'puedes revivirlo en tu campo (en ataque o defensa) con 1500 ATK y 1500 DEF. No ataca el turno en que revive. ' +
-        'Si lo invocas o lo revives con otra carta, la habilidad vuelve a estar disponible.'
+        'Si lo invocas o lo revives con otra carta, la habilidad vuelve a estar disponible.',
+      voice: { src: 'assets/voices/popeye.mp3', say: '¡A comer espinaca!' }
+    },
+    {
+      id: 'c_creeper', kind: 'monster', dex: 0, name: 'Creeper', types: ['minecraft'], type: 'minecraft',
+      level: 3, atk: 1000, def: 1000, rarity: 'rare', leg: false, gen: 0, bst: 0,
+      img: 'assets/cards/creeper.png', ability: 'boom',
+      text: 'Explosión del Creeper: cuando combate contra otro monstruo del campo (ataque tuyo o del rival, en ataque o en defensa), ' +
+        'el combate se calcula con normalidad y después Creeper y ese monstruo son desterrados (no van al cementerio). ' +
+        'Una vez por invocación; no se activa en ataques directos.',
+      voice: { src: 'assets/voices/creeper.mp3', say: '¡Ssssss… boom!' }
     }
   ];
   for (const c of CUSTOM) BY_ID.set(c.id, c);

@@ -53,7 +53,7 @@
   }
 
   function mkPlayer() {
-    return { alive: true, lp: START_LP, deck: [], hand: [], grave: [], mz: new Array(ZONES).fill(null), st: new Array(ZONES).fill(null), normalUsed: false };
+    return { alive: true, lp: START_LP, deck: [], hand: [], grave: [], banish: [], mz: new Array(ZONES).fill(null), st: new Array(ZONES).fill(null), normalUsed: false };
   }
 
   // ---------------- partida nueva ----------------
@@ -184,6 +184,18 @@
       st.pending = { k: 'ability', player: t.p, uid: t.uid, stage: 'ask' };
     }
   }
+  /** Desterrar un monstruo del campo: va a la zona de destierro (no al cementerio, así que no activa nada «al ir al cementerio»). */
+  function banishMonster(st, p, z) {
+    const P = st.players[p], m = P.mz[z];
+    if (!m) return;
+    P.mz[z] = null;
+    P.banish.push(m.c);
+    for (let i = 0; i < ZONES; i++) {                 // sus equipos sí se destruyen (van al cementerio)
+      const s = P.st[i];
+      if (s && !s.down && s.equipTo === z) { P.grave.push(s.c); P.st[i] = null; }
+    }
+  }
+  const boomReady = m => !!m && def(m.c).ability === 'boom' && !m.c.spent;
   function removeST(st, p, z) {
     const P = st.players[p], s = P.st[z];
     if (!s) return;
@@ -420,16 +432,26 @@
     const dd = def(dm.c);
     if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); }
     const A = atkOf(me, a.z);
+    // Explosión del Creeper: si él (o su rival) tiene la habilidad lista, el daño se calcula igual que siempre
+    // y después los dos monstruos son desterrados (no importa quién ganara el combate)
+    const boom = boomReady(at) || boomReady(dm);
+    const kill = (pl, z, nm) => { if (!boom) { destroyMonster(st, pl, z); log(st, -1, `${nm} es destruido`); } };
     if (dm.pos === 'atk') {
       const B = atkOf(op, a.target);
-      if (A > B) { destroyMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, vs, A - B); }
-      else if (A === B) { destroyMonster(st, a.p, a.z); destroyMonster(st, vs, a.target); log(st, -1, 'Los dos monstruos son destruidos'); }
-      else { destroyMonster(st, a.p, a.z); log(st, -1, `${ad.name} es destruido`); lose(st, a.p, B - A); }
+      if (A > B) { kill(vs, a.target, dd.name); lose(st, vs, A - B); }
+      else if (A === B) { if (!boom) { destroyMonster(st, a.p, a.z); destroyMonster(st, vs, a.target); log(st, -1, 'Los dos monstruos son destruidos'); } }
+      else { kill(a.p, a.z, ad.name); lose(st, a.p, B - A); }
     } else {
       const B = defOf(op, a.target);
-      if (A > B) { destroyMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); }
+      if (A > B) kill(vs, a.target, dd.name);
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
+    }
+    if (boom) {
+      const names = [];
+      if (me.mz[a.z] === at) { at.c.spent = at.c.spent || def(at.c).ability === 'boom'; names.push(ad.name); banishMonster(st, a.p, a.z); }
+      if (op.mz[a.target] === dm) { dm.c.spent = dm.c.spent || def(dm.c).ability === 'boom'; names.push(dd.name); banishMonster(st, vs, a.target); }
+      log(st, -1, `¡${def(at.c).ability === 'boom' ? ad.name : dd.name} explota! ${names.join(' y ')} ${names.length > 1 ? 'son desterrados' : 'es desterrado'}`);
     }
   }
 
@@ -670,6 +692,7 @@
       hand: own ? P.hand.map(i => ({ uid: i.uid, id: i.id })) : P.hand.map(() => null),
       handCount: P.hand.length,
       grave: P.grave.map(i => ({ uid: i.uid, id: i.id })),
+      banish: P.banish.map(i => ({ uid: i.uid, id: i.id })),
       mz: P.mz.map((s, z) => slotView(P, s, z, own)),
       st: P.st.map(s => stView(s, own))
     };
@@ -711,7 +734,7 @@
   /** Todas las cartas de un jugador (para comprobar que no se pierde ni se duplica ninguna). */
   function countCards(st, p) {
     const P = st.players[p];
-    let n = P.deck.length + P.hand.length + P.grave.length;
+    let n = P.deck.length + P.hand.length + P.grave.length + P.banish.length;
     for (const s of P.mz) if (s) n++;
     for (const s of P.st) if (s) n++;
     if (st.chain && st.chain.p === p) n++;

@@ -1,0 +1,4 @@
+Ilustraciones de las cartas propias (PNG con fondo transparente, cuadradas, ~256x256 o más).
+Para cambiar la imagen de una carta basta con reemplazar el archivo (mismo nombre):
+  popeye.png · creeper.png
+Las imágenes que hay ahora son provisionales y neutras.

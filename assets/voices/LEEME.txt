@@ -1,0 +1,4 @@
+Voces de las cartas al usar su habilidad (mp3, ogg o wav cortos, 1-3 s).
+Nombre del archivo = el indicado en js/duelo/cards.js (campo voice.src): popeye.mp3 · creeper.mp3
+Si el archivo no existe, el navegador dice la frase con su voz genérica (no es la voz del personaje).
+Usa sólo audios que tengas derecho a usar.

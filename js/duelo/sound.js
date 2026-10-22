@@ -168,10 +168,32 @@
     if (a && a.settings && a.settings.muted) a.toggleMute();
   }
 
+  /** Voz de una carta al usar su habilidad: un archivo de audio propio (card.voice.src) y, si no existe, la voz
+   *  genérica del navegador diciendo la frase (card.voice.say). Respeta el silencio y el volumen. */
+  let voiceEl = null;
+  function voice(card) {
+    const v = card && card.voice;
+    if (!v || !st.sfxOn || st.muted) return;
+    const vol = Math.min(1, st.master * Math.max(st.notify, st.combat));
+    const fallback = () => {
+      try {
+        if (!window.speechSynthesis || !v.say) return;
+        const u = new SpeechSynthesisUtterance(v.say);
+        u.lang = 'es-ES'; u.pitch = .55; u.rate = .9; u.volume = vol;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      } catch (e) { /* nada */ }
+    };
+    try {
+      if (voiceEl) voiceEl.pause();
+      voiceEl = new Audio(v.src); voiceEl.volume = vol;
+      voiceEl.onerror = fallback;
+      const pr = voiceEl.play(); if (pr && pr.catch) pr.catch(e => { if (e && e.name === 'NotSupportedError') fallback(); });
+    } catch (e) { fallback(); }
+  }
   const CATS = ['master', 'music', 'ui', 'combat', 'amb', 'notify'];
   const SAMPLE = { master: 'confirm', music: null, ui: 'select', combat: 'hit', amb: null, notify: 'notify' };
   D.Sound = {
-    init, play, setTrack, setAmbient, jingle, CATS,
+    init, play, setTrack, setAmbient, jingle, voice, CATS,
     get muted() { return st.muted; },
     get musicOn() { return st.musicOn; }, get sfxOn() { return st.sfxOn; },
     setMuted(m) { st.muted = !!m; save(); applyVolumes(); applyMusic(); applyAmb(); },

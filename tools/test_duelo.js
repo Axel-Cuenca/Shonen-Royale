@@ -403,6 +403,109 @@ section('Popeye');
   }
 }
 
+// ---------- Creeper (habilidad «Explosión del Creeper») ----------
+section('Creeper');
+{
+  const Cr = Cards.get('c_creeper');
+  ok(Cr && Cr.name === 'Creeper' && Cr.level === 3 && Cr.atk === 1000 && Cr.def === 1000 && Cr.type === 'minecraft', 'carta Creeper: 3★ 1000/1000 tipo Minecraft');
+  ok(Cards.TYPE_ES.minecraft === 'Minecraft', 'el tipo Minecraft tiene nombre');
+  const total = st => st.players.reduce((n, _, p) => n + E.countCards(st, p), 0);
+  const low = Cards.monsters.filter(m => m.level <= 4);
+  const strong = low.slice().sort((a, b) => b.atk - a.atk)[0], weak = low.filter(m => m.atk < 900 && m.def < 900)[0];
+  const wall = low.slice().sort((a, b) => b.def - a.def)[0];
+  // p0 invoca a Creeper (turno 1), p1 pone a X (turno 2) en la posición indicada; vuelve p0 (turno 3)
+  const setup = (xid, how) => {
+    const st = game();
+    give(st, 0, ['c_creeper']); give(st, 1, [xid]);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    act(st, 1, { t: how || 'summon', hand: 0, tributes: [] }); nextTurn(st);
+    return st;
+  };
+  const gr = (st, p) => st.players[p].grave.map(c => c.id), bn = (st, p) => st.players[p].banish.map(c => c.id);
+  {
+    // Creeper ataca a uno más fuerte: el daño es el normal (pierde la diferencia) y los dos son desterrados
+    const st = setup(strong.id), n0 = total(st), lp0 = st.players[0].lp;
+    act(st, 0, { t: 'toBattle' });
+    act(st, 0, find(st, 0, x => x.t === 'attack' && x.target === 0));
+    eq(st.players[0].lp, lp0 - (strong.atk - 1000), 'ataca a uno más fuerte: pierde la diferencia de ATK');
+    ok(!st.players[0].mz[0] && !st.players[1].mz[0], 'los dos salen del campo');
+    eq(bn(st, 0), ['c_creeper'], 'Creeper queda desterrado');
+    eq(bn(st, 1), [strong.id], 'el rival queda desterrado');
+    ok(!gr(st, 0).includes('c_creeper') && !gr(st, 1).includes(strong.id), 'no pasan por el cementerio');
+    ok(st.log.some(l => /Creeper explota/.test(l.t)), 'queda registrado en el log');
+    eq(total(st), n0, 'ninguna carta se pierde ni se duplica');
+    ok(E.view(st, 1).players[0].banish.length === 1, 'la vista incluye la zona de destierro');
+  }
+  {
+    // Creeper ataca a uno más débil: el rival pierde la diferencia
+    const st = setup(weak.id), lp1 = st.players[1].lp;
+    act(st, 0, { t: 'toBattle' });
+    act(st, 0, find(st, 0, x => x.t === 'attack' && x.target === 0));
+    eq(st.players[1].lp, lp1 - (1000 - weak.atk), 'ataca a uno más débil: el rival pierde la diferencia');
+    eq(bn(st, 1), [weak.id], 'aunque ganara el combate, los dos se destierran');
+  }
+  {
+    // Creeper en defensa es atacado por uno más fuerte: sin daño (regla normal), y los dos desterrados
+    const st = game();
+    give(st, 0, ['c_creeper']); give(st, 1, [strong.id]);
+    act(st, 0, { t: 'set', hand: 0, tributes: [] }); nextTurn(st);
+    act(st, 1, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st); nextTurn(st);
+    const lp = st.players.map(P => P.lp);
+    act(st, 1, { t: 'toBattle' });
+    act(st, 1, find(st, 1, x => x.t === 'attack' && x.target === 0));
+    eq(st.players.map(P => P.lp), lp, 'atacado en defensa por uno más fuerte: sin daño por diferencia');
+    ok(bn(st, 0).includes('c_creeper') && bn(st, 1).includes(strong.id), 'los dos desterrados (Creeper estaba boca abajo)');
+  }
+  {
+    // atacado en defensa por uno MÁS DÉBIL que su DEF: el atacante sufre la diferencia (rebote normal)
+    const st = game();
+    give(st, 0, ['c_creeper']); give(st, 1, [weak.id]);
+    act(st, 0, { t: 'set', hand: 0, tributes: [] }); nextTurn(st);
+    act(st, 1, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st); nextTurn(st);
+    const lp1 = st.players[1].lp;
+    act(st, 1, { t: 'toBattle' });
+    act(st, 1, find(st, 1, x => x.t === 'attack' && x.target === 0));
+    eq(st.players[1].lp, lp1 - (1000 - weak.atk), 'el atacante pierde DEF − ATK');
+    ok(bn(st, 0).includes('c_creeper') && bn(st, 1).includes(weak.id), 'y los dos se destierran');
+  }
+  {
+    // ataque directo: la habilidad no se activa
+    const st = game();
+    give(st, 0, ['c_creeper']); give(st, 1, [weak.id]);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] }); nextTurn(st); nextTurn(st);
+    act(st, 0, { t: 'toBattle' });
+    const d = find(st, 0, x => x.t === 'attack' && x.target === 'direct');
+    ok(!!d, 'sin monstruos rivales, puede atacar directo');
+    act(st, 0, d);
+    ok(st.players[0].mz[0] && !st.players[0].banish.length, 'un ataque directo no activa la explosión');
+    eq(st.players[1].lp, 8000 - 1000, 'el daño directo es normal');
+  }
+  {
+    // contra Popeye: queda desterrado, no va al cementerio y no hay espinaca
+    const st = setup('c_popeye');
+    act(st, 0, { t: 'toBattle' });
+    act(st, 0, find(st, 0, x => x.t === 'attack' && x.target === 0));
+    ok(!st.pending && bn(st, 1).includes('c_popeye') && !gr(st, 1).includes('c_popeye'), 'Popeye desterrado: sin habilidad de cementerio');
+  }
+  if (AI) {
+    let boomGames = 0, ended2 = 0;
+    for (let g = 0; g < 80; g++) {
+      const rng = mulberry(9000 + g);
+      const mk = t => { const d = Cards.presetDeck(t).slice(); d[0] = 'c_creeper'; d[1] = 'c_creeper'; d[2] = 'c_popeye'; return d; };
+      const st = E.newGame([mk(Cards.PRESET_TYPES[g % Cards.PRESET_TYPES.length]), mk(Cards.PRESET_TYPES[(g * 3 + 1) % Cards.PRESET_TYPES.length])], { seed: 1300 + g });
+      let steps = 0;
+      try {
+        while (st.winner === null && steps++ < 4000) { const p = E.actor(st); act(st, p, randomBot(st, p, rng)); if (steps % 5 === 0) checkInvariants(st, `Creeper partida ${g}`); }
+        checkInvariants(st, `Creeper partida ${g} final`);
+      } catch (e) { ok(false, e.message); break; }
+      if (st.winner !== null) ended2++;
+      if (st.log.some(l => /explota/.test(l.t))) boomGames++;
+    }
+    ok(ended2 === 80, 'las partidas con Creeper y Popeye terminan');
+    console.log(`  80 partidas con Creeper · explosión en ${boomGames}`);
+  }
+}
+
 // ---------- fin de turno y victoria ----------
 section('fin de turno y victoria');
 {
