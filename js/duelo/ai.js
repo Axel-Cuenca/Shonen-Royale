@@ -181,7 +181,7 @@
       const t = opp.mz[a.target];
       if (t.down) return m.atk >= 1800 ? 38 : -1;
       const att = cardOf(m.c), tgt = cardOf(t.c);
-      const A = Math.max(0, m.atk + C().typeBonus(att.type, tgt.types));
+      const A = m.atk;
       if (t.pos === 'atk') {
         if (A > t.atk) return 60 + (A - t.atk) / 100 + t.atk / 100;
         if (A === t.atk) return tgt.atk > att.atk ? 40 : -1;

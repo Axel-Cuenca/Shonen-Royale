@@ -148,7 +148,7 @@
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
         h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`),
         h('div', { class: 'sub' }, C.tributesFor(d.level) ? `Para invocarlo hay que sacrificar ${C.tributesFor(d.level)} monstruo(s) tuyo(s).` : 'Se invoca sin sacrificios.'),
-        h('div', { class: 'sub' }, 'Su tipo da ±500/±1000 de ATK al atacar según la tabla de tipos.'));
+        h('div', { class: 'sub' }, 'No hay ventajas de tipo: el combate sólo compara ATK y DEF.'));
     } else {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, h('span', { class: 'chip', style: 'background:' + (d.kind === 'spell' ? '#1f9d8a' : '#b04c9a') }, d.kind === 'spell' ? 'Magia' : 'Trampa')), h('div', null, d.text));
       if (d.kind === 'trap') txt.append(h('div', { class: 'sub' }, 'Se coloca boca abajo y se activa sola cuando puedes responder (desde el turno siguiente).'));
@@ -228,7 +228,7 @@
         h('ul', null,
           h('li', null, 'Ataque contra ataque: gana el mayor ATK; el perdedor se destruye y su dueño pierde la diferencia en PV. Si empatan, se destruyen los dos.'),
           h('li', null, 'Ataque contra defensa: si el ATK supera a la DEF, el defensor se destruye (sin daño). Si no, el atacante pierde la diferencia en PV.'),
-          h('li', null, 'Ventaja de tipo: el tipo principal del atacante suma o resta 500 o 1000 de ATK según la tabla de tipos del juego.')),
+          h('li', null, 'No hay ventajas de tipo: sólo cuentan el ATK y la DEF.')),
         h('h2', null, '3 o 4 jugadores'),
         h('ul', null,
           h('li', null, 'Todos contra todos (3 o 4): cada uno tiene su campo y sus 8000 PV. Se juega por turnos en orden; quien llega a 0 PV (o no puede robar) queda fuera y su mano y su campo van al cementerio. Gana el último en pie.'),
@@ -752,8 +752,6 @@
         else if (/cambia a/.test(t)) snd = 'pos';
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cut.push({ d, kind: 'trap' }); }
         else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) cut.push({ d, kind: 'spell' }); }
-        else if (/No es muy eficaz/.test(t)) { snd = 'noteff'; pops.push({ t: 'No es muy eficaz…', cls: 'weak' }); }
-        else if (/muy eficaz/.test(t)) { snd = 'crit'; pops.push({ t: '¡Es muy eficaz!', cls: 'strong' }); needShake = true; }
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });

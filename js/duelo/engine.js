@@ -10,7 +10,7 @@
  *   · una invocación normal (o colocar) por turno; nivel 5-6: 1 tributo, 7+: 2
  *   · colocar un monstruo = boca abajo en defensa; se puede voltear a otro turno
  *   · el primer turno de la partida no se roba ni se ataca
- *   · la tabla de tipos suma o resta ATK en combate (±500 / ±1000)
+ *   · no hay ventajas de tipo: el combate sólo compara ATK y DEF
  *   · las trampas se colocan boca abajo y se activan al turno siguiente, como
  *     respuesta a un ataque, una magia o una invocación del rival
  *   · pierdes con 0 PV o si no puedes robar
@@ -115,6 +115,7 @@
 
   function setWinner(st, w, reason) {
     if (st.winner !== null) return;
+    if (st.chain) { st.players[st.chain.p].grave.push(st.chain.inst); }      // la carta que estaba activándose no se pierde
     st.winner = w; st.reason = reason; st.pending = null; st.chain = null; st.atk = null;
     log(st, -1, w === 'draw' ? 'Empate.' : 'Fin del duelo.');
   }
@@ -399,11 +400,7 @@
     if (!dm) return;
     const dd = def(dm.c);
     if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); }
-    const bonus = C().typeBonus(ad.type, dd.types);
-    let A = atkOf(me, a.z) + bonus;
-    A = Math.max(0, A);
-    if (bonus > 0) log(st, -1, `¡Es muy eficaz! ${ad.name} +${bonus} ATK`);
-    else if (bonus < 0) log(st, -1, `No es muy eficaz… ${ad.name} ${bonus} ATK`);
+    const A = atkOf(me, a.z);
     if (dm.pos === 'atk') {
       const B = atkOf(op, a.target);
       if (A > B) { removeMonster(st, vs, a.target); log(st, -1, `${dd.name} es destruido`); lose(st, vs, A - B); }

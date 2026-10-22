@@ -50,10 +50,7 @@ eq(Cards.checkDeck(['m1']), 'El mazo debe tener exactamente 30 cartas (tiene 1).
 const pika = Cards.get(mon('Pikachu')), mewtwo = Cards.get(mon('Mewtwo'));
 console.log(`  Pikachu: nv${pika.level} ATK ${pika.atk} DEF ${pika.def} · Mewtwo: nv${mewtwo.level} ATK ${mewtwo.atk} DEF ${mewtwo.def}`);
 ok(pika.level <= 3 && mewtwo.level >= 7, 'niveles razonables');
-eq(Cards.typeBonus('fire', ['grass']), 500, 'fuego > planta');
-eq(Cards.typeBonus('fire', ['water']), -500, 'fuego < agua');
-eq(Cards.typeBonus('normal', ['ghost']), -1000, 'normal vs fantasma');
-eq(Cards.typeBonus('fire', ['grass', 'bug']), 1000, 'fuego vs planta/bicho');
+ok(typeof Cards.typeBonus === 'undefined', 'no hay ventajas de tipo');
 
 // ---------- inicio ----------
 section('inicio de partida');
@@ -99,10 +96,14 @@ section('invocación y tributos');
 }
 
 // ---------- batalla y tipos ----------
-section('batalla y tabla de tipos');
+section('batalla (sin ventajas de tipo)');
 {
   const st = game();
-  const char = mon('Charmander'), bulb = mon('Bulbasaur');
+  // agua (que antes perdía contra planta) con más ATK gana sin ningún bonus ni penalización
+  const low = Cards.monsters.filter(m => m.level <= 4);
+  const wat = low.filter(m => m.types[0] === 'water').sort((a, b) => b.atk - a.atk)[0];
+  const gra = low.filter(m => m.types[0] === 'grass' && m.atk < wat.atk).sort((a, b) => b.atk - a.atk)[0];
+  const char = wat.id, bulb = gra.id;
   give(st, 0, [char]); give(st, 1, [bulb]);
   act(st, 0, { t: 'summon', hand: 0, tributes: [] });
   nextTurn(st);
@@ -114,9 +115,9 @@ section('batalla y tabla de tipos');
   const cc = Cards.get(char), bb = Cards.get(bulb);
   const before = st.players[1].lp;
   act(st, 0, atk);
-  ok(!st.players[1].mz[0], 'Bulbasaur (planta) destruido por Charmander (fuego)');
-  eq(st.players[1].lp, before - (cc.atk + 500 - bb.atk), 'daño = ATK + 500 − ATK del defensor');
-  ok(st.log.some(l => /muy eficaz/.test(l.t)), 'avisa que es muy eficaz');
+  ok(!st.players[1].mz[0], 'el de menos ATK es destruido');
+  eq(st.players[1].lp, before - (cc.atk - bb.atk), 'daño = ATK − ATK del defensor, sin bonus de tipo');
+  ok(!st.log.some(l => /eficaz/.test(l.t)), 'no hay avisos de eficacia de tipo');
 }
 {
   // defensa y ataque directo

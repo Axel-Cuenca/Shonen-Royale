@@ -73,26 +73,6 @@
 
   for (const c of SPELLS.concat(TRAPS)) BY_ID.set(c.id, c);
 
-  // ---------------- tabla de tipos ----------------
-  /** Multiplicador de los juegos (×2 / ×0,5 / ×0, multiplicados) de un tipo atacante contra los tipos del defensor. */
-  function typeMult(att, defTypes) {
-    const row = GG.Types && GG.Types.CHART && GG.Types.CHART[att];
-    if (!row) return 1;
-    let m = 1;
-    for (const t of defTypes) if (row[t] != null) m *= row[t];
-    return m;
-  }
-  /** Bonus de ATK en combate: ±500 / ±1000 según la eficacia del tipo principal del atacante. */
-  function typeBonus(att, defTypes) {
-    const m = typeMult(att, defTypes);
-    if (m === 0) return -1000;
-    if (m >= 4) return 1000;
-    if (m >= 2) return 500;
-    if (m <= 0.25) return -1000;
-    if (m <= 0.5) return -500;
-    return 0;
-  }
-
   // ---------------- mazos ----------------
   const DECK_SIZE = 30, MAX_COPIES = 2;
 
@@ -140,7 +120,7 @@
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
     all: () => MONSTERS.concat(SPELLS, TRAPS),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
-    typeMult, typeBonus, presetDeck, checkDeck,
+    presetDeck, checkDeck,
     tributesFor: level => level >= 7 ? 2 : level >= 5 ? 1 : 0
   };
   if (!isBrowser) module.exports = D.Cards;
