@@ -191,8 +191,14 @@ module.exports = function (T) {
   {
     // Shang Tsung: copia y vuelve a su forma si lo derrotan
     const st = fresh(); put(st, 0, 0, 'c_shang', { summonedTurn: 3 });
-    const cp = pw(st, 0, 'copy', x => x.id === 'c_kratos_f'); ok(!!cp, 'Shang puede copiar a Kratos F');
+    ok(!pw(st, 0, 'copy'), 'sin personajes en el campo no hay a quién copiar');
+    put(st, 1, 0, 'c_kratos_f', { summonedTurn: 1, bonus: { atk: 300, def: 100 } });
+    const cp = pw(st, 0, 'copy', x => x.target && x.target.vs === 1 && x.target.z === 0); ok(!!cp, 'Shang puede copiar a Kratos F del campo');
+    const kf = E.view(st, 0).players[1].mz[0];
     act(st, 0, cp);
+    eq([E.view(st, 0).players[0].mz[0].atk, E.view(st, 0).players[0].mz[0].def], [kf.atk, kf.def], 'copia el ATK/DEF final exacto (con sus bonos), sin duplicar');
+    st.players[1].mz[0].bonus = null;
+    st.players[1].mz[0] = null;
     eq(E.view(st, 0).players[0].mz[0].c.id, 'c_kratos_f', 'toma el nombre del copiado');
     eq(E.view(st, 0).players[0].mz[0].real, 'c_shang', 'la vista recuerda quién es en realidad');
     put(st, 1, 0, 'c_sukuna60'); ready(st, 1, 7); toBattle(st, 1); atk(st, 1, 0, 0);

@@ -222,6 +222,8 @@
     if (isSolo(P)) { if (ab.includes('instinto')) n += 400; if (ab.includes('sangre')) n += 800; }
     if (st.domain && st.domain.uid === m.c.uid) n += 500;
     if (m.fur && m.fur === st.turn) n += 700;
+    if (m.cFury && m.cFury === st.turn) n += 700;                       // Furia copiada por Shang Tsung: dura lo mismo que en el original
+    if (m.cDom && st.domain && st.domain.uid === m.cDom) n += 500;      // dominio copiado: dura mientras dure el dominio
     return n;
   }
   // m.base: valores propios de esta aparición en el campo (p. ej. Popeye revivido con 1500/1500)
@@ -317,7 +319,7 @@
   /** Shang Tsung transformado es derrotado: no muere, pierde la transformación y ya no puede volver a transformarse. */
   function revertCopy(st, m, p) {
     const was = mdef(m).name;
-    m.copy = null; m.noCopy = true; m.bonus = null; m.ext = []; m.extFrom = null;
+    m.copy = null; m.noCopy = true; m.bonus = null; m.ext = []; m.extFrom = null; m.cFury = null; m.cDom = null;
     if (m.abs) releaseAbsorbed(st, m);
     log(st, p, `${was} es derrotado: Shang Tsung pierde la transformación y ya no puede transformarse`);
   }
@@ -849,10 +851,17 @@
       }
       for (const i of xformCands(st, p, z)) push({ pw: 'xform', hand: i });
       if (!st.domain || lvl(m) >= 10) {
-        // Shang Tsung: puede transformarse una vez por turno en cualquier otro personaje del juego
+        // Shang Tsung: una vez por turno puede transformarse en un personaje que esté ahora en el campo (boca arriba)
         const cd = def(m.c);
         if (cd.ab && cd.ab.includes('copy') && !m.noCopy && m.copyTurn !== st.turn) {
-          for (const c of C().all()) if (c.kind === 'monster' && c.id !== m.c.id && c.id !== m.copy && !c.test) push({ pw: 'copy', id: c.id });
+          for (let q = 0; q < st.n; q++) {
+            if (!st.players[q].alive) continue;
+            for (const tz of zonesWith(st.players[q].mz)) {
+              const tm = st.players[q].mz[tz];
+              if ((q === p && tz === z) || tm.down || mdef(tm).wide || eid(tm) === m.c.id || eid(tm) === m.copy) continue;
+              push({ pw: 'copy', target: { vs: q, z: tz } });
+            }
+          }
         }
       }
     });
@@ -1035,11 +1044,20 @@
       }
       case 'xform': transformInto(st, p, a.zone, a.hand, null); break;
       case 'copy': {
-        const nd = C().get(a.id);
+        // Copia el estado del objetivo en este momento: forma (nombre, tipo, estrellas, habilidades) y ATK/DEF finales.
+        const q = a.target.vs, tz = a.target.z, PT = st.players[q], tm = PT.mz[tz], nd = mdef(tm), oldName = def(m.c).name;
+        const fin = { atk: atkOf(st, PT, tz), def: defOf(st, PT, tz) };
+        const tmpF = tm.fur === st.turn ? 700 : 0, tmpD = st.domain && st.domain.uid === tm.c.uid ? 500 : 0;   // lo temporal se copia aparte para que termine a su hora
         if (m.abs) releaseAbsorbed(st, m);
-        m.bonus = null; m.ext = []; m.extFrom = null;
-        m.copy = a.id; m.copyTurn = st.turn;
-        log(st, p, `${def(m.c).name} se transforma en ${nd.name}`);
+        m.bonus = null; m.cFury = null; m.cDom = null;
+        m.ext = (tm.ext || []).slice(); m.extFrom = Object.assign({}, tm.extFrom || {});
+        m.copy = nd.id; m.copyTurn = st.turn;
+        const nat = { atk: atkOf(st, P, a.zone), def: defOf(st, P, a.zone) };      // lo que Shang ya tiene con esa forma (sus propios equipos, etc.)
+        m.bonus = { atk: fin.atk - tmpF - tmpD - nat.atk, def: fin.def - tmpF - tmpD - nat.def };
+        if (tmpF) m.cFury = st.turn;
+        if (tmpD) m.cDom = st.domain.uid;
+        log(st, p, `${oldName} se transforma en ${nd.name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = q;
         break;
       }
     }

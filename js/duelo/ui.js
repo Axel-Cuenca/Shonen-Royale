@@ -683,19 +683,13 @@
           const g = groups[k];
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }
           else if (k === 'bite') acts.push({ label: abn(k) + ' (−500 PV)', run: () => act(g[0]) });
-          else if (k === 'copy') acts.push({ label: 'Transformar en otro personaje…', run: () => copyPick(g) });
-          else if (g[0].target) acts.push({ label: abn(k) + '…', run: () => pickTargets(g.map(a => ({ seat: a.target.vs, area: k === 'desmantelar' ? 'st' : 'mz', z: a.target.z })), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige el objetivo') });
+          else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : abn(k)) + '…', run: () => pickTargets(g.map(a => ({ seat: a.target.vs, area: k === 'desmantelar' ? 'st' : 'mz', z: a.target.z })), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige el objetivo') });
           else acts.push({ label: abn(k), run: () => act(g[0]) });
         }
       }
       for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
       const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, stolenBox(s));
       modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null, btn('Cerrar', closeModal, 'ghost')));
-    }
-    function copyPick(list) {
-      modal(h('div', { class: 'box' }, h('h2', null, '¿En qué personaje te transformas?'),
-        h('div', { class: 'cands' }, list.map(a => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); act(a); } }, cardEl(C.get(a.id)), h('small', null, C.get(a.id).name)))),
-        btn('Cancelar', closeModal, 'ghost')));
     }
     function stormFlow(list) {
       const hands = [...new Set(list.map(a => a.hand))];

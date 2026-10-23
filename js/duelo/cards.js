@@ -56,7 +56,7 @@
     regen60: ['Regeneración maldita superior', 'Inmune a las magias, trampas y habilidades que intenten destruirlo.'],
     relicario: ['Relicario Demoníaco', 'Una vez por invocación: +500 ATK y DEF durante 2 turnos. Sólo los personajes de 10★ o más usan habilidades y nadie activa magias ni trampas.'],
     desmantelar: ['Desmantelar', 'Una vez por invocación: destruye una carta de magia/trampa del rival.'],
-    copy: ['Transformación', 'Una vez por turno puede transformarse en otro personaje (nombre, estadísticas y habilidades). Si lo derrotan transformado, vuelve a su forma y no puede transformarse más.'],
+    copy: ['Transformación', 'Una vez por turno puede transformarse en un personaje que esté en el campo, copiando su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes (los temporales duran lo mismo que en el original). Sus habilidades copiadas empiezan sin usar. Si lo derrotan transformado, vuelve a su forma y no puede transformarse más.'],
     saiyan: ['Sangre Saiyan', 'Si es revivido, vuelve con +500 ATK y +500 DEF.'],
     escudo: ['Escudo Blue Evolution', 'Escudo de 3000: los ataques y las magias/trampas que lo destruyan golpean primero al escudo.'],
     bigbang: ['Big Bang', 'Una vez por invocación: destruye a todos los personajes rivales con menos de 2000 ATK.'],

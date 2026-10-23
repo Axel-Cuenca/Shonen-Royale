@@ -151,8 +151,7 @@
             case 'bite': return 36;
             case 'xform': return 61;
             case 'copy': {
-              const d = cardOf({ id: a.id });
-              return d && m && d.atk > m.atk + 300 && d.kind === 'monster' ? 30 + d.atk / 100 : -1;
+              return tm && m && (tm.atk || 0) > m.atk + 300 ? 30 + tm.atk / 100 : -1;
             }
             case 'gempos': return 28;
             case 'gematk': return tm && v.team[a.target.vs] === v.team[v.seat] ? 31 : -1;
