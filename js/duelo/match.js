@@ -53,6 +53,20 @@
   }
   const seedRnd = seed => { let a = (seed | 0) + 12345; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
 
+  /** Reloj de turno: si una persona pasa de TURN_MS sin terminar su turno, el turno pasa al siguiente. */
+  const TURN_MS = 31000;   // un segundo de margen sobre los 30 s que ve cada jugador
+  function turnClock(getSt, isHuman, after) {
+    let key = '', t0 = Date.now();
+    const iv = setInterval(() => {
+      const st = getSt(); if (!st || st.winner !== null) return;
+      const k = st.turn + ':' + st.current;
+      if (k !== key) { key = k; t0 = Date.now(); return; }
+      if (!isHuman(st.current) || Date.now() - t0 < TURN_MS) return;
+      E().timeoutTurn(st); key = ''; after();
+    }, 500);
+    return () => clearInterval(iv);
+  }
+
   // ---------------- contra la computadora ----------------
   function local(o) {
     const seed = o.seed != null ? o.seed : randSeed();
@@ -86,7 +100,8 @@
     m.refresh = () => { emit(); pump(); };
     m.act = a => { if (closed) return { ok: false }; const r = E().apply(st, 0, a); if (r.ok) { emit(); pump(); } return r; };
     m.resign = () => { if (st.winner === null) { E().resign(st, 0, 'Te rendiste.'); emit(); pump(); } };
-    m.close = () => { closed = true; clearTimeout(timer); };
+    const stopClock = turnClock(() => st, q => q === 0 && st.players[0].alive, () => { emit(); pump(); });
+    m.close = () => { closed = true; clearTimeout(timer); stopClock(); };
     m.state = () => st;
     return m;
   }
@@ -217,7 +232,8 @@
       return { ok: true, text };
     };
     m.resign = () => { if (st && st.winner === null) { E().resign(st, 0, 'Te rendiste.'); broadcast(); pump(); } };
-    m.close = () => { closed = true; clearTimeout(timer); };
+    const stopClock = turnClock(() => st, q => humanSeat(q) && st.players[q].alive, () => { broadcast(); pump(); });
+    m.close = () => { closed = true; clearTimeout(timer); stopClock(); };
     m.state = () => st;
     return m;
   }

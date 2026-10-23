@@ -58,7 +58,7 @@
     desmantelar: ['Desmantelar', 'Una vez por invocación: destruye una carta de magia/trampa del rival.'],
     copy: ['Transformación', 'Una vez por turno puede transformarse en un personaje que esté en el campo, copiando su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes (los temporales duran lo mismo que en el original). Sus habilidades copiadas empiezan sin usar. Si lo derrotan transformado, vuelve a su forma y no puede transformarse más.'],
     saiyan: ['Sangre Saiyan', 'Si es revivido, vuelve con +500 ATK y +500 DEF.'],
-    escudo: ['Escudo Blue Evolution', 'Escudo de 3000: los ataques y las magias/trampas que lo destruyan golpean primero al escudo.'],
+    escudo: ['Escudo Blue Evolution', 'Escudo de 3000: mientras esté activo, los ataques se resuelven sólo contra el escudo (el ATK y la DEF de Vegeta no cuentan, nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta); las magias/trampas que lo destruyan golpean primero al escudo.'],
     bigbang: ['Big Bang', 'Una vez por invocación: destruye a todos los personajes rivales con menos de 2000 ATK.'],
     xform: ['Transformación', 'Se transforma en otra carta desde tu mano; la carta anterior queda vinculada.']
   };
@@ -148,7 +148,7 @@
     }),
     mon({
       id: 'c_vegeta_blue', name: 'Vegeta Blue Evolution', type: 'dbz', level: 10, atk: 2700, def: 2800, img: I('vegeta_blue'), ab: ['escudo', 'bigbang'], xform: { family: 'Vegeta' },
-      text: 'Escudo Blue Evolution: 3000 de resistencia; los ataques le quitan el escudo y no a él, y las magias o trampas que intenten destruirlo sólo destruyen el escudo. ' +
+      text: 'Escudo Blue Evolution: 3000 de resistencia; los ataques sólo dañan al escudo (su ATK/DEF no cuentan y nadie recibe daño de diferencia), y las magias o trampas que intenten destruirlo sólo destruyen el escudo. ' +
         'Big Bang (una vez): destruye a todos los personajes rivales con menos de 2000 ATK. Se puede llegar a él transformando a un Vegeta.',
       sfx: { attack: V('vegeta-attack'), transform: V('bardock-transform'), ability: V('vegeta_blue-ability') }
     }),

@@ -698,7 +698,10 @@
     const boomName = boomReady(st, at) ? ad.name : dd.name;
     const shielded = has(st, dm, 'escudo') && shieldOf(dm) > 0;
     const kill = (pl, z, nm, by) => { if (!boom) { if (destroyMonster(st, pl, z, { src: 'combat', by })) log(st, -1, `${nm} es destruido`); } };
-    if (dm.pos === 'atk') {
+    // Escudo Blue Evolution activo: el combate se resuelve sólo contra el escudo. El ATK/DEF de Vegeta no cuentan,
+    // nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta.
+    if (shielded) { /* se resuelve más abajo */ }
+    else if (dm.pos === 'atk') {
       const B = atkOf(st, op, a.target);
       if (A > B) { if (!shielded) { kill(vs, a.target, dd.name, atker); lose(st, vs, A - B); } }
       else if (A === B) { if (!boom) { destroyMonster(st, a.p, a.z, { src: 'combat', by: defender }); if (!shielded) destroyMonster(st, vs, a.target, { src: 'combat', by: atker }); log(st, -1, shielded ? `${ad.name} es destruido` : 'Los dos monstruos son destruidos'); } }
@@ -1372,6 +1375,18 @@
     return n;
   }
 
+  /** Se acabó el tiempo del turno: se rechaza lo que esté pendiente (responder, habilidades) y se pasa el turno al siguiente. */
+  function timeoutTurn(st) {
+    const turn0 = st.turn, cur0 = st.current;
+    for (let i = 0; i < 12 && st.winner === null; i++) {
+      if (st.turn !== turn0 || st.current !== cur0) break;
+      const p = actor(st); if (p < 0) break;
+      const L = legal(st, p);
+      const a = L.find(x => x.t === 'respond' && !x.activate) || L.find(x => x.t === 'ability' && x.use === false) || L.find(x => x.t === 'endTurn') || L[0];
+      if (!a || !apply(st, p, a).ok) break;
+    }
+  }
+
   /** Un jugador se rinde (o se desconecta). */
   function resign(st, p, why) {
     if (st.winner !== null || !st.players[p].alive) return;
@@ -1381,6 +1396,6 @@
     settle(st);
   }
 
-  D.Engine = { newGame, actor, legal, apply, view, resign, countCards, foes, START_LP, HAND_MAX, ZONES, GIVE, SHIELD_MAX };
+  D.Engine = { newGame, actor, legal, apply, view, resign, timeoutTurn, countCards, foes, START_LP, HAND_MAX, ZONES, GIVE, SHIELD_MAX };
   if (!isBrowser) module.exports = D.Engine;
 })();

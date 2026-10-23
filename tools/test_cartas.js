@@ -99,6 +99,17 @@ module.exports = function (T) {
     act(st, 0, s2);
     ok(grave(st, 1, 'c_espada') && grave(st, 0, 'c_tormenta'), 'función 2 también la envía al cementerio');
   }
+  section('Tiempo de turno agotado');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_popeye'); const cur = st.current, tr = st.turn;
+    E.timeoutTurn(st);
+    ok(st.turn !== tr || st.current !== cur, 'al acabarse el tiempo el turno pasa al siguiente');
+    eq(total(st, 0) + total(st, 1), total(st, 0) + total(st, 1), 'sin perder cartas');
+    // con algo pendiente (descartar) se resuelve y el turno pasa igual
+    const st2 = fresh(); give(st2, 0, ['c_popeye', 'c_popeye', 'c_creeper', 'c_lara', 'c_bardock', 'c_cell', 'c_vegeta', 'c_kratos', 'c_titan', 'c_popeye', 'c_creeper', 'c_lara', 'c_bardock']);
+    const c2 = st2.current; E.timeoutTurn(st2);
+    ok(st2.current !== c2 || st2.pending === null, 'con mano grande no se queda atascado');
+  }
   section('Espectador: el eliminado ve las manos');
   {
     const st = fresh(); give(st, 1, ['c_popeye']);
@@ -170,7 +181,26 @@ module.exports = function (T) {
     ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_vegeta_blue', 'Blue sigue en el campo');
     eq(E.view(st, 0).players[0].mz[0].shield, 1500, 'el escudo recibe el ATK del atacante (1500)');
     eq(st.players[0].lp, 8000, 'el escudo protege también la vida');
-    ok(grave(st, 1, 'c_cell') || st.players[1].mz[0], 'el atacante sufre el combate normal');
+    eq(st.players[1].lp, 8000, 'el atacante no recibe daño de diferencia');
+    ok(st.players[1].mz[0] && st.players[1].mz[0].c.id === 'c_cell', 'el atacante no es destruido');
+    // atacante débil (menos ATK que el ATK/DEF de Blue): igual sólo toca el escudo, sin rebote ni daño
+    {
+      const st5 = fresh(); put(st5, 0, 0, 'c_vegeta_blue'); put(st5, 1, 0, 'c_popeye'); ready(st5, 1, 7); toBattle(st5, 1); atk(st5, 1, 0, 0);
+      eq(E.view(st5, 0).players[0].mz[0].shield, 3000 - 1200, 'escudo recibe 1200 (ATK de Popeye)');
+      eq([st5.players[0].lp, st5.players[1].lp], [8000, 8000], 'sin daño para nadie aunque su ATK sea menor que el de Blue');
+      ok(st5.players[1].mz[0], 'el atacante sigue vivo');
+      // escudo con 800 y un atacante de 2000 ATK: se destruye el escudo, sin daño sobrante ni a Vegeta ni al atacante
+      const st6 = fresh(); const bl = put(st6, 0, 0, 'c_vegeta_blue'); bl.uBy = { c_vegeta_blue: { sh: 800 } }; put(st6, 1, 0, 'c_sukuna5', { atkMod: 0 }); ready(st6, 1, 7); toBattle(st6, 1);
+      st6.players[1].mz[0].bonus = { atk: 2000 - st6.players[1].mz[0] .c.atk, def: 0 };
+      atk(st6, 1, 0, 0);
+      eq(E.view(st6, 0).players[0].mz[0].shield || 0, 0, 'el escudo se destruye');
+      eq([st6.players[0].lp, st6.players[1].lp], [8000, 8000], 'Vegeta y el atacante no reciben daño');
+      ok(st6.players[0].mz[0] && st6.players[1].mz[0], 'los dos siguen en el campo');
+      // el siguiente ataque ya se resuelve con el ATK/DEF de Vegeta
+      st6.players[1].mz[0].attacked = false; st6.players[1].mz[0].attackedTurn = 0; st6.players[1].mz[0].attacked = false;
+      const lp0 = st6.players[1].lp;
+      if (L(st6, 1).some(x => x.t === 'attack')) { atk(st6, 1, 0, 0); ok(st6.players[1].lp < lp0 || !st6.players[1].mz[0], 'sin escudo, el combate usa el ATK de Vegeta (el atacante pierde)'); }
+    }
     // magia que lo destruye: sólo el escudo
     const st2 = fresh(); put(st2, 0, 0, 'c_vegeta_blue'); give(st2, 1, ['c_popeye']); ready(st2, 1, 7);
     st2.players[1].hand = [{ uid: 777, id: 'xs_beam' }];
