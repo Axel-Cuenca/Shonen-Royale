@@ -110,6 +110,11 @@ module.exports = function (T) {
     const c2 = st2.current; E.timeoutTurn(st2);
     ok(st2.current !== c2 || st2.pending === null, 'con mano grande no se queda atascado');
   }
+  {
+    const st = fresh(); give(st, 0, ['c_popeye']); const s0 = E.view(st, 0).seq;
+    act(st, 0, L(st, 0).find(x => x.t === 'summon'));
+    ok(E.view(st, 0).seq === s0 + 1, 'cada acción sube el contador que reinicia el reloj de inactividad');
+  }
   section('Espectador: el eliminado ve las manos');
   {
     const st = fresh(); give(st, 1, ['c_popeye']);

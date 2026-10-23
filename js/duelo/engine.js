@@ -1116,6 +1116,7 @@
     if (!a || typeof a !== 'object') return { ok: false, error: 'acción vacía' };
     const key = JSON.stringify(a);
     if (!legal(st, p).some(l => JSON.stringify(l) === key)) return { ok: false, error: 'acción no permitida' };
+    st.seq = (st.seq || 0) + 1;   // cuenta cada acción hecha: reinicia el contador de inactividad del turno
     const P = st.players[p];
     switch (a.t) {
       case 'summon': placeMonster(st, p, a.hand, a.tributes, false); break;
@@ -1351,7 +1352,7 @@
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {
       seat, n: st.n, mode: st.mode, team: st.team.slice(), rank: st.rank.slice(),
-      turn: st.turn, phase: st.phase, current: st.current, first: st.first,
+      seq: st.seq || 0, turn: st.turn, phase: st.phase, current: st.current, first: st.first,
       winner: st.winner, reason: st.reason, actor: actor(st),
       me: players[seat], opp: players[oppSeat], players,
       pending,

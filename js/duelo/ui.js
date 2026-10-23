@@ -531,7 +531,7 @@
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
-    // Contador de turno: 45 s por turno completo. Sólo avisa (cuenta atrás, color y un sonido al acabarse); no obliga a nada.
+    // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
     const TURN_SECS = 45;
     let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
     function ttTick() {
@@ -1188,7 +1188,7 @@
       const whose = v.current === v.seat ? 'Tu turno' : multi() ? 'Turno de ' + shortOf(v.current) : 'Turno rival';
       const turnTxt = `Turno ${v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
-      const tkey = v.turn + ':' + v.current;
+      const tkey = v.turn + ':' + v.current + ':' + (v.seq || 0);   // cada acción reinicia la cuenta
       if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false };
       const timer = v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
       if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
