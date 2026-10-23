@@ -69,7 +69,7 @@
       text: '¡A comer espinaca!: una vez, cuando sea destruido en combate o por un efecto y vaya al cementerio, ' +
         'puedes revivirlo en tu campo (en ataque o defensa) con 1500 ATK y 1500 DEF. No ataca el turno en que revive. ' +
         'Si lo invocas o lo revives con otra carta, la habilidad vuelve a estar disponible.',
-      voice: { src: null, say: '¡A comer espinaca!' }, sfx: { attack: V('popeye-attack') }
+      voice: { src: V('popeye-attack'), say: '¡A comer espinaca!' }, sfx: { attack: V('popeye-attack') }
     }),
     mon({
       id: 'c_creeper', name: 'Creeper', type: 'minecraft', level: 3, atk: 1000, def: 1000,
