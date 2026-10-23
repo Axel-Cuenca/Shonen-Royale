@@ -20,6 +20,8 @@ G.CHANGELOG = [
   ], chg: [
     ['Los personajes de 10 estrellas o más (Sukuna 60%, Vegeta Blue Evolution…) piden sacrificar 3 personajes tuyos para invocarlos de forma normal. Las invocaciones especiales y las transformaciones no piden sacrificios.',
      'Characters of 10 stars or more (Sukuna 60%, Vegeta Blue Evolution…) require sacrificing 3 of your characters to be normal-summoned. Special summons and transformations require no sacrifices.'],
+    ['Las cartas de tu mano ya no hacen ruido al pasar el ratón por encima.',
+     'The cards in your hand no longer make a sound when you hover over them.'],
     ['El modo de prueba («?prueba») sigue disponible, pero ya no hace falta para jugar.',
      'Test mode (“?prueba”) is still available but is no longer needed to play.']
   ] },

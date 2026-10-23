@@ -20,7 +20,7 @@
     if (!t || t === hoverEl) { if (!t) hoverEl = null; return; }
     hoverEl = t; const now = performance.now();
     if (now - hoverT < 90 || t.disabled) return;
-    hoverT = now; S.play(t.classList.contains('card') ? 'inspect' : 'hover');
+    hoverT = now; if (!t.classList.contains('card')) S.play('hover');      // las cartas ya no suenan al pasar el ratón
   });
   // efectos visuales reducidos (preferencia propia o del sistema)
   const RM = 'duelo.rm';
