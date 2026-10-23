@@ -74,6 +74,31 @@ module.exports = function (T) {
     st4.turn = 7; toBattle(st4, 0); act(st4, 0, L(st4, 0).find(x => x.t === 'attack'));
     eq(st4.players[1].lp, 6800, 'la espada no suma en ataques directos');
   }
+  section('Tormenta Eléctrica: un solo uso y al cementerio');
+  {
+    // sin coste o sin objetivo válido: no se puede activar y la carta permanece
+    const st = fresh(); putST(st, 0, 0, 'c_tormenta', { storm: { usedTurn: -1 } }); put(st, 1, 0, 'c_popeye');
+    ok(!pw(st, 0, 'storm1') && !pw(st, 0, 'storm2'), 'sin carta en la mano no hay activación');
+    give(st, 0, ['c_lara']);
+    ok(!pw(st, 0, 'storm1'), 'Lara (2★) no puede asesinar a Popeye (4★): sin objetivo válido no se ofrece y la carta se queda');
+    ok(!!st.players[0].st[0], 'Tormenta permanece en el campo sin consumir su uso');
+    st.players[0].hand = []; give(st, 0, ['c_bardock']);
+    const s1 = pw(st, 0, 'storm1'); ok(!!s1, 'función 1: personaje de la mano → asesina a un rival de igual o menos estrellas');
+    ok(!pw(st, 0, 'storm2'), 'sin magia/trampa rival no hay función 2');
+    const tot = total(st, 0) + total(st, 1);
+    act(st, 0, s1);
+    ok(grave(st, 1, 'c_popeye') && grave(st, 0, 'c_bardock'), 'rival destruido y coste pagado');
+    ok(grave(st, 0, 'c_tormenta') && !st.players[0].st[0], 'Tormenta Eléctrica se envía al cementerio tras resolver');
+    eq(st.players[0].grave.filter(c => c.id === 'c_tormenta').length, 1, 'va al cementerio una sola vez');
+    eq(total(st, 0) + total(st, 1), tot, 'sin duplicar cartas');
+  }
+  {
+    const st = fresh(); putST(st, 0, 0, 'c_tormenta', { storm: { usedTurn: -1 } }); putST(st, 1, 0, 'c_espada', { equipTo: null });
+    give(st, 0, ['c_karma']);
+    const s2 = pw(st, 0, 'storm2'); ok(!!s2, 'función 2: magia de la mano → destruye magia/trampa rival');
+    act(st, 0, s2);
+    ok(grave(st, 1, 'c_espada') && grave(st, 0, 'c_tormenta'), 'función 2 también la envía al cementerio');
+  }
   section('Superball');
   {
     const st = fresh(); give(st, 0, ['c_superball', 'c_cell', 'c_sukuna60', 'c_lara']);

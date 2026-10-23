@@ -18,6 +18,8 @@ G.CHANGELOG = [
     ['La computadora ya sabe usar las cartas nuevas y su mazo se arma con ellas.',
      'The computer now knows how to use the new cards and builds its deck with them.']
   ], chg: [
+    ['Tormenta Eléctrica: ahora sólo puede usar UNA de sus dos funciones, UNA vez en todo el tiempo que esté en el campo (antes una por turno). Al resolverse el efecto se envía sola al cementerio. Si no hay objetivo válido o carta para pagar el coste, no se activa y se queda en el campo sin gastar su uso.',
+     'Electric Storm: it can now use only ONE of its two functions, ONCE during its whole stay on the field (it was once per turn). After the effect resolves it goes to the graveyard by itself. If there is no valid target or card to pay the cost, it cannot activate and stays on the field without spending its use.'],
     ['Shang Tsung: «Transformación» ahora sólo copia a un personaje que esté en el campo y toma su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes, sin duplicarlos. Los efectos temporales (Furia, dominio) duran lo mismo que en el original. Sigue siendo la misma carta en su espacio; sus habilidades copiadas empiezan sin usar.',
      'Shang Tsung: «Transformation» now only copies a character that is on the field and takes its current state: name, type, stars, abilities and its final ATK/DEF with every active bonus and penalty, without duplicating them. Temporary effects (Fury, domain) last as long as on the original. He stays the same card in his slot; copied abilities start unused.'],
     ['Online: se espera hasta 20 s (antes 9) para conectar con los demás jugadores usando el puente, para que no salga «vuestras conexiones no logran verse» en redes lentas.',

@@ -176,7 +176,7 @@
     }),
     spell({
       id: 'c_tormenta', name: 'Tormenta Eléctrica', icon: '⚡', img: I('tormenta'), fx: 'storm', sub: 'cont',
-      text: 'Magia continua. Una vez por turno, elige: (1) destruye un personaje tuyo de la mano para asesinar a un personaje rival de igual o menos estrellas; o (2) destruye una magia/trampa de tu mano para destruir una magia/trampa rival.',
+      text: 'Magia continua. Sólo puede usar UNA función, UNA vez en todo el tiempo que esté en el campo; después va al cementerio. Elige: (1) destruye un personaje tuyo de la mano para asesinar a un personaje rival de igual o menos estrellas; o (2) destruye una magia/trampa de tu mano para destruir una magia/trampa rival.',
       sfx: { use: V('tormenta-use') }
     })
   ];

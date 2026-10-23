@@ -1089,6 +1089,8 @@
         const tm = st.players[e].mz[a.target.z];
         if (tm) { log(st, e, `${mdef(tm).name} es asesinado`); destroyMonster(st, e, a.target.z, { src: 'spell' }); }
       } else if (st.players[e].st[a.target.z]) { log(st, e, 'una carta de magia/trampa es destruida'); removeST(st, e, a.target.z); }
+      // Un solo uso en toda su estancia en el campo: tras resolver, va al cementerio (una sola vez)
+      if (P.st[a.zone] === s) { removeST(st, p, a.zone); log(st, p, `${nm} se envía al cementerio`); }
       return;
     }
     // Gema de la Mente
