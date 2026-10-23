@@ -30,6 +30,8 @@ G.CHANGELOG = [
     ['Se quitó el juego anterior (PokéSurvivor); el Duelo ocupa su lugar y la dirección de siempre. El menú tiene un botón «Novedades» y la ventana «Cuenta» para cerrar sesión, vincular tu Gmail o borrar la cuenta.',
      'The previous game (PokéSurvivor) was removed; the Duel takes its place at the same address. The menu has a “News” button and an “Account” window to sign out, link your Gmail or delete the account.']
   ], fix: [
+    ['Las magias y trampas sobresalían de su cuadrado en el tablero; ahora entran justas, como los monstruos.',
+     'Spells and traps stuck out of their slot on the board; they now fit exactly, like monsters.'],
     ['Las cartas de 5 y 6 estrellas se veían más grandes que las demás en el campo; ahora tienen el mismo tamaño.',
      'Cards of 5 and 6 stars looked bigger than the others on the field; they are now the same size.'],
     ['La ventana de información de una carta ahora muestra lo que hace su habilidad.',
