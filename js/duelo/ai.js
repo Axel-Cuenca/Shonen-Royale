@@ -218,6 +218,7 @@
 
     function scoreBattle(v, a, info) {
       if (a.t === 'endTurn') return 0;
+      if (a.t !== 'attack') return scoreMain(v, a, info);        // poderes que se pueden usar en la fase de batalla (Furia, Big Bang, Cañón…)
       const m = v.me.mz[a.zone], opp = targetOf(v, a);
       if (a.target === 'direct') return (m.atk >= opp.lp ? 200 : 70) + m.atk / 100 + (8000 - opp.lp) / 400;
       const t = opp.mz[a.target];
@@ -253,8 +254,16 @@
       return best;
     }
 
-    function choose(st, p) { return chooseView(E().view(st, p)); }
-    return { choose, chooseView, level };
+    /** Red de seguridad: si algo falla al decidir, la computadora nunca se queda colgada (termina turno o toma la primera acción legal). */
+    function safe(v) {
+      try { return chooseView(v); } catch (e) {
+        if (typeof console !== 'undefined') console.warn('IA:', e);
+        const L = v.legal || [];
+        return L.find(a => a.t === 'endTurn') || L.find(a => a.t === 'respond' && !a.activate) || L[0] || null;
+      }
+    }
+    function choose(st, p) { return safe(E().view(st, p)); }
+    return { choose, chooseView: safe, level };
   }
 
   D.AI = { create };

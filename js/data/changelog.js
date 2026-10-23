@@ -26,6 +26,9 @@ G.CHANGELOG = [
      'The cards in your hand no longer make a sound when you hover over them.'],
     ['El modo de prueba («?prueba») sigue disponible, pero ya no hace falta para jugar.',
      'Test mode (“?prueba”) is still available but is no longer needed to play.']
+  ], fix: [
+    ['La computadora se quedaba «jugando…» sin terminar su turno cuando tenía un poder disponible en la fase de batalla (por ejemplo la Furia de Esparta de Kratos tras una baja). Ya no se cuelga.',
+     'The computer could get stuck on “playing…” without finishing its turn when it had a power available in the battle phase (for example Kratos’ Spartan Rage after a kill). It no longer hangs.']
   ] },
   { d: '2026-10-22', title: ['Ahora el sitio es sólo el Duelo', 'The site is now only the Duel'], new: [
     ['Chat en las partidas online: escribe a tu rival (y a tus compañeros) debajo del seguimiento de acciones. Puedes plegarlo o silenciarlo.',

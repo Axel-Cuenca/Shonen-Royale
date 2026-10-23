@@ -232,4 +232,13 @@ module.exports = function (T) {
     ok(st.players[0].mz.filter(Boolean).length === 1 && st.players[0].mz.some(m => m && m.c.id === 'c_sukuna60'), 'queda sólo el invocado');
     eq(st.players[0].grave.length, 3, 'los 3 sacrificados van al cementerio'); eq(total(st, 0), tot0, 'sin duplicar');
   }
+
+  section('IA: poderes en la fase de batalla');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_kratos_f'); st.players[0].mz[0].uBy = { c_kratos_f: { kills: 1 } };
+    put(st, 1, 0, 'c_sukuna5'); ready(st, 0, 7); toBattle(st, 0);
+    ok(has(st, 0, x => x.pw === 'furia'), 'Furia disponible en la fase de batalla');
+    let thrown = null; try { const a = AI.create('normal', 1).choose(st, 0); ok(!!a, 'la IA elige una acción con Furia disponible'); } catch (e) { thrown = e; }
+    ok(!thrown, 'la IA no lanza errores en batalla con poderes');
+  }
 }
