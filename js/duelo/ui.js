@@ -531,6 +531,17 @@
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
+    // Contador de turno: 30 s por turno completo. Sólo avisa (cuenta atrás, color y un sonido al acabarse); no obliga a nada.
+    const TURN_SECS = 30;
+    let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
+    function ttTick() {
+      const el = document.querySelector('.turntimer');
+      if (!el) { clearInterval(ttInt); ttInt = null; return; }
+      const left = Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000));
+      el.textContent = left > 0 ? '⏱ ' + left + ' s' : '⏱ ¡Tiempo!';
+      el.classList.toggle('low', left <= 10 && left > 0); el.classList.toggle('out', left === 0);
+      if (left === 0 && !tt.beeped) { tt.beeped = true; if (v && v.current === v.seat) S.play('error'); }
+    }
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map(), enterMem = new Map();
     let gameEl = null, zrowsEl = null, lcol = null;
@@ -1177,9 +1188,13 @@
       const whose = v.current === v.seat ? 'Tu turno' : multi() ? 'Turno de ' + shortOf(v.current) : 'Turno rival';
       const turnTxt = `Turno ${v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
+      const tkey = v.turn + ':' + v.current;
+      if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false };
+      const timer = v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
+      if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
         multi() ? null : pcard(v.opp.seat),
-        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), h('div', { class: 'logline' }, logTxt), fan),
+        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
           h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },

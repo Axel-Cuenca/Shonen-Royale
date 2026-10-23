@@ -20,7 +20,9 @@ G.CHANGELOG = [
     ['Música de fondo durante las partidas: lofi de Dragon Ball Z (1 hora, en bucle). Sigue el control «Música» del panel de sonido (🔊). En el menú y la sala suena la de siempre.',
      'Background music during matches: Dragon Ball Z lofi (1 hour, looping). It follows the "Music" control in the sound panel (🔊). Menu and lobby keep the usual music.'],
     ['Espectador: cuando te eliminan en una partida de varios, ahora ves las cartas boca abajo de los que siguen y, con el botón «Ver manos», las cartas de su mano.',
-     'Spectator: when you are eliminated in a multiplayer match you now see the face-down cards of the remaining players and, with the "Ver manos" button, the cards in their hands.']
+     'Spectator: when you are eliminated in a multiplayer match you now see the face-down cards of the remaining players and, with the "Ver manos" button, the cards in their hands.'],
+    ['Contador de turno: cada turno tiene 30 segundos. Se ve una cuenta atrás bajo el título del turno (se pone naranja a los 10 s y roja al acabarse, con un aviso sonoro). Sólo avisa: no pasa el turno solo.',
+     'Turn timer: every turn has 30 seconds. A countdown shows under the turn title (orange at 10 s, red when it runs out, with a sound). It only warns: it does not end the turn by itself.']
   ], chg: [
     ['Tormenta Eléctrica: ahora sólo puede usar UNA de sus dos funciones, UNA vez en todo el tiempo que esté en el campo (antes una por turno). Al resolverse el efecto se envía sola al cementerio. Si no hay objetivo válido o carta para pagar el coste, no se activa y se queda en el campo sin gastar su uso.',
      'Electric Storm: it can now use only ONE of its two functions, ONCE during its whole stay on the field (it was once per turn). After the effect resolves it goes to the graveyard by itself. If there is no valid target or card to pay the cost, it cannot activate and stays on the field without spending its use.'],
