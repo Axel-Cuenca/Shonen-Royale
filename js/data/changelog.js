@@ -16,6 +16,8 @@ G.CHANGELOG = [
     ['La computadora ya sabe usar las cartas nuevas y su mazo se arma con ellas.',
      'The computer now knows how to use the new cards and builds its deck with them.']
   ], chg: [
+    ['Los personajes de 10 estrellas o más (Sukuna 60%, Vegeta Blue Evolution…) piden sacrificar 3 personajes tuyos para invocarlos de forma normal. Las invocaciones especiales y las transformaciones no piden sacrificios.',
+     'Characters of 10 stars or more (Sukuna 60%, Vegeta Blue Evolution…) require sacrificing 3 of your characters to be normal-summoned. Special summons and transformations require no sacrifices.'],
     ['El modo de prueba («?prueba») sigue disponible, pero ya no hace falta para jugar.',
      'Test mode (“?prueba”) is still available but is no longer needed to play.']
   ] },

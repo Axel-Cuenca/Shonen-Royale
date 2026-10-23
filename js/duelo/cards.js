@@ -279,7 +279,7 @@
     all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,
-    tributesFor: level => level >= 7 ? 2 : level >= 5 ? 1 : 0
+    tributesFor: level => level >= 10 ? 3 : level >= 7 ? 2 : level >= 5 ? 1 : 0
   };
   if (!isBrowser) module.exports = D.Cards;
 })();
