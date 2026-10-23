@@ -24,6 +24,8 @@ G.CHANGELOG = [
      'New “Card voices and sounds” control in the sound panel (🔊): raise or lower the volume of the character audio. By default they are now quieter (40%).'],
     ['Las habilidades robadas de Kratos y de Kratos, el Fantasma de Esparta ahora se ven en su carta (toca el personaje en el campo): sección «Habilidades robadas» con cuántas lleva (1/1 o 2/2), el nombre de cada una, de qué personaje viene, si está disponible, ya usada o es pasiva, y al tocarla su descripción y condiciones. También la ven los rivales. Cell muestra igual sus habilidades absorbidas.',
      'The stolen abilities of Kratos and Kratos, the Ghost of Sparta are now shown on their card (tap the character on the field): a “Stolen abilities” section with how many it holds (1/1 or 2/2), each one’s name, which character it came from, whether it is available, used or passive, and on tap its description and conditions. Opponents can see them too. Cell shows its absorbed abilities the same way.'],
+    ['Cuando Lara Tybur muere y se invoca a Titán Martillo también suena el audio de transformación y sale la animación a pantalla grande (antes solo ocurría con el mordisco).',
+     'When Lara Tybur dies and Hammer Titan is summoned, the transformation audio and the full-screen animation now play too (before, only the bite did that).'],
     ['Las cartas de tu mano ya no hacen ruido al pasar el ratón por encima.',
      'The cards in your hand no longer make a sound when you hover over them.'],
     ['El modo de prueba («?prueba») sigue disponible, pero ya no hace falta para jugar.',
