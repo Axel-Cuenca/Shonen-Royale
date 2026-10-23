@@ -487,7 +487,7 @@
     if (!opts.wait) prepare();
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map();
-    let gameEl = null, zrowsEl = null;
+    let gameEl = null, zrowsEl = null, lcol = null;
     let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
     const seatNames = () => match.names;
     const nameOf = q => seatNames()[q] || ('Jugador ' + (q + 1));
@@ -724,6 +724,46 @@
       /destruid|destruye/.test(t) ? '💥' : /daño|pierde|refleja/.test(t) ? '🔥' : /recupera/.test(t) ? '💚' : /^invoca|^revive|queda en/.test(t) ? '✨' : /boca abajo/.test(t) ? '🂠' :
       /^voltea/.test(t) ? '🔄' : /cambia a/.test(t) ? '🔁' : /trampa/.test(t) ? '🪤' : /^activa|equipa/.test(t) ? '🔮' : /^roba|agrega/.test(t) ? '🃏' : /descarta/.test(t) ? '🗑️' :
       /fase de batalla|ofrece/.test(t) ? '⚔' : /fuera|Fin del duelo|Empate/.test(t) ? '🏁' : '•';
+    // ---- chat de la partida (sólo online) ----
+    const chatSt = { msgs: [], open: true, muted: false, unread: 0 };
+    let chatBox = null, chatList = null, chatDot = null, chatIn = null;
+    function chatPaint() {
+      if (!chatList) return;
+      chatList.replaceChildren(...chatSt.msgs.slice(-6).map(m => h('div', { class: 'cm ' + m.who }, h('b', null, m.name + ': '), m.text)));
+      chatList.scrollTop = chatList.scrollHeight;
+      chatDot.style.display = chatSt.unread && !chatSt.open ? '' : 'none';
+      chatDot.textContent = chatSt.unread;
+    }
+    function chatAdd(m, who) {
+      chatSt.msgs.push({ name: m.name, text: m.text, who });
+      if (chatSt.msgs.length > 40) chatSt.msgs.shift();
+      if (who !== 'me' && !chatSt.open) chatSt.unread++;
+      chatPaint();
+    }
+    function chatSend() {
+      const t = chatIn.value;
+      if (!t.trim()) return;
+      const r = match.chat(t);
+      if (r.ok) { chatAdd({ name: nameOf(v.seat), text: r.text }, 'me'); chatIn.value = ''; }
+      else if (r.why === 'wait') { chatIn.classList.add('shake'); setTimeout(() => chatIn.classList.remove('shake'), 400); }
+    }
+    function chatEl() {
+      if (chatBox || typeof match.chat !== 'function') return chatBox;
+      chatList = h('div', { class: 'cmsgs', 'aria-live': 'polite' });
+      chatDot = h('i', { class: 'cdot' });
+      chatIn = h('input', { class: 'cin', type: 'text', maxlength: 120, placeholder: 'Escribe un mensaje…', autocomplete: 'off', 'aria-label': 'Mensaje de chat' });
+      chatIn.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
+      const body = h('div', { class: 'cbody' }, chatList, h('div', { class: 'cform' }, chatIn, h('button', { class: 'csend', onclick: chatSend, title: 'Enviar' }, '➤')));
+      const mute = h('button', { class: 'ib sm', title: 'Silenciar el chat del rival', onclick: () => { chatSt.muted = !chatSt.muted; mute.textContent = chatSt.muted ? '🔇' : '🔊'; } }, '🔊');
+      const tog = h('button', { class: 'ib sm', title: 'Plegar / abrir el chat', onclick: () => { chatSt.open = !chatSt.open; chatSt.unread = 0; chatBox.classList.toggle('closed', !chatSt.open); tog.textContent = chatSt.open ? '▾' : '▴'; chatPaint(); if (chatSt.open) chatIn.focus(); } }, '▾');
+      chatBox = h('div', { class: 'chat' }, h('div', { class: 'chead' }, h('span', null, '💬 Chat', chatDot), h('span', { class: 'cbtns' }, mute, tog)), body);
+      match.onChat(m => {
+        if (chatSt.muted) return;
+        chatAdd(m, m.seat != null && v && isAlly(m.seat) ? 'ally' : 'foe');
+        if (!chatSt.open) S.play && S.play('tab');
+      });
+      return chatBox;
+    }
     /** Lista fija con las últimas acciones: la más nueva arriba y más grande; las viejas se van apagando. */
     let feedLastN = null;
     function feedEl() {
@@ -941,12 +981,16 @@
         zrowsEl = h('div', { class: 'zrows' });
         const slab = h('div', { class: 'slab' }, zrowsEl);
         D.Scene.build(slab);
-        gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))));
+        lcol = h('div', { class: 'lcol' });
+        gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))), lcol);
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
       gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);
-      const hud = h('div', { class: 'hud' }, hudTop, feedEl(), hudBot);
+      const hud = h('div', { class: 'hud' }, hudTop, hudBot);
+      const oldFeed = lcol.querySelector('.feed'), newFeed = feedEl();
+      if (oldFeed) oldFeed.replaceWith(newFeed); else lcol.prepend(newFeed);
+      const cb = chatEl(); if (cb && !cb.isConnected) lcol.append(cb);
       const oldHud = gameEl.querySelector(':scope > .hud');
       if (oldHud) oldHud.replaceWith(hud); else gameEl.append(hud);
       fitBoard();

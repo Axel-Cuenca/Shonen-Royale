@@ -7,6 +7,8 @@
  */
 G.CHANGELOG = [
   { d: '2026-10-22', title: ['Ahora el sitio es sólo el Duelo', 'The site is now only the Duel'], new: [
+    ['Chat en las partidas online: escribe a tu rival (y a tus compañeros) debajo del seguimiento de acciones. Puedes plegarlo o silenciarlo.',
+     'Chat in online matches: write to your opponent (and teammates) below the action feed. You can fold or mute it.'],
     ['El juego ahora es únicamente el Duelo Pokémon: se abre directo en el duelo de cartas. Puedes crear una cuenta (nombre y contraseña o Google) o jugar como invitado. Con cuenta, tus mazos se guardan en la nube y los tienes en cualquier aparato, y puedes jugar online con amigos. Las cuentas que ya tenías siguen funcionando. Como invitado puedes jugar contra la computadora.',
      'The game is now only Pokémon Duel: it opens straight into the card duel. You can create an account (name and password, or Google) or play as a guest. With an account your decks are saved in the cloud so you have them on any device, and you can play online with friends. Your existing accounts keep working. As a guest you can play against the computer.']
     ,

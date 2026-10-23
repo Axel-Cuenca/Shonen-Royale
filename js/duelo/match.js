@@ -96,12 +96,16 @@
   function wireView(v) { const w = Object.assign({}, v); delete w.me; delete w.opp; w.oppSeat = v.opp ? v.opp.seat : 0; return w; }
   function unwireView(w) { if (!w.me && w.players) { w.me = w.players[w.seat]; w.opp = w.players[w.oppSeat != null ? w.oppSeat : 0]; } return w; }
 
+  /** Chat de la partida online: texto plano, sin caracteres de control, hasta 120 letras. */
+  const cleanChat = t => String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  const CHAT_GAP = 900;   // ms mínimos entre mensajes de una misma persona
+
   function host(o) {
-    const views = emitter(), status = emitter();
+    const views = emitter(), status = emitter(), chats = emitter();
     const n = o.n || 2, mode = o.mode || 'ffa', delay = o.delay != null ? o.delay : 750;
     let st = null, closed = false, timer = 0, ais = [];
     const slots = [];      // un invitado por canal: { tr, name, deck, pref, seat, left }
-    const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', onView: views.on, onStatus: status.on };
+    const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', onView: views.on, onStatus: status.on, onChat: chats.on };
     const humanSeat = s => s === 0 || slots.some(g => g.seat === s && !g.left);
 
     function broadcast() {
@@ -171,6 +175,13 @@
           const r = E().apply(st, g.seat, msg.a);
           if (!r.ok) tr.send({ k: 'err', why: r.error });
           broadcast(); pump();
+        } else if (msg.k === 'chat') {
+          const text = cleanChat(msg.text), now = Date.now();
+          if (!st || g.seat == null || !text || now - (g.lastChat || 0) < CHAT_GAP) return;
+          g.lastChat = now;
+          const out = { k: 'chat', seat: g.seat, name: g.name, text };
+          for (const x of slots) if (x !== g && x.seat != null && !x.left) x.tr.send(out);
+          chats.emit(out);
         } else if (msg.k === 'resign') {
           if (st && g.seat != null && st.winner === null) { E().resign(st, g.seat, g.name + ' se rindió.'); broadcast(); pump(); }
         }
@@ -195,6 +206,16 @@
     m.mode = mode; m.n = n;
     m.start = () => { if (st) views.emit(E().view(st, 0)); else tryStart(); };
     m.act = a => { if (closed || !st) return { ok: false }; const r = E().apply(st, 0, a); if (r.ok) { broadcast(); pump(); } return r; };
+    let lastOwn = 0;
+    m.chat = t => {
+      const text = cleanChat(t), now = Date.now();
+      if (closed || !st || !text) return { ok: false };
+      if (now - lastOwn < CHAT_GAP) return { ok: false, why: 'wait' };
+      lastOwn = now;
+      const out = { k: 'chat', seat: 0, name: m.names[0], text };
+      for (const x of slots) if (x.seat != null && !x.left) x.tr.send(out);
+      return { ok: true, text };
+    };
     m.resign = () => { if (st && st.winner === null) { E().resign(st, 0, 'Te rendiste.'); broadcast(); pump(); } };
     m.close = () => { closed = true; clearTimeout(timer); };
     m.state = () => st;
@@ -204,9 +225,9 @@
   // ---------------- online: invitado ----------------
   function guest(o) {
     const tr = o.transport;
-    const views = emitter(), status = emitter();
+    const views = emitter(), status = emitter(), chats = emitter();
     let closed = false, got = false, last = null, timer = 0;
-    const m = { seat: 1, names: ['Anfitrión', o.name || 'Tú'], kind: 'guest', onView: views.on, onStatus: status.on };
+    const m = { seat: 1, names: ['Anfitrión', o.name || 'Tú'], kind: 'guest', onView: views.on, onStatus: status.on, onChat: chats.on };
     const hello = () => tr.send({ k: 'hello', deck: o.deck, name: o.name || 'Rival' });
     tr.onMessage(msg => {
       if (closed || !msg) return;
@@ -218,10 +239,20 @@
         views.emit(last);
       } else if (msg.k === 'reject') { clearInterval(timer); status.emit({ k: 'rejected', why: msg.why }); }
       else if (msg.k === 'err') status.emit({ k: 'err', why: msg.why });
+      else if (msg.k === 'chat') { const text = cleanChat(msg.text); if (text) chats.emit({ k: 'chat', seat: msg.seat, name: String(msg.name || '').slice(0, 24), text }); }
     });
     tr.onClose(() => { if (!closed) status.emit({ k: 'closed' }); });
     m.start = () => { hello(); timer = setInterval(() => { if (!got && !closed) hello(); }, o.helloMs || 1500); };
     m.act = a => { if (closed) return { ok: false }; tr.send({ k: 'act', a }); return { ok: true }; };
+    let lastOwn = 0;
+    m.chat = t => {
+      const text = cleanChat(t), now = Date.now();
+      if (closed || !got || !text) return { ok: false };
+      if (now - lastOwn < CHAT_GAP) return { ok: false, why: 'wait' };
+      lastOwn = now;
+      tr.send({ k: 'chat', text });
+      return { ok: true, text };
+    };
     m.resign = () => tr.send({ k: 'resign' });
     m.close = () => { closed = true; clearInterval(timer); };
     m.lastView = () => last;

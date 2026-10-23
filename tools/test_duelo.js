@@ -989,6 +989,34 @@ async function multiTests() {
     h.close(); a.close(); b.close();
   }
   {
+    // chat de la partida online: del invitado al anfitrión y al otro invitado, texto limpio y con límite de ritmo
+    const [h1, g1] = Match.memoryPair(0), [h2, g2] = Match.memoryPair(0);
+    const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', n: 3, mode: 'ffa', seed: 41, delay: 100000, autoStart: false });
+    h.addGuest(h1); h.addGuest(h2);
+    const a = Match.guest({ deck: Cards.presetDeck('fire'), name: 'Ana', transport: g1, helloMs: 20 });
+    const b = Match.guest({ deck: Cards.presetDeck('grass'), name: 'Beto', transport: g2, helloMs: 20 });
+    const gh = [], ga = [], gb = []; let hv = null, av = null;
+    h.onChat(x => gh.push(x)); a.onChat(x => ga.push(x)); b.onChat(x => gb.push(x));
+    h.onView(x => { hv = x; }); a.onView(x => { av = x; });
+    ok(!h.chat('hola').ok && !a.chat('hola').ok, 'sin partida empezada no hay chat');
+    h.start(); a.start(); b.start();
+    await until(() => h.lobby().filter(x => x.ready).length === 2, 1000);
+    h.begin(); await until(() => hv && av, 1000);
+    ok(a.chat('  Hola\n\n  mundo\u0007  ').ok, 'el invitado escribe');
+    ok(await until(() => gh.length === 1 && gb.length === 1, 500), 'llega al anfitrión y al otro invitado');
+    eq(gh[0], { k: 'chat', seat: 1, name: 'Ana', text: 'Hola mundo' }, 'texto limpio y con autor');
+    eq(ga.length, 0, 'el que escribe no recibe su propio mensaje de vuelta');
+    ok(a.chat('otro').why === 'wait', 'escribir muy seguido se frena');
+    ok(h.chat('x'.repeat(500)).text.length === 120, 'máximo 120 letras');
+    ok(await until(() => ga.length === 1 && gb.length === 2, 500), 'el anfitrión llega a todos');
+    eq(ga[0].name, 'Axel', 'con su nombre');
+    ok(!h.chat('   ').ok, 'un mensaje vacío no se envía');
+    g1.send({ k: 'chat', text: 'a' }); g1.send({ k: 'chat', text: 'b' });
+    await sleep(20);
+    ok(gh.length === 1, 'un invitado tramposo no se salta el límite de ritmo');
+    h.close(); a.close(); b.close();
+  }
+  {
     // 2 contra 2 online con un invitado de compañero y desconexión
     const [h1, g1] = Match.memoryPair(0);
     const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', n: 4, mode: 'teams', seed: 32, delay: 5, autoStart: false });
