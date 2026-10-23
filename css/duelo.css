@@ -77,7 +77,7 @@ select, input[type=text], input[type=search], input[type=password] { font: inher
 .field { display: flex; flex-direction: column; gap: .35em; flex: 1; min-height: 0; justify-content: center; align-items: center; }
 .zrow { display: grid; grid-template-columns: repeat(3, 7.5em); gap: .5em; justify-content: center; }
 .zone { width: 7.5em; height: 10.2em; border: .15em dashed #5f7fd466; border-radius: .5em; display: grid; place-items: center; background: #ffffff08; position: relative; }
-.zone.st { height: 7.4em; } .zone.st .card { font-size: .74em; }
+.zone.st { width: 5.7em; height: 7.5em; justify-self: center; } .zone.st .card { font-size: .73em; }
 .zone.hl { border-color: var(--gold); border-style: solid; box-shadow: 0 0 .8em var(--gold); animation: pulse 1s infinite alternate; cursor: pointer; }
 @keyframes pulse { to { background: #ffd84a33; } }
 
