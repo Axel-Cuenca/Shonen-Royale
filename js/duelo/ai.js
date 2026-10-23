@@ -59,7 +59,15 @@
         }
         return best;
       }
-      if (pd.k === 'ability') return L.find(a => a.use === true || a.pos === 'atk') || L[0];
+      if (pd.k === 'ability') {
+        if (pd.ab === 'karma') {                       // arrastra al rival más fuerte
+          let best = L[0], bs = -1;
+          for (const a of L) { const m = v.players[a.vs] && v.players[a.vs].mz[a.z]; const sc = m ? (m.atk || 0) + (v.team[a.vs] !== v.team[v.seat] ? 5000 : 0) : 0; if (sc > bs) { bs = sc; best = a; } }
+          return best;
+        }
+        if (pd.ab === 'steal') return L.find(a => a.pick != null) || L[0];
+        return L.find(a => a.use === true || a.pos === 'atk') || L[0];
+      }
       if (pd.k === 'discard') {
         let best = L[0], bs = 1e9;
         const myMons = v.me.mz.filter(Boolean).length;
@@ -130,6 +138,30 @@
           if (m.pos === 'def') return (!info.count || m.atk >= info.maxAtk) ? 30 : -1;
           return (m.atk < info.maxAtk * 0.8 && m.def >= info.maxAtk * 0.8) ? 26 : -1;
         }
+        case 'power': case 'spow': {
+          const m = a.t === 'power' ? me.mz[a.zone] : null;
+          const tm = a.target && v.players[a.target.vs] ? v.players[a.target.vs].mz[a.target.z] : null;
+          switch (a.pw) {
+            case 'canon': return 58 + ((tm && tm.atk) || 0) / 100;
+            case 'absorb': return tm && v.team[a.target.vs] === v.team[v.seat] ? -1 : 50 + ((tm && tm.atk) || 0) / 200;
+            case 'furia': return 55;
+            case 'bigbang': return allFoes.some(q => q.mz.some(t => t && (t.down || (t.atk || 0) < 2000))) ? 66 : -1;
+            case 'relicario': return info.count >= 2 ? 48 : -1;
+            case 'desmantelar': return 47;
+            case 'bite': return 36;
+            case 'xform': return 61;
+            case 'copy': {
+              const d = cardOf({ id: a.id });
+              return d && m && d.atk > m.atk + 300 && d.kind === 'monster' ? 30 + d.atk / 100 : -1;
+            }
+            case 'gempos': return 28;
+            case 'gematk': return tm && v.team[a.target.vs] === v.team[v.seat] ? 31 : -1;
+            case 'storm1': { const hd = cardOf(me.hand[a.hand]); return 44 + ((tm && tm.atk) || 0) / 100 - hd.atk / 200; }
+            case 'storm2': return 40 - cardOf(me.hand[a.hand]).atk / 200 + (cardOf(me.hand[a.hand]).kind === 'monster' ? 0 : 0);
+          }
+          return -1;
+        }
+        case 'special': return 63;
         case 'activate': case 'activateSet': {
           const card = a.t === 'activate' ? me.hand[a.hand] : me.st[a.zone].c;
           const d = cardOf(card);
@@ -162,6 +194,15 @@
                 if (m.atk <= th && m.atk + d.n > th) return 54;
               }
               return !info.count ? 24 : -1;
+            }
+            case 'special': {                              // Superball: personaje de 6★ o menos sin gastar invocación
+              const hc = a.target && a.target.u != null ? me.hand.find(c => c && c.uid === a.target.u) : null;
+              return hc ? 46 + cardOf(hc).atk / 100 : -1;
+            }
+            case 'gem': case 'storm': return myMons.length || d.fx === 'gem' ? 42 : -1;
+            case 'karma': {
+              const m = me.mz[a.target.z];
+              return m && !m.down && info.count ? 41 : -1;
             }
             case 'equip': {
               const m = me.mz[a.target.z];

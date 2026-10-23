@@ -286,7 +286,7 @@ section('tablero 3+3 y catálogo');
   ok(E.ZONES === 3, 'ZONES = 3');
   ok(typeof Cards.canPlay === 'function', 'Cards.canPlay existe');
   // el catálogo de producción (sin el legado de pruebas) sólo tiene las cartas propias
-  ok(Cards.custom.length === 2 && Cards.custom.map(c => c.id).sort().join() === 'c_creeper,c_popeye', 'las cartas propias son Popeye y Creeper');
+  ok(Cards.custom.length === 20 && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 20 (con Popeye y Creeper)');
   const v = E.view(st, 0);
   ok(typeof v.opp.handCount === 'number' && v.opp.handCount === 5, 'la vista dice cuántas cartas tiene el rival en la mano');
 }
@@ -1042,6 +1042,7 @@ async function multiTests() {
   }
 }
 
+require('./test_cartas.js')({ E, Cards, AI, ok, eq, section, act, find, give, mulberry, randomBot, checkInvariants: null, game });
 matchTests().then(multiTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);

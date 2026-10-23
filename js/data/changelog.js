@@ -6,6 +6,19 @@
  * Cada línea en español y en inglés.
  */
 G.CHANGELOG = [
+  { d: '2026-10-23', title: ['Llegan 18 cartas nuevas: ya se puede jugar', '18 new cards: you can play now'], new: [
+    ['Ya hay 20 cartas y se pueden armar mazos (30 cartas, máximo 2 copias) y jugar contra la computadora y online. Personajes: Bardock, Bardock SSJ, Cell Semi Perfecto, Kratos, Kratos el Fantasma de Esparta, Lara Tybur, Titán Martillo, Ryomen Sukuna 5% y 60%, Shang Tsung, Vegeta y Vegeta Blue Evolution (más Popeye y Creeper, con imagen y sonido nuevos). Magias: Armadura Dorada, Espada del Rey Arruinado, Gema de la Mente, Karma, Superball y Tormenta Eléctrica. Toca una carta para ver lo que hace su habilidad.',
+     'There are now 20 cards and you can build decks (30 cards, max 2 copies) and play against the computer and online. Characters: Bardock, Bardock SSJ, Semi-Perfect Cell, Kratos, Kratos the Ghost of Sparta, Lara Tybur, Hammer Titan, Ryomen Sukuna 5% and 60%, Shang Tsung, Vegeta and Vegeta Blue Evolution (plus Popeye and Creeper, with new art and sound). Spells: Golden Armor, Sword of the Ruined King, Mind Gem, Karma, Superball and Electric Storm. Tap a card to see what its ability does.'],
+    ['Habilidades con acción propia: aparecen como botones al tocar tu personaje (transformaciones, Cañón Espiritual, Absorción, Big Bang, Relicario Demoníaco, Desmantelar, Furia de Esparta…) o tu magia continua (Gema de la Mente, Tormenta Eléctrica). Los personajes muestran insignias: escudo, vínculo, habilidades robadas, bajas, Karma, dominio.',
+     'Abilities with their own action: they show as buttons when you tap your character (transformations, Spirit Cannon, Absorption, Big Bang, Demonic Shrine, Dismantle, Spartan Rage…) or your continuous spell (Mind Gem, Electric Storm). Characters show badges: shield, link, stolen abilities, kills, Karma, domain.'],
+    ['Titán Martillo ocupa 2 zonas de monstruo. Las cartas propias suenan al atacar, transformarse o usar su habilidad.',
+     'Hammer Titan takes up 2 monster zones. The cards play their own sounds when attacking, transforming or using their ability.'],
+    ['La computadora ya sabe usar las cartas nuevas y su mazo se arma con ellas.',
+     'The computer now knows how to use the new cards and builds its deck with them.']
+  ], chg: [
+    ['El modo de prueba («?prueba») sigue disponible, pero ya no hace falta para jugar.',
+     'Test mode (“?prueba”) is still available but is no longer needed to play.']
+  ] },
   { d: '2026-10-22', title: ['Ahora el sitio es sólo el Duelo', 'The site is now only the Duel'], new: [
     ['Chat en las partidas online: escribe a tu rival (y a tus compañeros) debajo del seguimiento de acciones. Puedes plegarlo o silenciarlo.',
      'Chat in online matches: write to your opponent (and teammates) below the action feed. You can fold or mute it.'],

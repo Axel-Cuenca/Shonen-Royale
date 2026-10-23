@@ -145,9 +145,9 @@
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
     }
-    return h('div', { class: 'card ' + d.kind + (o.down ? ' dis' : ''), 'data-cid': d.id },
-      h('div', { class: 'cn' }, d.name), h('div', { class: 'art ico' }, d.icon),
-      h('div', { class: 'ck' }, d.kind === 'spell' ? (d.sub === 'equip' ? 'Magia · Equipo' : 'Magia') : 'Trampa'));
+    return h('div', { class: 'card ' + d.kind + (o.down ? ' dis' : '') + (d.img ? ' hasimg' : ''), 'data-cid': d.id },
+      h('div', { class: 'cn' }, d.name), d.img ? sprite(d) : h('div', { class: 'art ico' }, d.icon),
+      h('div', { class: 'ck' }, d.kind === 'spell' ? (d.sub === 'equip' ? 'Magia · Equipo' : d.sub === 'cont' ? 'Magia continua' : 'Magia') : 'Trampa'));
   }
   function detailBox(card, extra) {
     const d = typeof card === 'string' ? C.get(card) : card;
@@ -496,6 +496,38 @@
     const isAlly = q => q !== v.seat && v.team[q] === v.team[v.seat];
     const place = q => v.n - v.rank.indexOf(q);
 
+    const fileSfx = src => { if (src) S.voice({ voice: { src } }); };
+    const abn = k => (C.AB && C.AB[k] ? C.AB[k][0] : k);
+    const nameId = id => (C.get(id) || {}).name || id;
+    /** Estados de un monstruo en el tablero, en texto (ventana de detalle). */
+    function statusText(s) {
+      const o = [];
+      if (s.real) o.push('Transformado (en realidad es ' + nameId(s.real) + ')');
+      if (s.shield != null) o.push('Escudo: ' + s.shield);
+      if (s.link && s.link.length) o.push('Vinculado: ' + s.link.map(nameId).join(', '));
+      if (s.ext && s.ext.length) o.push('Habilidades robadas/absorbidas: ' + s.ext.map(abn).join(', '));
+      if (s.absorbed) o.push('Tiene absorbido a ' + nameId(s.absorbed));
+      if (s.fury) o.push('Furia de Esparta activa');
+      if (s.kills) o.push('Bajas: ' + s.kills);
+      if (s.domain) o.push('Su dominio cubre el campo');
+      if (s.muted) o.push('Habilidades silenciadas por el dominio');
+      if (s.karma) o.push('Karma: muere en ' + s.karma.left + ' turno(s)');
+      if (s.gem) o.push('Mente controlada (' + s.gem.left + ' uso(s) de la Gema)');
+      return o;
+    }
+    function badgesEl(s) {
+      const b = [];
+      if (s.shield != null) b.push('🛡️' + s.shield);
+      if (s.link && s.link.length) b.push('🔗');
+      if ((s.ext && s.ext.length) || s.absorbed) b.push('🌀');
+      if (s.fury) b.push('🔥');
+      if (s.domain) b.push('👹');
+      if (s.muted) b.push('🔇');
+      if (s.kills) b.push('☠️' + s.kills);
+      if (s.karma) b.push('☯️' + s.karma.left);
+      if (s.gem) b.push('🔮');
+      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', null, x))) : null;
+    }
     function act(a) {
       if (!v || v.actor !== v.seat) { S.play('error'); return; }
       sel = null; closeModal();
@@ -536,9 +568,17 @@
         const vsList = list.map(a => a.target.vs);
         return vsList.length === 1 ? act(list[0]) : pickFoe(vsList, q => act(list.find(a => a.target.vs === q)), '¿A quién le haces daño?');
       }
-      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST', area = d.fx === 'destroyST' ? 'st' : 'mz';
+      if (d.fx === 'special') return chooseHand(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje de tu mano');
+      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
+    }
+    /** Ventana para elegir una carta de la mano por uid. */
+    function chooseHand(uids, done, text) {
+      const cs = uids.map(u => v.me.hand.find(c => c && c.uid === u)).filter(Boolean);
+      modal(h('div', { class: 'box' }, h('h2', null, text),
+        h('div', { class: 'cands' }, cs.map(c => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); done(c.uid); } }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))),
+        btn('Cancelar', closeModal, 'ghost')));
     }
     function handClick(i) {
       const c = v.me.hand[i], d = C.get(c.id);
@@ -552,13 +592,17 @@
         if (os[0].tributes.length === 0) acts.push({ label, run: () => act(os[0]) });
         else acts.push({ label: label + ` · sacrificar ${os[0].tributes.length}`, run: () => startTribute(i, t, os) });
       }
+      const spc = mine.find(a => a.t === 'special');
+      if (spc) acts.push({ label: 'Invocar especialmente (ataque)', run: () => act(spc) });
       const sp = mine.filter(a => a.t === 'activate');
       if (sp.length) acts.push({ label: 'Activar', run: () => spellFlow(sp, d) });
       const st = mine.find(a => a.t === 'setst');
       if (st) acts.push({ label: d.kind === 'trap' ? 'Colocar boca abajo' : 'Colocar boca abajo (para después)', run: () => act(st), cls: sp.length ? 'ghost' : 'gold' });
+      if (!acts.length && d.sp) { sheet(d, acts, 'Sólo entra con invocación especial: ' + d.text); return; }
       sheet(d, acts, acts.length ? null : (v.me.normalUsed && d.kind === 'monster' ? 'Ya usaste tu invocación del turno.' : v.phase === 'battle' ? 'Solo se puede en la fase principal.' : 'No se puede jugar ahora.'));
     }
     function myMzClick(z) {
+      if (!v.me.mz[z]) return;
       const s = v.me.mz[z], d = C.get(s.c.id), acts = [];
       let hint = null;
       if (myTurn() && !v.pending) {
@@ -570,23 +614,57 @@
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });
       }
+      if (myTurn() && !v.pending) {
+        const groups = {};
+        for (const a of L().filter(a => a.t === 'power' && a.zone === z)) (groups[a.pw] = groups[a.pw] || []).push(a);
+        for (const k of Object.keys(groups)) {
+          const g = groups[k];
+          if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }
+          else if (k === 'bite') acts.push({ label: abn(k) + ' (−500 PV)', run: () => act(g[0]) });
+          else if (k === 'copy') acts.push({ label: 'Transformar en otro personaje…', run: () => copyPick(g) });
+          else if (g[0].target) acts.push({ label: abn(k) + '…', run: () => pickTargets(g.map(a => ({ seat: a.target.vs, area: k === 'desmantelar' ? 'st' : 'mz', z: a.target.z })), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige el objetivo') });
+          else acts.push({ label: abn(k), run: () => act(g[0]) });
+        }
+      }
+      for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
       const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null);
       modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null, btn('Cerrar', closeModal, 'ghost')));
     }
+    function copyPick(list) {
+      modal(h('div', { class: 'box' }, h('h2', null, '¿En qué personaje te transformas?'),
+        h('div', { class: 'cands' }, list.map(a => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); act(a); } }, cardEl(C.get(a.id)), h('small', null, C.get(a.id).name)))),
+        btn('Cancelar', closeModal, 'ghost')));
+    }
+    function stormFlow(list) {
+      const hands = [...new Set(list.map(a => a.hand))];
+      const go = hi => { const sub = list.filter(a => a.hand === hi), area = sub[0].pw === 'storm1' ? 'mz' : 'st'; pickTargets(sub.map(a => ({ seat: a.target.vs, area, z: a.target.z })), t => act(sub.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige el objetivo rival'); };
+      if (hands.length === 1) return go(hands[0]);
+      modal(h('div', { class: 'box' }, h('h2', null, 'Elige la carta de tu mano que se destruye'),
+        h('div', { class: 'cands' }, hands.map(hi => { const c = v.me.hand[hi]; return h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); go(hi); } }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)); })),
+        btn('Cancelar', closeModal, 'ghost')));
+    }
     function myStClick(z) {
+      if (!v.me.st[z]) return;
       const s = v.me.st[z], d = C.get(s.c.id), acts = [];
       if (myTurn() && !v.pending) {
+        const sw = L().filter(a => a.t === 'spow' && a.zone === z);
+        const gp = sw.find(a => a.pw === 'gempos'); if (gp) acts.push({ label: 'Cambiar su posición', run: () => act(gp) });
+        const ga = sw.filter(a => a.pw === 'gematk');
+        if (ga.length) acts.push({ label: 'Obligarlo a atacar a un aliado…', run: () => pickTargets(ga.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(ga.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién ataca') });
+        const sto = sw.filter(a => a.pw === 'storm1' || a.pw === 'storm2');
+        if (sto.length) acts.push({ label: 'Usar la tormenta…', run: () => stormFlow(sto) });
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
         if (os.length) acts.push({ label: 'Activar', run: () => spellFlow(os, d) });
       }
-      sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : null);
+      const extra = s.gem ? `Controla la mente de un rival. Usos que quedan: ${s.gem.left}.` : s.karma ? (s.karma.phase === 'foe' ? `Karma va a morir en ${s.karma.left} turno(s).` : 'Equipada a un personaje tuyo.') : null;
+      sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : extra);
     }
     function oppClick(seat, area, z) {
       const s = v.players[seat][area][z];
       if (!s) return;
       if (s.down) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const d = C.get(s.c.id);
-      sheet(d, [], d.kind === 'monster' ? `${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}` : null);
+      sheet(d, [], d.kind === 'monster' ? [`${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`].concat(statusText(s)).join(' · ') : null);
     }
     function zoneClick(seat, area, z) {
       S.play('select');
@@ -600,6 +678,7 @@
         return render();
       }
       if (sel && sel.kind === 'target') { const t = sel.targets.find(x => x.seat === seat && x.area === area && x.z === z); if (t) return sel.done(t); }
+      if (area === 'mz' && !v.players[seat].mz[z] && v.players[seat].shadow && v.players[seat].shadow[z] >= 0) z = v.players[seat].shadow[z];
       if (seat === v.seat) return area === 'mz' ? myMzClick(z) : myStClick(z);
       return oppClick(seat, area, z);
     }
@@ -616,6 +695,23 @@
         const box = h('div', { class: 'box' }, h('h2', null, '¿Activar una trampa?'), h('p', { class: 'sub' }, trgText(pd)),
           h('div', { class: 'acts' }, pd.cands.map(z => { const d = C.get(v.me.st[z].c.id); return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text)); })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'steal') {
+        const box = h('div', { class: 'box' }, h('h2', null, 'Robar habilidad'), h('p', { class: 'sub' }, `Mataste a ${pd.from || 'un personaje'}. ¿Te quedas con una de sus habilidades?`),
+          h('div', { class: 'acts' }, L().filter(a => a.pick != null).map(a => btn(abn(a.pick), () => act(a), 'gold')), btn('No robar', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'karma') {
+        const box = h('div', { class: 'box' }, h('h2', null, '☯️ Karma'), h('p', { class: 'sub' }, 'Tu personaje murió. Elige al personaje enemigo que arrastrará: morirá en 3 turnos y el tuyo revivirá.'),
+          h('div', { class: 'acts' }, L().map(a => { const m = v.players[a.vs].mz[a.z]; return btn(`${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'titan') {
+        const box = h('div', { class: 'box' }, h('h2', null, '¿Invocar a Titán Martillo?'), h('p', { class: 'sub' }, 'Lara Tybur murió: puedes invocar especialmente a Titán Martillo desde tu mano; ella queda vinculada a él.'),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_titan'))),
+          h('div', { class: 'acts' }, btn('Sí, invocar', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'gem') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🔮 Gema de la Mente'), h('p', { class: 'sub' }, 'Un personaje enemigo controlado va a atacar. ¿Cancelas el ataque? (gasta un uso de la Gema)'),
+          h('div', { class: 'acts' }, btn('Cancelar el ataque', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar atacar', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability') {
         const d = pd.card && pd.card.id ? C.get(pd.card.id) : null, nm = d ? d.name : 'Popeye';
@@ -651,6 +747,7 @@
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
         el.append(c);
+        if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         cur = curOf(s, area);
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
@@ -658,6 +755,8 @@
           const d = cur.id ? C.get(cur.id) : null;
           fx.push({ k: key, type: cur.down && !cur.id ? 'small' : cur.down ? 'small' : (d && d.kind === 'monster' && d.level >= 7 ? 'epic' : d && d.kind !== 'monster' ? 'spell' : 'normal') });
         }
+      } else if (area === 'mz' && v.players[seat].shadow && v.players[seat].shadow[z] >= 0) {
+        el.classList.add('shadowz'); el.append(h('span', { class: 'shd' }, '↔ ocupada por un gigante'));
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       return el;
@@ -839,10 +938,13 @@
         else if (/^voltea/.test(t)) snd = 'flip';
         else if (/cambia a/.test(t)) snd = 'pos';
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cut.push({ d, kind: 'trap' }); }
-        else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) cut.push({ d, kind: 'spell' }); }
+        else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cut.push({ d, kind: 'spell' }); fileSfx(d.sfx && d.sfx.use); } }
+        else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) fileSfx(d.sfx && d.sfx.transform); }
+        else if (/ usa Big Bang| activa Relicario/.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) fileSfx(d.sfx && d.sfx.ability); }
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
+          if (d && d.sfx) fileSfx(d.sfx.attack);
         }
         else if (/Todos los monstruos son destruidos/.test(t)) { snd = 'explosion'; needShake = true; }
         else if (/destruid|destruye/.test(t)) snd = 'destroy';

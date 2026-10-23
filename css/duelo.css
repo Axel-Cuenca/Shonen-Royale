@@ -599,3 +599,12 @@ html.rm .spinach { display: none; }
 html.rm .fe.new { animation: none; }
 .logline { display: none !important; }
 @media (max-width: 900px) { .lcol { top: 96px; width: min(320px, 62vw); } .fe { font-size: 12px; } .fe.top { font-size: 14px; } .fe:nth-child(n+4) { display: none; } }
+
+/* ---- cartas propias: magias con ilustración, insignias, gigante de 2 zonas ---- */
+.card.hasimg .art { font-size: 3.6em; }
+.zone .badges { position: absolute; top: 38%; right: .1em; display: flex; flex-direction: column; gap: .1em; z-index: 4; pointer-events: none; }
+.zone .badges i { font-style: normal; font-size: .85em; line-height: 1.1; background: #000a; border-radius: .4em; padding: 0 .25em; color: #fff; }
+.zone.shadowz { border-style: dotted; opacity: .6; }
+.zone .shd { font-size: .6em; text-align: center; color: #cfd8ff; padding: .3em; }
+.zone.wideA { box-shadow: 0 0 .6em #ffd84a88; }
+.board3d .zone .badges { transform: translateZ(20px); } .board3d .zone .shd { transform: translateZ(2px); }

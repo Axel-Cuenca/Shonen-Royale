@@ -43,10 +43,11 @@ servidores, base de datos o costes NO van ahí.
 - La nube sólo funciona desde `axel-cuenca.github.io` (y localhost); la lista está en `HOSTS` de `account.js`.
 
 ## Cartas
-- El catálogo del juego (`js/duelo/cards.js`) son sólo las cartas propias del array `CUSTOM` (Popeye y Creeper hoy):
-  el dueño pasa las cartas de a una. El catálogo antiguo (Pokémon, 12 magias, 5 trampas) vive en
+- El catálogo del juego (`js/duelo/cards.js`) son sólo las cartas propias del array `CUSTOM` (20 desde el 23-10-2026: 14
+  personajes y 6 magias; sus habilidades están en la tabla `AB` y en `engine.js`; imágenes `.webp` en `assets/cards/`):
+  el dueño pasa las cartas de a una o por lotes (ZIP). El catálogo antiguo (Pokémon, 12 magias, 5 trampas) vive en
   `tools/legacy_catalog.js` y lo usan SÓLO las pruebas. Con menos de 15 cartas distintas no se puede armar un
-  mazo (30 cartas, 2 copias): el juego avisa «aún no hay cartas suficientes» y bloquea jugar. Las reglas del mazo
+  mazo (30 cartas, 2 copias): el juego avisa «aún no hay cartas suficientes» y bloquea jugar (con las 20 actuales ya se puede). La computadora usa `aiDeck()`. Las reglas del mazo
   no se tocan.
 - Tablero: 3 zonas de monstruo + 3 de magia/trampa por jugador (`ZONES` en `engine.js`).
 - Las imágenes de las cartas van en `assets/cards/` y las voces de habilidad en `assets/voices/` (las pone el dueño).
