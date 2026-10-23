@@ -919,7 +919,7 @@
     // ----- apariciones a pantalla grande (cartas y personajes), una detrás de otra; tocar la pantalla salta la actual -----
     function cutAdd(c) {
       if (c.short && (cutQ.length || cutBusy)) return;                  // las acciones menores no se acumulan
-      c.ms = c.k === 'card' ? 1900 : c.short ? 800 : 1650;
+      c.ms = c.k === 'card' ? 2400 : c.short ? 1500 : 2300;
       if (cutQ.length >= 3) cutQ.shift();
       cutQ.push(c);
     }
