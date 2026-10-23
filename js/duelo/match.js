@@ -237,10 +237,18 @@
         const copy = JSON.parse(JSON.stringify(msg));
         const go = () => other.fns.forEach(fn => fn(copy));
         if (latency) {
-          // como el canal real (ordenado): un mensaje nunca llega antes que uno enviado antes
-          const at = Math.max(Date.now() + Math.random() * latency, me.last || 0);
-          me.last = at;
-          setTimeout(go, Math.max(0, at - Date.now()));
+          // como el canal real (ordenado): una cola por sentido; nunca sale un mensaje antes que otro enviado antes
+          const q = me.q || (me.q = []);
+          const at = Math.max(Date.now() + Math.random() * latency, q.length ? q[q.length - 1].at : 0);
+          q.push({ at, go });
+          if (!me.timer) {
+            const pump = () => {
+              me.timer = 0;
+              while (q.length && q[0].at <= Date.now()) q.shift().go();
+              if (q.length) me.timer = setTimeout(pump, Math.max(1, q[0].at - Date.now()));
+            };
+            me.timer = setTimeout(pump, Math.max(1, at - Date.now()));
+          }
         } else Promise.resolve().then(go);
       },
       onMessage(fn) { me.fns.push(fn); },
