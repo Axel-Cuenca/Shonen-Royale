@@ -891,6 +891,13 @@
       if (v.mode === 'teams') return { top: [at(1), at(3)], bot: [s0, at(2)] };
       return { top: [at(1), at(2)], bot: [s0, at(3)] };
     }
+    /** Espectador (eliminado): las manos de los jugadores que siguen en la partida. */
+    function specHands() {
+      const rows = v.players.filter((p, q) => q !== v.seat && p.alive).map(p => h('div', { style: 'margin:.4em 0' },
+        h('h3', null, nameOf(p.seat) + ' · ' + p.handCount + ' cartas en la mano'),
+        p.handCount ? h('div', { class: 'cands' }, p.hand.map(c => c ? h('div', { style: 'text-align:center;font-size:13px' }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)) : null)) : h('p', { class: 'sub' }, 'Sin cartas en la mano.')));
+      modal(h('div', { class: 'box' }, h('h2', null, 'Manos de los que siguen'), rows.length ? rows : h('p', null, 'No queda nadie.'), btn('Cerrar', closeModal, 'ghost')));
+    }
     function showGrave(seat) {
       const g = v.players[seat].grave;
       modal(h('div', { class: 'box' }, h('h2', null, seat === v.seat ? 'Tu cementerio' : 'Cementerio de ' + nameOf(seat)), g.length ? h('div', { class: 'cands' }, g.map(c => h('div', { style: 'cursor:pointer;text-align:center', onclick: () => modal(h('div', { class: 'box' }, detailBox(c.id), btn('Cerrar', closeModal))) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))) : h('p', { class: 'sub' }, 'Vacío.'), btn('Cerrar', closeModal, 'ghost')));
@@ -1162,7 +1169,7 @@
       if (sel) banner = h('div', { class: 'banner' }, sel.text, sel.kind === 'tribute' ? ` (${sel.chosen.length}/${sel.need})` : '',
         sel.direct ? btn('Directo', sel.direct, 'gold') : null, btn('Cancelar', () => { sel = null; render(); }, 'ghost'));
       else if (discarding) banner = h('div', { class: 'banner' }, `Tienes demasiadas cartas: descarta ${v.pending.excess}. Toca una de tu mano.`);
-      else if (meOut) banner = h('div', { class: 'banner wait' }, `Quedaste fuera (${place(v.seat)}.º). Sigues viendo la partida.`, btn('Salir', menu, 'ghost'));
+      else if (meOut) banner = h('div', { class: 'banner wait' }, `Quedaste fuera (${place(v.seat)}.º). Sigues viendo la partida.`, btn('Ver manos', specHands, 'gold'), btn('Salir', menu, 'ghost'));
       else if (!my && v.winner === null) banner = h('div', { class: 'banner wait' }, multi() ? `${shortOf(v.actor)} está jugando…` : v.actor === 1 - v.seat ? 'El rival está jugando…' : '…');
       const lastLog = v.log.length ? v.log[v.log.length - 1] : null;
       const canBattle = my && !v.pending && L().some(a => a.t === 'toBattle');

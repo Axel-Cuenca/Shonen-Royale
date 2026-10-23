@@ -1341,7 +1341,9 @@
       } else if (pd.k === 'respond') pending.trigger = pd.trigger;
       else if (pd.k === 'ability') pending.ab = pd.ab;
     }
-    const players = st.players.map((_, i) => playerView(st, i, i === seat));
+    // Un jugador eliminado mira la partida como espectador: ve las manos y las cartas boca abajo de los que siguen
+    const spec = !st.players[seat].alive && st.winner === null;
+    const players = st.players.map((_, i) => playerView(st, i, i === seat || spec));
     const fl = foes(st, seat);
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {

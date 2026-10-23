@@ -99,6 +99,15 @@ module.exports = function (T) {
     act(st, 0, s2);
     ok(grave(st, 1, 'c_espada') && grave(st, 0, 'c_tormenta'), 'función 2 también la envía al cementerio');
   }
+  section('Espectador: el eliminado ve las manos');
+  {
+    const st = fresh(); give(st, 1, ['c_popeye']);
+    ok(E.view(st, 0).players[1].hand.every(c => c === null), 'vivo: no ve la mano del rival');
+    st.players[0].alive = false;
+    const ve = E.view(st, 0);
+    ok(ve.players[1].hand.length && ve.players[1].hand.every(c => c && c.id), 'eliminado: ve las cartas de la mano de los demás');
+    ok(E.view(st, 1).players[0].hand.every(c => c === null), 'los vivos no ven la mano del eliminado');
+  }
   section('Superball');
   {
     const st = fresh(); give(st, 0, ['c_superball', 'c_cell', 'c_sukuna60', 'c_lara']);

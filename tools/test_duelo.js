@@ -568,9 +568,9 @@ function checkInvariants(st, tag) {
   for (let seat = 0; seat < 2; seat++) {
     const v = JSON.stringify(E.view(st, seat));
     const O = st.players[1 - seat];
-    const hidden = O.hand.map(c => c.uid).concat(O.deck.map(c => c.uid));
-    for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid);
-    for (const s of O.st) if (s && s.down) hidden.push(s.c.uid);
+    const spec = !st.players[seat].alive && st.winner === null;   // el eliminado mira como espectador: ve manos y cartas boca abajo, pero no los mazos
+    const hidden = (spec ? [] : O.hand.map(c => c.uid)).concat(O.deck.map(c => c.uid));
+    if (!spec) { for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid); for (const s of O.st) if (s && s.down) hidden.push(s.c.uid); }
     for (const u of hidden) if (v.includes(`"uid":${u},`) || v.includes(`"uid":${u}}`)) {
       // las candidatas de un 'pick' del propio jugador son suyas, no del rival: aquí sólo miramos al rival
       throw new Error(`${tag}: la vista del asiento ${seat} filtra la carta ${u}`);
@@ -747,9 +747,9 @@ function checkMulti(st, tag) {
     for (let q = 0; q < st.n; q++) {
       if (q === seat) continue;
       const O = st.players[q];
-      const hidden = O.hand.map(c => c.uid).concat(O.deck.map(c => c.uid));
-      for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid);
-      for (const s of O.st) if (s && s.down) hidden.push(s.c.uid);
+      const spec = !st.players[seat].alive && st.winner === null;
+      const hidden = (spec ? [] : O.hand.map(c => c.uid)).concat(O.deck.map(c => c.uid));
+      if (!spec) { for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid); for (const s of O.st) if (s && s.down) hidden.push(s.c.uid); }
       for (const u of hidden) if (v.includes(`"uid":${u},`) || v.includes(`"uid":${u}}`)) throw new Error(`${tag}: la vista del asiento ${seat} filtra la carta ${u} de ${q}`);
     }
   }
