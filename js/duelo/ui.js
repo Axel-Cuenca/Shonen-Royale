@@ -113,7 +113,9 @@
     try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
     if (pick !== rem) D.Account.push(store);
   }
-  const activeDeck = () => store.decks[store.active];
+  // en el modo de prueba (?prueba) el mazo es fijo y no se guarda
+  const TESTDK = { name: 'Mazo de prueba', get ids() { return C.testDeck(); } };
+  const activeDeck = () => C.test ? TESTDK : store.decks[store.active];
 
   // ---------------- dibujo de cartas ----------------
   function sprite(card, px) {
@@ -209,10 +211,11 @@
       acctBar(),
       h('h1', null, 'Duelo Pokémon'),
       h('p', { class: 'sub' }, 'Duelos de cartas por turnos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
+      C.test ? h('div', { class: 'panel' }, h('div', { class: 'msg ok' }, 'MODO DE PRUEBA: mazo fijo de 30 cartas (Popeye, Creeper y cartas de relleno «Prueba ★N»), sólo contra la computadora. No se guarda nada. Para salir, abre el juego sin «?prueba».')) : null,
       few ? h('div', { class: 'panel' }, h('div', { class: 'msg err' }, `Todavía no hay cartas suficientes para jugar: hay ${C.all().length} y hacen falta al menos ${Math.ceil(C.DECK_SIZE / C.MAX_COPIES)} distintas para armar un mazo. Se van añadiendo de a poco; mientras tanto puedes ver las cartas en «Mis mazos».`)) : null,
       h('div', { class: 'panel' }, h('div', null, 'Mazo activo: ', h('b', null, dk.name)), bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null),
       h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
-      h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
+      h('button', { class: 'menu-btn', disabled: !!bad || few || C.test, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
       h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
       h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
@@ -283,7 +286,7 @@
     let match;
     if (fm.n === 2) {
       const type = o.rival || C.PRESET_TYPES[Math.floor(Math.random() * C.PRESET_TYPES.length)];
-      match = D.Match.local({ deck: activeDeck().ids.slice(), aiDeck: C.presetDeck(type), aiLevel: o.level, name: 'Tú', aiName: 'Computadora (' + C.TYPE_ES[type] + ')' });
+      match = D.Match.local({ deck: activeDeck().ids.slice(), aiDeck: C.presetDeck(type), aiLevel: o.level, name: 'Tú', aiName: 'Computadora' + (type ? ' (' + C.TYPE_ES[type] + ')' : '') });
     } else match = D.Match.local({ deck: activeDeck().ids.slice(), n: fm.n, mode: fm.mode, aiLevel: o.level, name: 'Tú', delay: 600 });
     game(match, { rematch: () => startAI(o) });
   }

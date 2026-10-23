@@ -50,3 +50,4 @@ servidores, base de datos o costes NO van ahí.
   no se tocan.
 - Tablero: 3 zonas de monstruo + 3 de magia/trampa por jugador (`ZONES` en `engine.js`).
 - Las imágenes de las cartas van en `assets/cards/` y las voces de habilidad en `assets/voices/` (las pone el dueño).
+- Modo de prueba: abrir el sitio con `?prueba` (p. ej. `axel-cuenca.github.io/duelo/?prueba`) da un mazo fijo de 30 (Popeye, Creeper y cartas «Prueba ★N»), sin límite de copias, sólo contra la computadora y sin guardar nada. Sirve para probar mientras el catálogo es pequeño; no cambia las reglas reales.

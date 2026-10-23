@@ -15,13 +15,13 @@
     normal: 'Normal', fire: 'Fuego', water: 'Agua', electric: 'Eléctrico', grass: 'Planta', ice: 'Hielo',
     fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra', flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho',
     rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada',
-    popeye: 'Popeye', minecraft: 'Minecraft'
+    popeye: 'Popeye', minecraft: 'Minecraft', prueba: 'Prueba'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
     fighting: '#c22e28', poison: '#a33ea1', ground: '#e2bf65', flying: '#a98ff3', psychic: '#f95587', bug: '#a6b91a',
     rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad',
-    popeye: '#2e5aa8', minecraft: '#4a9a3a'
+    popeye: '#2e5aa8', minecraft: '#4a9a3a', prueba: '#8a8fa8'
   };
 
   // ---------------- catálogo ----------------
@@ -56,6 +56,18 @@
   ];
   for (const c of CUSTOM) BY_ID.set(c.id, c);
 
+  // ---------------- modo de prueba ----------------
+  // Se activa abriendo el juego con «?prueba» al final de la dirección. Sirve para ver y probar el juego mientras
+  // no hay cartas suficientes: mazo fijo de 30 con Popeye, Creeper y unas cartas de relleno («Prueba ★N», sin
+  // habilidad) de varios niveles, sin límite de copias y sólo contra la computadora. No cambia las reglas reales.
+  const TEST = isBrowser && /[?&]prueba(=|&|$)/.test(location.search);
+  const TESTCARDS = TEST ? [2, 4, 5, 6, 7, 8].map(l => ({
+    id: 'x' + l, kind: 'monster', dex: 0, name: 'Prueba ★' + l, types: ['prueba'], type: 'prueba', level: l,
+    atk: 700 + l * 250, def: 600 + l * 200, rarity: 'c', leg: false, gen: 0, bst: 0, text: 'Carta de relleno del modo de prueba (sin habilidad).'
+  })) : [];
+  for (const c of TESTCARDS) BY_ID.set(c.id, c);
+  const testDeck = () => { const ids = ['c_popeye', 'c_creeper'].concat(TESTCARDS.map(c => c.id)); return Array.from({ length: 30 }, (_, i) => ids[i % ids.length]); };
+
   // ---------------- mazos ----------------
   const DECK_SIZE = 30, MAX_COPIES = 2;
 
@@ -64,6 +76,7 @@
   /** Mazo de estreno de un tipo: 18 monstruos (por niveles) + 8 magias + 4 trampas. Siempre el mismo. */
   function presetDeck(type) {
     const bucket = c => c.level <= 2 ? 0 : c.level <= 4 ? 1 : c.level <= 6 ? 2 : 3;
+    if (TEST && !MONSTERS.length) return testDeck();
     const quota = [4, 8, 4, 2];
     const pool = MONSTERS.filter(c => c.types.includes(type));
     const rest = MONSTERS.filter(c => !c.types.includes(type) && c.types.includes('normal'));
@@ -90,7 +103,7 @@
     for (const id of ids) {
       if (!BY_ID.has(id)) return 'Hay una carta que no existe.';
       n[id] = (n[id] || 0) + 1;
-      if (n[id] > MAX_COPIES) return `Máximo ${MAX_COPIES} copias de cada carta (${BY_ID.get(id).name}).`;
+      if (!TEST && n[id] > MAX_COPIES) return `Máximo ${MAX_COPIES} copias de cada carta (${BY_ID.get(id).name}).`;
     }
     return '';
   }
@@ -103,15 +116,15 @@
     PRESET_TYPES.length = 0; PRESET_TYPES.push(...types);
   }
   /** ¿Hay cartas suficientes para armar un mazo válido? (con pocas cartas aún no se puede jugar) */
-  const canPlay = () => (MONSTERS.length + CUSTOM.length + SPELLS.length + TRAPS.length) * MAX_COPIES >= DECK_SIZE;
+  const canPlay = () => TEST || (MONSTERS.length + CUSTOM.length + SPELLS.length + TRAPS.length) * MAX_COPIES >= DECK_SIZE;
 
   D.Cards = {
     get: id => BY_ID.get(id),
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
     custom: CUSTOM,
-    all: () => MONSTERS.concat(CUSTOM, SPELLS, TRAPS),
+    all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
-    presetDeck, checkDeck, register, canPlay,
+    presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,
     tributesFor: level => level >= 7 ? 2 : level >= 5 ? 1 : 0
   };
   if (!isBrowser) module.exports = D.Cards;
