@@ -642,3 +642,45 @@ html.rm .cutc, html.rm .cutin.cardcut { display: none !important; }
 .stolen .ss { font-size: 11px; padding: 0 .5em; border-radius: .8em; background: #1f9d8a; }
 .stolen.used .ss { background: #8a3a3a; } .stolen.passive .ss { background: #4a5a8a; }
 .stitem .sd { padding: 4px 8px; font-size: 12px; }
+
+/* ---- personajes de pie (holograma) ---- */
+.zone .card.m.holohide { opacity: 0; }
+.holo, .hbase, .hbeam, .hwave { pointer-events: none; }
+.hbase { position: absolute; left: 50%; top: 50%; width: 7em; height: 7em; margin: -3.5em 0 0 -3.5em; border-radius: 50%; border: .18em solid #4ffc; box-shadow: 0 0 1.2em #4ff, inset 0 0 1.4em #4ffa; background: radial-gradient(circle, #4ff5, #0000 70%); transform: translateZ(.2em); }
+.zone.opp .hbase { border-color: #ff8a5ccc; box-shadow: 0 0 1.2em #f85, inset 0 0 1.4em #f85a; background: radial-gradient(circle, #f855, #0000 70%); }
+.zone.ally .hbase { border-color: #5fe6a0cc; box-shadow: 0 0 1.2em #5fe6a0, inset 0 0 1.4em #5fe6a0aa; background: radial-gradient(circle, #5fe6a055, #0000 70%); }
+.hbase.sel { border-color: var(--gold); box-shadow: 0 0 1.6em var(--gold), inset 0 0 1.6em #ffd84a99; }
+.holo { position: absolute; left: 50%; bottom: 50%; width: 8.4em; height: 11.4em; margin-left: -4.2em; transform-origin: 50% 100%; transform: rotateX(-40deg) translateZ(.4em); }
+.zone.wideA .holo.wide { left: calc(50% + 4.3em); width: 12em; height: 14.4em; margin-left: -6em; }
+.zone.wideA .hbase { left: calc(50% + 4.3em); width: 12em; margin-left: -6em; border-radius: 50%; }
+.holo .hin { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.holo .hin > img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 0 .35em #4ff) drop-shadow(0 0 1.1em #2bd) brightness(1.06); -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, #000c 3px 4px); animation: hBob 3.2s ease-in-out infinite alternate; }
+.zone.opp .holo .hin > img { filter: drop-shadow(0 0 .35em #f96) drop-shadow(0 0 1.1em #f63) brightness(1.06); }
+.zone.ally .holo .hin > img { filter: drop-shadow(0 0 .35em #6f9) drop-shadow(0 0 1.1em #3d8) brightness(1.06); }
+.holo .pl { position: absolute; left: 50%; bottom: .1em; transform: translateX(-50%); font: 700 1.15em Rajdhani, sans-serif; color: #dff; background: #023b; padding: 0 .6em; border: 1px solid #4ff8; border-radius: .4em; white-space: nowrap; text-shadow: 0 0 .4em #4ff; }
+.holo .pl b.up { color: #8f8; } .holo .pl b.dn { color: #f99; }
+.holo.def .hin { transform: scale(1, .72); }
+.holo.def .hin > img { filter: grayscale(.25) drop-shadow(0 0 .35em #fc4) drop-shadow(0 0 1.1em #c90) brightness(1); }
+.hbase.def, .holo.def ~ .hbase { }
+.holo.compact { height: 9.4em; } .holo.compact .hin > img { -webkit-mask-image: none; filter: drop-shadow(0 0 .4em #4ff); }
+.holo.enter .hin { animation: hIn var(--ms) cubic-bezier(.3,.7,.3,1) both; }
+.holo.enter .pl { animation: hFade var(--ms) both; }
+.hbase.enter { animation: hBase var(--ms) both; }
+.hbeam { position: absolute; left: 50%; bottom: 50%; width: 7em; height: 20em; margin-left: -3.5em; transform-origin: 50% 100%; transform: rotateX(-40deg); background: linear-gradient(#4ff0, #4ffd 70%, #fff); clip-path: polygon(15% 0, 85% 0, 100% 100%, 0 100%); animation: hBeam var(--ms) both; }
+.zone.opp .hbeam { background: linear-gradient(#f850, #f85d 70%, #fff); }
+.hwave { position: absolute; left: 50%; top: 50%; width: 7em; height: 7em; margin: -3.5em 0 0 -3.5em; border-radius: 50%; border: .25em solid #fff; box-shadow: 0 0 1.5em #4ff; transform: translateZ(.3em); animation: hWave var(--ms) both; }
+@keyframes hBob { from { transform: translateY(0); } to { transform: translateY(-.45em); } }
+@keyframes hIn { 0% { transform: translateY(-9em) scale(1.12); opacity: 0; filter: brightness(4); } 22% { opacity: 1; filter: brightness(3); } 38% { transform: translateY(0) scale(1.1, .86); filter: brightness(2.2); } 52% { transform: translateY(-1.1em) scale(.97, 1.05); filter: brightness(1.4); } 66% { transform: translateY(0) scale(1.02, .98); filter: brightness(1.1); } 80%, 100% { transform: none; filter: none; } }
+@keyframes hFade { 0%, 45% { opacity: 0; } 70%, 100% { opacity: 1; } }
+@keyframes hBase { 0%, 30% { opacity: 0; } 60%, 100% { opacity: 1; } }
+@keyframes hBeam { 0% { opacity: 0; } 15% { opacity: .85; } 40% { opacity: .7; } 60%, 100% { opacity: 0; } }
+@keyframes hWave { 0%, 36% { transform: translateZ(.3em) scale(.2); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateZ(.3em) scale(2.6); opacity: 0; } }
+.holo.hi.enter .hin { filter: none; }
+.zone.atkr.me .holo { animation: hLungeUp .8s ease-in-out; } .zone.atkr.opp .holo { animation: hLungeDown .8s ease-in-out; }
+.zone.atkr.opp.lowrow .holo { animation: hLungeUp .8s ease-in-out; }
+@keyframes hLungeUp { 40% { transform: translateY(-6em) rotateX(-40deg) translateZ(70px) scale(1.15); filter: brightness(1.5); } }
+@keyframes hLungeDown { 40% { transform: translateY(6em) rotateX(-40deg) translateZ(70px) scale(1.15); filter: brightness(1.5); } }
+.ghostholo { position: fixed; z-index: 44; pointer-events: none; transform: translate(-50%, -50%); animation: hGone .9s ease-in forwards; }
+.ghostholo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 .5em #4ff); }
+@keyframes hGone { 0% { opacity: 1; } 15% { opacity: .3; } 25% { opacity: 1; } 40% { opacity: .2; } 55% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -60%) scale(.9); filter: blur(3px); } }
+html.rm .holo *, html.rm .hbase { animation: none !important; } html.rm .holo { animation: none !important; } html.rm .hbeam, html.rm .hwave, html.rm .ghostholo { display: none !important; }

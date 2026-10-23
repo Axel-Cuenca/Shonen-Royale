@@ -118,6 +118,52 @@
   const activeDeck = () => C.test ? TESTDK : store.decks[store.active];
 
   // ---------------- dibujo de cartas ----------------
+  /** Figuras de pie («holograma»): la ilustración de cada personaje con el fondo claro recortado (se hace una vez en el navegador). */
+  const Holo = (() => {
+    const cache = new Map();
+    function cutout(src) {
+      return new Promise(res => {
+        const im = new Image();
+        im.onerror = () => res(null);
+        im.onload = () => {
+          try {
+            const k = Math.min(1, 560 / Math.max(im.naturalWidth, im.naturalHeight));
+            const W = Math.round(im.naturalWidth * k), H = Math.round(im.naturalHeight * k);
+            const c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H);
+            const d = x.getImageData(0, 0, W, H), p = d.data, seen = new Uint8Array(W * H), q = [];
+            const light = i => { const a = p[i * 4 + 3]; if (a < 20) return true; return p[i * 4] > 226 && p[i * 4 + 1] > 226 && p[i * 4 + 2] > 226; };
+            for (let i = 0; i < W; i++) q.push(i, (H - 1) * W + i);
+            for (let j = 0; j < H; j++) q.push(j * W, j * W + W - 1);
+            while (q.length) {
+              const i = q.pop();
+              if (seen[i] || !light(i)) continue;
+              seen[i] = 1; p[i * 4 + 3] = 0;
+              const xx = i % W, yy = (i / W) | 0;
+              if (xx > 0) q.push(i - 1); if (xx < W - 1) q.push(i + 1); if (yy > 0) q.push(i - W); if (yy < H - 1) q.push(i + W);
+            }
+            // quita el halo blanco del borde: píxeles casi blancos pegados a lo transparente
+            for (let i = 0; i < W * H; i++) {
+              if (p[i * 4 + 3] === 0) continue;
+              const xx = i % W, yy = (i / W) | 0;
+              if ((xx > 0 && seen[i - 1]) || (xx < W - 1 && seen[i + 1]) || (yy > 0 && seen[i - W]) || (yy < H - 1 && seen[i + W])) {
+                if (p[i * 4] > 190 && p[i * 4 + 1] > 190 && p[i * 4 + 2] > 190) p[i * 4 + 3] = 0;
+              }
+            }
+            x.putImageData(d, 0, 0);
+            res(c.toDataURL('image/png'));
+          } catch (e) { res(null); }          // p. ej. abierto como archivo local: se queda la carta plana
+        };
+        im.src = src;
+      });
+    }
+    return {
+      prepare() { for (const c of C.all()) if (c.kind === 'monster' && c.img && !cache.has(c.id)) { cache.set(c.id, null); cutout(c.img).then(u => cache.set(c.id, u)); } },
+      src: id => cache.get(id) || null
+    };
+  })();
+  setTimeout(() => Holo.prepare(), 0);
+
   function sprite(card, px) {
     if (card.img) {                       // carta propia con ilustración (no es de la Pokédex)
       const b = h('div', { class: 'art', style: px ? `font-size:${px}px;width:1em;height:1em;flex:none;margin:0` : '' });
@@ -486,7 +532,7 @@
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
-    const zoneMem = new Map();
+    const zoneMem = new Map(), enterMem = new Map();
     let gameEl = null, zrowsEl = null, lcol = null;
     let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
     const seatNames = () => match.names;
@@ -765,6 +811,8 @@
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
         el.append(c);
+        const hsrc = area === 'mz' && s.c && !s.down ? Holo.src(s.c.id) : null;
+        if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         cur = curOf(s, area);
@@ -777,7 +825,24 @@
         el.classList.add('shadowz'); el.append(h('span', { class: 'shd' }, '↔ ocupada por un gigante'));
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
+      if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id)) el.append(...holoEls(s, key, cur, landing, chosen));
       return el;
+    }
+    /** Figura de pie + anillo de luz (y, al aparecer, haz de luz y onda). */
+    function holoEls(s, key, cur, landing, chosen) {
+      const d = C.get(s.c.id), now = performance.now(), hi = d.level >= 7, lo = d.level <= 4;
+      const ms = hi ? 2100 : lo ? 1000 : 1500;
+      if (landing) enterMem.set(key, { uid: cur.uid, t0: now, ms });
+      const m = enterMem.get(key);
+      const entering = !!m && m.uid === cur.uid && now - m.t0 < m.ms;
+      const dl = entering ? `animation-delay:-${Math.round(now - m.t0)}ms;` : '';
+      const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
+      const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
+      const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
+      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, h('img', { src: Holo.src(d.id), alt: d.name, draggable: 'false', style: bob }), stat);
+      const out = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` }), h('div', { class: cls, style: `--ms:${ms}ms` }, fig)];
+      if (entering) out.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
+      return out;
     }
     /** Cambios de PV desde la vista anterior: sonidos y efectos una sola vez; las fichas sólo pintan el número flotante. */
     function lpEvents() {
@@ -1043,7 +1108,9 @@
         if (f.type === 'gone' && f.fam) elemFx(r.left + r.width / 2, r.top + r.height / 2, r.width * 2.6, f.fam, true);
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zel = document.querySelector('.zone[data-k="' + f.k + '"]'), zs = (parseFloat(getComputedStyle(zel).fontSize) || 10) * (r.width / zel.offsetWidth);
         if (f.type === 'gone') {
-          const c = f.card, g = h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
+          const c = f.card, hs = c.id && !c.down && Holo.src(c.id);
+          const g = hs ? h('div', { class: 'ghostholo', style: `left:${cx}px;top:${cy - r.height * .35}px;width:${r.width * 1.1}px;height:${r.height * 1.5}px` }, h('img', { src: hs, alt: '' }))
+            : h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
           document.body.append(g); setTimeout(() => g.remove(), 800);
         } else {
           const size = r.width * (f.type === 'epic' ? 3.8 : f.type === 'small' ? 2 : 3);
