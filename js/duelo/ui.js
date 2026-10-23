@@ -531,8 +531,8 @@
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
-    // Contador de turno: 30 s por turno completo. Sólo avisa (cuenta atrás, color y un sonido al acabarse); no obliga a nada.
-    const TURN_SECS = 30;
+    // Contador de turno: 45 s por turno completo. Sólo avisa (cuenta atrás, color y un sonido al acabarse); no obliga a nada.
+    const TURN_SECS = 45;
     let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
     function ttTick() {
       const el = document.querySelector('.turntimer');

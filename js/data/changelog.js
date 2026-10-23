@@ -21,8 +21,8 @@ G.CHANGELOG = [
      'Background music during matches: Dragon Ball Z lofi (1 hour, looping). It follows the "Music" control in the sound panel (🔊). Menu and lobby keep the usual music.'],
     ['Espectador: cuando te eliminan en una partida de varios, ahora ves las cartas boca abajo de los que siguen y, con el botón «Ver manos», las cartas de su mano.',
      'Spectator: when you are eliminated in a multiplayer match you now see the face-down cards of the remaining players and, with the "Ver manos" button, the cards in their hands.'],
-    ['Contador de turno: cada turno tiene 30 segundos y se ve una cuenta atrás bajo el título del turno (se pone naranja a los 10 s y roja al acabarse, con un aviso sonoro). Al llegar a 0, el turno pasa solo al siguiente jugador.',
-     'Turn timer: every turn has 30 seconds. A countdown shows under the turn title (orange at 10 s, red when it runs out, with a sound). When it hits 0 the turn passes to the next player by itself.']
+    ['Contador de turno: cada turno tiene 45 segundos y se ve una cuenta atrás bajo el título del turno (se pone naranja a los 10 s y roja al acabarse, con un aviso sonoro). Al llegar a 0, el turno pasa solo al siguiente jugador.',
+     'Turn timer: every turn has 45 seconds. A countdown shows under the turn title (orange at 10 s, red when it runs out, with a sound). When it hits 0 the turn passes to the next player by itself.']
   ], chg: [
     ['Vegeta Blue Evolution: mientras su escudo está activo, los ataques se resuelven sólo contra el escudo. Su ATK y DEF no cuentan, el atacante no sufre daño de diferencia ni rebote, y si el escudo se rompe lo que sobra no pasa a Vegeta. Los ataques siguientes usan sus estadísticas normales. Los ataques directos no cambian.',
      'Vegeta Blue Evolution: while his shield is active, attacks are resolved only against the shield. His ATK and DEF do not count, the attacker takes no difference damage or bounce, and if the shield breaks the excess does not reach Vegeta. Later attacks use his normal stats. Direct attacks are unchanged.'],
