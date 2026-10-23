@@ -22,7 +22,7 @@ G.Net = (() => {
   // STUN de Google + los TURN propios de js/core/firebase-config.js (G.TURN_SERVERS), si hay.
   const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }]
     .concat(Array.isArray(G.TURN_SERVERS) ? G.TURN_SERVERS : []);
-  const DIRECT_TIMEOUT = 9000;     // ms para conseguir canal directo antes de usar el relé
+  const DIRECT_TIMEOUT = 20000;    // ms para conseguir canal directo antes de usar el relé
   // Relé por la Realtime Database APAGADO (12-10-2026): a 1 $ el GB era lo que más
   // costaba del cooperativo. Sin conexión directa, esa pareja no puede jugar
   // junta ('failed') y el anfitrión lo reintenta cada RETRY_MS. Por la base de datos

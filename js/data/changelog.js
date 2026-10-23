@@ -20,6 +20,8 @@ G.CHANGELOG = [
   ], chg: [
     ['Shang Tsung: «Transformación» ahora sólo copia a un personaje que esté en el campo y toma su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes, sin duplicarlos. Los efectos temporales (Furia, dominio) duran lo mismo que en el original. Sigue siendo la misma carta en su espacio; sus habilidades copiadas empiezan sin usar.',
      'Shang Tsung: «Transformation» now only copies a character that is on the field and takes its current state: name, type, stars, abilities and its final ATK/DEF with every active bonus and penalty, without duplicating them. Temporary effects (Fury, domain) last as long as on the original. He stays the same card in his slot; copied abilities start unused.'],
+    ['Online: se espera hasta 20 s (antes 9) para conectar con los demás jugadores usando el puente, para que no salga «vuestras conexiones no logran verse» en redes lentas.',
+     'Online: it now waits up to 20 s (was 9) to connect to the other players through the relay, so the "connections cannot see each other" message no longer shows on slow networks.'],
     ['Los personajes de 10 estrellas o más (Sukuna 60%, Vegeta Blue Evolution…) piden sacrificar 3 personajes tuyos para invocarlos de forma normal. Las invocaciones especiales y las transformaciones no piden sacrificios.',
      'Characters of 10 stars or more (Sukuna 60%, Vegeta Blue Evolution…) require sacrificing 3 of your characters to be normal-summoned. Special summons and transformations require no sacrifices.'],
     ['Nuevo control «Voces y sonidos de las cartas» en el panel de sonido (🔊): sube o baja el volumen de los audios de los personajes. Por defecto ahora suenan más bajos (40 %).',
