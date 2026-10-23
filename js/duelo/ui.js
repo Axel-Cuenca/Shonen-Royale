@@ -183,7 +183,7 @@
     sndEl.style.display = show ? '' : 'none';
   }
   function soundPanel() {
-    const LBL = { master: 'Volumen general', music: 'Música', ui: 'Interfaz y cartas', combat: 'Combate', amb: 'Ambiente', notify: 'Avisos' };
+    const LBL = { master: 'Volumen general', music: 'Música', ui: 'Interfaz y cartas', combat: 'Combate', voice: 'Voces y sonidos de las cartas', amb: 'Ambiente', notify: 'Avisos' };
     const rows = S.CATS.map(k => {
       const r = h('input', { type: 'range', min: 0, max: 100, value: Math.round(S.volume(k) * 100), 'aria-label': LBL[k], oninput: () => { S.setVolume(k, r.value / 100); val.textContent = r.value; }, onchange: () => S.sample(k) });
       const val = h('span', { class: 'sv' }, String(Math.round(S.volume(k) * 100)));

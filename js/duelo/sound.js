@@ -11,7 +11,7 @@
   'use strict';
   const D = (window.Duelo = window.Duelo || {});
   const KEY = 'duelo.snd2', BASE = 'assets/duelo/audio/';
-  const st = { master: .85, music: .55, ui: .75, combat: .85, amb: .5, notify: .8, muted: false, musicOn: true, sfxOn: true };
+  const st = { master: .85, music: .55, ui: .75, combat: .85, amb: .5, notify: .8, voice: .4, muted: false, musicOn: true, sfxOn: true };
   try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* nada */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* nada */ } };
   const A = () => (window.G && G.Audio) || null;
@@ -174,7 +174,7 @@
   function voice(card) {
     const v = card && card.voice;
     if (!v || !st.sfxOn || st.muted) return;
-    const vol = Math.min(1, st.master * Math.max(st.notify, st.combat));
+    const vol = Math.min(1, st.master * st.voice);
     const fallback = () => {
       try {
         if (!window.speechSynthesis || !v.say) return;
@@ -190,7 +190,7 @@
       const pr = voiceEl.play(); if (pr && pr.catch) pr.catch(e => { if (e && e.name === 'NotSupportedError') fallback(); });
     } catch (e) { fallback(); }
   }
-  const CATS = ['master', 'music', 'ui', 'combat', 'amb', 'notify'];
+  const CATS = ['master', 'music', 'ui', 'combat', 'voice', 'amb', 'notify'];
   const SAMPLE = { master: 'confirm', music: null, ui: 'select', combat: 'hit', amb: null, notify: 'notify' };
   D.Sound = {
     init, play, setTrack, setAmbient, jingle, voice, CATS,
@@ -201,7 +201,7 @@
     setSfx(on) { st.sfxOn = !!on; save(); applyAmb(); if (on) play('select'); },
     volume(k) { return st[k]; },
     setVolume(k, v) { st[k] = Math.max(0, Math.min(1, v)); save(); applyVolumes(); },
-    sample(k) { if (SAMPLE[k]) play(SAMPLE[k]); },
+    sample(k) { if (k === 'voice') { const c = D.Cards && D.Cards.get('c_creeper'); if (c) voice(c); } else if (SAMPLE[k]) play(SAMPLE[k]); },
     get ready() { return !!ctx && ctx.state === 'running'; },
     get state() { return { track: cur && cur.name, legacy: !!(cur && cur.legacy), ambient: !!amb, ctx: ctx && ctx.state, buffers: bufs.size }; }
   };
