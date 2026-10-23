@@ -317,7 +317,7 @@
   /** Shang Tsung transformado es derrotado: no muere, pierde la transformación y ya no puede volver a transformarse. */
   function revertCopy(st, m, p) {
     const was = mdef(m).name;
-    m.copy = null; m.noCopy = true; m.bonus = null; m.ext = [];
+    m.copy = null; m.noCopy = true; m.bonus = null; m.ext = []; m.extFrom = null;
     if (m.abs) releaseAbsorbed(st, m);
     log(st, p, `${was} es derrotado: Shang Tsung pierde la transformación y ya no puede transformarse`);
   }
@@ -993,7 +993,8 @@
         m.bonus = m.bonus || { atk: 0, def: 0 };
         m.bonus.atk += Math.floor(atk / 2); m.bonus.def += Math.floor(df / 2);
         m.ext = m.ext || [];
-        for (const g of give) if (!m.ext.includes(g) && !(mdef(m).ab || []).includes(g)) m.ext.push(g);
+        m.extFrom = m.extFrom || {};
+        for (const g of give) if (!m.ext.includes(g) && !(mdef(m).ab || []).includes(g)) { m.ext.push(g); m.extFrom[g] = td.name; }
         log(st, p, `${nm} obtiene +${Math.floor(atk / 2)} ATK y +${Math.floor(df / 2)} DEF${give.length ? ' y su habilidad' : ''}`);
         break;
       }
@@ -1036,7 +1037,7 @@
       case 'copy': {
         const nd = C().get(a.id);
         if (m.abs) releaseAbsorbed(st, m);
-        m.bonus = null; m.ext = [];
+        m.bonus = null; m.ext = []; m.extFrom = null;
         m.copy = a.id; m.copyTurn = st.turn;
         log(st, p, `${def(m.c).name} se transforma en ${nd.name}`);
         break;
@@ -1188,6 +1189,7 @@
       const kr = slotByUid(st, p, pd.uid);
       if (!kr) return;
       kr.m.ext = kr.m.ext || []; kr.m.ext.push(a.pick);
+      kr.m.extFrom = kr.m.extFrom || {}; kr.m.extFrom[a.pick] = pd.from || null;
       const ku = uOf(kr.m); ku.stolen = (ku.stolen || 0) + 1;
       log(st, p, `${mdef(kr.m).name} roba la habilidad de ${pd.from}`);
       return;
@@ -1230,6 +1232,18 @@
   }
 
   // ---------------- vistas (información oculta tapada) ----------------
+  /** Estado de uso de una habilidad de un monstruo: 'used' (gastada), 'ready' (disponible) o 'passive' (siempre activa). */
+  function useState(m, id) {
+    const u = uOf(m);
+    if (id === 'bigbang') return u.bb ? 'used' : 'ready';
+    if (id === 'relicario') return u.relic ? 'used' : 'ready';
+    if (id === 'desmantelar') return u.desm ? 'used' : 'ready';
+    if (id === 'absorb') return u.absorb ? 'used' : 'ready';
+    if (id === 'furia') return u.furia ? 'used' : 'ready';
+    if (id === 'boom' || id === 'spinach') return m.c.spent ? 'used' : 'ready';
+    if (id === 'canon') return 'ready';
+    return 'passive';
+  }
   function slotView(st, P, s, z, own) {
     if (!s) return null;
     if (s.down && !own) return { down: true, pos: s.pos, c: null, atk: 0, def: 0, equipTo: null };
@@ -1240,7 +1254,12 @@
     const ab = abil(st, s);
     if (ab.includes('escudo')) v.shield = shieldOf(s);
     if (s.link && s.link.length) v.link = s.link.map(c => c.id);
-    if (s.ext && s.ext.length) v.ext = s.ext.slice();
+    if (s.ext && s.ext.length) {
+      v.ext = s.ext.slice();
+      v.extInfo = s.ext.map(id => ({ id, from: (s.extFrom || {})[id] || null, state: useState(s, id) }));
+    }
+    const cap = mdef(s).ab && mdef(s).ab.includes('robar2') ? 2 : mdef(s).ab && mdef(s).ab.includes('robar1') ? 1 : 0;
+    if (cap) { v.stealCap = cap; v.stealN = (uOf(s).stolen || 0); }
     if (s.abs) v.absorbed = s.abs.c.id;
     if (s.fur && s.fur === st.turn) v.fury = true;
     if (st.domain && st.domain.uid === s.c.uid) v.domain = true;

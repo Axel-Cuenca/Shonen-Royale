@@ -505,7 +505,6 @@
       if (s.real) o.push('Transformado (en realidad es ' + nameId(s.real) + ')');
       if (s.shield != null) o.push('Escudo: ' + s.shield);
       if (s.link && s.link.length) o.push('Vinculado: ' + s.link.map(nameId).join(', '));
-      if (s.ext && s.ext.length) o.push('Habilidades robadas/absorbidas: ' + s.ext.map(abn).join(', '));
       if (s.absorbed) o.push('Tiene absorbido a ' + nameId(s.absorbed));
       if (s.fury) o.push('Furia de Esparta activa');
       if (s.kills) o.push('Bajas: ' + s.kills);
@@ -514,6 +513,23 @@
       if (s.karma) o.push('Karma: muere en ' + s.karma.left + ' turno(s)');
       if (s.gem) o.push('Mente controlada (' + s.gem.left + ' uso(s) de la Gema)');
       return o;
+    }
+    const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.' };
+    /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
+    function stolenBox(s) {
+      if (!s.stealCap && !(s.extInfo && s.extInfo.length)) return null;
+      const steal = !!s.stealCap, info = s.extInfo || [];
+      const title = (steal ? 'Habilidades robadas' : 'Habilidades absorbidas') + (steal ? ` (${info.length}/${s.stealCap})` : '');
+      const items = info.map(x => {
+        const ab = C.AB && C.AB[x.id] || [x.id, ''];
+        const stTxt = x.state === 'used' ? 'Ya usada' : x.state === 'ready' ? 'Disponible' : 'Pasiva';
+        const det = h('div', { class: 'sd', style: 'display:none' }, h('div', null, ab[1]), h('div', { class: 'sub' }, 'Condiciones: ' + (LIMIT[x.id] || '—')));
+        const row = h('button', { class: 'stolen ' + x.state, onclick: () => { det.style.display = det.style.display === 'none' ? '' : 'none'; } },
+          h('b', null, ab[0]), h('span', { class: 'sf' }, x.from ? 'de ' + x.from : ''), h('span', { class: 'ss' }, stTxt));
+        return h('div', { class: 'stitem' }, row, det);
+      });
+      return h('div', { class: 'stbox' }, h('b', null, title),
+        items.length ? items : h('div', { class: 'sub' }, steal ? 'Aún no ha robado ninguna.' : 'Ninguna.'));
     }
     function badgesEl(s) {
       const b = [];
@@ -627,7 +643,7 @@
         }
       }
       for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
-      const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null);
+      const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, stolenBox(s));
       modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null, btn('Cerrar', closeModal, 'ghost')));
     }
     function copyPick(list) {
@@ -664,7 +680,9 @@
       if (!s) return;
       if (s.down) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const d = C.get(s.c.id);
-      sheet(d, [], d.kind === 'monster' ? [`${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`].concat(statusText(s)).join(' · ') : null);
+      const hint = d.kind === 'monster' ? [`${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`].concat(statusText(s).filter(x => !/^Habilidades robadas/.test(x))).join(' · ') : null;
+      const sb = d.kind === 'monster' ? stolenBox(s) : null;
+      modal(h('div', { class: 'box' }, detailBox(d, h('div', null, hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, sb)), btn('Cerrar', closeModal, 'ghost')));
     }
     function zoneClick(seat, area, z) {
       S.play('select');

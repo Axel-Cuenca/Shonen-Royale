@@ -633,3 +633,12 @@ html.rm .fe.new { animation: none; }
 @keyframes cutcIn { 0% { transform: translateX(calc(-50% + var(--d) * 130vw)) scale(.9); opacity: 0; } 16% { transform: translateX(calc(-50% + var(--d) * -3vw)) scale(1.03); opacity: 1; } 24% { transform: translateX(calc(-50% + var(--d) * 1vw)) scale(1); } 30%, 80% { transform: translateX(-50%) scale(1.02); opacity: 1; } 100% { transform: translateX(calc(-50% + var(--d) * -30vw)) scale(1); opacity: 0; } }
 @keyframes cutcTx { 0%, 14% { opacity: 0; transform: translateY(1.2em); } 28%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 html.rm .cutc, html.rm .cutin.cardcut { display: none !important; }
+
+.stbox { margin-top: 8px; padding: 6px 8px; border: 1px solid #b04c9a99; border-radius: .5em; background: #b04c9a18; text-align: left; font-size: 13px; }
+.stbox > b { color: #e7a8ff; }
+.stitem { margin-top: 4px; }
+.stolen { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; background: #0006; color: #fff; border: 1px solid #ffffff33; border-radius: .4em; padding: 4px 8px; cursor: pointer; font: inherit; }
+.stolen .sf { opacity: .75; font-size: 12px; flex: 1; }
+.stolen .ss { font-size: 11px; padding: 0 .5em; border-radius: .8em; background: #1f9d8a; }
+.stolen.used .ss { background: #8a3a3a; } .stolen.passive .ss { background: #4a5a8a; }
+.stitem .sd { padding: 4px 8px; font-size: 12px; }

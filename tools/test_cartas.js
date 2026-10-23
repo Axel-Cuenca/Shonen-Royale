@@ -219,6 +219,12 @@ module.exports = function (T) {
     const pd = st.pending;
     ok(!pd || pd.ab === 'steal', 'tras la baja Kratos puede robar');
     if (pd) { const a = L(st, 0).find(x => x.pick != null); ok(!!a, 'hay habilidad que robar'); if (a) act(st, 0, a); ok(st.players[0].mz[0].ext && st.players[0].mz[0].ext.length === 1, 'la habilidad robada se guarda'); }
+    const sv = E.view(st, 0).players[0].mz[0];
+    eq(sv.stealCap, 1, 'Kratos puede guardar 1 habilidad robada'); eq(sv.stealN, 1, 'ya robó 1');
+    eq(sv.extInfo.map(x => [x.id, x.from]), [['absorb', 'Cell Semi Perfecto']], 'la vista dice cuál y de quién la robó');
+    eq(sv.extInfo[0].state, 'ready', 'disponible mientras no se use');
+    const ab = pw(st, 0, 'absorb'); if (ab) { act(st, 0, ab); eq(E.view(st, 0).players[0].mz[0].extInfo[0].state, 'used', 'tras usarla figura como usada'); }
+    const v1 = E.view(st, 1).players[0].mz[0]; ok(v1.extInfo && v1.extInfo.length === 1, 'el rival también ve lo que robó');
   }
 
   section('Sacrificios: 10★ o más piden 3');
