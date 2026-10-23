@@ -16,7 +16,9 @@ G.CHANGELOG = [
     ['Nuevas animaciones a pantalla grande: al activar una magia o trampa la carta aparece grande en el centro, y cuando un personaje ataca, se transforma o usa una habilidad su imagen entra con rebote desde un lado con el texto de la acción. Se ven también las jugadas del rival; toca la pantalla para saltarlas. Las invocaciones tienen una versión corta. Se desactivan con la opción de movimiento reducido.',
      'New full-screen animations: when a spell or trap is activated the card appears large in the center, and when a character attacks, transforms or uses an ability its image bounces in from the side with the action text. Your opponent’s plays are shown too; tap the screen to skip them. Summons have a short version. They are turned off by the reduced-motion option.'],
     ['La computadora ya sabe usar las cartas nuevas y su mazo se arma con ellas.',
-     'The computer now knows how to use the new cards and builds its deck with them.']
+     'The computer now knows how to use the new cards and builds its deck with them.'],
+    ['Música de fondo durante las partidas: lofi de Dragon Ball Z (1 hora, en bucle). Sigue el control «Música» del panel de sonido (🔊). En el menú y la sala suena la de siempre.',
+     'Background music during matches: Dragon Ball Z lofi (1 hour, looping). It follows the "Music" control in the sound panel (🔊). Menu and lobby keep the usual music.']
   ], chg: [
     ['Tormenta Eléctrica: ahora sólo puede usar UNA de sus dos funciones, UNA vez en todo el tiempo que esté en el campo (antes una por turno). Al resolverse el efecto se envía sola al cementerio. Si no hay objetivo válido o carta para pagar el coste, no se activa y se queda en el campo sin gastar su uso.',
      'Electric Storm: it can now use only ONE of its two functions, ONCE during its whole stay on the field (it was once per turn). After the effect resolves it goes to the graveyard by itself. If there is no valid target or card to pay the cost, it cannot activate and stays on the field without spending its use.'],

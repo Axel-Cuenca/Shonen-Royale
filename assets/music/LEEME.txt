@@ -1,0 +1,3 @@
+Música de las partidas: dbz-lofi.mp3 (Respawn Orchestra, comprimida a 64 kbps).
+Suena en bucle durante la partida; en el menú y la sala suena la música de siempre.
+Si se cambia el archivo, mantener el nombre. Asegúrate de tener derecho a usarla.

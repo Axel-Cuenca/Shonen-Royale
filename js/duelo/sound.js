@@ -42,7 +42,7 @@
   const TRACKS = { menu: 'music_menu', prep: 'music_prep', battle: 'music_battle', tense: 'music_tense' };
   const LEGACY_MUSIC = { menu: 'village', prep: 'forest', battle: 'volcano', tense: 'boss' };
 
-  let ctx = null, master = null, buses = {}, want = null, cur = null, amb = null, ambOn = false, tok = 0, ambTok = 0;
+  let streamBad = false, ctx = null, master = null, buses = {}, want = null, cur = null, amb = null, ambOn = false, tok = 0, ambTok = 0;
   const last = {}, bufs = new Map();
   let active = 0;
 
@@ -101,16 +101,31 @@
   // ---- música con fundido cruzado ----
   function fadeOut(c, sec) {
     if (!c) return;
-    try { c.gain.gain.cancelScheduledValues(ctx.currentTime); c.gain.gain.setValueAtTime(c.gain.gain.value, ctx.currentTime); c.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + sec); c.src.stop(ctx.currentTime + sec + .05); } catch (e) { /* nada */ }
+    try { c.gain.gain.cancelScheduledValues(ctx.currentTime); c.gain.gain.setValueAtTime(c.gain.gain.value, ctx.currentTime); c.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + sec); if (c.src) c.src.stop(ctx.currentTime + sec + .05); } catch (e) { /* nada */ }
+    if (c.el) setTimeout(() => { try { c.el.pause(); c.el.removeAttribute('src'); c.el.load(); } catch (e) { /* nada */ } }, sec * 1000 + 100);
     if (c.legacy) { const a = A(); if (a) a.music(null); }
   }
   function applyMusic() {
     if (!ctx || ctx.state !== 'running') return;
     const target = st.musicOn && !st.muted ? want : null;
-    if ((cur && cur.name === target) || (!cur && !target)) return;
+    // En partida (normal o en tensión) suena la misma pista larga: no se reinicia al cambiar entre las dos
+    const key = (target === 'battle' || target === 'tense') && !streamBad ? 'match' : target;
+    if ((cur && cur.name === key) || (!cur && !key)) return;
     const my = ++tok;
     fadeOut(cur, 1.6); cur = null;
     if (!target) return;
+    if (key === 'match') {
+      // Una hora de música: se reproduce en streaming (decodificarla entera ocuparía más de 1 GB de memoria)
+      const el = new Audio(), g = ctx.createGain();
+      el.loop = true; el.preload = 'auto'; el.src = 'assets/music/dbz-lofi.mp3';
+      el.addEventListener('loadedmetadata', () => { try { if (el.duration > 600) el.currentTime = Math.random() * (el.duration - 300); } catch (e) { /* nada */ } }, { once: true });
+      el.addEventListener('error', () => { streamBad = true; if (cur && cur.el === el) { cur = null; applyMusic(); } }, { once: true });
+      try { const ms = ctx.createMediaElementSource(el); ms.connect(g); g.connect(buses.music); } catch (e) { streamBad = true; return applyMusic(); }
+      g.gain.value = 0; g.gain.linearRampToValueAtTime(1, ctx.currentTime + 2.2);
+      cur = { name: 'match', el, gain: g };
+      el.play().catch(() => { /* el navegador exige un clic: applyMusic se repite al interactuar */ });
+      return;
+    }
     buffer(TRACKS[target]).then(b => {
       if (my !== tok) return;
       if (!b) { const a = A(); if (a) { a.music(LEGACY_MUSIC[target]); cur = { name: target, legacy: true }; } return; }
