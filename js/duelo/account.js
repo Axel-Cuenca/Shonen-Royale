@@ -40,7 +40,7 @@
 
   const loadScript = src => new Promise((ok, no) => {
     const s = document.createElement('script');
-    s.src = src; s.async = true; s.onload = ok; s.onerror = () => no(new Error('No se pudo cargar ' + src));
+    s.src = src; s.async = false; s.onload = ok; s.onerror = () => no(new Error('No se pudo cargar ' + src));
     document.head.appendChild(s);
   });
 
@@ -49,10 +49,10 @@
     if (!/^https?:$/.test(location.protocol)) return false;
     if (!cfg || !cfg.apiKey || !cfg.projectId) return false;
     if (!cfg.emulator && !HOSTS.includes(location.hostname)) return false;
-    await loadScript(SDK + 'firebase-app-compat.js');
-    await loadScript(SDK + 'firebase-auth-compat.js');
-    await loadScript(SDK + 'firebase-firestore-compat.js');
-    if (cfg.databaseURL) await loadScript(SDK + 'firebase-database-compat.js');
+    // Se descargan a la vez (y el navegador ya las pidió desde index.html); async=false las ejecuta en orden.
+    const libs = ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'];
+    if (cfg.databaseURL) libs.push('firebase-database-compat.js');
+    await Promise.all(libs.map(f => loadScript(SDK + f)));
     const fb = window.firebase;
     fb.initializeApp(cfg);
     auth = fb.auth(); fs = fb.firestore();
