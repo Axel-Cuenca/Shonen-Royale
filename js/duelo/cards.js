@@ -58,15 +58,36 @@
 
   // ---------------- modo de prueba ----------------
   // Se activa abriendo el juego con «?prueba» al final de la dirección. Sirve para ver y probar el juego mientras
-  // no hay cartas suficientes: mazo fijo de 30 con Popeye, Creeper y unas cartas de relleno («Prueba ★N», sin
-  // habilidad) de varios niveles, sin límite de copias y sólo contra la computadora. No cambia las reglas reales.
+  // no hay cartas suficientes: mazo fijo de 30 con Popeye, Creeper, cartas de relleno («Prueba ★N», sin
+  // habilidad) y magias y trampas de prueba, sin límite de copias y sólo contra la computadora. No cambia las reglas reales.
   const TEST = isBrowser && /[?&]prueba(=|&|$)/.test(location.search);
   const TESTCARDS = TEST ? [2, 4, 5, 6, 7, 8].map(l => ({
     id: 'x' + l, kind: 'monster', dex: 0, name: 'Prueba ★' + l, types: ['prueba'], type: 'prueba', level: l,
     atk: 700 + l * 250, def: 600 + l * 200, rarity: 'c', leg: false, gen: 0, bst: 0, text: 'Carta de relleno del modo de prueba (sin habilidad).'
   })) : [];
-  for (const c of TESTCARDS) BY_ID.set(c.id, c);
-  const testDeck = () => { const ids = ['c_popeye', 'c_creeper'].concat(TESTCARDS.map(c => c.id)); return Array.from({ length: 30 }, (_, i) => ids[i % ids.length]); };
+  // magias y trampas de relleno, sólo para probar el tablero y las respuestas (usan los efectos que ya tiene el motor)
+  const TESTST = !TEST ? [] : [
+    { id: 'xs_potion', name: 'Prueba: Poción', icon: '🧪', fx: 'heal', n: 1000, text: 'Recuperas 1000 PV.' },
+    { id: 'xs_bag', name: 'Prueba: Mochila', icon: '🎒', fx: 'draw', n: 2, text: 'Robas 2 cartas.' },
+    { id: 'xs_revive', name: 'Prueba: Revivir', icon: '✨', fx: 'revive', text: 'Invoca 1 monstruo de tu cementerio en posición de ataque.' },
+    { id: 'xs_beam', name: 'Prueba: Hiperrayo', icon: '💥', fx: 'destroyOne', self: 1000, text: 'Destruye 1 monstruo del rival. Pierdes 1000 PV.' },
+    { id: 'xs_quake', name: 'Prueba: Terremoto', icon: '🌋', fx: 'destroyAll', text: 'Destruye todos los monstruos del campo.' },
+    { id: 'xs_twister', name: 'Prueba: Tornado', icon: '🌪️', fx: 'destroyST', text: 'Destruye 1 carta de magia o trampa del rival.' },
+    { id: 'xs_flame', name: 'Prueba: Llamarada', icon: '🔥', fx: 'burn', n: 1000, text: 'Inflige 1000 de daño directo al rival.' },
+    { id: 'xs_candy', name: 'Prueba: Caramelo', icon: '🍬', fx: 'boost', n: 700, text: 'Un monstruo tuyo gana 700 ATK hasta el final del turno.' },
+    { id: 'xs_band', name: 'Prueba: Cinta', icon: '🎗️', fx: 'equip', eAtk: 600, eDef: 600, sub: 'equip', text: 'Equipa a un monstruo tuyo: gana 600 ATK y DEF.' }
+  ].map(c => Object.assign({ kind: 'spell' }, c)).concat([
+    { id: 'xt_barrier', name: 'Prueba: Barrera', icon: '🛡️', trigger: 'attack', fx: 'negateAttack', text: 'Cuando el rival declare un ataque: niega ese ataque.' },
+    { id: 'xt_counter', name: 'Prueba: Contraataque', icon: '⚔️', trigger: 'attack', fx: 'destroyAttacker', text: 'Cuando el rival declare un ataque: destruye al monstruo atacante.' },
+    { id: 'xt_mirror', name: 'Prueba: Espejo', icon: '🪞', trigger: 'attack', fx: 'mirror', text: 'Cuando el rival declare un ataque: niega el ataque y el rival pierde 800 PV.' },
+    { id: 'xt_negate', name: 'Prueba: Anulación', icon: '🚫', trigger: 'spell', fx: 'negateSpell', text: 'Cuando el rival active una magia: niega su activación y destrúyela.' },
+    { id: 'xt_snare', name: 'Prueba: Cepo', icon: '🪤', trigger: 'summon', fx: 'destroySummoned', text: 'Cuando el rival invoque un monstruo en ataque: destrúyelo.' }
+  ].map(c => Object.assign({ kind: 'trap' }, c)));
+  for (const c of TESTCARDS.concat(TESTST)) BY_ID.set(c.id, c);
+  // mazo de prueba (30): 12 monstruos, 10 magias y 8 trampas
+  const testDeck = () => ['c_popeye', 'c_popeye', 'c_popeye', 'c_creeper', 'c_creeper', 'c_creeper', 'x2', 'x4', 'x5', 'x6', 'x7', 'x8',
+    'xs_potion', 'xs_potion', 'xs_bag', 'xs_revive', 'xs_beam', 'xs_quake', 'xs_twister', 'xs_flame', 'xs_candy', 'xs_band',
+    'xt_barrier', 'xt_barrier', 'xt_counter', 'xt_counter', 'xt_mirror', 'xt_negate', 'xt_snare', 'xt_snare'].filter(id => BY_ID.has(id));
 
   // ---------------- mazos ----------------
   const DECK_SIZE = 30, MAX_COPIES = 2;
@@ -122,7 +143,7 @@
     get: id => BY_ID.get(id),
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
     custom: CUSTOM,
-    all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS),
+    all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,
     tributesFor: level => level >= 7 ? 2 : level >= 5 ? 1 : 0
