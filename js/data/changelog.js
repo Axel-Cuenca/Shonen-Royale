@@ -13,6 +13,8 @@ G.CHANGELOG = [
      'Abilities with their own action: they show as buttons when you tap your character (transformations, Spirit Cannon, Absorption, Big Bang, Demonic Shrine, Dismantle, Spartan Rage…) or your continuous spell (Mind Gem, Electric Storm). Characters show badges: shield, link, stolen abilities, kills, Karma, domain.'],
     ['Titán Martillo ocupa 2 zonas de monstruo. Las cartas propias suenan al atacar, transformarse o usar su habilidad.',
      'Hammer Titan takes up 2 monster zones. The cards play their own sounds when attacking, transforming or using their ability.'],
+    ['Nuevas animaciones a pantalla grande: al activar una magia o trampa la carta aparece grande en el centro, y cuando un personaje ataca, se transforma o usa una habilidad su imagen entra con rebote desde un lado con el texto de la acción. Se ven también las jugadas del rival; toca la pantalla para saltarlas. Las invocaciones tienen una versión corta. Se desactivan con la opción de movimiento reducido.',
+     'New full-screen animations: when a spell or trap is activated the card appears large in the center, and when a character attacks, transforms or uses an ability its image bounces in from the side with the action text. Your opponent’s plays are shown too; tap the screen to skip them. Summons have a short version. They are turned off by the reduced-motion option.'],
     ['La computadora ya sabe usar las cartas nuevas y su mazo se arma con ellas.',
      'The computer now knows how to use the new cards and builds its deck with them.']
   ], chg: [

@@ -488,7 +488,7 @@
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map();
     let gameEl = null, zrowsEl = null, lcol = null;
-    let fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
+    let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
     const seatNames = () => match.names;
     const nameOf = q => seatNames()[q] || ('Jugador ' + (q + 1));
     const shortOf = q => { const m = /^Computadora(?: (\d))?/.exec(nameOf(q)); return m ? 'Compu' + (m[1] ? ' ' + m[1] : '') : nameOf(q); };
@@ -916,6 +916,37 @@
 
     // ----- sonidos y efectos de lo que acaba de pasar -----
     /** Animación de Popeye: destello verde con una hoja de espinaca. */
+    // ----- apariciones a pantalla grande (cartas y personajes), una detrás de otra; tocar la pantalla salta la actual -----
+    function cutAdd(c) {
+      if (c.short && (cutQ.length || cutBusy)) return;                  // las acciones menores no se acumulan
+      c.ms = c.k === 'card' ? 1900 : c.short ? 800 : 1650;
+      if (cutQ.length >= 3) cutQ.shift();
+      cutQ.push(c);
+    }
+    function cutBuild(c) {
+      const d = c.d;
+      if (c.k === 'card') {
+        const card = cardEl(d);
+        return h('div', { class: 'cutin cardcut' + (c.trap ? ' trap' : ''), style: `animation-duration:${c.ms}ms` },
+          h('div', { class: 'cc', style: `animation-duration:${c.ms}ms` }, card, h('div', { class: 'tag' }, c.trap ? '¡Trampa activada!' : '¡Magia activada!')));
+      }
+      const col = (C.TYPE_COLOR && C.TYPE_COLOR[d.type]) || '#ffd84a';
+      const fig = d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d);
+      const el = h('div', { class: 'cutin cutc' + (c.mine ? '' : ' foe') + (c.short ? ' short' : ''), style: `--tc:${col};--ms:${c.ms}ms` },
+        h('div', { class: 'cbg' }), h('div', { class: 'cfig' }, fig),
+        h('div', { class: 'ctx' }, h('b', null, d.name), c.text ? h('span', null, c.text) : null));
+      return el;
+    }
+    function cutPump() {
+      if (cutBusy || !cutQ.length || current !== cur) { if (current !== cur) cutQ = []; return; }
+      const c = cutQ.shift(); cutBusy = true;
+      const el = cutBuild(c); document.body.append(el);
+      const cd = el.querySelector('.cardcut .card'); if (cd) { const f = parseFloat(getComputedStyle(cd).fontSize) || 12, k = Math.min(innerWidth * .7 / cd.offsetWidth, innerHeight * .62 / cd.offsetHeight); cd.style.fontSize = (f * k) + 'px'; }
+      let t = 0;
+      const done = () => { clearTimeout(t); el.remove(); cutBusy = false; cutPump(); };
+      t = setTimeout(done, c.ms);
+      el.addEventListener('pointerdown', done);
+    }
     function spinachFx() {
       if (document.documentElement.classList.contains('rm')) return;
       const e = h('div', { class: 'spinach' }, h('span', null, '🥬'), h('b', null, '¡A comer espinaca!'));
@@ -928,23 +959,26 @@
       let i = 0; lastFam = null;
       for (const l of fresh2) {
         const t = l.t; let snd = null;
+        const cin = (d, text, o) => { if (d && d.kind === 'monster') cutAdd(Object.assign({ k: 'char', d, text, mine: l.p === v.seat }, o || {})); };
         if (/^Turno/.test(t)) snd = (!multi() || l.p === v.seat) ? 'turn' : null;
         else if (/^queda fuera/.test(t)) { snd = 'destroy'; needShake = true; pops.push({ t: l.p === v.seat ? 'Quedaste fuera' : nameOf(l.p) + ' queda fuera', cls: 'weak' }); }
-        else if (/^invoca a/.test(t)) { const m = /^invoca a (.+) \(ATK/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; }
+        else if (/^invoca a/.test(t)) { const m = /^invoca a (.+) \(ATK/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; if (d && !multi()) cin(d, '', { short: true }); }
         else if (/^revive a/.test(t)) snd = 'summon';
-        else if (/come espinaca/.test(t)) { snd = 'epic'; spinachFx(); S.voice(byName['Popeye El Marinero']); }
-        else if (/ explota!/.test(t)) { snd = 'explosion'; needShake = true; S.voice(byName['Creeper']); }
+        else if (/come espinaca/.test(t)) { snd = 'epic'; spinachFx(); S.voice(byName['Popeye El Marinero']); cin(byName['Popeye El Marinero'], '¡A comer espinaca!'); }
+        else if (/ explota!/.test(t)) { snd = 'explosion'; needShake = true; S.voice(byName['Creeper']); cin(byName['Creeper'], '¡BOOM!'); }
         else if (/boca abajo/.test(t)) snd = 'set';
         else if (/^voltea/.test(t)) snd = 'flip';
         else if (/cambia a/.test(t)) snd = 'pos';
-        else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cut.push({ d, kind: 'trap' }); }
-        else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cut.push({ d, kind: 'spell' }); fileSfx(d.sfx && d.sfx.use); } }
-        else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) fileSfx(d.sfx && d.sfx.transform); }
-        else if (/ usa Big Bang| activa Relicario/.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) fileSfx(d.sfx && d.sfx.ability); }
+        else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) cutAdd({ k: 'card', d, trap: true, mine: l.p === v.seat }); }
+        else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
+        else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.transform); const to = / se transforma en (.+)$/.exec(t); cin(d, '¡TRANSFORMACIÓN!' + (to ? ' → ' + to[1] : '')); } }
+        else if (/ usa Big Bang| activa Relicario/.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, / Big Bang/.test(t) ? 'BIG BANG' : 'RELICARIO DEMONÍACO'); } }
+        else if (/^(.+?) (?:usa|absorbe) /.test(t) && !/ inmune/.test(t)) { const m = /^(.+?) (usa (.+?)(?: contra .*|: .*)?|absorbe a .*)$/.exec(t), d = m && byName[m[1]]; if (d) { snd = 'epic'; fileSfx(d.sfx && d.sfx.ability); cin(d, m[3] ? m[3].toUpperCase() : 'ABSORCIÓN'); } }
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
           if (d && d.sfx) fileSfx(d.sfx.attack);
+          cin(d, d && d.voice && d.voice.say && d.type !== 'popeye' ? d.voice.say : '¡ATAQUE!');
         }
         else if (/Todos los monstruos son destruidos/.test(t)) { snd = 'explosion'; needShake = true; }
         else if (/destruid|destruye/.test(t)) snd = 'destroy';
@@ -999,12 +1033,7 @@
         }
       }
       fx = [];
-      const c = cut.shift(); cut = [];
-      if (c) {
-        const el = h('div', { class: 'cutin ' + c.kind }, h('div', { class: 'cc' }, cardEl(c.d), h('div', { class: 'tag' }, c.kind === 'trap' ? '¡Trampa activada!' : 'Magia activada')));
-        const cd = el.querySelector('.card'); cd.style.fontSize = '24px';
-        document.body.append(el); setTimeout(() => el.remove(), 1600);
-      }
+      cut = []; cutPump();
       if (needShake) { const g = document.querySelector('.game'); if (g) { g.classList.add('shake'); setTimeout(() => g.classList.remove('shake'), 500); } needShake = false; }
     }
 
