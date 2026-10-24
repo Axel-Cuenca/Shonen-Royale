@@ -1068,6 +1068,12 @@ html.rm #splash *, html.rm #splash { animation: none !important; }
   position: fixed; inset: 0; z-index: 2; overflow-x: hidden; overflow-y: auto; font-family: var(--ui); color: #fff; }
 .hbg { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
 .hbg > * { position: absolute; }
+body.goldbg #bg { visibility: hidden; }
+.hbg { --u: min(100vw / 1600, 100vh / 900); --acc: #f2c862; --glow: rgba(255, 190, 90, .55); }
+/* en las demás pantallas el fondo se oscurece para que se lea todo, y sin el brillo del personaje */
+.hb-dim { inset: 0; background: rgba(6, 4, 2, .36); transition: opacity .5s; }
+body:has(.home) .hb-dim { opacity: 0; }
+body:not(:has(.home)) .hb-halo, body:not(:has(.home)) .hb-shadow { display: none; }
 .hb-sky { inset: 0; background: linear-gradient(#0b0703 0%, #2b1a08 42%, #6b4514 62%, #1a0f05 64%); }
 .hb-floorwrap { left: -20%; right: -20%; top: 50%; bottom: -30%; perspective: 900px; overflow: hidden; }
 .hb-floor { position: absolute; left: 0; right: 0; top: 0; height: 140%; background: url(../assets/duelo/home/suelo.webp) center / 700px repeat; transform-origin: 50% 0; transform: rotateX(66deg); filter: brightness(.85) saturate(.8); }
@@ -1112,7 +1118,6 @@ html.rm #splash *, html.rm #splash { animation: none !important; }
 .hdesc { margin-top: 22px; font: 600 17px / 1.35 var(--ui); color: #e5e9f4; white-space: nowrap; text-shadow: 0 2px 6px #000; padding-left: 4px; }
 .hdesc b { color: var(--acc); }
 .hdesc.long { white-space: normal; max-width: 470px; }
-body:has(.home) #bg { visibility: hidden; }
 .hnote { margin-top: 10px; max-width: 470px; font: 600 14px / 1.3 var(--ui); color: #f3d9a0; text-shadow: 0 2px 6px #000; padding-left: 4px; white-space: normal; }
 .hnote.err { color: #ff9a8a; }
 .hnews { width: 360px; flex: none; margin-top: 4px; }

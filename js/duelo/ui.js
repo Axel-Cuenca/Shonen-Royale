@@ -36,7 +36,14 @@
   const bgEl = h('div', { id: 'bg' }, h('div', { class: 'vig' }));
   document.body.prepend(bgEl);
   D.Scene.backdrop(bgEl);
-  const showBg = on => { bgEl.style.display = on ? '' : 'none'; if (on) D.Scene.toBackdrop(); };
+  // fondo dorado de todos los menús (el mismo del menú principal): suelo de piedra, niebla, luz y brasas
+  const goldBg = (() => {
+    const parts = h('div', { class: 'hb-parts' });
+    if (!document.documentElement.classList.contains('rm')) for (let i = 0; i < 30; i++) { const sz = 2 + Math.random() * 5, d = 6 + Math.random() * 9; parts.append(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;top:${(40 + Math.random() * 60).toFixed(1)}%;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;--d:${d.toFixed(1)}s;animation-delay:-${(Math.random() * d).toFixed(1)}s;--dx:${((Math.random() - .5) * 120).toFixed(0)}px` })); }
+    const e = h('div', { class: 'hbg' }, h('div', { class: 'hb-sky' }), h('div', { class: 'hb-floorwrap' }, h('div', { class: 'hb-floor' }), h('div', { class: 'hb-floorfade' })), h('div', { class: 'hb-tint' }), h('div', { class: 'hb-rays' }), h('div', { class: 'hb-fog' }), h('div', { class: 'hb-halo' }), h('div', { class: 'hb-shadow' }), parts, h('div', { class: 'hb-dim' }), h('div', { class: 'hb-vig' }));
+    e.style.display = 'none'; document.body.prepend(e); return e;
+  })();
+  const showBg = on => { bgEl.style.display = on ? '' : 'none'; goldBg.style.display = on ? '' : 'none'; document.body.classList.toggle('goldbg', !!on); if (on) D.Scene.toBackdrop(); };
 
   // ---------------- vista previa al pasar el mouse ----------------
   let prevEl = null;
@@ -289,7 +296,6 @@
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 10 L40 38 M52 10 L24 38"/><path d="M8 14 L14 8 M56 14 L50 8"/><path d="M18 42 L26 50 M46 42 L38 50"/><rect x="26" y="34" width="12" height="12" transform="rotate(45 32 40)" style="fill:var(--acc2)"/></svg>';
   const embEl = () => { const d = document.createElement('div'); d.innerHTML = EMB; return d.firstChild; };
-  const noRm = () => !document.documentElement.classList.contains('rm');
   // las 3 novedades más recientes para la columna de la derecha del menú
   function latestNews(n) {
     const en = /^en/i.test(navigator.language || '') ? 1 : 0, out = [];
@@ -341,11 +347,8 @@
     const info = C.test ? null : D.Shop.dailyInfo();
     const pb = pointsBar(true);
     const hero = h('div', { class: 'hhero' }, h('img', { src: 'assets/duelo/home/bardock.webp', alt: '', draggable: 'false' }));
-    const parts = h('div', { class: 'hb-parts' });
-    if (noRm()) for (let i = 0; i < 30; i++) { const sz = 2 + Math.random() * 5, d = 6 + Math.random() * 9; parts.append(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;top:${(40 + Math.random() * 60).toFixed(1)}%;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;--d:${d.toFixed(1)}s;animation-delay:-${(Math.random() * d).toFixed(1)}s;--dx:${((Math.random() - .5) * 120).toFixed(0)}px` })); }
     const sp = document.getElementById('splash');
     const home = h('div', { class: 'home' + (sp && !sp.classList.contains('out') ? ' pre' : '') },
-      h('div', { class: 'hbg' }, h('div', { class: 'hb-sky' }), h('div', { class: 'hb-floorwrap' }, h('div', { class: 'hb-floor' }), h('div', { class: 'hb-floorfade' })), h('div', { class: 'hb-tint' }), h('div', { class: 'hb-rays' }), h('div', { class: 'hb-fog' }), h('div', { class: 'hb-halo' }), h('div', { class: 'hb-shadow' }), parts, h('div', { class: 'hb-vig' })),
       hero,
       h('header', { class: 'htop' }, h('div', { class: 'brand' }, embEl(), 'DUELO POKÉMON'),
         h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[2] ? 'on' : '', onclick: n[1] }, n[0]))),
