@@ -1330,13 +1330,16 @@
       const edgeB = Math.min(rw / 2 / cs, rh / 2 / sn, direct ? 1e9 : rw / 2);   // distancia del centro al borde de la mira en la dirección de la flecha
       const s0 = Math.min(from.width * .42, len / 3), stop = Math.max(len - edgeB - s0 - 4, 0);
       const tgName = direct ? shortOf(a.vs) : ((v.players[a.vs] && v.players[a.vs].mz[a.tg] && !v.players[a.vs].mz[a.tg].down && v.players[a.vs].mz[a.tg].c && C.get(v.players[a.vs].mz[a.tg].c.id).name) || 'Carta boca abajo');
-      const txt = direct ? '⚔ ATAQUE DIRECTO → ' + shortOf(a.vs) : '🎯 ' + (multi() ? shortOf(a.vs) + ' · ' : '') + tgName;
+      const who = a.who || 'Un monstruo', own = multi() || !mine ? ' (' + shortOf(a.p) + ')' : '';   // en la partida de varios o si ataca el rival, se dice de quién es cada cosa
+      const txt = direct ? '⚔ ' + who + own + ' → ' + shortOf(a.vs) + ' · ATAQUE DIRECTO' : '🎯 ' + who + own + ' → ' + tgName + (multi() ? ' (' + shortOf(a.vs) + ')' : '');
       const below = by - rh / 2 < 44;                          // si no cabe arriba, el nombre va debajo
       const el = h('div', { class: 'atkfx' + (mine ? ' mine' : ' foe'), style: `--ac:${col}` },
         h('div', { class: 'ashaft', style: `left:${ax + Math.cos(ang) * s0}px;top:${ay + Math.sin(ang) * s0}px;width:${stop}px;transform:rotate(${ang}rad)` }, h('i')),
         h('div', { class: 'areticle' + (direct ? ' direct' : ''), style: `left:${bx}px;top:${by}px;width:${rw}px;height:${rh}px` }, h('b'), h('b'), h('b'), h('b')),
         h('div', { class: 'atag' + (below ? ' below' : ''), style: `left:${Math.min(Math.max(bx, 90), innerWidth - 90)}px;top:${below ? by + rh / 2 + 6 : by - rh / 2 - 6}px` }, txt));
       document.body.append(el);
+      const tg = el.querySelector('.atag'), tw = tg.offsetWidth / 2 + 6;   // el nombre no se sale de la pantalla
+      tg.style.left = Math.min(Math.max(bx, tw), innerWidth - tw) + 'px';
       tEl.classList.add('tgt'); setTimeout(() => tEl.classList.remove('tgt'), 2100);
       setTimeout(() => el.remove(), 2200);
     }
