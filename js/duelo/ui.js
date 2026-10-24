@@ -1312,36 +1312,25 @@
       document.body.append(e); setTimeout(() => e.remove(), 1300);
     }
     const boltPts = () => { let x = 20, y = 0, a = ''; while (y < 100) { a += `${x.toFixed(0)},${y} `; x = 20 + (Math.random() - .5) * 30; y += 14 + Math.random() * 10; } return a + '20,100'; };
-    /** Marca a quién se ataca: flecha desde el atacante, mira en el objetivo y su nombre (se espera a que acaben los cortes a pantalla grande). */
+    /** Aviso «versus» de cada ataque (lo ven todos): atacante a la izquierda, objetivo a la derecha. Espera a que acaben los cortes a pantalla grande. */
     function atkMark(a, tries) {
       if (current !== cur) return;
       if ((cutBusy || cutQ.length) && (tries || 0) < 40) { setTimeout(() => atkMark(a, (tries || 0) + 1), 150); return; }
-      const from = rectOf('s' + a.p + '-mz-' + a.z);
-      const direct = a.tg === 'direct';
-      const tEl = direct ? document.querySelector('.plate[data-seat="' + a.vs + '"], .pcard[data-seat="' + a.vs + '"]') : document.querySelector('.zone[data-k="s' + a.vs + '-mz-' + a.tg + '"]');
-      if (!from || !tEl) return;
-      const to = tEl.getBoundingClientRect(), mine = a.p === v.seat;
-      const ax = from.left + from.width / 2, ay = from.top + from.height / 2, bx = to.left + to.width / 2, by = to.top + to.height / 2;
-      const len = Math.hypot(bx - ax, by - ay), ang = Math.atan2(by - ay, bx - ax);
-      const col = mine ? '#ffd84a' : '#ff5a4a';
-      // tamaño de la mira: rodea la carta (o la tarjeta del jugador si es directo); la flecha sale del borde del atacante y acaba en el borde de la mira
-      const rw = direct ? to.width + 16 : Math.max(to.width * 1.2, 76), rh = direct ? to.height + 16 : rw;
-      const cs = Math.abs(Math.cos(ang)) || 1e-6, sn = Math.abs(Math.sin(ang)) || 1e-6;
-      const edgeB = Math.min(rw / 2 / cs, rh / 2 / sn, direct ? 1e9 : rw / 2);   // distancia del centro al borde de la mira en la dirección de la flecha
-      const s0 = Math.min(from.width * .42, len / 3), stop = Math.max(len - edgeB - s0 - 4, 0);
-      const tgName = direct ? shortOf(a.vs) : ((v.players[a.vs] && v.players[a.vs].mz[a.tg] && !v.players[a.vs].mz[a.tg].down && v.players[a.vs].mz[a.tg].c && C.get(v.players[a.vs].mz[a.tg].c.id).name) || 'Carta boca abajo');
-      const who = a.who || 'Un monstruo', own = multi() || !mine ? ' (' + shortOf(a.p) + ')' : '';   // en la partida de varios o si ataca el rival, se dice de quién es cada cosa
-      const txt = direct ? '⚔ ' + who + own + ' → ' + shortOf(a.vs) + ' · ATAQUE DIRECTO' : '🎯 ' + who + own + ' → ' + tgName + (multi() ? ' (' + shortOf(a.vs) + ')' : '');
-      const below = by - rh / 2 < 44;                          // si no cabe arriba, el nombre va debajo
-      const el = h('div', { class: 'atkfx' + (mine ? ' mine' : ' foe'), style: `--ac:${col}` },
-        direct ? null : h('div', { class: 'ashaft', style: `left:${ax + Math.cos(ang) * s0}px;top:${ay + Math.sin(ang) * s0}px;width:${stop}px;transform:rotate(${ang}rad)` }, h('i')),
-        h('div', { class: 'areticle' + (direct ? ' direct' : ''), style: `left:${bx}px;top:${by}px;width:${rw}px;height:${rh}px` }, h('b'), h('b'), h('b'), h('b')),
-        h('div', { class: 'atag' + (below ? ' below' : ''), style: `left:${Math.min(Math.max(bx, 90), innerWidth - 90)}px;top:${below ? by + rh / 2 + 6 : by - rh / 2 - 6}px` }, txt));
+      const direct = a.tg === 'direct', mine = a.p === v.seat, ally = mine || isAlly(a.p);
+      const fig = (d, big) => d ? (d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56)) : h('span', { class: 'qm' }, '?');
+      const ad = a.ci ? C.get(a.ci) : (a.who && byName[a.who]) || null, td = a.ti ? C.get(a.ti) : null;
+      const owner = q => (q === v.seat ? 'Tú' : shortOf(q));
+      const left = h('div', { class: 'vs-side l ' + (ally ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(ad)),
+        h('div', { class: 'vs-tx' }, h('b', null, (ad && ad.name) || a.who || 'Monstruo'), h('small', null, '⚔ ' + (a.at != null ? 'ATK ' + a.at + ' · ' : '') + owner(a.p))));
+      const rightAlly = a.vs === v.seat || isAlly(a.vs);
+      const right = direct
+        ? h('div', { class: 'vs-side r ' + (rightAlly ? 'good' : 'bad') }, h('div', { class: 'vs-fig av' }, lookOf(a.vs).emoji || (owner(a.vs)[0] || '?').toUpperCase()),
+          h('div', { class: 'vs-tx' }, h('b', null, owner(a.vs)), h('small', null, '💥 ATAQUE DIRECTO')))
+        : h('div', { class: 'vs-side r ' + (rightAlly ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(td)),
+          h('div', { class: 'vs-tx' }, h('b', null, td ? td.name : 'Carta boca abajo'), h('small', null, (td ? (a.tpos === 'atk' ? '⚔ ATK ' : '🛡 DEF ') + a.tv + ' · ' : '') + owner(a.vs))));
+      const el = h('div', { class: 'vsban' }, left, h('div', { class: 'vs-mid' }, '⚔'), right);
       document.body.append(el);
-      const tg = el.querySelector('.atag'), tw = tg.offsetWidth / 2 + 6;   // el nombre no se sale de la pantalla
-      tg.style.left = Math.min(Math.max(bx, tw), innerWidth - tw) + 'px';
-      tEl.classList.add('tgt'); setTimeout(() => tEl.classList.remove('tgt'), 2100);
-      setTimeout(() => el.remove(), 2200);
+      setTimeout(() => el.remove(), 2300);
     }
     window.__duelo_atkMark = a => atkMark(a);
     function runFx() {

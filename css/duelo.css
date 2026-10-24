@@ -978,31 +978,32 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
 @media (max-width: 480px) { .tools { gap: 5px; } .tools .ib { width: 34px; height: 34px; font-size: 16px; } }
 @media (max-width: 760px) { .fe:nth-child(n+3) { display: none; } }
 
-/* marca de a quién se ataca: flecha + mira + nombre del objetivo */
-.atkfx { position: fixed; inset: 0; z-index: 44; pointer-events: none; }
-.atkfx .ashaft { position: absolute; height: 0; transform-origin: 0 50%; }
-.atkfx .ashaft i { position: absolute; left: 0; top: -6px; height: 12px; width: 100%; border-radius: 5px; transform-origin: 0 50%;
-  background: repeating-linear-gradient(90deg, var(--ac) 0 16px, #fff 16px 22px, var(--ac) 22px 38px); box-shadow: 0 0 12px var(--ac), 0 0 3px #000;
-  clip-path: polygon(0 20%, calc(100% - 24px) 20%, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, calc(100% - 24px) 80%, 0 80%); animation: atkShaft .45s ease-out both, atkFade .5s 1.6s forwards; }
-.atkfx .areticle { position: absolute; transform: translate(-50%, -50%); border: 4px solid var(--ac); border-radius: 50%; box-shadow: 0 0 18px var(--ac), inset 0 0 14px #ff000055;
-  animation: atkRet .45s .25s cubic-bezier(.2, 1.5, .4, 1) both, atkBeat .5s .7s 3, atkFade .5s 1.6s forwards; }
-.atkfx .areticle.direct { border-radius: 18px; }
-.atkfx .areticle b { position: absolute; background: var(--ac); box-shadow: 0 0 6px #000; }
-.atkfx .areticle b:nth-child(1) { left: 50%; top: -14px; width: 4px; height: 20px; margin-left: -2px; }
-.atkfx .areticle b:nth-child(2) { left: 50%; bottom: -14px; width: 4px; height: 20px; margin-left: -2px; }
-.atkfx .areticle b:nth-child(3) { top: 50%; left: -14px; height: 4px; width: 20px; margin-top: -2px; }
-.atkfx .areticle b:nth-child(4) { top: 50%; right: -14px; height: 4px; width: 20px; margin-top: -2px; }
-.atkfx .atag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; padding: .15em .7em; border-radius: 999px; background: #1a0606ee; color: #fff; border: 2px solid var(--ac);
-  font: 800 16px var(--ui); letter-spacing: .5px; text-shadow: 1px 1px 0 #000; box-shadow: 0 3px 12px #000a, 0 0 12px var(--ac); animation: atkTag .3s .35s ease-out both, atkFade .5s 1.6s forwards; max-width: 94vw; overflow: hidden; text-overflow: ellipsis; }
-.atkfx .atag.below { transform: translate(-50%, 0); animation-name: atkTagB, atkFade; }
-.atkfx.foe .atag { background: #3a0808f2; }
-.zone.tgt, .plate.tgt, .pcard.tgt { animation: tgtFlash .5s .3s 4; }
-@keyframes atkShaft { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes atkRet { from { opacity: 0; transform: translate(-50%, -50%) scale(2.4) rotate(40deg); } to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); } }
-@keyframes atkBeat { 50% { transform: translate(-50%, -50%) scale(1.12); } }
-@keyframes atkTag { from { opacity: 0; transform: translate(-50%, -70%); } to { opacity: 1; transform: translate(-50%, -100%); } }
-@keyframes atkTagB { from { opacity: 0; transform: translate(-50%, 30%); } to { opacity: 1; transform: translate(-50%, 0); } }
-@keyframes atkFade { to { opacity: 0; } }
-@keyframes tgtFlash { 50% { filter: brightness(1.7) drop-shadow(0 0 12px #ff3b2a); } }
-.rm .atkfx *, .rm .tgt { animation: none !important; }
-@media (max-width: 760px) { .atkfx .atag { font-size: 13px; } }
+/* aviso «versus» de cada ataque: atacante (izquierda) contra objetivo (derecha) */
+.vsban { position: fixed; left: 50%; top: 66px; transform: translateX(-50%); z-index: 44; pointer-events: none; display: flex; align-items: center; width: min(720px, 96vw); filter: drop-shadow(0 8px 18px #000c); animation: vsIn .35s cubic-bezier(.2, .9, .3, 1) both, vsOut .4s 1.85s forwards; }
+.vs-side { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 18px; border: 3px solid #ffd84a; background: linear-gradient(#10224f, #08122c); }
+.vs-side.l { border-radius: 14px 0 0 14px; padding-right: 36px; clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%); }
+.vs-side.r { border-radius: 0 14px 14px 0; padding-left: 36px; flex-direction: row-reverse; text-align: right; clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%); }
+.vs-side.good { border-color: #ffd84a; background: linear-gradient(#10224f, #08122c); }
+.vs-side.bad { border-color: #ff5a4a; background: linear-gradient(#4a0c0c, #220606); }
+.vs-fig { flex: none; width: 62px; height: 62px; border-radius: 8px; border: 2px solid #fff; background: #e9eefc; display: grid; place-items: center; overflow: hidden; font-size: 30px; color: #1b1200; font-weight: 800; }
+.vs-fig img { width: 100%; height: 100%; object-fit: contain; }
+.vs-fig .qm { font: 900 36px var(--serif); color: #223; }
+.vs-fig.av { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #d6fbff, #4fd2ee 55%, #1c7a96); }
+.vs-tx { min-width: 0; }
+.vs-tx b { display: block; font: 800 20px/1.1 var(--ui); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 1px 0 #000; }
+.vs-tx small { display: block; font: 700 14px var(--ui); color: #ffd84a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs-side.bad .vs-tx small { color: #ff9a8a; }
+.vs-mid { flex: none; z-index: 2; width: 62px; height: 62px; margin: 0 -20px; border-radius: 50%; display: grid; place-items: center; font-size: 32px; border: 3px solid #fff; background: radial-gradient(#fff6c0, #ffb62e); box-shadow: 0 0 22px #ffd84a; }
+@keyframes vsIn { from { opacity: 0; transform: translate(-50%, -30px) scale(.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes vsOut { to { opacity: 0; transform: translate(-50%, -12px); } }
+.rm .vsban { animation: none; }
+@media (max-width: 560px) {
+  /* en el móvil los dos lados van apilados para que se lean los nombres enteros */
+  .vsban { top: 170px; flex-direction: column; width: 94vw; gap: 0; }
+  .vs-side { width: 100%; box-sizing: border-box; gap: 10px; padding: 6px 12px; }
+  .vs-side.l, .vs-side.r { clip-path: none; border-radius: 12px 12px 0 0; padding: 6px 12px; }
+  .vs-side.r { border-radius: 0 0 12px 12px; flex-direction: row-reverse; }
+  .vs-fig { width: 44px; height: 44px; font-size: 22px; }
+  .vs-mid { position: absolute; left: 50%; top: 50%; margin: -19px 0 0 -19px; width: 38px; height: 38px; font-size: 20px; }
+  .vs-tx b { font-size: 16px; } .vs-tx small { font-size: 12px; }
+}
