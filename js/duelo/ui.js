@@ -467,74 +467,212 @@
     game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
   }
 
-  // ---------------- constructor de mazos ----------------
+  // ---------------- mazos: primero la lista de mazos y luego el editor (arrastrar y soltar en escritorio) ----------------
+  const MAX_DECKS = 6;
+  const myDecks = () => C.test ? [TESTDK] : store.decks;
+  const countOf = ids => { const n = {}; ids.forEach(i => { n[i] = (n[i] || 0) + 1; }); return n; };
+  const KIND_ORDER = { monster: 0, spell: 1, trap: 2 };
+  const byKindLevel = (a, b) => (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((a.level || 0) - (b.level || 0)) || a.name.localeCompare(b.name);
+  /** Miniatura de una carta (con la skin que tenga puesta). */
+  function thumbEl(card) {
+    const sk = card.kind === 'monster' && D.Shop.skinOf(card.id);
+    const el = h('div', { class: 'tmb ' + card.kind }, card.img ? h('img', { class: 'cimg', src: card.img, alt: card.name, draggable: 'false' }) : h('span', { class: 'ico' }, card.icon || '?'));
+    if (sk) el.dataset.sk = D.Shop.slug(sk.id);
+    return el;
+  }
+  const deckInfo = ids => {
+    const cs = ids.map(i => C.get(i)).filter(Boolean), bad = C.checkDeck(ids);
+    return { n: ids.length, bad, mon: cs.filter(c => c.kind === 'monster').length, spl: cs.filter(c => c.kind === 'spell').length, trp: cs.filter(c => c.kind === 'trap').length };
+  };
+
+  /** Lista de mazos (entrada): una tarjeta por mazo; Editar abre el editor. */
   function deckBuilder() {
     endCurrent(); S.setTrack('prep');
-    let q = '', kind = 'all', type = '', shown = 60;
-    const cnt = ids => { const n = {}; ids.forEach(i => { n[i] = (n[i] || 0) + 1; }); return n; };
-    const root = h('div', { class: 'scr', style: 'max-width:980px' });
-    const poolEl = h('div', { class: 'list' }), deckEl = h('div', { class: 'list' }), head = h('div', { class: 'panel' });
+    const decks = myDecks();
+    const again = () => deckBuilder();
+    const rename = i => { const d = decks[i], nm = prompt('Nombre del mazo', d.name); if (nm) { d.name = nm.trim().slice(0, 20) || d.name; save(); again(); } };
+    const copy = i => { if (decks.length >= MAX_DECKS) { alert('Máximo ' + MAX_DECKS + ' mazos.'); return; } decks.push({ name: (decks[i].name + ' 2').slice(0, 20), ids: decks[i].ids.slice() }); save(); again(); };
+    const del = i => {
+      if (decks.length <= 1) { alert('Tienes que conservar al menos un mazo.'); return; }
+      if (!confirm('¿Borrar «' + decks[i].name + '»?')) return;
+      decks.splice(i, 1); if (store.active === i) store.active = 0; else if (store.active > i) store.active--; save(); closeModal(true); again();
+    };
+    const use = i => { store.active = i; save(); S.play('confirm'); again(); };
+    const more = i => modal(h('div', { class: 'box' }, h('h2', null, decks[i].name),
+      btn('Renombrar', () => { closeModal(true); rename(i); }, 'ghost'), btn('Copiar', () => { closeModal(true); copy(i); }, 'ghost'),
+      i === store.active ? null : btn('Usar para jugar', () => { closeModal(true); use(i); }, 'gold'),
+      btn('Borrar', () => del(i), 'red'), btn('Cerrar', closeModal, 'ghost')));
+    const create = ids => { decks.push({ name: 'Mazo ' + (decks.length + 1), ids }); save(); closeModal(true); deckEditor(decks.length - 1); };
+    const newDeck = () => {
+      if (decks.length >= MAX_DECKS) { alert('Máximo ' + MAX_DECKS + ' mazos.'); return; }
+      modal(h('div', { class: 'box' }, h('h2', null, 'Nuevo mazo'),
+        btn('Mazo vacío', () => create([]), 'gold'), btn('Copia del mazo activo', () => create(activeDeck().ids.slice()), 'ghost'),
+        ...C.PRESET_TYPES.map(t => btn('Mazo de estreno · tipo ' + C.TYPE_ES[t], () => { decks.push({ name: C.TYPE_ES[t] + ' ' + (decks.length + 1), ids: C.presetDeck(t) }); save(); closeModal(true); deckEditor(decks.length - 1); }, 'ghost')),
+        btn('Cancelar', closeModal, 'ghost')));
+    };
+    const tile = (d, i) => {
+      const inf = deckInfo(d.ids), act = !C.test && i === store.active;
+      const top = [...new Set(d.ids)].map(id => C.get(id)).filter(Boolean).sort((x, y) => (KIND_ORDER[x.kind] - KIND_ORDER[y.kind]) || ((y.level || 0) - (x.level || 0))).slice(0, 3);
+      const fan = h('div', { class: 'dkfan' }, top.length ? top.map((c, k) => h('div', { class: 'fc fc' + k + (top.length === 1 ? ' solo' : '') }, thumbEl(c))) : [0, 1, 2].map(k => h('div', { class: 'fc fc' + k + ' e' }, '?')));
+      return h('div', { class: 'panel dktile' + (act ? ' act' : '') },
+        act ? h('span', { class: 'dktag' }, 'MAZO ACTIVO') : null, fan,
+        h('div', { class: 'dkrow' }, h('b', null, d.name), h('span', { class: 'sub' }, `${inf.n} / ${C.DECK_SIZE}`)),
+        h('div', { class: 'dkst ' + (inf.bad ? 'bad' : 'ok') }, inf.bad || 'Mazo válido'),
+        h('div', { class: 'sub' }, `${inf.mon} personajes · ${inf.spl} magias` + (inf.trp ? ` · ${inf.trp} trampas` : '')),
+        h('div', { class: 'row dkact' }, btn(C.test ? 'Ver' : 'Editar', () => deckEditor(i), 'gold sm'),
+          C.test ? null : (act ? null : btn('Usar para jugar', () => use(i), 'ghost sm')),
+          C.test ? null : btn('Copiar', () => copy(i), 'ghost sm'), C.test ? null : h('button', { class: 'btn ghost sm', 'aria-label': 'Más opciones', onclick: () => more(i) }, '⋯')));
+    };
+    mount(h('div', { class: 'scr', style: 'max-width:1100px' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Mis mazos'),
+      h('p', { class: 'sub' }, C.test ? 'Modo de prueba: el mazo es fijo.' : `Elige un mazo para editarlo. El mazo activo es el que usas al jugar. Hasta ${MAX_DECKS} mazos.`),
+      h('div', { class: 'dkgrid' }, decks.map(tile),
+        C.test || decks.length >= MAX_DECKS ? null : h('button', { class: 'dknew', onclick: newDeck }, h('span', { class: 'plus' }, '+'), 'Nuevo mazo', h('small', null, 'Vacío, o a partir de uno que ya tengas')))));
+  }
 
-    function rowFor(card, n, add) {
-      const th = h('div', { class: 'th' });
-      if (card.kind === 'monster') th.append(sprite(card, 34)); else th.textContent = card.icon;
-      return h('div', { class: 'li', onclick: add, oncontextmenu: e => { e.preventDefault(); showCard(card); } }, th,
-        h('div', null, card.name, h('small', null, card.kind === 'monster' ? `${C.TYPE_ES[card.type]} · Nv ${card.level} · ${card.atk}/${card.def}` : card.kind === 'spell' ? 'Magia' : 'Trampa')),
-        n != null ? h('span', { class: 'n' }, '×' + n) : h('button', { class: 'btn ghost', style: 'padding:2px 8px', onclick: e => { e.stopPropagation(); showCard(card); } }, 'ℹ'));
+  /** Editor de un mazo: colección al centro, detalle de la carta a la derecha, tu mazo abajo. Escritorio: arrastrar y soltar. Móvil: botones − / +. */
+  function deckEditor(idx) {
+    endCurrent(); S.setTrack('prep');
+    const ro = !!C.test, decks = myDecks();
+    idx = Math.max(0, Math.min(idx | 0, decks.length - 1));
+    const dk = decks[idx];
+    let q = '', kind = 'all', type = '', shown = 60, sel = null, flash = '', flashT = 0, noClick = false;
+    const narrow = () => window.matchMedia && window.matchMedia('(max-width: 860px)').matches;
+    const root = h('div', { class: 'scr dked', 'data-tab': 'pool' });
+    const leftEl = h('div', { class: 'panel dkleft' }), poolEl = h('div', { class: 'dkpool' }), sideEl = h('div', { class: 'panel dkside' });
+    const stripEl = h('div', { class: 'dkstrip' }), listEl = h('div', { class: 'dkpool dklist' }), statEl = h('div', { class: 'dkbar' }), statEl2 = h('div', { class: 'dkbar2' });
+    const tabPool = h('button', { class: 'on', onclick: () => tab('pool') }, 'Colección'), tabDeck = h('button', { onclick: () => tab('deck') }, 'Tu mazo');
+    function tab(t) { root.dataset.tab = t; tabPool.className = t === 'pool' ? 'on' : ''; tabDeck.className = t === 'deck' ? 'on' : ''; }
+
+    const copies = id => dk.ids.filter(x => x === id).length;
+    function say(msg) { flash = msg; clearTimeout(flashT); flashT = setTimeout(() => { flash = ''; renderStatus(); }, 1800); renderStatus(); }
+    function add(id) {
+      if (ro) { say('Modo de prueba: el mazo es fijo'); return false; }
+      if (dk.ids.length >= C.DECK_SIZE) { S.play('error'); say(`El mazo ya tiene ${C.DECK_SIZE} cartas: quita una primero`); return false; }
+      if (copies(id) >= C.MAX_COPIES) { S.play('error'); say(`Máximo ${C.MAX_COPIES} copias de cada carta`); return false; }
+      dk.ids.push(id); save(); S.play('select'); renderAll(); return true;
     }
+    function remove(id) {
+      if (ro) { say('Modo de prueba: el mazo es fijo'); return false; }
+      const i = dk.ids.indexOf(id); if (i < 0) return false;
+      dk.ids.splice(i, 1); save(); S.play('close'); renderAll(); return true;
+    }
+    function pick(id) {
+      if (noClick) return;
+      sel = id; renderSide(); renderPool(); renderDeck();
+      if (narrow()) cardModal(C.get(id));
+    }
+
     /** Skins (de las cajas) que tengo, para ponerle una a este personaje. */
-    function skinPicker(card) {
+    function skinPicker(card, again) {
       const SH = D.Shop, mine = SH.mySkins();
       if (card.kind !== 'monster' || !card.img) return null;
       const cur = SH.skinOf(card.id), row = h('div', { class: 'skpick' }, h('b', null, 'Skin'));
       if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Aún no tienes skins. Salen en las cajas (Tienda → Cajas) y valen para cualquier personaje.')); return row; }
-      const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); S.play('select'); showCard(card); } }, label);
+      const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); S.play('select'); again(); renderPool(); renderDeck(); } }, label);
       row.append(opt('Normal', null), ...mine.map(it => opt(it.name, it)));
       return row;
     }
-    const showCard = card => modal(h('div', { class: 'box' }, detailBox(card, skinPicker(card)), btn('Cerrar', closeModal)));
+    /** Ventana de una carta (móvil): detalle, skin y botones de añadir y quitar. */
+    function cardModal(card) {
+      const n = copies(card.id);
+      modal(h('div', { class: 'box' }, detailBox(card, skinPicker(card, () => cardModal(card))),
+        h('div', { class: 'dkcnt' }, 'En el mazo: ', h('b', null, `${n} / ${C.MAX_COPIES}`)),
+        h('div', { class: 'row' }, btn('Quitar una', () => { remove(card.id); cardModal(card); }, 'ghost'), btn('Añadir', () => { add(card.id); cardModal(card); }, 'gold')),
+        btn('Cerrar', closeModal, 'ghost')));
+    }
 
-    function refresh() {
-      const dk = activeDeck(), n = cnt(dk.ids), bad = C.checkDeck(dk.ids);
-      // cabecera
-      const sel = h('select', { onchange: () => { store.active = +sel.value; save(); refresh(); } }, store.decks.map((d, i) => h('option', { value: i, selected: i === store.active }, d.name)));
-      const pre = h('select', { style: C.PRESET_TYPES.length ? '' : 'display:none' }, h('option', { value: '' }, 'Nuevo mazo de estreno…'), C.PRESET_TYPES.map(t => h('option', { value: t }, 'Tipo ' + C.TYPE_ES[t])));
-      pre.onchange = () => {
-        if (!pre.value) return;
-        if (store.decks.length >= 6) { alert('Máximo 6 mazos.'); pre.value = ''; return; }
-        store.decks.push({ name: C.TYPE_ES[pre.value] + ' ' + (store.decks.length + 1), ids: C.presetDeck(pre.value) });
-        store.active = store.decks.length - 1; save(); refresh();
-      };
-      head.replaceChildren(h('div', { class: 'row' }, sel, pre),
-        h('div', { class: 'row' }, btn('Renombrar', () => { const nm = prompt('Nombre del mazo', dk.name); if (nm) { dk.name = nm.trim().slice(0, 20) || dk.name; save(); refresh(); } }, 'ghost'),
-          btn('Copiar', () => { if (store.decks.length < 6) { store.decks.push({ name: (dk.name + ' 2').slice(0, 20), ids: dk.ids.slice() }); store.active = store.decks.length - 1; save(); refresh(); } }, 'ghost'),
-          btn('Borrar', () => { if (store.decks.length > 1 && confirm('¿Borrar «' + dk.name + '»?')) { store.decks.splice(store.active, 1); store.active = 0; save(); refresh(); } }, 'red')),
-        h('div', { class: 'count ' + (bad ? 'bad' : 'ok') }, `${dk.ids.length}/${C.DECK_SIZE} cartas · ${bad || 'mazo válido'}`));
-      // mazo
-      const uniq = [...new Set(dk.ids)].map(id => C.get(id)).sort((a, b) => (a.kind === b.kind ? (a.level || 0) - (b.level || 0) : a.kind === 'monster' ? -1 : b.kind === 'monster' ? 1 : a.kind < b.kind ? 1 : -1));
-      deckEl.replaceChildren(...uniq.map(c => rowFor(c, n[c.id], () => { dk.ids.splice(dk.ids.indexOf(c.id), 1); save(); refresh(); })));
-      renderPool();
+    // ---- arrastrar y soltar (ratón o lápiz; en táctil se usan los botones − / +) ----
+    function drag(el, id, from) {
+      el.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'touch' || e.button !== 0 || ro) return;
+        const sx = e.clientX, sy = e.clientY; let ghost = null, over = null;
+        const move = ev => {
+          if (!ghost) {
+            if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 7) return;
+            ghost = h('div', { class: 'dgh' }, thumbEl(C.get(id))); document.body.append(ghost);
+            document.body.dataset.drag = from; noClick = true;
+          }
+          ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+          const t = document.elementFromPoint(ev.clientX, ev.clientY), z = t && t.closest ? t.closest('[data-drop]') : null;
+          if (z !== over) { if (over) over.classList.remove('over'); over = z; if (over) over.classList.add('over'); }
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+          if (!ghost) return;
+          ghost.remove(); delete document.body.dataset.drag;
+          const zone = over && over.dataset.drop; if (over) over.classList.remove('over');
+          setTimeout(() => { noClick = false; }, 0);
+          if (from === 'pool' && zone === 'deck') add(id);
+          else if (from === 'deck' && zone === 'pool') remove(id);
+        };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+      });
+    }
+
+    // ---- dibujo ----
+    function poolCard(c) {
+      const n = copies(c.id);
+      const el = h('div', { class: 'mcard' + (n ? ' in' : '') + (sel === c.id ? ' sel' : ''), 'data-did': c.id, onclick: () => pick(c.id), ondblclick: () => { if (!narrow()) add(c.id); } },
+        h('div', { class: 'im' }, thumbEl(c)), n ? h('span', { class: 'bd' }, '×' + n) : null,
+        h('div', { class: 'nm' }, c.name),
+        h('div', { class: 'mt' }, c.kind === 'monster' ? `Nv ${c.level} · ${c.atk}/${c.def}` : c.kind === 'spell' ? 'Magia' : 'Trampa'),
+        h('div', { class: 'stp' }, h('button', { 'aria-label': 'Quitar una', onclick: e => { e.stopPropagation(); remove(c.id); } }, '−'), h('b', null, String(n)), h('button', { class: 'p', 'aria-label': 'Añadir una', onclick: e => { e.stopPropagation(); add(c.id); } }, '+')));
+      drag(el, c.id, 'pool');
+      return el;
     }
     function renderPool() {
-      const dk = activeDeck(), n = cnt(dk.ids), ql = q.trim().toLowerCase();
+      const ql = q.trim().toLowerCase();
       let list = C.all().filter(c => (kind === 'all' || c.kind === kind) && (!type || (c.types && c.types.includes(type))) && (!ql || c.name.toLowerCase().includes(ql)));
       const total = list.length; list = list.slice(0, shown);
-      poolEl.replaceChildren(...[...list.map(c => rowFor(c, null, () => {
-        if (dk.ids.length >= C.DECK_SIZE) return;
-        if ((n[c.id] || 0) >= C.MAX_COPIES) return;
-        dk.ids.push(c.id); save(); refresh();
-      })), ...(total > shown ? [btn(`Ver más (${total - shown})`, () => { shown += 80; renderPool(); }, 'ghost')] : [])]);
+      poolEl.replaceChildren(...list.map(poolCard), ...(total > shown ? [btn(`Ver más (${total - shown})`, () => { shown += 80; renderPool(); }, 'ghost')] : []), ...(!total ? [h('p', { class: 'sub' }, 'No hay cartas con ese filtro.')] : []));
     }
+    function renderDeck() {
+      const cs = dk.ids.map(i => C.get(i)).filter(Boolean).sort(byKindLevel);
+      stripEl.replaceChildren(...cs.map(c => { const el = h('div', { class: 'dk' + (sel === c.id ? ' sel' : ''), 'data-did': c.id, title: c.name, onclick: () => pick(c.id), ondblclick: () => { if (!narrow()) remove(c.id); } }, thumbEl(c)); drag(el, c.id, 'deck'); return el; }),
+        ...Array.from({ length: Math.max(0, C.DECK_SIZE - cs.length) }, () => h('div', { class: 'dk empty' }, '+')));
+      const uniq = [...new Set(dk.ids)].map(i => C.get(i)).filter(Boolean).sort(byKindLevel);
+      listEl.replaceChildren(...(uniq.length ? uniq.map(poolCard) : [h('p', { class: 'sub' }, 'Todavía no hay cartas: ve a «Colección» y añade con +.')]));
+    }
+    function renderStatus() {
+      const inf = deckInfo(dk.ids), full = inf.n === C.DECK_SIZE;
+      const txt = h('span', { class: 'dkst ' + (inf.bad ? 'bad' : 'ok') }, flash || (inf.bad || 'Mazo válido · listo para jugar'));
+      const cnt = h('b', { class: full && !inf.bad ? 'ok' : '' }, `${inf.n} / ${C.DECK_SIZE}`);
+      statEl.replaceChildren(h('b', { class: 'gold' }, 'Tu mazo'), cnt, txt, h('span', { class: 'sub' }, `${inf.mon} personajes · ${inf.spl} magias` + (inf.trp ? ` · ${inf.trp} trampas` : '')), h('span', { class: 'sub hint' }, ro ? '' : 'Arrastra cartas aquí · doble clic para quitar'));
+      statEl2.replaceChildren(h('div', null, h('b', { class: 'big ' + (inf.bad ? 'bad' : 'ok') }, `${inf.n} / ${C.DECK_SIZE}`), h('div', { class: 'sub' }, flash || (inf.bad || 'Mazo válido · se guarda solo'))));
+      tabDeck.textContent = `Tu mazo · ${inf.n}`;
+    }
+    function renderSide() {
+      const card = sel && C.get(sel);
+      if (!card) { sideEl.replaceChildren(h('h2', null, 'Carta seleccionada'), h('p', { class: 'sub' }, 'Toca una carta para ver su habilidad y ponerle una skin. Arrastra las cartas al mazo de abajo, o usa los botones − / +.')); return; }
+      const n = copies(card.id);
+      sideEl.replaceChildren(h('h2', null, 'Carta seleccionada'), detailBox(card, skinPicker(card, renderSide)),
+        h('div', { class: 'dkcnt' }, 'En el mazo: ', h('b', null, `${n} / ${C.MAX_COPIES}`)),
+        h('div', { class: 'row' }, btn('Quitar una', () => remove(card.id), 'ghost'), btn(n >= C.MAX_COPIES ? 'Máximo' : 'Añadir', () => add(card.id), n >= C.MAX_COPIES ? 'ghost' : 'gold')));
+    }
+    function renderLeft() {
+      leftEl.replaceChildren(h('h2', null, 'Mazos'),
+        ...decks.map((d, i) => h('button', { class: 'dkl' + (i === idx ? ' on' : ''), onclick: () => { if (i !== idx) deckEditor(i); } }, h('span', null, d.name), h('b', { class: deckInfo(d.ids).bad ? 'bad' : 'ok' }, String(d.ids.length)))),
+        ro ? null : h('div', { class: 'dkmore' },
+          btn('+ Nuevo mazo', () => { if (decks.length >= MAX_DECKS) { alert('Máximo ' + MAX_DECKS + ' mazos.'); return; } decks.push({ name: 'Mazo ' + (decks.length + 1), ids: [] }); save(); deckEditor(decks.length - 1); }, 'ghost sm'),
+          btn('Renombrar', () => { const nm = prompt('Nombre del mazo', dk.name); if (nm) { dk.name = nm.trim().slice(0, 20) || dk.name; save(); renderLeft(); } }, 'ghost sm'),
+          btn('Copiar', () => { if (decks.length >= MAX_DECKS) { alert('Máximo ' + MAX_DECKS + ' mazos.'); return; } decks.push({ name: (dk.name + ' 2').slice(0, 20), ids: dk.ids.slice() }); save(); deckEditor(decks.length - 1); }, 'ghost sm'),
+          btn('Borrar', () => { if (decks.length > 1 && confirm('¿Borrar «' + dk.name + '»?')) { decks.splice(idx, 1); if (store.active === idx) store.active = 0; else if (store.active > idx) store.active--; save(); deckEditor(0); } }, 'red sm'),
+          idx === store.active ? h('div', { class: 'dkact2' }, 'Mazo activo (el que usas al jugar)') : btn('Usar para jugar', () => { store.active = idx; save(); S.play('confirm'); renderLeft(); }, 'gold sm')));
+    }
+    function renderAll() { renderLeft(); renderPool(); renderDeck(); renderStatus(); renderSide(); }
+
     const search = h('input', { type: 'search', placeholder: 'Buscar carta…', oninput: () => { q = search.value; shown = 60; renderPool(); } });
     const kindSel = h('select', { onchange: () => { kind = kindSel.value; shown = 60; renderPool(); } }, [['all', 'Todas'], ['monster', 'Monstruos'], ['spell', 'Magias'], ['trap', 'Trampas']].map(([v, t]) => h('option', { value: v }, t)));
     const typeSel = h('select', { onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(C.custom.map(c => c.type).filter((t, i, a) => a.indexOf(t) === i)).map(t => h('option', { value: t }, C.TYPE_ES[t])));
-    root.append(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Mis mazos'),
-      h('p', { class: 'sub' }, 'Toca una carta de la colección para añadirla; toca una del mazo para quitarla. Se guarda solo.'),
-      head,
-      h('div', { class: 'builder' },
-        h('div', { class: 'panel' }, h('h2', null, 'Colección'), h('div', { class: 'row' }, search, kindSel, typeSel), poolEl),
-        h('div', { class: 'panel' }, h('h2', null, 'Tu mazo'), deckEl)));
-    mount(root); refresh();
+    root.append(h('button', { class: 'back', onclick: deckBuilder }, '← Mis mazos'), h('h1', null, dk.name),
+      h('div', { class: 'dktabs' }, tabPool, tabDeck),
+      h('div', { class: 'dkmain' }, leftEl,
+        h('div', { class: 'panel dkcenter', 'data-drop': 'pool' }, h('div', { class: 'dkpl' }, h('h2', null, 'Colección'), h('div', { class: 'row' }, search, kindSel, typeSel)), poolEl),
+        h('div', { class: 'panel dkdeckm', 'data-drop': 'deck' }, h('h2', null, 'Tu mazo'), listEl),
+        sideEl),
+      h('div', { class: 'panel dkbottom', 'data-drop': 'deck' }, statEl, stripEl),
+      statEl2);
+    mount(root); renderAll();
   }
 
   // ---------------- la partida ----------------
