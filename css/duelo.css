@@ -972,3 +972,7 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
 .nv .ent.new i { background: #1f9d6a; color: #04180f; }
 .nv .ent.chg i { background: #3b7bff; color: #fff; }
 .nv .ent.fix i { background: #e0a030; color: #241a00; }
+
+/* botón de pantalla completa (móvil): debajo del de sonido */
+.fsbtn { top: 64px; }
+@media (max-width: 480px) { .tools { gap: 5px; } .tools .ib { width: 34px; height: 34px; font-size: 16px; } }

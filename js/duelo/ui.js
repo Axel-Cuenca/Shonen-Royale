@@ -225,11 +225,46 @@
   }
 
   // ---------------- sonido ----------------
-  let sndEl = null;
+  let sndEl = null, fsEl = null;
   function sndButton(show) {
     if (!sndEl) { sndEl = h('button', { class: 'sndbtn', title: 'Sonido y música', onclick: soundPanel }, '🔊'); document.body.append(sndEl); }
     sndEl.style.display = show ? '' : 'none';
+    if (FS.wanted()) {
+      if (!fsEl) { fsEl = h('button', { class: 'sndbtn fsbtn fsb', title: 'Pantalla completa', onclick: FS.toggle }, FS.icon()); document.body.append(fsEl); }
+      fsEl.style.display = show ? '' : 'none';
+    }
   }
+
+  // ---------------- pantalla completa (móvil) ----------------
+  // Android/iPad: API de pantalla completa. iPhone no la tiene: se explica «Añadir a pantalla de inicio»
+  // (la app ya es standalone por el manifest). Si el jugador la activó, se vuelve a pedir en su siguiente toque
+  // (al recargar por una actualización el navegador sale de pantalla completa).
+  const FS = (() => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    const cur = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone === true;
+    const pref = v => { try { if (v === undefined) return localStorage.getItem('duelo.fs') === '1'; localStorage.setItem('duelo.fs', v ? '1' : '0'); } catch (e) { return false; } };
+    const touch = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    const api = {
+      wanted: () => touch() && !standalone(),
+      icon: () => (cur() ? '⤡' : '⛶'),
+      sync: () => document.querySelectorAll('.fsb').forEach(b => { b.textContent = api.icon(); b.title = cur() ? 'Salir de pantalla completa' : 'Pantalla completa'; }),
+      toggle: () => {
+        if (cur()) { pref(false); (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+        if (!req) { api.help(); return; }
+        pref(true);
+        try { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(api.help); } catch (e) { api.help(); }
+      },
+      help: () => modal(h('div', { class: 'box' }, h('h2', null, 'Pantalla completa'),
+        h('p', null, 'Este navegador no permite la pantalla completa dentro de la página. En iPhone se consigue así:'),
+        h('ol', null, h('li', null, 'Toca el botón Compartir de Safari.'), h('li', null, 'Elige «Añadir a pantalla de inicio».'), h('li', null, 'Abre el juego desde ese icono: sin barras y a toda la pantalla.')),
+        btn('Entendido', () => closeModal(), 'gold'))),
+    };
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, api.sync));
+    document.addEventListener('pointerdown', () => { if (req && api.wanted() && pref() && !cur()) { try { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (e) { /* nada */ } } }, true);
+    return api;
+  })();
   function soundPanel() {
     const LBL = { master: 'Volumen general', music: 'Música', ui: 'Interfaz y cartas', combat: 'Combate', voice: 'Voces y sonidos de las cartas', amb: 'Ambiente', notify: 'Avisos' };
     const rows = S.CATS.map(k => {
@@ -1374,6 +1409,7 @@
         multi() ? null : pcard(v.opp.seat),
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
+          FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
           h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
