@@ -99,6 +99,8 @@
     I('ef_arcoiris', 'ef', 'Arcoíris', 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' })
   ];
   const BY = new Map(ITEMS.map(i => [i.id, i]));
+  /** Cosmético por id: del catálogo o de temporada (D.Seasons, exclusivos por rango; no están en la Tienda ni en cajas). */
+  const byId = id => BY.get(id) || (D.Seasons ? D.Seasons.item(id) : null) || undefined;
   const DEFAULT_EQ = { hc: 'hc_cian', ha: 'ha_none', hm: 'hm_flotar', cb: 'cb_clasico', bd: 'bd_clasico', av: 'av_user', fr: 'fr_none', ti: 'ti_none', ef: 'ef_none' };
   const RARITY = { c: 'Común', r: 'Raro', e: 'Épico', l: 'Legendario' };
   const RANK = { c: 0, r: 1, e: 2, l: 3 };
@@ -142,12 +144,12 @@
     p.day = typeof p.day === 'string' ? p.day : '';
     p.aiDay = typeof p.aiDay === 'string' ? p.aiDay : '';
     p.aiGot = Math.max(0, Math.floor(Number(p.aiGot) || 0));
-    p.owned = Array.isArray(p.owned) ? p.owned.filter(id => BY.has(id)) : [];
+    p.owned = Array.isArray(p.owned) ? p.owned.filter(id => !!byId(id)) : [];
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
     return p;
   }
-  const owns = id => { const it = BY.get(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
+  const owns = id => { const it = byId(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
   const coins = () => { const p = pts(); return p ? p.coins : 0; };
 
   /** ¿Se puede cobrar hoy? Devuelve { amount, day } (day 1..7) o null. */
@@ -186,7 +188,7 @@
     while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0].id);
     return out;
   }
-  const priceOf = id => { const it = BY.get(id); return !it ? 0 : offers().includes(id) ? Math.round(it.price * (1 - OFFER_OFF)) : it.price; };
+  const priceOf = id => { const it = byId(id); return !it ? 0 : offers().includes(id) ? Math.round(it.price * (1 - OFFER_OFF)) : it.price; };
   const rand = () => { try { const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] / 4294967296; } catch (e) { return Math.random(); } };
   /** Abre una caja: cobra, sortea (con garantía) y entrega el premio; si ya lo tenías, devuelve parte en puntos. */
   function openBox(boxId) {
@@ -211,21 +213,32 @@
     return { ok: true, item: it, dup, refund, pity: p.pity[b.id] };
   }
   function buy(id) {
-    const p = pts(), it = BY.get(id);
+    const p = pts(), it = byId(id);
     if (!p || !it) return { ok: false, error: 'No existe.' };
+    if (it.excl) return { ok: false, error: 'Es un premio de temporada: sólo se consigue por rango.' };
     if (owns(id)) return { ok: false, error: 'Ya lo tienes.' };
     const pr = priceOf(id);
     if (p.coins < pr) return { ok: false, error: 'Te faltan ' + (pr - p.coins) + ' puntos.' };
     p.coins -= pr; p.owned.push(id); saveStore();
     return { ok: true };
   }
+  /** Entrega puntos y cosméticos (premios de temporada). Devuelve los cosméticos nuevos. */
+  function grant(n, ids) {
+    const p = pts(); if (!p) return [];
+    p.coins += Math.max(0, Math.floor(Number(n) || 0));
+    const nuevos = [];
+    for (const id of ids || []) if (byId(id) && !p.owned.includes(id)) { p.owned.push(id); nuevos.push(id); }
+    saveStore(); return nuevos;
+  }
+  /** Cosméticos de temporada que tengo de una categoría (no están en la Tienda). */
+  const exclusive = cat => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.excl && i.cat === cat).sort((a, b) => (b.season + b.tier).localeCompare(a.season + a.tier)) : []; };
   function equip(id) {
-    const p = pts(), it = BY.get(id);
+    const p = pts(), it = byId(id);
     if (!p || !it || !owns(id)) return false;
     p.eq[it.cat] = id; saveStore(); apply();
     return true;
   }
-  const equipped = cat => { const p = pts(), id = p && p.eq[cat]; return BY.get(owns(id) ? id : DEFAULT_EQ[cat]); };
+  const equipped = cat => { const p = pts(), id = p && p.eq[cat]; return byId(owns(id) ? id : DEFAULT_EQ[cat]); };
 
   /** Lo que ven los demás de mí (sólo los ids de las categorías que se muestran en la partida). */
   const NET_CATS = ['hc', 'ha', 'hm', 'cb', 'av', 'fr', 'ti'];
@@ -233,15 +246,15 @@
   /** Sanea lo que manda otro jugador: sólo ids que existen en su categoría. Devuelve { cat: 'id' }. */
   function clean(o) {
     const out = {};
-    if (o && typeof o === 'object') for (const c of NET_CATS) { const it = BY.get(o[c]); if (it && it.cat === c) out[c] = it.id; }
+    if (o && typeof o === 'object') for (const c of NET_CATS) { const it = byId(o[c]); if (it && it.cat === c) out[c] = it.id; }
     return out;
   }
-  const slug = id => { const it = BY.get(id); return it ? id.slice(it.cat.length + 1) : ''; };
+  const slug = id => { const it = byId(id); return it ? id.slice(it.cat.length + 1) : ''; };
   /** Pone los cosméticos puestos en <html> (data-hc, data-ha…), que el CSS usa. */
   function apply() {
     const r = document.documentElement;
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, get: id => BY.get(id), AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, grant, exclusive, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

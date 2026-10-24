@@ -870,3 +870,12 @@ html.rm .boxov .bx-rays, html.rm .boxov .bx-box { animation: none; }
 .bx-strip { display: flex; gap: 8px; position: absolute; left: 0; top: 10px; will-change: transform; }
 .bx-mark { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: #ffe14a; box-shadow: 0 0 12px #ffe14a; z-index: 2; }
 html.rm .bxstage .bxbig { animation: none; }
+
+/* ---- premios de temporada ---- */
+.seasonp { display: flex; flex-direction: column; gap: 6px; } .seasonp ul { margin: 2px 0 0; padding-left: 18px; }
+.sprow { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.sprw { --rc: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border: 1.5px solid color-mix(in srgb, var(--rc) 55%, transparent); border-radius: 10px; background: #0007; text-align: center; }
+.sprw b { color: var(--rc); } .sprw .spc { color: var(--gold); font-weight: 700; } .sprw.got { opacity: .65; } .sprw.now { box-shadow: 0 0 14px var(--rc); border-color: var(--rc); } .sprw small { color: #8f8; }
+.sprw .spi { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; min-height: 26px; }
+.sp-ti { font: italic 700 12px var(--serif); color: var(--gold); } .sp-av { font-size: 24px; line-height: 1; }
+.sp-fr { width: 22px; height: 22px; border-radius: 50%; border: 3px solid; display: inline-block; }

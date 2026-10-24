@@ -69,11 +69,35 @@
     r.best = Math.max(r.pts, Math.floor(Number(r.best) || 0));
     if (typeof r.season !== 'string' || !/^\d{4}-\d{2}$/.test(r.season)) { r.season = cur; }
     if (r.season !== cur) {                       // temporada nueva: reinicio parcial
-      r.prev = { season: r.season, pts: r.pts, w: r.w, l: r.l };
+      r.prev = { season: r.season, pts: r.pts, w: r.w, l: r.l, best: r.best };
+      r.pending = (Array.isArray(r.pending) ? r.pending : []).filter(x => x && x.season !== r.season).concat([{ season: r.season, best: r.best, w: r.w, l: r.l }]).slice(-12);   // premios por cobrar
       r.pts = softReset(r.pts); r.w = 0; r.l = 0; r.best = r.pts; r.season = cur; r.pub = false;
       saveStore();
     }
     return r;
+  }
+  // ---------------- premios de fin de temporada ----------------
+  /** Temporadas cerradas con premio por cobrar (saneadas): [{ season, best, w, l, tier, ok, games }]. */
+  function pending() {
+    const r = state(); if (!r || !Array.isArray(r.pending)) return [];
+    const SE = D.Seasons; if (!SE) return [];
+    r.pending = r.pending.filter(x => x && SE.valid(x.season) && x.season >= SE.FIRST && x.season < r.season);
+    return r.pending.map(x => { const best = Math.max(0, Math.min(MAX_PTS, Math.floor(Number(x.best) || 0))), w = Math.max(0, Math.floor(Number(x.w) || 0)), l = Math.max(0, Math.floor(Number(x.l) || 0));
+      return { season: x.season, best, w, l, games: w + l, ok: w + l >= SE.MIN_GAMES, tier: tierOf(best).tier.id }; });
+  }
+  /** Cobra todo lo pendiente. Devuelve [{ season, tier, coins, ids, ok, games }] (ok=false: pocas partidas, sin premio). */
+  function claim() {
+    const list = pending(); if (!list.length) return [];
+    const SE = D.Seasons, out = [];
+    let coins = 0; const ids = [];
+    for (const x of list) {
+      const rw = x.ok ? SE.reward(x.season, x.tier) : { coins: 0, ids: [] };
+      coins += rw.coins; ids.push(...rw.ids);
+      out.push({ season: x.season, tier: x.tier, coins: rw.coins, ids: rw.ids, ok: x.ok, games: x.games, best: x.best });
+    }
+    D.Shop.grant(coins, ids);
+    state().pending = []; saveStore();
+    return out;
   }
   const me = () => { const r = state(); return r ? tierOf(r.pts) : null; };
 
@@ -114,5 +138,5 @@
     } catch (e) { lastErr = e.code || e.message; return { ok: false, error: e.code === 'permission-denied' ? 'denied' : (e.code || 'error') }; }
   }
 
-  D.Rank = { TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
+  D.Rank = { TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, pending, claim, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
 })();

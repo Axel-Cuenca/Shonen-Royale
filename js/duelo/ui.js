@@ -1376,6 +1376,7 @@
         h('div', null, h('h2', null, info.label), h('div', { class: 'sub' }, `${st.pts} PC · ${st.w} victorias · ${st.l} derrotas`),
           info.to ? h('div', { class: 'rkbar' }, h('i', { style: `width:${info.pct}%` })) : null,
           h('small', null, info.to ? `Te faltan ${info.next} PC para ${R.tierOf(info.to).label}` : 'Eres Gran Maestro: sigue sumando para subir en la tabla.'))) : null,
+      seasonPrizes(st),
       h('h2', null, 'Los mejores de la temporada'), tbl,
       h('details', { class: 'rkinfo' }, h('summary', null, 'Rangos y cómo se sube'),
         h('p', null, 'Ganar una partida online suma PC; perder resta. Ganarle a alguien mejor que tú da más; perderle a alguien peor te quita más. En 3 o 4 jugadores cuenta el puesto. Las partidas contra la computadora no cuentan. Si abandonas una partida, cuenta como derrota.'),
@@ -1389,11 +1390,35 @@
     tbl.replaceChildren(...res.rows.map((r, i) => h('div', { class: 'rkrow' + (u && r.uid === u.uid ? ' me' : '') }, h('span', { class: 'pos' }, String(i + 1)), rkBadge(r.pts, true), h('b', null, r.name || 'Jugador'), h('small', null, `${r.w || 0}V · ${r.l || 0}D`), h('span', { class: 'pc' }, r.pts + ' PC'))));
   }
 
+  /** Premios de fin de temporada de esta temporada, por rango (cambian cada mes). */
+  function seasonPrizes(st) {
+    const R = D.Rank, SE = D.Seasons, sid = R.seasonId(), best = st ? R.tierOf(st.best || st.pts).tier.id : null;
+    const bi = best ? SE.TIERS.indexOf(best) : -1, th = SE.theme(sid);
+    const prev = id => { const it = SE.item(id); if (!it) return null; return it.cat === 'ti' ? h('span', { class: 'sp-ti' }, it.text) : it.cat === 'av' ? h('span', { class: 'sp-av' }, it.emoji) : h('span', { class: 'sp-fr', style: `border-color:${it.sw};box-shadow:0 0 6px ${th.c}` }); };
+    return h('div', { class: 'seasonp' }, h('h2', null, `🏅 Premios de la temporada «${th.name}»`),
+      h('div', { class: 'sub' }, `Al cerrar la temporada (en ${R.daysLeft()} días) cobras el premio de tu MEJOR rango, si jugaste al menos ${SE.MIN_GAMES} partidas con rango. Los cosméticos son exclusivos de este mes: no se compran ni salen de cajas, y el mes que viene serán otros.`),
+      h('div', { class: 'sprow' }, SE.table(sid).map((t, i) => h('div', { class: 'sprw' + (i === bi ? ' now' : i < bi ? ' got' : ''), style: `--rc:${t.color}` },
+        h('b', null, t.name), h('span', { class: 'spc' }, '✦ ' + t.coins), h('span', { class: 'spi' }, t.ids.map(prev)), i === bi ? h('small', null, 'Tu mejor rango') : null))));
+  }
+  /** Aviso de premios de temporada por cobrar (se enseña al entrar al menú, una vez por sesión). */
+  function seasonModal() {
+    const res = D.Rank.claim(); if (!res.length) return;
+    S.play('win');
+    const SE = D.Seasons;
+    modal(h('div', { class: 'box' }, h('h2', null, '🏅 Premios de temporada'),
+      ...res.map(x => h('div', { class: 'seasonp' }, h('b', null, 'Temporada «' + SE.label(x.season) + '»'),
+        x.ok ? h('div', null, 'Mejor rango: ', h('b', { style: `color:${SE.TCOLOR[x.tier]}` }, SE.TNAME[x.tier]), ' · ', h('b', null, '✦ +' + x.coins + ' puntos')) : h('div', { class: 'sub' }, `Jugaste ${x.games} de ${SE.MIN_GAMES} partidas con rango necesarias: esta vez sin premio.`),
+        x.ok ? h('ul', null, x.ids.map(id => h('li', null, SE.item(id).name))) : null)),
+      h('p', { class: 'sub' }, 'Los cosméticos nuevos están en la Tienda, en «Tus premios de temporada», para equiparlos.'),
+      btn('Genial', () => { closeModal(); menu(); }, 'gold')));
+  }
+
   // ---------------- puntos, recompensa diaria y Tienda ----------------
-  let dailyShown = false;
+  let dailyShown = false, seasonShown = false;
   function pointsBar() {
     if (C.test) return null;
     const info = D.Shop.dailyInfo();
+    if (!seasonShown && D.Rank.pending().length) { seasonShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) seasonModal(); }, 300); }
     if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
     return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), ' puntos'),
       info ? btn('🎁 Recompensa diaria: +' + info.amount, dailyModal, 'gold sm') : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
@@ -1428,7 +1453,7 @@
       const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '∅');
       return h('div', { class: 'shi r-' + it.rar + (on ? ' on' : '') },
         offer && !own ? h('span', { class: 'offtag' }, '−' + Math.round(SH.OFFER_OFF * 100) + '%') : null,
-        prev, h('b', null, it.name), h('small', null, SH.RARITY[it.rar] + (it.cat !== cat ? ' · ' + SH.CATS.find(c => c.id === it.cat).name : '')),
+        prev, h('b', null, it.name), h('small', null, (it.excl ? 'Temporada · ' : '') + SH.RARITY[it.rar] + (it.cat !== cat ? ' · ' + SH.CATS.find(c => c.id === it.cat).name : '')),
         on ? h('span', { class: 'tag' }, 'Puesto ✓')
           : own ? btn('Equipar', () => { SH.equip(it.id); S.play('select'); shopScreen(cat); }, 'ghost sm')
           : btn(offer ? h('span', null, h('s', null, '✦ ' + it.price), ' ✦ ' + pr) : '✦ ' + pr, () => { const r = SH.buy(it.id); if (r.ok) { SH.equip(it.id); S.play('confirm'); shopScreen(cat); } else { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; } }, SH.coins() >= pr ? 'gold sm' : 'ghost sm'));
@@ -1439,6 +1464,7 @@
       h('div', { class: 'shgrid' }, offerIds.map(id => tile(SH.get(id)))),
       h('div', { class: 'tabs shtabs' }, SH.CATS.map(c => h('button', { class: 'tab' + (c.id === cat ? ' on' : ''), onclick: () => shopScreen(c.id) }, c.icon + ' ' + c.name))),
       sample(), h('div', { class: 'msg err shmsg' }),
+      SH.exclusive(cat).length ? h('div', null, h('h2', null, '🏅 Tus premios de temporada'), h('div', { class: 'sub' }, 'Se consiguen por rango al cerrar cada temporada: no se compran ni salen de cajas.'), h('div', { class: 'shgrid' }, SH.exclusive(cat).map(tile))) : null,
       h('div', { class: 'shgrid' }, items.map(tile))));
   }
   // ---------------- cajas (estilo apertura de contenedores de CS2) ----------------

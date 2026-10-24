@@ -66,4 +66,5 @@ match /ranks/{season}/p/{uid} {
     && (resource == null || (request.resource.data.pts - resource.data.pts <= 60 && resource.data.pts - request.resource.data.pts <= 60));
 }
 ```
+- Premios de fin de temporada (`js/duelo/seasons.js`, se carga ANTES de `shop.js`): al cerrar el mes se cobra (modal al entrar al menú, `D.Rank.claim`) el premio del MEJOR rango (`rank.best`), si hubo ≥ 5 partidas con rango. Trae ✦ y cosméticos EXCLUSIVOS (no están en `ITEMS`, ni en la Tienda ni en cajas): título (todos los rangos), marco (desde Oro), avatar (desde Platino). Ids `ti_s2026-10-oro`, `fr_…`, `av_…`; se generan al pedirlos (`Seasons.item`) y cambian solos cada mes según `TEMAS[mes]` (nombre, emoji, brillo). Para un premio hecho a mano en un mes concreto: entrada en `ESPECIALES`. Los pendientes van en `store.rank.pending`. Se equipan desde la Tienda («Tus premios de temporada»). Primera temporada con premios: 2026-10.
 - Cajas y ofertas: en `shop.js` (`BOXES`, `openBox`, `offers`); cada cosmético sale en una sola caja y la Tienda lo vende más caro que esa caja. Los cosméticos viajan en el `hello`/vista (`cos`) y se validan contra el catálogo.

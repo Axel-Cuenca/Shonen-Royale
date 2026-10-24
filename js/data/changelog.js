@@ -6,7 +6,10 @@
  * Cada línea en español y en inglés.
  */
 G.CHANGELOG = [
-  { d: '2026-10-24', title: ['Cajas como en CS2', 'Boxes like CS2'], chg: [
+  { d: '2026-10-24', title: ['Cajas como en CS2 y premios de temporada', 'CS2-style boxes and season rewards'], new: [
+    ['Premios de fin de temporada: al cerrar cada mes cobras puntos ✦ y cosméticos exclusivos según tu MEJOR rango (título, marco desde Oro y avatar desde Platino). Hacen falta 5 partidas con rango. Cada mes los premios son distintos y no se compran ni salen de cajas. Los ves en Ranking y los equipas en la Tienda.',
+     'Season-end rewards: when each month closes you get ✦ points and exclusive cosmetics for your BEST rank (title, frame from Gold and avatar from Platinum). 5 ranked games are required. Rewards change every month and cannot be bought or found in boxes. See them in Ranking and equip them in the Shop.']
+  ], chg: [
     ['Música nueva fuera de partida: en el menú, los mazos, la Tienda, el Ranking y la sala de espera suena Chrono Cross (Opening). Durante la partida sigue la música de siempre.',
      'New music outside matches: Chrono Cross (Opening) plays in the menu, decks, Shop, Ranking and waiting room. Matches keep the usual music.'],
     ['Las cajas ahora se ven como tarjetas; al tocar una se abre su detalle con la caja grande, las probabilidades y todos los premios posibles, ordenados de común a legendario.',
