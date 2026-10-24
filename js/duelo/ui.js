@@ -1440,6 +1440,8 @@
       const cb = chatEl(); if (cb && !cb.isConnected) lcol.append(cb);
       const oldHud = gameEl.querySelector(':scope > .hud');
       if (oldHud) oldHud.replaceWith(hud); else gameEl.append(hud);
+      // en móvil la barra de arriba ocupa varias filas: el registro de acciones va justo debajo (no tapa tarjetas ni turno)
+      lcol.style.top = window.innerWidth <= 900 ? Math.round(hudTop.getBoundingClientRect().bottom + 4) + 'px' : '';
       fitBoard();
       pendingUI();
       if (fresh) { runFx(); firstView = false; }

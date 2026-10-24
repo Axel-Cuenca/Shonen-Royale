@@ -976,3 +976,4 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
 /* botón de pantalla completa (móvil): debajo del de sonido */
 .fsbtn { top: 64px; }
 @media (max-width: 480px) { .tools { gap: 5px; } .tools .ib { width: 34px; height: 34px; font-size: 16px; } }
+@media (max-width: 760px) { .fe:nth-child(n+3) { display: none; } }
