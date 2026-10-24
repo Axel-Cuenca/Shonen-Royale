@@ -23,9 +23,11 @@ Al publicar, todos los jugadores deben pasar a la versión nueva sin perder nada
 No quitar `updater.js` ni la escritura de `version.json` en `tools/build.js`.
 
 ## Novedades (changelog)
-Cada cambio de juego o arreglo de fallos va también en `js/data/changelog.js`
-(español e inglés, en `new` / `chg` / `fix` de la fecha de hoy; se ve en «Novedades» del menú). Los cambios de
-servidores, base de datos o costes NO van ahí.
+Cada cambio de juego o arreglo de fallos va también en `js/data/changelog.js`, en `new` / `chg` / `fix` de la fecha de hoy
+(se ve en «Novedades» del menú). **Cada cambio es UNA entrada propia**: `[tituloES, descripcionES, tituloEN, descripcionEN]`.
+El título es corto y representativo («Skins de cartas», «Ruleta de cajas más larga»), sin prefijos tipo «Música: …»
+dentro de la descripción; la descripción dice qué hace o cambia. Un cambio = una entrada (no mezclar varios en una).
+Los cambios de servidores, base de datos o costes NO van ahí.
 
 ## Servidores
 - Firebase: proyecto **pokesurvivor-free** (autenticación normal: cuentas gratis sin límite).

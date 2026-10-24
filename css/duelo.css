@@ -959,3 +959,16 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
   .dkbar2 .big { font-size: 20px; } .dkbar2 .big.bad { color: #ffb35a; }
 }
 .dkfan .fc.e { background: #0b153599; border: 2px dashed #3b5bb0; display: grid; place-items: center; color: #6f86c8; font: 800 28px var(--ui, sans-serif); }
+
+/* Novedades: cada cambio es una tarjeta con insignia, título y descripción */
+.nv h2 { margin: 0; color: var(--gold, #ffd84a); }
+.nv .nvs { display: flex; flex-direction: column; gap: 8px; }
+.nv .nvh { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+.nv .nvh::after { content: ''; flex: 1; height: 1px; background: #3b5bb066; }
+.nv .ent { padding: 10px 12px; border-radius: 10px; background: #0b153588; border: 1px solid #2c4590; display: flex; flex-direction: column; gap: 3px; }
+.nv .ent .et { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 800; font-size: 17px; }
+.nv .ent .et i { font-style: normal; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 9px; letter-spacing: .05em; }
+.nv .ent p { margin: 0; color: #cfd8ff; font-size: 14px; line-height: 1.4; }
+.nv .ent.new i { background: #1f9d6a; color: #04180f; }
+.nv .ent.chg i { background: #3b7bff; color: #fff; }
+.nv .ent.fix i { background: #e0a030; color: #241a00; }

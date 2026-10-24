@@ -1701,10 +1701,17 @@
   function news() {
     S.setTrack('menu');
     const en = /^en/i.test(navigator.language || '') ? 1 : 0;
-    const SEC = [['new', 'Nuevo', 'New'], ['chg', 'Cambios', 'Changes'], ['fix', 'Arreglos', 'Fixes']];
-    const items = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').map(e => h('div', { class: 'panel' },
-      h('h2', null, e.title[en]), h('div', { class: 'sub' }, e.d),
-      ...SEC.filter(x => e[x[0]] && e[x[0]].length).map(x => h('div', null, h('b', null, x[1 + en]), h('ul', null, e[x[0]].map(l => h('li', null, l[en])))))));
+    const SEC = [['new', 'Nuevo', 'New', 'NUEVO', 'NEW'], ['chg', 'Cambios', 'Changes', 'CAMBIO', 'CHANGE'], ['fix', 'Arreglos', 'Fixes', 'ARREGLO', 'FIX']];
+    const MES = [['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+      ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']];
+    const fecha = d => { const [y, m, dd] = d.split('-').map(Number); return en ? MES[1][m - 1] + ' ' + dd + ', ' + y : dd + ' de ' + MES[0][m - 1] + ' de ' + y; };
+    // cada cambio = [títuloES, descES, títuloEN, descEN] (los viejos [es, en] salen sin título)
+    const ent = (k, l) => l.length >= 4
+      ? h('div', { class: 'ent ' + k }, h('div', { class: 'et' }, h('i', null, SEC.find(x => x[0] === k)[3 + en]), l[en * 2]), h('p', null, l[en * 2 + 1]))
+      : h('div', { class: 'ent ' + k }, h('p', null, l[en]));
+    const items = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').map(e => h('div', { class: 'panel nv' },
+      h('h2', null, fecha(e.d)),
+      ...SEC.filter(x => e[x[0]] && e[x[0]].length).map(x => h('div', { class: 'nvs' }, h('div', { class: 'nvh' }, x[1 + en]), ...e[x[0]].map(l => ent(x[0], l))))));
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Novedades'), ...items));
   }
 
