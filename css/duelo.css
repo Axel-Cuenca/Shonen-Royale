@@ -997,13 +997,5 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
 @keyframes vsIn { from { opacity: 0; transform: translate(-50%, -30px) scale(.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes vsOut { to { opacity: 0; transform: translate(-50%, -12px); } }
 .rm .vsban { animation: none; }
-@media (max-width: 560px) {
-  /* en el móvil los dos lados van apilados para que se lean los nombres enteros */
-  .vsban { top: 170px; flex-direction: column; width: 94vw; gap: 0; }
-  .vs-side { width: 100%; box-sizing: border-box; gap: 10px; padding: 6px 12px; }
-  .vs-side.l, .vs-side.r { clip-path: none; border-radius: 12px 12px 0 0; padding: 6px 12px; }
-  .vs-side.r { border-radius: 0 0 12px 12px; flex-direction: row-reverse; }
-  .vs-fig { width: 44px; height: 44px; font-size: 22px; }
-  .vs-mid { position: absolute; left: 50%; top: 50%; margin: -19px 0 0 -19px; width: 38px; height: 38px; font-size: 20px; }
-  .vs-tx b { font-size: 16px; } .vs-tx small { font-size: 12px; }
-}
+/* en pantallas angostas (móvil) no se muestra: ocupa demasiado */
+@media (max-width: 560px) { .vsban { display: none; } }

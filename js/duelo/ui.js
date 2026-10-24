@@ -1314,7 +1314,7 @@
     const boltPts = () => { let x = 20, y = 0, a = ''; while (y < 100) { a += `${x.toFixed(0)},${y} `; x = 20 + (Math.random() - .5) * 30; y += 14 + Math.random() * 10; } return a + '20,100'; };
     /** Aviso «versus» de cada ataque (lo ven todos): atacante a la izquierda, objetivo a la derecha. Espera a que acaben los cortes a pantalla grande. */
     function atkMark(a, tries) {
-      if (current !== cur) return;
+      if (current !== cur || innerWidth <= 560) return;   // en el móvil no se muestra (ocupa demasiado)
       if ((cutBusy || cutQ.length) && (tries || 0) < 40) { setTimeout(() => atkMark(a, (tries || 0) + 1), 150); return; }
       const direct = a.tg === 'direct', mine = a.p === v.seat, ally = mine || isAlly(a.p);
       const fig = (d, big) => d ? (d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56)) : h('span', { class: 'qm' }, '?');
