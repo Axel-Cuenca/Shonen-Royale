@@ -274,7 +274,7 @@
     });
     const tog = (label, get, set) => { const t = h('button', { class: 'btn tog' + (get() ? ' on' : ''), onclick: () => { set(!get()); t.classList.toggle('on', get()); t.textContent = label + (get() ? ': sí' : ': no'); } }, label + (get() ? ': sí' : ': no')); return t; };
     const gfx = h('select', { onchange: () => { D.Floor.setQuality(gfx.value); note.textContent = 'Se aplica al recargar la página.'; } },
-      h('option', { value: 'auto' }, 'Gráficos: automático'), h('option', { value: 'low' }, 'Gráficos: ligeros'), h('option', { value: 'off' }, 'Gráficos: sin WebGL'));
+      h('option', { value: 'auto' }, 'Gráficos: automático'), h('option', { value: 'low' }, 'Gráficos: bajos'), h('option', { value: 'mid' }, 'Gráficos: medios'), h('option', { value: 'high' }, 'Gráficos: altos'), h('option', { value: 'off' }, 'Gráficos: sin WebGL'));
     gfx.value = D.Floor.quality();
     const note = h('p', { class: 'sub' }, '');
     modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Sonido y efectos'), ...rows,

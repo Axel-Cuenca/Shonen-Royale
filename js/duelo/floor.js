@@ -366,7 +366,8 @@ void main(){
   /** Calidad máxima según el equipo (el suelo se calcula en la tarjeta gráfica: en equipos justos congela el navegador). */
   function maxScale() {
     if (st.q === 'low') return 0.7;
-    if (st.q === 'high') return 1.4;
+    if (st.q === 'mid') return 1.0;
+    if (st.q === 'high') return 1.8;
     const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 4;
     return cores >= 8 && mem >= 8 ? 1.4 : cores >= 4 ? 1.0 : 0.75;
   }
@@ -379,13 +380,14 @@ void main(){
     if (st.q === 'off') return false;
     if (!make(0.5)) return false;
     const ms = st.bakeMs, top = maxScale();
-    if (ms > 1500 && st.q !== 'high') {            // ni a un cuarto de resolución va bien: sin suelo 3D (queda el suelo sencillo)
+    if (ms > 1500 && st.q !== 'high' && st.q !== 'mid') {            // ni a un cuarto de resolución va bien: sin suelo 3D (queda el suelo sencillo)
       try { const x = st.gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { /* nada */ }
       st.ok = false; st.canvas = null; st.gl = null;
       if (st.q === 'auto') { try { localStorage.setItem('duelo.gfx', 'off'); } catch (e) { /* nada */ } }
       return false;
     }
-    const want = Math.min(top, 0.5 * Math.sqrt(500 / Math.max(ms, 1)));   // a ~0,5 s de preparación como mucho
+    // elegido a mano (bajos/medios/altos): se respeta tal cual; en automático, a ~0,5 s de preparación como mucho
+    const want = st.q === 'auto' ? Math.min(top, 0.5 * Math.sqrt(500 / Math.max(ms, 1))) : top;
     if (want > 0.62) {
       const keep = { gl: st.gl, canvas: st.canvas, S: st.S, draw: st.draw };
       if (make(want)) { try { const x = keep.gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { /* nada */ } }
