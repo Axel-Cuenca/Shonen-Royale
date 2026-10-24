@@ -12,7 +12,8 @@
   const D = (window.Duelo = window.Duelo || {});
 
   // ---------------- catálogo ----------------
-  // rar: c común · r raro · e épico · l legendario. Los 'free' vienen con la cuenta.
+  // rar: c común · r raro · e épico · l legendario. El precio sale de la rareza (PRICE); los 'free' vienen con la cuenta.
+  const PRICE = { c: 200, r: 400, e: 800, l: 1500 };
   const CATS = [
     { id: 'hc', name: 'Color del holograma', icon: '🎨' },
     { id: 'ha', name: 'Aura', icon: '🔥' },
@@ -21,56 +22,105 @@
     { id: 'bd', name: 'Tablero', icon: '🟦' },
     { id: 'av', name: 'Avatar', icon: '🧑' },
     { id: 'fr', name: 'Marco de perfil', icon: '🖼️' },
-    { id: 'ti', name: 'Título', icon: '🏷️' }
+    { id: 'ti', name: 'Título', icon: '🏷️' },
+    { id: 'ef', name: 'Efecto de victoria', icon: '🎆' }
   ];
-  const I = (id, cat, name, price, rar, extra) => Object.assign({ id, cat, name, price, rar: rar || 'c' }, extra || {});
+  const I = (id, cat, name, rar, extra) => Object.assign({ id, cat, name, rar, price: extra && extra.free ? 0 : PRICE[rar] }, extra || {});
   const ITEMS = [
-    // color del holograma (css: html[data-hc])
-    I('hc_cian', 'hc', 'Cian clásico', 0, 'c', { free: 1, sw: '#44ffff' }),
-    I('hc_oro', 'hc', 'Oro', 150, 'c', { sw: '#ffd84a' }),
-    I('hc_magenta', 'hc', 'Magenta', 150, 'c', { sw: '#ff4fd8' }),
-    I('hc_esmeralda', 'hc', 'Esmeralda', 220, 'r', { sw: '#3dffa0' }),
-    I('hc_violeta', 'hc', 'Violeta', 220, 'r', { sw: '#a77bff' }),
-    I('hc_carmesi', 'hc', 'Carmesí', 300, 'r', { sw: '#ff4a5a' }),
-    // aura (css: html[data-ha])
-    I('ha_none', 'ha', 'Sin aura', 0, 'c', { free: 1 }),
-    I('ha_fuego', 'ha', 'Llamas', 400, 'r', { sw: '#ff8a2a' }),
-    I('ha_rayos', 'ha', 'Tormenta', 500, 'e', { sw: '#9fd0ff' }),
-    I('ha_arcoiris', 'ha', 'Arcoíris', 700, 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' }),
-    // movimiento del holograma (css: html[data-hm])
-    I('hm_flotar', 'hm', 'Flotar suave', 0, 'c', { free: 1 }),
-    I('hm_respirar', 'hm', 'Respirar', 250, 'r'),
-    I('hm_oscilar', 'hm', 'Oscilar', 300, 'r'),
-    I('hm_girar', 'hm', 'Giro holográfico', 600, 'e'),
-    // reverso de cartas (css: html[data-cb])
-    I('cb_clasico', 'cb', 'Clásico', 0, 'c', { free: 1, sw: '#26409a' }),
-    I('cb_dorado', 'cb', 'Dorado', 200, 'c', { sw: '#b8892a' }),
-    I('cb_carmesi', 'cb', 'Carmesí', 200, 'c', { sw: '#8a1c2a' }),
-    I('cb_galaxia', 'cb', 'Galaxia', 450, 'e', { sw: '#3a1a7a' }),
-    // tablero (css: html[data-bd])
-    I('bd_clasico', 'bd', 'Clásico', 0, 'c', { free: 1, sw: '#3a54b8' }),
-    I('bd_esmeralda', 'bd', 'Esmeralda', 300, 'r', { sw: '#1f8a5a' }),
-    I('bd_carmesi', 'bd', 'Carmesí', 300, 'r', { sw: '#a83040' }),
-    I('bd_medianoche', 'bd', 'Medianoche', 500, 'e', { sw: '#2a2a5a' }),
+    // color del holograma (css: [data-hc])
+    I('hc_cian', 'hc', 'Cian clásico', 'c', { free: 1, sw: '#44ffff' }),
+    I('hc_oro', 'hc', 'Oro', 'c', { sw: '#ffd84a' }),
+    I('hc_magenta', 'hc', 'Magenta', 'c', { sw: '#ff4fd8' }),
+    I('hc_esmeralda', 'hc', 'Esmeralda', 'r', { sw: '#3dffa0' }),
+    I('hc_violeta', 'hc', 'Violeta', 'r', { sw: '#a77bff' }),
+    I('hc_carmesi', 'hc', 'Carmesí', 'r', { sw: '#ff4a5a' }),
+    I('hc_blanco', 'hc', 'Blanco puro', 'e', { sw: '#ffffff' }),
+    I('hc_prisma', 'hc', 'Prisma (cambia de color)', 'l', { sw: 'linear-gradient(90deg,#4ff,#a6f,#f6a,#fd4)' }),
+    // aura
+    I('ha_none', 'ha', 'Sin aura', 'c', { free: 1 }),
+    I('ha_escarcha', 'ha', 'Escarcha', 'r', { sw: '#9fe6ff' }),
+    I('ha_fuego', 'ha', 'Llamas', 'r', { sw: '#ff8a2a' }),
+    I('ha_rayos', 'ha', 'Tormenta', 'e', { sw: '#9fd0ff' }),
+    I('ha_sombra', 'ha', 'Sombras', 'e', { sw: '#3a1a5a' }),
+    I('ha_arcoiris', 'ha', 'Arcoíris', 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' }),
+    I('ha_solar', 'ha', 'Corona solar', 'l', { sw: 'radial-gradient(#fff,#ffd84a,#ff8a00)' }),
+    // movimiento del holograma
+    I('hm_flotar', 'hm', 'Flotar suave', 'c', { free: 1 }),
+    I('hm_respirar', 'hm', 'Respirar', 'r'),
+    I('hm_oscilar', 'hm', 'Oscilar', 'r'),
+    I('hm_latido', 'hm', 'Latido', 'r'),
+    I('hm_girar', 'hm', 'Giro holográfico', 'e'),
+    I('hm_levitar', 'hm', 'Levitar', 'e'),
+    I('hm_fantasma', 'hm', 'Fantasma (parpadea)', 'l'),
+    // reverso de cartas
+    I('cb_clasico', 'cb', 'Clásico', 'c', { free: 1, sw: '#26409a' }),
+    I('cb_dorado', 'cb', 'Dorado', 'c', { sw: '#b8892a' }),
+    I('cb_carmesi', 'cb', 'Carmesí', 'c', { sw: '#8a1c2a' }),
+    I('cb_hielo', 'cb', 'Hielo', 'r', { sw: '#8fd6f0' }),
+    I('cb_galaxia', 'cb', 'Galaxia', 'e', { sw: '#3a1a7a' }),
+    I('cb_prisma', 'cb', 'Prisma', 'l', { sw: 'linear-gradient(90deg,#4ff,#a6f,#f6a,#fd4)' }),
+    // tablero
+    I('bd_clasico', 'bd', 'Clásico', 'c', { free: 1, sw: '#3a54b8' }),
+    I('bd_violeta', 'bd', 'Violeta', 'r', { sw: '#6a3ab8' }),
+    I('bd_esmeralda', 'bd', 'Esmeralda', 'r', { sw: '#1f8a5a' }),
+    I('bd_carmesi', 'bd', 'Carmesí', 'r', { sw: '#a83040' }),
+    I('bd_medianoche', 'bd', 'Medianoche', 'e', { sw: '#2a2a5a' }),
+    I('bd_dorado', 'bd', 'Oro real', 'l', { sw: '#d9a520' }),
     // avatar (emoji)
-    I('av_user', 'av', 'Jugador', 0, 'c', { free: 1, emoji: '👤' }),
-    I('av_dragon', 'av', 'Dragón', 120, 'c', { emoji: '🐉' }),
-    I('av_rayo', 'av', 'Rayo', 120, 'c', { emoji: '⚡' }),
-    I('av_calavera', 'av', 'Calavera', 180, 'r', { emoji: '💀' }),
-    I('av_corona', 'av', 'Corona', 350, 'e', { emoji: '👑' }),
-    // marco de perfil (css: .fr-*)
-    I('fr_none', 'fr', 'Sin marco', 0, 'c', { free: 1 }),
-    I('fr_oro', 'fr', 'Marco de oro', 250, 'r', { sw: '#ffd84a' }),
-    I('fr_neon', 'fr', 'Marco neón', 350, 'e', { sw: '#4ff' }),
+    I('av_user', 'av', 'Jugador', 'c', { free: 1, emoji: '👤' }),
+    I('av_estrella', 'av', 'Estrella', 'c', { emoji: '⭐' }),
+    I('av_dragon', 'av', 'Dragón', 'c', { emoji: '🐉' }),
+    I('av_rayo', 'av', 'Rayo', 'c', { emoji: '⚡' }),
+    I('av_calavera', 'av', 'Calavera', 'r', { emoji: '💀' }),
+    I('av_alien', 'av', 'Alienígena', 'r', { emoji: '👽' }),
+    I('av_demonio', 'av', 'Demonio', 'e', { emoji: '😈' }),
+    I('av_corona', 'av', 'Corona', 'e', { emoji: '👑' }),
+    I('av_aguila', 'av', 'Águila real', 'l', { emoji: '🦅' }),
+    // marco de perfil
+    I('fr_none', 'fr', 'Sin marco', 'c', { free: 1 }),
+    I('fr_plata', 'fr', 'Marco de plata', 'c', { sw: '#cfd8e8' }),
+    I('fr_oro', 'fr', 'Marco de oro', 'r', { sw: '#ffd84a' }),
+    I('fr_neon', 'fr', 'Marco neón', 'e', { sw: '#4ff' }),
+    I('fr_arcoiris', 'fr', 'Marco arcoíris', 'e', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' }),
+    I('fr_llamas', 'fr', 'Marco de llamas', 'l', { sw: '#ff6a1a' }),
     // título
-    I('ti_none', 'ti', 'Sin título', 0, 'c', { free: 1 }),
-    I('ti_novato', 'ti', 'Duelista novato', 100, 'c', { text: 'Duelista novato' }),
-    I('ti_estratega', 'ti', 'Estratega', 220, 'r', { text: 'Estratega' }),
-    I('ti_invicto', 'ti', 'El Invicto', 400, 'e', { text: 'El Invicto' })
+    I('ti_none', 'ti', 'Sin título', 'c', { free: 1 }),
+    I('ti_aprendiz', 'ti', 'Aprendiz', 'c', { text: 'Aprendiz' }),
+    I('ti_novato', 'ti', 'Duelista novato', 'c', { text: 'Duelista novato' }),
+    I('ti_estratega', 'ti', 'Estratega', 'r', { text: 'Estratega' }),
+    I('ti_invicto', 'ti', 'El Invicto', 'e', { text: 'El Invicto' }),
+    I('ti_maestro', 'ti', 'Maestro del duelo', 'e', { text: 'Maestro del duelo' }),
+    I('ti_leyenda', 'ti', 'Leyenda viviente', 'l', { text: 'Leyenda viviente' }),
+    // efecto de victoria (pantalla de «¡VICTORIA!»)
+    I('ef_none', 'ef', 'Confeti clásico', 'c', { free: 1 }),
+    I('ef_oro', 'ef', 'Lluvia de oro', 'c', { sw: '#ffd84a' }),
+    I('ef_estrellas', 'ef', 'Estrellas', 'r', { sw: '#fff' }),
+    I('ef_fuego', 'ef', 'Chispas de fuego', 'e', { sw: '#ff6a1a' }),
+    I('ef_arcoiris', 'ef', 'Arcoíris', 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' })
   ];
   const BY = new Map(ITEMS.map(i => [i.id, i]));
-  const DEFAULT_EQ = { hc: 'hc_cian', ha: 'ha_none', hm: 'hm_flotar', cb: 'cb_clasico', bd: 'bd_clasico', av: 'av_user', fr: 'fr_none', ti: 'ti_none' };
+  const DEFAULT_EQ = { hc: 'hc_cian', ha: 'ha_none', hm: 'hm_flotar', cb: 'cb_clasico', bd: 'bd_clasico', av: 'av_user', fr: 'fr_none', ti: 'ti_none', ef: 'ef_none' };
   const RARITY = { c: 'Común', r: 'Raro', e: 'Épico', l: 'Legendario' };
+  const RANK = { c: 0, r: 1, e: 2, l: 3 };
+
+  // ---------------- cajas ----------------
+  // w = probabilidad (%) de cada rareza. Cada premio sale en UNA sola caja (reparto automático), y la Tienda lo vende más caro
+  // que lo que cuesta la caja donde puede salir. pity = tras n aperturas sin la rareza `to` (o mejor), la siguiente la trae segura.
+  const BOXES = [
+    { id: 'plata', name: 'Caja de Plata', price: 60, w: { c: 80, r: 17, e: 3 }, pity: { n: 15, to: 'e' }, color: '#cfd8e8', icon: '📦' },
+    { id: 'oro', name: 'Caja de Oro', price: 150, w: { c: 50, r: 40, e: 10 }, pity: { n: 10, to: 'e' }, color: '#ffd84a', icon: '🎁' },
+    { id: 'premium', name: 'Caja Premium', price: 300, w: { r: 55, e: 38, l: 7 }, pity: { n: 12, to: 'l' }, color: '#c47bff', icon: '💎' },
+    { id: 'especial', name: 'Caja Especial', price: 600, w: { e: 80, l: 20 }, pity: { n: 5, to: 'l' }, color: '#ff7a4a', icon: '🔮' },
+    { id: 'legendaria', name: 'Caja Legendaria', price: 1100, w: { l: 100 }, pity: null, color: '#fff2a8', icon: '👑' }
+  ];
+  const BOX_BY = new Map(BOXES.map(b => [b.id, b]));
+  const boxOf = {};
+  for (const R of ['c', 'r', 'e', 'l']) {
+    const bs = BOXES.filter(b => b.w[R]), its = ITEMS.filter(i => i.rar === R && !i.free);
+    its.forEach((it, k) => { boxOf[it.id] = bs[k % bs.length].id; });
+  }
+  const poolOf = (box, R) => ITEMS.filter(i => boxOf[i.id] === box.id && (!R || i.rar === R));
+  const dupRefund = it => Math.round(PRICE[it.rar] * 0.2);
 
   // ---------------- economía ----------------
   const DAILY = [20, 25, 30, 35, 40, 50, 80];          // día 1..7 de la racha (luego vuelve a empezar)
@@ -94,6 +144,7 @@
     p.aiGot = Math.max(0, Math.floor(Number(p.aiGot) || 0));
     p.owned = Array.isArray(p.owned) ? p.owned.filter(id => BY.has(id)) : [];
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
+    p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
     return p;
   }
   const owns = id => { const it = BY.get(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
@@ -125,12 +176,47 @@
     if (n > 0) { p.coins += n; saveStore(); }
     return n;
   }
+  // ofertas del día: 3 cosméticos con 30 % de descuento, iguales para todos ese día
+  const OFFER_OFF = 0.3;
+  function offers() {
+    const t = today(); let h = 2166136261;
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+    let a = h >>> 0; const rnd = () => { a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+    const pool = ITEMS.filter(i => !i.free && i.rar !== 'l'), out = [];
+    while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0].id);
+    return out;
+  }
+  const priceOf = id => { const it = BY.get(id); return !it ? 0 : offers().includes(id) ? Math.round(it.price * (1 - OFFER_OFF)) : it.price; };
+  const rand = () => { try { const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] / 4294967296; } catch (e) { return Math.random(); } };
+  /** Abre una caja: cobra, sortea (con garantía) y entrega el premio; si ya lo tenías, devuelve parte en puntos. */
+  function openBox(boxId) {
+    const p = pts(), b = BOX_BY.get(boxId);
+    if (!p || !b) return { ok: false, error: 'No existe.' };
+    if (p.coins < b.price) return { ok: false, error: 'Te faltan ' + (b.price - p.coins) + ' puntos.' };
+    p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
+    const n = Math.max(0, Math.floor(Number(p.pity[b.id]) || 0));
+    let R = null;
+    if (b.pity && n + 1 >= b.pity.n && poolOf(b, b.pity.to).length) R = b.pity.to;
+    if (!R) {
+      const opts = Object.keys(b.w).filter(r => poolOf(b, r).length), tot = opts.reduce((x, r) => x + b.w[r], 0);
+      let roll = rand() * tot; R = opts[opts.length - 1];
+      for (const r of opts) { if (roll < b.w[r]) { R = r; break; } roll -= b.w[r]; }
+    }
+    const pool = poolOf(b, R), it = pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
+    p.coins -= b.price;
+    p.pity[b.id] = b.pity && RANK[R] >= RANK[b.pity.to] ? 0 : n + 1;
+    const dup = owns(it.id), refund = dup ? dupRefund(it) : 0;
+    if (dup) p.coins += refund; else p.owned.push(it.id);
+    saveStore();
+    return { ok: true, item: it, dup, refund, pity: p.pity[b.id] };
+  }
   function buy(id) {
     const p = pts(), it = BY.get(id);
     if (!p || !it) return { ok: false, error: 'No existe.' };
     if (owns(id)) return { ok: false, error: 'Ya lo tienes.' };
-    if (p.coins < it.price) return { ok: false, error: 'Te faltan ' + (it.price - p.coins) + ' puntos.' };
-    p.coins -= it.price; p.owned.push(id); saveStore();
+    const pr = priceOf(id);
+    if (p.coins < pr) return { ok: false, error: 'Te faltan ' + (pr - p.coins) + ' puntos.' };
+    p.coins -= pr; p.owned.push(id); saveStore();
     return { ok: true };
   }
   function equip(id) {
@@ -141,11 +227,21 @@
   }
   const equipped = cat => { const p = pts(), id = p && p.eq[cat]; return BY.get(owns(id) ? id : DEFAULT_EQ[cat]); };
 
+  /** Lo que ven los demás de mí (sólo los ids de las categorías que se muestran en la partida). */
+  const NET_CATS = ['hc', 'ha', 'hm', 'cb', 'av', 'fr', 'ti'];
+  function mine() { const o = {}; for (const c of NET_CATS) { const it = equipped(c); if (it) o[c] = it.id; } return o; }
+  /** Sanea lo que manda otro jugador: sólo ids que existen en su categoría. Devuelve { cat: 'id' }. */
+  function clean(o) {
+    const out = {};
+    if (o && typeof o === 'object') for (const c of NET_CATS) { const it = BY.get(o[c]); if (it && it.cat === c) out[c] = it.id; }
+    return out;
+  }
+  const slug = id => { const it = BY.get(id); return it ? id.slice(it.cat.length + 1) : ''; };
   /** Pone los cosméticos puestos en <html> (data-hc, data-ha…), que el CSS usa. */
   function apply() {
     const r = document.documentElement;
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, get: id => BY.get(id), AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, get: id => BY.get(id), AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

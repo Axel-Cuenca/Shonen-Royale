@@ -113,6 +113,8 @@
 
   /** Chat de la partida online: texto plano, sin caracteres de control, hasta 120 letras. */
   const cleanChat = t => String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  /** Cosméticos que manda un jugador ({ hc:'hc_oro', … }): sólo textos cortos; la pantalla los vuelve a validar contra el catálogo. */
+  const cleanCos = c => { const out = {}; if (c && typeof c === 'object') for (const k of ['hc', 'ha', 'hm', 'cb', 'av', 'fr', 'ti']) if (typeof c[k] === 'string' && c[k].length <= 24) out[k] = c[k]; return out; };
   const CHAT_GAP = 900;   // ms mínimos entre mensajes de una misma persona
 
   function host(o) {
@@ -120,12 +122,12 @@
     const n = o.n || 2, mode = o.mode || 'ffa', delay = o.delay != null ? o.delay : 750;
     let st = null, closed = false, timer = 0, ais = [];
     const slots = [];      // un invitado por canal: { tr, name, deck, pref, seat, left }
-    const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', onView: views.on, onStatus: status.on, onChat: chats.on };
+    const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', cos: [cleanCos(o.cos)], onView: views.on, onStatus: status.on, onChat: chats.on };
     const humanSeat = s => s === 0 || slots.some(g => g.seat === s && !g.left);
 
     function broadcast() {
       views.emit(E().view(st, 0));
-      for (const g of slots) if (g.seat != null && !g.left) g.tr.send({ k: 'view', v: wireView(E().view(st, g.seat)), names: m.names });
+      for (const g of slots) if (g.seat != null && !g.left) g.tr.send({ k: 'view', v: wireView(E().view(st, g.seat)), names: m.names, cos: m.cos });
     }
     function pump() {
       if (closed || !st || st.winner !== null || timer) return;
@@ -149,7 +151,7 @@
       const seats = assignSeats(mode, n, gs);
       const decks = new Array(n).fill(null), names = new Array(n).fill(null);
       decks[0] = o.deck; names[0] = m.names[0];
-      gs.forEach((g, i) => { g.seat = seats[i]; decks[g.seat] = g.deck; names[g.seat] = g.name; });
+      gs.forEach((g, i) => { g.seat = seats[i]; decks[g.seat] = g.deck; names[g.seat] = g.name; m.cos[g.seat] = g.cos || {}; });
       fillAI(n, decks, names, seedRnd(seed));
       m.names = names;
       ais = decks.map((_, s) => (humanSeat(s) ? null : AIm().create(o.aiLevel || 'normal', seed + 1 + s)));
@@ -173,7 +175,7 @@
         if (closed || !msg || g.left) return;
         if (msg.k === 'hello') {
           if (st) {                                  // el invitado repite el saludo hasta recibir su vista
-            if (g.seat != null) tr.send({ k: 'view', v: wireView(E().view(st, g.seat)), names: m.names });
+            if (g.seat != null) tr.send({ k: 'view', v: wireView(E().view(st, g.seat)), names: m.names, cos: m.cos });
             else tr.send({ k: 'reject', why: 'La partida ya empezó.' });
             return;
           }
@@ -181,7 +183,7 @@
           if (why) { tr.send({ k: 'reject', why }); status.emit({ k: 'rejected', why }); return; }
           const first = !g.deck;
           g.deck = msg.deck.slice();
-          g.name = String(msg.name || 'Rival').slice(0, 24);
+          g.name = String(msg.name || 'Rival').slice(0, 24); g.cos = cleanCos(msg.cos);
           if (n === 2) m.names[1] = g.name;
           if (first) status.emit({ k: 'guest', name: g.name, idx });
           tryStart();
@@ -243,13 +245,14 @@
     const tr = o.transport;
     const views = emitter(), status = emitter(), chats = emitter();
     let closed = false, got = false, last = null, timer = 0;
-    const m = { seat: 1, names: ['Anfitrión', o.name || 'Tú'], kind: 'guest', onView: views.on, onStatus: status.on, onChat: chats.on };
-    const hello = () => tr.send({ k: 'hello', deck: o.deck, name: o.name || 'Rival' });
+    const m = { seat: 1, names: ['Anfitrión', o.name || 'Tú'], kind: 'guest', cos: [], onView: views.on, onStatus: status.on, onChat: chats.on };
+    const hello = () => tr.send({ k: 'hello', deck: o.deck, name: o.name || 'Rival', cos: cleanCos(o.cos) });
     tr.onMessage(msg => {
       if (closed || !msg) return;
       if (msg.k === 'view') {
         if (!got) { got = true; clearInterval(timer); status.emit({ k: 'started' }); }
         if (msg.names) m.names = msg.names;
+        if (Array.isArray(msg.cos)) m.cos = msg.cos.slice(0, 4).map(cleanCos);
         last = unwireView(msg.v);
         m.seat = last.seat;
         views.emit(last);

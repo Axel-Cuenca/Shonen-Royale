@@ -434,7 +434,7 @@
       });
     } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
     codeEl.textContent = room.code; status.textContent = single ? 'Esperando a tu amigo…' : 'Esperando a tus amigos…';
-    match = D.Match.host({ deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
+    match = D.Match.host({ cos: D.Shop.mine(), deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
     match.onStatus(s => {
       if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
       else if (s.k === 'started') room.lock();
@@ -458,7 +458,7 @@
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
     errBox.replaceChildren(h('div', { class: 'msg ok' }, 'Dentro de la sala. Conectando con el anfitrión… Cuando empiece el duelo entrarás solo.'));
     failTimer = setTimeout(() => errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)), 20000);
-    const match = D.Match.guest({ deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
+    const match = D.Match.guest({ cos: D.Shop.mine(), deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
     match.onStatus(s => {
       if (s.k === 'rejected') errBox.replaceChildren(h('div', { class: 'msg err' }, s.why && /empez/.test(s.why) ? s.why : 'Tu mazo no es válido: ' + s.why));
     });
@@ -804,6 +804,8 @@
     // ----- dibujo -----
     const curOf = (s, area) => (s ? { uid: s.c ? s.c.uid : 'hidden', id: s.c ? s.c.id : null, down: !!s.down, pos: s.pos, area } : null);
     /** low = el campo está en la fila de abajo del tablero (el mío, o el de un compañero/rival que se sienta abajo). */
+    /** Cosméticos de un asiento: los míos salen de mi equipo; los de los demás, de lo que mandaron (validado). */
+    const cosOf = q => q === v.seat ? D.Shop.mine() : D.Shop.clean(current && current.match && current.match.cos && current.match.cos[q]);
     function zoneEl(seat, area, z, low) {
       const side = seat === v.seat ? 'me' : 'opp', s = v.players[seat][area][z];
       const key = 's' + seat + '-' + area + '-' + z, old = zoneMem.get(key);
@@ -811,7 +813,9 @@
         (sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.allowed.includes(z));
       const chosen = sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.chosen.includes(z);
       const attacking = v.atk && area === 'mz' && v.atk.z === z && v.atk.p === seat;
+      const cs = cosOf(seat);
       const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
+      for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
       let cur = null, landing = false;
       if (s) {
         let c;
@@ -867,16 +871,19 @@
     }
     const lpFloat = seat => (lpDelta[seat] ? h('span', { class: 'fl ' + (lpDelta[seat] < 0 ? 'neg' : 'pos') }, (lpDelta[seat] > 0 ? '+' : '') + lpDelta[seat]) : null);
     /** Ficha grande de un jugador (1 contra 1, y la mía abajo). */
+    /** Avatar, marco y título que lleva un jugador (los suyos propios o los que mandó por la red). */
+    const lookOf = q => { const c = cosOf(q), g = k => D.Shop.get(c[k]); return { emoji: g('av') && !g('av').free ? g('av').emoji : '', fr: c.fr && !g('fr').free ? D.Shop.slug(c.fr) : '', ti: g('ti') && g('ti').text || '' }; };
     function pcard(seat) {
+      const lk = lookOf(seat);
       const p = v.players[seat], mine = seat === v.seat, nm = nameOf(seat);
       const lp = h('span', { class: 'lp' }, p.alive ? String(p.lp) : '☠', lpFloat(seat));
       const pct = Math.max(0, Math.min(100, p.lp / 80));
       const ini = (nm || '?').trim().charAt(0).toUpperCase();
       const cls = 'pcard ' + (mine ? 'mine' : isAlly(seat) ? 'ally' : 'theirs') + (!p.alive ? ' dead' : '') + (v.current === seat && v.winner === null && p.alive ? ' turn' : '');
       return h('div', { class: cls, 'data-seat': seat },
-        h('div', { class: 'av' }, ini),
+        h('div', { class: 'av' + (lk.fr ? ' fr-' + lk.fr : '') }, lk.emoji || ini),
         h('div', { class: 'pi' },
-          h('div', { class: 'pn', title: nm }, nm),
+          h('div', { class: 'pn', title: nm }, nm), lk.ti ? h('small', { class: 'ttl' }, lk.ti) : null,
           h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
           h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null)));
     }
@@ -886,7 +893,7 @@
       const pct = Math.max(0, Math.min(100, p.lp / 80));
       const tag = v.mode === 'teams' && seat !== v.seat ? h('em', { class: 'ptag ' + (isAlly(seat) ? 'ally' : 'foe') }, isAlly(seat) ? 'Aliado' : 'Rival') : null;
       return h('div', { class: 'plate', 'data-seat': seat, title: nm },
-        h('div', { class: 'pl1' }, h('b', { class: 'pnm' }, seat === v.seat ? 'Tú' : nm), tag,
+        h('div', { class: 'pl1' }, h('b', { class: 'pnm' }, (lookOf(seat).emoji ? lookOf(seat).emoji + ' ' : '') + (seat === v.seat ? 'Tú' : nm)), tag,
           h('span', { class: 'plp' }, p.alive ? String(p.lp) : '☠ fuera', lpFloat(seat))),
         h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })),
         h('div', { class: 'pl2' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null));
@@ -1345,7 +1352,7 @@
     if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
     return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), ' puntos'),
       info ? btn('🎁 Recompensa diaria: +' + info.amount, dailyModal, 'gold sm') : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
-      btn('Tienda', () => shopScreen(), 'ghost sm'));
+      btn('Tienda', () => shopScreen(), 'ghost sm'), btn('Cajas', () => boxScreen(), 'ghost sm'));
   }
   function dailyModal() {
     const info = D.Shop.dailyInfo(); if (!info) return;
@@ -1359,30 +1366,71 @@
   }
   function shopScreen(cat) {
     cat = cat || 'hc'; S.setTrack('menu');
-    const SH = D.Shop, items = SH.ITEMS.filter(i => i.cat === cat), cinfo = SH.CATS.find(c => c.id === cat);
-    let msg = null;
+    const SH = D.Shop, items = SH.ITEMS.filter(i => i.cat === cat);
     const sample = () => {
       if (cat === 'cb') return h('div', { class: 'shpv' }, h('div', { class: 'card back', style: 'font-size:14px' }));
       if (cat === 'bd') return h('div', { class: 'shpv' }, h('div', { class: 'board3d mini' }, [0, 1, 2].map(() => h('div', { class: 'zone mz', style: 'width:5em;height:7em;display:inline-block;margin:.3em' }))));
+      if (cat === 'av' || cat === 'fr' || cat === 'ti') return h('div', { class: 'shpv' }, h('div', { class: 'acct' }, h('span', { class: 'who fr-' + SH.equipped('fr').id.slice(3) }, (SH.equipped('av').emoji || '👤') + ' ', h('b', null, (D.Account.user && D.Account.user.name) || 'Tú'), SH.equipped('ti').text ? h('small', { class: 'ttl' }, ' · ' + SH.equipped('ti').text) : null)));
+      if (cat === 'ef') return h('div', { class: 'shpv ef' }, h('div', { class: 'endscr win mini' }, h('div', { class: 'parts' }, Array.from({ length: 22 }, () => h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 2).toFixed(2)}s;--t:${(2 + Math.random() * 2).toFixed(2)}s;--x:${((Math.random() - .5) * 80) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }))), h('h2', null, '¡VICTORIA!')));
       const src = Holo.src('c_popeye');
-      if (!['hc', 'ha', 'hm'].includes(cat)) return null;
       return h('div', { class: 'shpv' }, h('div', { class: 'zone me shz' }, h('div', { class: 'hbase' }),
         h('div', { class: 'holo' }, h('div', { class: 'hin' }, src ? h('img', { src, alt: '', draggable: 'false' }) : h('div', { class: 'sub' }, '…')))));
     };
+    const offerIds = SH.offers();
     const tile = it => {
-      const own = SH.owns(it.id), on = SH.equipped(cat).id === it.id;
+      const own = SH.owns(it.id), on = SH.equipped(it.cat).id === it.id, offer = offerIds.includes(it.id), pr = SH.priceOf(it.id);
       const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '∅');
       return h('div', { class: 'shi r-' + it.rar + (on ? ' on' : '') },
-        prev, h('b', null, it.name), h('small', null, SH.RARITY[it.rar]),
+        offer && !own ? h('span', { class: 'offtag' }, '−' + Math.round(SH.OFFER_OFF * 100) + '%') : null,
+        prev, h('b', null, it.name), h('small', null, SH.RARITY[it.rar] + (it.cat !== cat ? ' · ' + SH.CATS.find(c => c.id === it.cat).name : '')),
         on ? h('span', { class: 'tag' }, 'Puesto ✓')
           : own ? btn('Equipar', () => { SH.equip(it.id); S.play('select'); shopScreen(cat); }, 'ghost sm')
-          : btn('✦ ' + it.price, () => { const r = SH.buy(it.id); if (r.ok) { SH.equip(it.id); S.play('confirm'); shopScreen(cat); } else { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; } }, SH.coins() >= it.price ? 'gold sm' : 'ghost sm'));
+          : btn(offer ? h('span', null, h('s', null, '✦ ' + it.price), ' ✦ ' + pr) : '✦ ' + pr, () => { const r = SH.buy(it.id); if (r.ok) { SH.equip(it.id); S.play('confirm'); shopScreen(cat); } else { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; } }, SH.coins() >= pr ? 'gold sm' : 'ghost sm'));
     };
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Tienda'),
-      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Se ganan jugando y con la recompensa diaria. Todo es sólo estético.')),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), btn('📦 Cajas con premios al azar', () => boxScreen(), 'gold sm')),
+      h('h2', null, '🔥 Ofertas de hoy'), h('div', { class: 'sub' }, 'Cambian cada día. Comprar directo cuesta más que abrir cajas, pero el premio es seguro.'),
+      h('div', { class: 'shgrid' }, offerIds.map(id => tile(SH.get(id)))),
       h('div', { class: 'tabs shtabs' }, SH.CATS.map(c => h('button', { class: 'tab' + (c.id === cat ? ' on' : ''), onclick: () => shopScreen(c.id) }, c.icon + ' ' + c.name))),
-      sample(), h('div', { class: 'msg err shmsg' }, msg),
+      sample(), h('div', { class: 'msg err shmsg' }),
       h('div', { class: 'shgrid' }, items.map(tile))));
+  }
+  // ---------------- cajas ----------------
+  function boxScreen() {
+    const SH = D.Shop; S.setTrack('menu');
+    const pctOf = b => Object.keys(b.w).map(r => `${SH.RARITY[r]} ${b.w[r]}%`).join(' · ');
+    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: () => shopScreen() }, '← Tienda'), h('h1', null, 'Cajas'),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Cada premio sólo sale de su caja.')),
+      h('div', { class: 'shmsg msg err' }),
+      ...SH.BOXES.map(b => {
+        const n = (SH.pts().pity[b.id] | 0), items = SH.poolOf(b);
+        return h('div', { class: 'boxrow', style: `--bc:${b.color}` },
+          h('div', { class: 'bicon' }, b.icon),
+          h('div', { class: 'binfo' }, h('b', null, b.name), h('small', null, pctOf(b)),
+            h('small', null, `${items.length} premios únicos` + (b.pity ? ` · garantía: ${SH.RARITY[b.pity.to]} seguro tras ${b.pity.n} sin suerte (${Math.min(n, b.pity.n)}/${b.pity.n})` : ' · todo lo que sale es legendario')),
+            h('small', { class: 'dupn' }, 'Si te sale uno repetido, te devolvemos parte en puntos.')),
+          h('div', { class: 'bbtn' }, btn('Ver premios', () => boxPrizes(b), 'ghost sm'), btn('Abrir ✦ ' + b.price, () => openBoxFlow(b), SH.coins() >= b.price ? 'gold' : 'ghost')));
+      })));
+  }
+  function boxPrizes(b) {
+    const SH = D.Shop, by = {}; for (const it of SH.poolOf(b)) (by[it.rar] = by[it.rar] || []).push(it);
+    modal(h('div', { class: 'box' }, h('h2', null, b.icon + ' ' + b.name), ...['l', 'e', 'r', 'c'].filter(r => by[r]).map(r => h('div', null, h('b', { class: 'rr r-' + r }, SH.RARITY[r] + (b.w[r] ? ` (${b.w[r]}%)` : '')),
+      h('div', { class: 'prz' }, by[r].map(it => h('span', { class: 'pz r-' + it.rar + (SH.owns(it.id) ? ' got' : '') }, (it.emoji || '') + ' ' + it.name + ' · ' + SH.CATS.find(c => c.id === it.cat).name + (SH.owns(it.id) ? ' ✓' : '')))))), btn('Cerrar', closeModal, 'ghost')));
+  }
+  function openBoxFlow(b) {
+    const SH = D.Shop, r = SH.openBox(b.id);
+    if (!r.ok) { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; return; }
+    const it = r.item, rar = it.rar;
+    const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+    const ov = h('div', { class: 'boxov r-' + rar },
+      h('div', { class: 'bx-rays' }), h('div', { class: 'bx-box' }, b.icon),
+      h('div', { class: 'bx-prize' }, prev, h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.CATS.find(c => c.id === it.cat).name),
+        h('div', { class: 'bx-note' }, r.dup ? `Repetido: te devolvemos ✦ ${r.refund} puntos.` : '¡Nuevo! Ya está en tu colección.'),
+        h('div', { class: 'row' }, !r.dup ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Abrir otra', () => { ov.remove(); boxScreen(); }, 'ghost'), btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
+    document.body.append(ov);
+    S.play(rar === 'l' ? 'win' : 'confirm');
+    try { if (rar === 'l' || rar === 'e') S.jingle && S.jingle('win'); } catch (e) { /* nada */ }
+    setTimeout(() => ov.classList.add('open'), 900);
   }
 
   function news() {

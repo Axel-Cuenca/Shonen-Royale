@@ -725,36 +725,54 @@ html.rm .turntimer.out { animation: none; }
 .shz .hbase { transform: scaleY(.35); top: auto; bottom: -.4em; margin-top: 0; }
 .shz .hin > img { animation-name: hBob; }
 
-/* --- color del holograma (sólo mis personajes) --- */
-html[data-hc="oro"] { --hc-a: #ffd84a; --hc-b: #e09a00; }
-html[data-hc="magenta"] { --hc-a: #ff4fd8; --hc-b: #c0189a; }
-html[data-hc="esmeralda"] { --hc-a: #3dffa0; --hc-b: #12a060; }
-html[data-hc="violeta"] { --hc-a: #a77bff; --hc-b: #5a2fd0; }
-html[data-hc="carmesi"] { --hc-a: #ff4a5a; --hc-b: #b01020; }
-html[data-hc]:not([data-hc="cian"]) .zone.me .holo:not(.def) .hin > img { filter: drop-shadow(0 0 .35em var(--hc-a)) drop-shadow(0 0 1.1em var(--hc-b)) brightness(1.06); }
-html[data-hc]:not([data-hc="cian"]) .zone.me .hbase:not(.sel) { border-color: var(--hc-a); box-shadow: 0 0 1.2em var(--hc-a), inset 0 0 1.4em var(--hc-b); background: radial-gradient(circle, color-mix(in srgb, var(--hc-a) 30%, transparent), #0000 70%); }
-html[data-hc]:not([data-hc="cian"]) .zone.me .hbeam { background: linear-gradient(#0000, var(--hc-a) 70%, #fff); }
+/* --- color del holograma (cada zona lleva el color de su dueño; la base de los rivales conserva el color del equipo) --- */
+.zone[data-hc="oro"] { --hc-a: #ffd84a; --hc-b: #e09a00; }
+.zone[data-hc="magenta"] { --hc-a: #ff4fd8; --hc-b: #c0189a; }
+.zone[data-hc="esmeralda"] { --hc-a: #3dffa0; --hc-b: #12a060; }
+.zone[data-hc="violeta"] { --hc-a: #a77bff; --hc-b: #5a2fd0; }
+.zone[data-hc="carmesi"] { --hc-a: #ff4a5a; --hc-b: #b01020; }
+.zone[data-hc="blanco"] { --hc-a: #ffffff; --hc-b: #9ab4ff; }
+.zone[data-hc="prisma"] { --hc-a: #4ff; --hc-b: #a6f; }
+.zone[data-hc]:not([data-hc="cian"]) .holo:not(.def) .hin > img { filter: drop-shadow(0 0 .35em var(--hc-a)) drop-shadow(0 0 1.1em var(--hc-b)) brightness(1.06); }
+.zone.me[data-hc]:not([data-hc="cian"]) .hbase:not(.sel) { border-color: var(--hc-a); box-shadow: 0 0 1.2em var(--hc-a), inset 0 0 1.4em var(--hc-b); background: radial-gradient(circle, color-mix(in srgb, var(--hc-a) 30%, transparent), #0000 70%); }
+.zone.me[data-hc]:not([data-hc="cian"]) .hbeam { background: linear-gradient(#0000, var(--hc-a) 70%, #fff); }
+.zone[data-hc="prisma"] .holo { animation: hPrism 6s linear infinite; }
+.zone.atkr[data-hc="prisma"] .holo { animation: hLungeUp .8s ease-in-out; }
+@keyframes hPrism { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
 /* --- aura: un resplandor detrás del personaje --- */
-html[data-ha]:not([data-ha="none"]) .zone.me .holo::before { content: ''; position: absolute; left: -12%; right: -12%; bottom: -4%; height: 78%; border-radius: 50% 50% 40% 40%; pointer-events: none; z-index: -1; }
-html[data-ha="fuego"] .zone.me .holo::before { background: radial-gradient(ellipse at 50% 85%, #ffd84acc, #ff6a1a99 40%, #ff3a0000 72%); animation: auraFire .55s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-html[data-ha="rayos"] .zone.me .holo::before { background: radial-gradient(ellipse at 50% 80%, #ffffffbb, #7fc4ff88 38%, #3a6aff00 72%); animation: auraStorm .9s steps(2, jump-none) infinite; }
-html[data-ha="arcoiris"] .zone.me .holo::before { background: conic-gradient(from 0deg at 50% 70%, #f55a, #fd4a, #5f8a, #4afa, #a6fa, #f55a); filter: blur(.8em); animation: auraRainbow 4s linear infinite; }
+.zone[data-ha]:not([data-ha="none"]) .holo::before { content: ''; position: absolute; left: -12%; right: -12%; bottom: -4%; height: 78%; border-radius: 50% 50% 40% 40%; pointer-events: none; z-index: -1; transform-origin: 50% 100%; }
+.zone[data-ha="fuego"] .holo::before { background: radial-gradient(ellipse at 50% 85%, #ffd84acc, #ff6a1a99 40%, #ff3a0000 72%); animation: auraFire .55s ease-in-out infinite alternate; }
+.zone[data-ha="rayos"] .holo::before { background: radial-gradient(ellipse at 50% 80%, #ffffffbb, #7fc4ff88 38%, #3a6aff00 72%); animation: auraStorm .9s steps(2, jump-none) infinite; }
+.zone[data-ha="arcoiris"] .holo::before { background: conic-gradient(from 0deg at 50% 70%, #f55a, #fd4a, #5f8a, #4afa, #a6fa, #f55a); filter: blur(.8em); animation: auraRainbow 4s linear infinite; }
+.zone[data-ha="escarcha"] .holo::before { background: radial-gradient(ellipse at 50% 85%, #e8fbffcc, #7fd6ff88 42%, #7fd6ff00 72%); animation: auraFrost 2.4s ease-in-out infinite alternate; }
+.zone[data-ha="sombra"] .holo::before { background: radial-gradient(ellipse at 50% 85%, #1a0630ee, #4a1a8a88 45%, #4a1a8a00 74%); animation: auraFire 1.3s ease-in-out infinite alternate; }
+.zone[data-ha="solar"] .holo::before { background: radial-gradient(ellipse at 50% 55%, #fffbe0ee, #ffd84acc 30%, #ff8a0066 55%, #ff8a0000 75%); animation: auraSun 2.2s ease-in-out infinite alternate; }
 @keyframes auraFire { from { transform: scale(.94, .88); opacity: .75; } to { transform: scale(1.06, 1.12); opacity: 1; } }
 @keyframes auraStorm { 0% { opacity: .35; } 50% { opacity: 1; } 100% { opacity: .6; } }
 @keyframes auraRainbow { from { filter: blur(.8em) hue-rotate(0deg); } to { filter: blur(.8em) hue-rotate(360deg); } }
+@keyframes auraFrost { from { opacity: .55; transform: scale(.97); } to { opacity: 1; transform: scale(1.04); } }
+@keyframes auraSun { from { transform: scale(.92); opacity: .8; } to { transform: scale(1.14); opacity: 1; } }
 /* --- movimiento del holograma --- */
-html[data-hm="respirar"] .zone.me .holo:not(.def) .hin > img { animation: hBreath 2.6s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-html[data-hm="oscilar"] .zone.me .holo:not(.def) .hin > img { animation: hSway 3.4s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-html[data-hm="girar"] .zone.me .holo:not(.def) .hin > img { animation: hSpin 7s linear infinite; transform-origin: 50% 100%; }
+.zone[data-hm="respirar"] .holo:not(.def) .hin > img { animation: hBreath 2.6s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.zone[data-hm="oscilar"] .holo:not(.def) .hin > img { animation: hSway 3.4s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.zone[data-hm="girar"] .holo:not(.def) .hin > img { animation: hSpin 7s linear infinite; transform-origin: 50% 100%; }
+.zone[data-hm="latido"] .holo:not(.def) .hin > img { animation: hBeat 1s ease-in-out infinite; transform-origin: 50% 100%; }
+.zone[data-hm="levitar"] .holo:not(.def) .hin > img { animation: hLevit 3.6s ease-in-out infinite alternate; }
+.zone[data-hm="fantasma"] .holo:not(.def) .hin > img { animation: hGhost 3s steps(1) infinite, hBob 3.2s ease-in-out infinite alternate; }
 @keyframes hBreath { from { transform: scale(1, .97); } to { transform: scale(1.03, 1.03) translateY(-.2em); } }
 @keyframes hSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-.3em); } }
 @keyframes hSpin { 0% { transform: rotateY(0deg); } 40%, 100% { transform: rotateY(360deg); } }
+@keyframes hBeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.07, 1.05); } 30% { transform: scale(1); } 45% { transform: scale(1.04); } }
+@keyframes hLevit { from { transform: translateY(.2em); } to { transform: translateY(-1.3em); } }
+@keyframes hGhost { 0%, 62%, 70%, 100% { opacity: 1; } 64% { opacity: .25; } 66% { opacity: .9; } 68% { opacity: .1; } }
 html.rm .holo::before { animation: none !important; }
-/* --- reverso de las cartas --- */
-html[data-cb="dorado"] .card.back { background: repeating-linear-gradient(45deg, #6b4a10, #6b4a10 .4em, #c8962a .4em, #c8962a .8em); border-color: #fff0b0; }
-html[data-cb="carmesi"] .card.back { background: repeating-linear-gradient(45deg, #4a0c18, #4a0c18 .4em, #8a1c2a .4em, #8a1c2a .8em); border-color: #ff9aa6; }
-html[data-cb="galaxia"] .card.back { background: radial-gradient(circle at 30% 30%, #7a4aff, transparent 45%), radial-gradient(circle at 70% 70%, #ff4fd8aa, transparent 45%), #12062e; border-color: #c9a8ff; }
-html[data-cb]:not([data-cb="clasico"]) .card.back::after { color: #fff; }
+/* --- reverso de las cartas (de quien las juega) --- */
+.zone[data-cb="dorado"] .card.back, html[data-cb="dorado"] .card.back.mine { background: repeating-linear-gradient(45deg, #6b4a10, #6b4a10 .4em, #c8962a .4em, #c8962a .8em); border-color: #fff0b0; }
+.zone[data-cb="carmesi"] .card.back, html[data-cb="carmesi"] .card.back.mine { background: repeating-linear-gradient(45deg, #4a0c18, #4a0c18 .4em, #8a1c2a .4em, #8a1c2a .8em); border-color: #ff9aa6; }
+.zone[data-cb="galaxia"] .card.back, html[data-cb="galaxia"] .card.back.mine { background: radial-gradient(circle at 30% 30%, #7a4aff, transparent 45%), radial-gradient(circle at 70% 70%, #ff4fd8aa, transparent 45%), #12062e; border-color: #c9a8ff; }
+.zone[data-cb="hielo"] .card.back, html[data-cb="hielo"] .card.back.mine { background: repeating-linear-gradient(45deg, #1b5a7a, #1b5a7a .4em, #7fd6f0 .4em, #7fd6f0 .8em); border-color: #e8fbff; }
+.zone[data-cb="prisma"] .card.back, html[data-cb="prisma"] .card.back.mine { background: repeating-linear-gradient(45deg, #5a2fd0, #5a2fd0 .4em, #4ff .4em, #4ff .8em); border-color: #fff; animation: hPrism 5s linear infinite; }
+.zone[data-cb]:not([data-cb="clasico"]) .card.back::after { color: #fff; }
 /* --- tablero --- */
 html[data-bd="esmeralda"] .board3d .zone:not(.hl) { border-color: #5fe6a0aa; background: linear-gradient(160deg, #1f8a5a77, #0a3a2a99); box-shadow: inset 0 0 1.2em #000a, 0 0 .5em #3dffa055; }
 html[data-bd="esmeralda"] .board3d .zone.mz:not(.hl) { background: linear-gradient(160deg, #2a9a6a88, #0a3a2acc); }
@@ -764,3 +782,41 @@ html[data-bd="medianoche"] .board3d .zone:not(.hl) { border-color: #c9a8ff88; ba
 html[data-bd="medianoche"] .board3d .zone.mz:not(.hl) { background: linear-gradient(160deg, #3a2a7aaa, #08081e); }
 .shz { border: 0 !important; background: none !important; box-shadow: none !important; }
 .shtabs .tab { flex: 0 1 auto; }
+
+html[data-bd="violeta"] .board3d .zone:not(.hl) { border-color: #c9a8ffaa; background: linear-gradient(160deg, #6a3ab877, #2a0c5a99); box-shadow: inset 0 0 1.2em #000a, 0 0 .5em #a77bff55; }
+html[data-bd="violeta"] .board3d .zone.mz:not(.hl) { background: linear-gradient(160deg, #7a4ac888, #2a0c5acc); }
+html[data-bd="dorado"] .board3d .zone:not(.hl) { border-color: #ffe08aaa; background: linear-gradient(160deg, #d9a52088, #5a3a0899); box-shadow: inset 0 0 1.2em #000a, 0 0 .8em #ffd84a77; }
+html[data-bd="dorado"] .board3d .zone.mz:not(.hl) { background: linear-gradient(160deg, #e9b53099, #6a4a10cc); }
+.fr-plata { border-color: #cfd8e8 !important; box-shadow: 0 0 .5em #cfd8e888; }
+.fr-arcoiris { border-color: transparent !important; background: linear-gradient(#0a0f33, #0a0f33) padding-box, linear-gradient(90deg, #f55, #fd4, #5f8, #4af, #a6f) border-box; }
+.fr-llamas { border-color: #ff8a2a !important; box-shadow: 0 0 .7em #ff6a1a, inset 0 0 .5em #ffd84a88; animation: auraFire .6s ease-in-out infinite alternate; }
+/* --- efectos de victoria (confeti de la pantalla final) --- */
+html[data-ef="oro"] .endscr.win .parts i { background: hsl(calc(42 + var(--c) / 30) 95% 58%); }
+html[data-ef="estrellas"] .endscr.win .parts i { width: calc(14px * var(--z)); height: calc(14px * var(--z)); background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 38%, 69% 60%, 80% 100%, 50% 75%, 20% 100%, 31% 60%, 0 38%, 38% 38%); filter: drop-shadow(0 0 4px #fff); }
+html[data-ef="fuego"] .endscr.win .parts i { top: 105%; width: calc(5px * var(--z)); height: calc(5px * var(--z)); border-radius: 50%; background: hsl(calc(15 + var(--c) / 12) 100% 55%); box-shadow: 0 0 10px #ff5a2a; animation-name: embers; }
+html[data-ef="arcoiris"] .endscr.win .parts i { width: calc(10px * var(--z)); height: calc(18px * var(--z)); background: hsl(var(--c) 95% 60%); box-shadow: 0 0 10px hsl(var(--c) 95% 60%); animation-duration: calc(var(--t) * .7); }
+/* --- cajas y ofertas --- */
+.rr.r-c, .pz.r-c { color: #cfd8e8; } .rr.r-r, .pz.r-r { color: #6fb0ff; } .rr.r-e, .pz.r-e { color: #c98bff; } .rr.r-l, .pz.r-l { color: #ffd84a; }
+.prz { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; } .pz { border: 1px solid currentColor; border-radius: 8px; padding: 2px 8px; font-size: 13px; opacity: .85; } .pz.got { opacity: .5; }
+.shi { position: relative; } .offtag { position: absolute; top: 6px; right: 6px; background: #e0524a; color: #fff; font: 800 12px var(--ui); padding: 2px 7px; border-radius: 999px; }
+.shi s { opacity: .6; margin-right: 4px; }
+.boxrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px; border: 2px solid var(--bc); border-radius: 14px; background: #0007; box-shadow: 0 0 14px color-mix(in srgb, var(--bc) 35%, transparent); }
+.boxrow .bicon { font-size: 54px; filter: drop-shadow(0 0 10px var(--bc)); }
+.boxrow .binfo { flex: 1 1 220px; display: flex; flex-direction: column; gap: 3px; } .boxrow .binfo b { font: 800 20px var(--serif); color: var(--bc); }
+.boxrow .binfo small { color: var(--muted); } .boxrow .bbtn { display: flex; flex-direction: column; gap: 6px; }
+.boxov { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--bc) 30%, #000d), #000e 70%); overflow: hidden; animation: endFade .4s both; }
+.boxov .bx-rays { position: absolute; left: 50%; top: 48%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--bc) 30%, transparent) 0 3deg, transparent 3deg 18deg); opacity: 0; animation: spin 14s linear infinite; }
+.boxov.open .bx-rays { opacity: .7; transition: opacity .5s; }
+.boxov .bx-box { font-size: 120px; filter: drop-shadow(0 0 20px #fff8); animation: bxShake .9s ease-in-out both; }
+.boxov.open .bx-box { display: none; }
+.boxov .bx-prize { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; }
+.boxov.open .bx-prize { display: flex; animation: bxPop .6s cubic-bezier(.3, 1.5, .5, 1) both; }
+.boxov .bx-prize .big { font-size: 96px; } .boxov .bx-prize .sw { width: 110px; height: 110px; border-radius: 50%; border: 3px solid #fff8; box-shadow: 0 0 30px var(--bc); } .boxov .bx-prize .ttlprev { font: italic 800 28px var(--serif); color: var(--gold); }
+.boxov .bx-rar { font: 800 18px var(--ui); letter-spacing: 4px; color: var(--bc); } .boxov.r-c { --bc: #cfd8e8; } .boxov.r-r { --bc: #6fb0ff; } .boxov.r-e { --bc: #c98bff; } .boxov.r-l { --bc: #ffd84a; }
+.boxov .bx-prize h2 { font-size: 34px; margin: 0; } .boxov .bx-note { color: var(--ink); font-weight: 700; }
+@keyframes bxShake { 0% { transform: rotate(0) scale(.8); } 15% { transform: rotate(-12deg) scale(1); } 30% { transform: rotate(12deg); } 45% { transform: rotate(-14deg) scale(1.1); } 60% { transform: rotate(14deg) scale(1.15); } 80% { transform: rotate(0) scale(1.25); filter: brightness(2.5) drop-shadow(0 0 40px #fff); } 100% { transform: scale(1.4); filter: brightness(4); opacity: 0; } }
+@keyframes bxPop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.shpv.ef { position: relative; } .endscr.mini { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(255, 214, 90, .3), rgba(40, 24, 4, .85) 70%); } .endscr.mini h2 { font-size: 30px; margin: 0; position: relative; }
+html.rm .boxov .bx-rays, html.rm .boxov .bx-box { animation: none; }
+.pcard .ttl { display: block; color: var(--gold); font-style: italic; font-size: 11px; line-height: 1; margin-top: -1px; }
+.pcard .av { font-size: 20px; }
