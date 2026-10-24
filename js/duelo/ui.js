@@ -748,7 +748,7 @@
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map(), enterMem = new Map();
     let gameEl = null, zrowsEl = null, lcol = null;
-    let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], pops = [];
+    let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], atkTg = [], pops = [];
     const seatNames = () => match.names;
     const nameOf = q => seatNames()[q] || ('Jugador ' + (q + 1));
     const shortOf = q => { const m = /^Computadora(?: (\d))?/.exec(nameOf(q)); return m ? 'Compu' + (m[1] ? ' ' + m[1] : '') : nameOf(q); };
@@ -1286,6 +1286,7 @@
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
+          if (l.a) atkTg.push({ p: l.p, z: l.a.z, tg: l.a.tg, vs: l.a.vs, who: nm && nm[1] });
           if (d && d.sfx) fileSfx(d.sfx.attack);
           cin(d, d && d.voice && d.voice.say && d.type !== 'popeye' ? d.voice.say : '¡ATAQUE!');
         }
@@ -1311,7 +1312,38 @@
       document.body.append(e); setTimeout(() => e.remove(), 1300);
     }
     const boltPts = () => { let x = 20, y = 0, a = ''; while (y < 100) { a += `${x.toFixed(0)},${y} `; x = 20 + (Math.random() - .5) * 30; y += 14 + Math.random() * 10; } return a + '20,100'; };
+    /** Marca a quién se ataca: flecha desde el atacante, mira en el objetivo y su nombre (se espera a que acaben los cortes a pantalla grande). */
+    function atkMark(a, tries) {
+      if (current !== cur) return;
+      if ((cutBusy || cutQ.length) && (tries || 0) < 40) { setTimeout(() => atkMark(a, (tries || 0) + 1), 150); return; }
+      const from = rectOf('s' + a.p + '-mz-' + a.z);
+      const direct = a.tg === 'direct';
+      const tEl = direct ? document.querySelector('.plate[data-seat="' + a.vs + '"], .pcard[data-seat="' + a.vs + '"]') : document.querySelector('.zone[data-k="s' + a.vs + '-mz-' + a.tg + '"]');
+      if (!from || !tEl) return;
+      const to = tEl.getBoundingClientRect(), mine = a.p === v.seat;
+      const ax = from.left + from.width / 2, ay = from.top + from.height / 2, bx = to.left + to.width / 2, by = to.top + to.height / 2;
+      const len = Math.hypot(bx - ax, by - ay), ang = Math.atan2(by - ay, bx - ax);
+      const col = mine ? '#ffd84a' : '#ff5a4a';
+      // tamaño de la mira: rodea la carta (o la tarjeta del jugador si es directo); la flecha sale del borde del atacante y acaba en el borde de la mira
+      const rw = direct ? to.width + 16 : Math.max(to.width * 1.2, 76), rh = direct ? to.height + 16 : rw;
+      const cs = Math.abs(Math.cos(ang)) || 1e-6, sn = Math.abs(Math.sin(ang)) || 1e-6;
+      const edgeB = Math.min(rw / 2 / cs, rh / 2 / sn, direct ? 1e9 : rw / 2);   // distancia del centro al borde de la mira en la dirección de la flecha
+      const s0 = Math.min(from.width * .42, len / 3), stop = Math.max(len - edgeB - s0 - 4, 0);
+      const tgName = direct ? shortOf(a.vs) : ((v.players[a.vs] && v.players[a.vs].mz[a.tg] && !v.players[a.vs].mz[a.tg].down && v.players[a.vs].mz[a.tg].c && C.get(v.players[a.vs].mz[a.tg].c.id).name) || 'Carta boca abajo');
+      const txt = direct ? '⚔ ATAQUE DIRECTO → ' + shortOf(a.vs) : '🎯 ' + (multi() ? shortOf(a.vs) + ' · ' : '') + tgName;
+      const below = by - rh / 2 < 44;                          // si no cabe arriba, el nombre va debajo
+      const el = h('div', { class: 'atkfx' + (mine ? ' mine' : ' foe'), style: `--ac:${col}` },
+        h('div', { class: 'ashaft', style: `left:${ax + Math.cos(ang) * s0}px;top:${ay + Math.sin(ang) * s0}px;width:${stop}px;transform:rotate(${ang}rad)` }, h('i')),
+        h('div', { class: 'areticle' + (direct ? ' direct' : ''), style: `left:${bx}px;top:${by}px;width:${rw}px;height:${rh}px` }, h('b'), h('b'), h('b'), h('b')),
+        h('div', { class: 'atag' + (below ? ' below' : ''), style: `left:${Math.min(Math.max(bx, 90), innerWidth - 90)}px;top:${below ? by + rh / 2 + 6 : by - rh / 2 - 6}px` }, txt));
+      document.body.append(el);
+      tEl.classList.add('tgt'); setTimeout(() => tEl.classList.remove('tgt'), 2100);
+      setTimeout(() => el.remove(), 2200);
+    }
+    window.__duelo_atkMark = a => atkMark(a);
     function runFx() {
+      for (const a of atkTg) atkMark(a);
+      atkTg = [];
       // preparación del atacante (efecto del elemento)
       for (const a of atkFx) {
         const zi = a.p >= 0 && v.players[a.p] ? v.players[a.p].mz.findIndex(z => z && z.c && C.get(z.c.id).name === a.name) : -1;

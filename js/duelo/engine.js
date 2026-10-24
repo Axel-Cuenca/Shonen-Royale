@@ -654,6 +654,7 @@
     st.atk = { p, z, target, vs, negated: false };
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
+    st.log[st.log.length - 1].a = { z, tg: target, vs };   // para que la pantalla marque a quién se ataca
     // Gema de la Mente: quien controla la mente del atacante puede cancelar el ataque
     const g = !st.domain && gemOf(st, m.c.uid);
     if (g && st.players[g.p].alive && g.s.gem.uses < 2 && g.s.gem.usedTurn !== st.turn) {

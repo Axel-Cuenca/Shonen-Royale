@@ -977,3 +977,32 @@ body[data-drag="pool"] .dkbottom { outline: 2px dashed var(--gold); outline-offs
 .fsbtn { top: 64px; }
 @media (max-width: 480px) { .tools { gap: 5px; } .tools .ib { width: 34px; height: 34px; font-size: 16px; } }
 @media (max-width: 760px) { .fe:nth-child(n+3) { display: none; } }
+
+/* marca de a quién se ataca: flecha + mira + nombre del objetivo */
+.atkfx { position: fixed; inset: 0; z-index: 44; pointer-events: none; }
+.atkfx .ashaft { position: absolute; height: 0; transform-origin: 0 50%; }
+.atkfx .ashaft i { position: absolute; left: 0; top: -6px; height: 12px; width: 100%; border-radius: 5px; transform-origin: 0 50%;
+  background: repeating-linear-gradient(90deg, var(--ac) 0 16px, #fff 16px 22px, var(--ac) 22px 38px); box-shadow: 0 0 12px var(--ac), 0 0 3px #000;
+  clip-path: polygon(0 20%, calc(100% - 24px) 20%, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, calc(100% - 24px) 80%, 0 80%); animation: atkShaft .45s ease-out both, atkFade .5s 1.6s forwards; }
+.atkfx .areticle { position: absolute; transform: translate(-50%, -50%); border: 4px solid var(--ac); border-radius: 50%; box-shadow: 0 0 18px var(--ac), inset 0 0 14px #ff000055;
+  animation: atkRet .45s .25s cubic-bezier(.2, 1.5, .4, 1) both, atkBeat .5s .7s 3, atkFade .5s 1.6s forwards; }
+.atkfx .areticle.direct { border-radius: 18px; }
+.atkfx .areticle b { position: absolute; background: var(--ac); box-shadow: 0 0 6px #000; }
+.atkfx .areticle b:nth-child(1) { left: 50%; top: -14px; width: 4px; height: 20px; margin-left: -2px; }
+.atkfx .areticle b:nth-child(2) { left: 50%; bottom: -14px; width: 4px; height: 20px; margin-left: -2px; }
+.atkfx .areticle b:nth-child(3) { top: 50%; left: -14px; height: 4px; width: 20px; margin-top: -2px; }
+.atkfx .areticle b:nth-child(4) { top: 50%; right: -14px; height: 4px; width: 20px; margin-top: -2px; }
+.atkfx .atag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; padding: .15em .7em; border-radius: 999px; background: #1a0606ee; color: #fff; border: 2px solid var(--ac);
+  font: 800 16px var(--ui); letter-spacing: .5px; text-shadow: 1px 1px 0 #000; box-shadow: 0 3px 12px #000a, 0 0 12px var(--ac); animation: atkTag .3s .35s ease-out both, atkFade .5s 1.6s forwards; max-width: 94vw; overflow: hidden; text-overflow: ellipsis; }
+.atkfx .atag.below { transform: translate(-50%, 0); animation-name: atkTagB, atkFade; }
+.atkfx.foe .atag { background: #3a0808f2; }
+.zone.tgt, .plate.tgt, .pcard.tgt { animation: tgtFlash .5s .3s 4; }
+@keyframes atkShaft { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes atkRet { from { opacity: 0; transform: translate(-50%, -50%) scale(2.4) rotate(40deg); } to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); } }
+@keyframes atkBeat { 50% { transform: translate(-50%, -50%) scale(1.12); } }
+@keyframes atkTag { from { opacity: 0; transform: translate(-50%, -70%); } to { opacity: 1; transform: translate(-50%, -100%); } }
+@keyframes atkTagB { from { opacity: 0; transform: translate(-50%, 30%); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes atkFade { to { opacity: 0; } }
+@keyframes tgtFlash { 50% { filter: brightness(1.7) drop-shadow(0 0 12px #ff3b2a); } }
+.rm .atkfx *, .rm .tgt { animation: none !important; }
+@media (max-width: 760px) { .atkfx .atag { font-size: 13px; } }
