@@ -187,7 +187,8 @@
     if (d.kind === 'monster') {
       const atk = o.atk != null ? o.atk : d.atk, def = o.def != null ? o.def : d.def;
       const cls = (v, base) => v > base ? 'up' : v < base ? 'dn' : '';
-      return h('div', { class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' lvmid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] },
+      const mySk = D.Shop && D.Shop.skinOf(d.id);
+      return h('div', Object.assign({ class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' lvmid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] }, mySk && !o.down ? { 'data-sk': D.Shop.slug(mySk.id) } : {}),
         h('div', { class: 'cn' }, d.name), sprite(d),
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
@@ -481,7 +482,17 @@
         h('div', null, card.name, h('small', null, card.kind === 'monster' ? `${C.TYPE_ES[card.type]} · Nv ${card.level} · ${card.atk}/${card.def}` : card.kind === 'spell' ? 'Magia' : 'Trampa')),
         n != null ? h('span', { class: 'n' }, '×' + n) : h('button', { class: 'btn ghost', style: 'padding:2px 8px', onclick: e => { e.stopPropagation(); showCard(card); } }, 'ℹ'));
     }
-    const showCard = card => modal(h('div', { class: 'box' }, detailBox(card), btn('Cerrar', closeModal)));
+    /** Skins (de las cajas) que tengo, para ponerle una a este personaje. */
+    function skinPicker(card) {
+      const SH = D.Shop, mine = SH.mySkins();
+      if (card.kind !== 'monster' || !card.img) return null;
+      const cur = SH.skinOf(card.id), row = h('div', { class: 'skpick' }, h('b', null, 'Skin'));
+      if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Aún no tienes skins. Salen en las cajas (Tienda → Cajas) y valen para cualquier personaje.')); return row; }
+      const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); S.play('select'); showCard(card); } }, label);
+      row.append(opt('Normal', null), ...mine.map(it => opt(it.name, it)));
+      return row;
+    }
+    const showCard = card => modal(h('div', { class: 'box' }, detailBox(card, skinPicker(card)), btn('Cerrar', closeModal)));
 
     function refresh() {
       const dk = activeDeck(), n = cnt(dk.ids), bad = C.checkDeck(dk.ids);
@@ -838,6 +849,8 @@
         if (area === 'mz') c = s.c ? cardEl(C.get(s.c.id), { down: s.down, pos: s.pos, atk: s.atk, def: s.def }) : cardEl(null, { down: true, pos: 'def' });
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
+        const skId = area === 'mz' && s.c && !s.down && s.c.id && cs.sk ? cs.sk[s.c.id] : null;      // skin que le puso SU dueño
+        if (skId) { el.dataset.sk = D.Shop.slug(skId); c.dataset.sk = el.dataset.sk; } else delete c.dataset.sk;
         el.append(c);
         const hsrc = area === 'mz' && s.c && !s.down ? Holo.src(s.c.id) : null;
         if (hsrc) c.classList.add('holohide');
@@ -1453,7 +1466,7 @@
       const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '∅');
       return h('div', { class: 'shi r-' + it.rar + (on ? ' on' : '') },
         offer && !own ? h('span', { class: 'offtag' }, '−' + Math.round(SH.OFFER_OFF * 100) + '%') : null,
-        prev, h('b', null, it.name), h('small', null, (it.excl ? 'Temporada · ' : '') + SH.RARITY[it.rar] + (it.cat !== cat ? ' · ' + SH.CATS.find(c => c.id === it.cat).name : '')),
+        prev, h('b', null, it.name), h('small', null, (it.excl ? 'Temporada · ' : '') + SH.RARITY[it.rar] + (it.cat !== cat ? ' · ' + SH.catName(it.cat) : '')),
         on ? h('span', { class: 'tag' }, 'Puesto ✓')
           : own ? btn('Equipar', () => { SH.equip(it.id); S.play('select'); shopScreen(cat); }, 'ghost sm')
           : btn(offer ? h('span', null, h('s', null, '✦ ' + it.price), ' ✦ ' + pr) : '✦ ' + pr, () => { const r = SH.buy(it.id); if (r.ok) { SH.equip(it.id); S.play('confirm'); shopScreen(cat); } else { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; } }, SH.coins() >= pr ? 'gold sm' : 'ghost sm'));
@@ -1468,9 +1481,10 @@
       h('div', { class: 'shgrid' }, items.map(tile))));
   }
   // ---------------- cajas (estilo apertura de contenedores de CS2) ----------------
-  const itemPrev = it => it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+  const skSample = () => C.all().find(c => c.kind === 'monster' && c.img);
+  const itemPrev = it => it.cat === 'sk' ? h('span', { class: 'skprev', 'data-sk': D.Shop.slug(it.id) }, skSample() ? h('img', { class: 'cimg', src: skSample().img, alt: '', draggable: 'false' }) : '🃏') : it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
   const RAR_ORDER = ['c', 'r', 'e', 'l'];
-  const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name), h('small', null, D.Shop.CATS.find(c => c.id === it.cat).name + (own ? ' ✓' : '')));
+  const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name), h('small', null, D.Shop.catName(it.cat) + (own ? ' ✓' : '')));
   const pctOf = b => Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
   /** Lista de cajas: cuadrícula de tarjetas; al tocar una se ve el detalle con todos sus premios. */
   function boxScreen() {
@@ -1512,9 +1526,10 @@
     const ov = h('div', { class: 'boxov r-' + rar },
       h('div', { class: 'bx-rays' }),
       h('div', { class: 'bx-spin' }, h('h2', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)), reel, skip),
-      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.CATS.find(c => c.id === it.cat).name),
+      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.catName(it.cat)),
         h('div', { class: 'bx-note' }, r.dup ? `Repetido: te devolvemos ✦ ${r.refund} puntos.` : '¡Nuevo! Ya está en tu colección.'),
-        h('div', { class: 'row' }, !r.dup ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
+        it.cat === 'sk' ? h('small', { class: 'sub' }, 'Pónsela a un personaje en el constructor de mazos (ℹ de la carta).') : null,
+        h('div', { class: 'row' }, !r.dup && it.cat !== 'sk' ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
     document.body.append(ov);
     S.play('confirm');
     let done = false, raf = 0, last = -1, lastT = 0;

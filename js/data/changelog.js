@@ -7,6 +7,8 @@
  */
 G.CHANGELOG = [
   { d: '2026-10-24', title: ['Cajas como en CS2 y premios de temporada', 'CS2-style boxes and season rewards'], new: [
+    ['Skins de cartas: 13 efectos nuevos (Sepia, Sombra, Escarcha, Carmesí, Jade, Amatista, Neón, Negativo, Dorada, Cromada, Arcoíris, Llamarada y Galaxia) que cambian el aspecto de cualquier personaje. Sólo salen en las cajas (cada caja trae al menos una), no se compran. Se ponen a cada personaje en el constructor de mazos (botón ℹ de la carta) y tus rivales las ven en la partida.',
+     'Card skins: 13 new effects (Sepia, Shadow, Frost, Crimson, Jade, Amethyst, Neon, Negative, Golden, Chrome, Rainbow, Blaze and Galaxy) that change the look of any character. They only come from boxes (every box has at least one) and cannot be bought. Set one per character in the deck builder (ℹ button on the card); your rivals see them in the match.'],
     ['Premios de fin de temporada: al cerrar cada mes cobras puntos ✦ y cosméticos exclusivos según tu MEJOR rango (título, marco desde Oro y avatar desde Platino). Hacen falta 5 partidas con rango. Cada mes los premios son distintos y no se compran ni salen de cajas. Los ves en Ranking y los equipas en la Tienda.',
      'Season-end rewards: when each month closes you get ✦ points and exclusive cosmetics for your BEST rank (title, frame from Gold and avatar from Platinum). 5 ranked games are required. Rewards change every month and cannot be bought or found in boxes. See them in Ranking and equip them in the Shop.']
   ], chg: [

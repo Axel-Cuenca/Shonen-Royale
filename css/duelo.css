@@ -654,15 +654,15 @@ html.rm .cutc, html.rm .cutin.cardcut { display: none !important; }
 .zone.wideA .holo.wide { left: calc(50% + 4.3em); width: 12em; height: 14.4em; margin-left: -6em; }
 .zone.wideA .hbase { left: calc(50% + 4.3em); width: 12em; margin-left: -6em; border-radius: 50%; }
 .holo .hin { position: absolute; inset: 0; transform-origin: 50% 100%; }
-.holo .hin > img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 0 .35em #4ff) drop-shadow(0 0 1.1em #2bd) brightness(1.06); -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, #000c 3px 4px); animation: hBob 3.2s ease-in-out infinite alternate; }
-.zone.opp .holo .hin > img { filter: drop-shadow(0 0 .35em #f96) drop-shadow(0 0 1.1em #f63) brightness(1.06); }
-.zone.ally .holo .hin > img { filter: drop-shadow(0 0 .35em #6f9) drop-shadow(0 0 1.1em #3d8) brightness(1.06); }
+.holo .hin > img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; filter: var(--skf) drop-shadow(0 0 .35em #4ff) drop-shadow(0 0 1.1em #2bd) brightness(1.06); -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, #000c 3px 4px); animation: hBob 3.2s ease-in-out infinite alternate; }
+.zone.opp .holo .hin > img { filter: var(--skf) drop-shadow(0 0 .35em #f96) drop-shadow(0 0 1.1em #f63) brightness(1.06); }
+.zone.ally .holo .hin > img { filter: var(--skf) drop-shadow(0 0 .35em #6f9) drop-shadow(0 0 1.1em #3d8) brightness(1.06); }
 .holo .pl { position: absolute; left: 50%; bottom: .1em; transform: translateX(-50%); font: 700 1.15em Rajdhani, sans-serif; color: #dff; background: #023b; padding: 0 .6em; border: 1px solid #4ff8; border-radius: .4em; white-space: nowrap; text-shadow: 0 0 .4em #4ff; }
 .holo .pl b.up { color: #8f8; } .holo .pl b.dn { color: #f99; }
 .holo.def .hin { transform: scale(1, .72); }
-.holo.def .hin > img { filter: grayscale(.25) drop-shadow(0 0 .35em #fc4) drop-shadow(0 0 1.1em #c90) brightness(1); }
+.holo.def .hin > img { filter: var(--skf) grayscale(.25) drop-shadow(0 0 .35em #fc4) drop-shadow(0 0 1.1em #c90) brightness(1); }
 .hbase.def, .holo.def ~ .hbase { }
-.holo.compact { height: 9.4em; } .holo.compact .hin > img { -webkit-mask-image: none; filter: drop-shadow(0 0 .4em #4ff); }
+.holo.compact { height: 9.4em; } .holo.compact .hin > img { -webkit-mask-image: none; filter: var(--skf) drop-shadow(0 0 .4em #4ff); }
 .holo.enter .hin { animation: hIn var(--ms) cubic-bezier(.3,.7,.3,1) both; }
 .holo.enter .pl { animation: hFade var(--ms) both; }
 .hbase.enter { animation: hBase var(--ms) both; }
@@ -733,7 +733,7 @@ html.rm .turntimer.out { animation: none; }
 .zone[data-hc="carmesi"] { --hc-a: #ff4a5a; --hc-b: #b01020; }
 .zone[data-hc="blanco"] { --hc-a: #ffffff; --hc-b: #9ab4ff; }
 .zone[data-hc="prisma"] { --hc-a: #4ff; --hc-b: #a6f; }
-.zone[data-hc]:not([data-hc="cian"]) .holo:not(.def) .hin > img { filter: drop-shadow(0 0 .35em var(--hc-a)) drop-shadow(0 0 1.1em var(--hc-b)) brightness(1.06); }
+.zone[data-hc]:not([data-hc="cian"]) .holo:not(.def) .hin > img { filter: var(--skf) drop-shadow(0 0 .35em var(--hc-a)) drop-shadow(0 0 1.1em var(--hc-b)) brightness(1.06); }
 .zone.me[data-hc]:not([data-hc="cian"]) .hbase:not(.sel) { border-color: var(--hc-a); box-shadow: 0 0 1.2em var(--hc-a), inset 0 0 1.4em var(--hc-b); background: radial-gradient(circle, color-mix(in srgb, var(--hc-a) 30%, transparent), #0000 70%); }
 .zone.me[data-hc]:not([data-hc="cian"]) .hbeam { background: linear-gradient(#0000, var(--hc-a) 70%, #fff); }
 .zone[data-hc="prisma"] .holo { animation: hPrism 6s linear infinite; }
@@ -879,3 +879,27 @@ html.rm .bxstage .bxbig { animation: none; }
 .sprw .spi { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; min-height: 26px; }
 .sp-ti { font: italic 700 12px var(--serif); color: var(--gold); } .sp-av { font-size: 24px; line-height: 1; }
 .sp-fr { width: 22px; height: 22px; border-radius: 50%; border: 3px solid; display: inline-block; }
+
+/* ---- skins de cartas (efectos sobre la imagen que ya tiene cada personaje; sólo salen en cajas) ---- */
+@property --skh { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+:root { --skf: brightness(1); }
+@keyframes skHue { to { --skh: 360deg; } } @keyframes skFlick { from { --skh: 0deg; } to { --skh: 16deg; } }
+[data-sk="sepia"] { --skf: sepia(.95) contrast(1.05);  }
+[data-sk="sombra"] { --skf: grayscale(1) contrast(1.25) brightness(.8);  }
+[data-sk="escarcha"] { --skf: hue-rotate(160deg) saturate(1.3) brightness(1.05);  }
+[data-sk="carmesi"] { --skf: sepia(1) hue-rotate(-35deg) saturate(3.2);  }
+[data-sk="jade"] { --skf: hue-rotate(95deg) saturate(1.4);  }
+[data-sk="amatista"] { --skf: hue-rotate(250deg) saturate(1.5);  }
+[data-sk="neon"] { --skf: saturate(2.4) contrast(1.15) drop-shadow(0 0 .25em #0ff);  }
+[data-sk="negativo"] { --skf: invert(1) hue-rotate(180deg);  }
+[data-sk="dorada"] { --skf: sepia(1) saturate(4.5) hue-rotate(-12deg) brightness(1.12) drop-shadow(0 0 .3em #ffd84a);  }
+[data-sk="cromo"] { --skf: grayscale(1) contrast(1.7) brightness(1.2) drop-shadow(0 0 .2em #fff);  }
+[data-sk="arcoiris"] { --skf: hue-rotate(var(--skh)) saturate(1.7); animation: skHue 5s linear infinite; }
+[data-sk="llamarada"] { --skf: sepia(1) saturate(5) hue-rotate(calc(-28deg + var(--skh))) brightness(1.1) drop-shadow(0 0 .35em #ff6a1a); animation: skFlick 1.1s ease-in-out infinite alternate; }
+[data-sk="galaxia"] { --skf: invert(.9) hue-rotate(calc(220deg + var(--skh))) saturate(2.2) drop-shadow(0 0 .35em #a6f); animation: skHue 12s linear infinite; }
+[data-sk] .cimg { filter: var(--skf); }
+.skprev { display: inline-block; width: 54px; height: 54px; } .skprev img { width: 100%; height: 100%; object-fit: contain; filter: var(--skf); }
+.skpick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; } .skpick b { width: 100%; }
+.skpick button { font: 700 12px var(--ui); color: var(--ink); background: #0007; border: 1.5px solid var(--edge); border-radius: 8px; padding: 4px 9px; cursor: pointer; }
+.skpick button.on { border-color: var(--gold); background: #5a4a1a88; } .skpick .r-r { border-color: #5fa0ff; } .skpick .r-e { border-color: #c47bff; } .skpick .r-l { border-color: #ffd84a; }
+html.rm [data-sk] { animation: none !important; }

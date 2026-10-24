@@ -96,7 +96,12 @@
     I('ef_oro', 'ef', 'Lluvia de oro', 'c', { sw: '#ffd84a' }),
     I('ef_estrellas', 'ef', 'Estrellas', 'r', { sw: '#fff' }),
     I('ef_fuego', 'ef', 'Chispas de fuego', 'e', { sw: '#ff6a1a' }),
-    I('ef_arcoiris', 'ef', 'Arcoíris', 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' })
+    I('ef_arcoiris', 'ef', 'Arcoíris', 'l', { sw: 'linear-gradient(90deg,#f55,#fd4,#5f8,#4af,#a6f)' }),
+    // skins de cartas (sk): efectos sobre la imagen de CUALQUIER personaje; sólo salen en cajas (no se venden). css: [data-sk]
+    I('sk_sepia', 'sk', 'Sepia antiguo', 'c', { box: 1 }), I('sk_sombra', 'sk', 'Sombra', 'c', { box: 1 }), I('sk_escarcha', 'sk', 'Escarcha', 'c', { box: 1 }),
+    I('sk_carmesi', 'sk', 'Carmesí', 'r', { box: 1 }), I('sk_jade', 'sk', 'Jade', 'r', { box: 1 }), I('sk_amatista', 'sk', 'Amatista', 'r', { box: 1 }),
+    I('sk_neon', 'sk', 'Neón', 'e', { box: 1 }), I('sk_negativo', 'sk', 'Negativo', 'e', { box: 1 }), I('sk_dorada', 'sk', 'Dorada', 'e', { box: 1 }), I('sk_cromo', 'sk', 'Cromada', 'e', { box: 1 }),
+    I('sk_arcoiris', 'sk', 'Arcoíris', 'l', { box: 1 }), I('sk_llamarada', 'sk', 'Llamarada', 'l', { box: 1 }), I('sk_galaxia', 'sk', 'Galaxia', 'l', { box: 1 })
   ];
   const BY = new Map(ITEMS.map(i => [i.id, i]));
   /** Cosmético por id: del catálogo o de temporada (D.Seasons, exclusivos por rango; no están en la Tienda ni en cajas). */
@@ -118,8 +123,9 @@
   const BOX_BY = new Map(BOXES.map(b => [b.id, b]));
   const boxOf = {};
   for (const R of ['c', 'r', 'e', 'l']) {
-    const bs = BOXES.filter(b => b.w[R]), its = ITEMS.filter(i => i.rar === R && !i.free);
+    const bs = BOXES.filter(b => b.w[R]), its = ITEMS.filter(i => i.rar === R && !i.free && !i.box), sks = ITEMS.filter(i => i.rar === R && i.box);
     its.forEach((it, k) => { boxOf[it.id] = bs[k % bs.length].id; });
+    sks.forEach((it, k) => { boxOf[it.id] = bs[k % bs.length].id; });      // las skins se reparten aparte: así cada caja trae al menos una
   }
   const poolOf = (box, R) => ITEMS.filter(i => boxOf[i.id] === box.id && (!R || i.rar === R));
   const dupRefund = it => Math.round(PRICE[it.rar] * 0.2);
@@ -147,6 +153,7 @@
     p.owned = Array.isArray(p.owned) ? p.owned.filter(id => !!byId(id)) : [];
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
+    p.sk = p.sk && typeof p.sk === 'object' && !Array.isArray(p.sk) ? p.sk : {};
     return p;
   }
   const owns = id => { const it = byId(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
@@ -184,7 +191,7 @@
     const t = today(); let h = 2166136261;
     for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
     let a = h >>> 0; const rnd = () => { a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
-    const pool = ITEMS.filter(i => !i.free && i.rar !== 'l'), out = [];
+    const pool = ITEMS.filter(i => !i.free && !i.box && i.rar !== 'l'), out = [];
     while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0].id);
     return out;
   }
@@ -215,6 +222,7 @@
   function buy(id) {
     const p = pts(), it = byId(id);
     if (!p || !it) return { ok: false, error: 'No existe.' };
+    if (it.box) return { ok: false, error: 'Las skins sólo salen en cajas.' };
     if (it.excl) return { ok: false, error: 'Es un premio de temporada: sólo se consigue por rango.' };
     if (owns(id)) return { ok: false, error: 'Ya lo tienes.' };
     const pr = priceOf(id);
@@ -234,19 +242,42 @@
   const exclusive = cat => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.excl && i.cat === cat).sort((a, b) => (b.season + b.tier).localeCompare(a.season + a.tier)) : []; };
   function equip(id) {
     const p = pts(), it = byId(id);
-    if (!p || !it || !owns(id)) return false;
+    if (!p || !it || !owns(id) || it.cat === 'sk') return false;     // las skins se ponen a un personaje (setSkin)
     p.eq[it.cat] = id; saveStore(); apply();
     return true;
   }
+  /** Skin que tengo puesta a un personaje (item) o null. */
+  function skinOf(cardId) { const p = pts(), id = p && p.sk[cardId]; const it = id && byId(id); return it && it.cat === 'sk' && owns(id) ? it : null; }
+  /** Pone (o quita, con null) una skin a un personaje. Hay que tenerla. */
+  function setSkin(cardId, skinId) {
+    const p = pts(); if (!p || typeof cardId !== 'string' || !/^[\w-]{1,40}$/.test(cardId)) return false;
+    if (skinId == null) { delete p.sk[cardId]; saveStore(); return true; }
+    const it = byId(skinId); if (!it || it.cat !== 'sk' || !owns(skinId)) return false;
+    p.sk[cardId] = skinId; saveStore(); return true;
+  }
+  const mySkins = () => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.cat === 'sk') : []; };
+  const catName = c => { const k = CATS.find(x => x.id === c); return k ? k.name : c === 'sk' ? 'Skin de cartas' : c; };
   const equipped = cat => { const p = pts(), id = p && p.eq[cat]; return byId(owns(id) ? id : DEFAULT_EQ[cat]); };
 
   /** Lo que ven los demás de mí (sólo los ids de las categorías que se muestran en la partida). */
   const NET_CATS = ['hc', 'ha', 'hm', 'cb', 'av', 'fr', 'ti'];
-  function mine() { const o = {}; for (const c of NET_CATS) { const it = equipped(c); if (it) o[c] = it.id; } return o; }
+  const MAX_SK = 60;
+  function mine() {
+    const o = {}; for (const c of NET_CATS) { const it = equipped(c); if (it) o[c] = it.id; }
+    const p = pts(), sk = {}; let n = 0;
+    if (p) for (const cid of Object.keys(p.sk)) { const it = skinOf(cid); if (it && n++ < MAX_SK) sk[cid] = it.id; }
+    if (n) o.sk = sk;
+    return o;
+  }
   /** Sanea lo que manda otro jugador: sólo ids que existen en su categoría. Devuelve { cat: 'id' }. */
   function clean(o) {
     const out = {};
     if (o && typeof o === 'object') for (const c of NET_CATS) { const it = byId(o[c]); if (it && it.cat === c) out[c] = it.id; }
+    if (o && o.sk && typeof o.sk === 'object') {            // skins por personaje: { idCarta: 'sk_…' }
+      const sk = {}; let n = 0;
+      for (const cid of Object.keys(o.sk)) { const it = byId(o.sk[cid]); if (it && it.cat === 'sk' && /^[\w-]{1,40}$/.test(cid) && n++ < MAX_SK) sk[cid] = it.id; }
+      if (n) out.sk = sk;
+    }
     return out;
   }
   const slug = id => { const it = byId(id); return it ? id.slice(it.cat.length + 1) : ''; };
@@ -256,5 +287,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, grant, exclusive, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();
