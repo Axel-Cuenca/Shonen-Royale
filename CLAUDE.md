@@ -52,3 +52,6 @@ servidores, base de datos o costes NO van ahí.
 - Tablero: 3 zonas de monstruo + 3 de magia/trampa por jugador (`ZONES` en `engine.js`).
 - Las imágenes de las cartas van en `assets/cards/` y las voces de habilidad en `assets/voices/` (las pone el dueño).
 - Modo de prueba: abrir el sitio con `?prueba` (p. ej. `axel-cuenca.github.io/duelo/?prueba`) da un mazo fijo de 30 (Popeye, Creeper, monstruos «Prueba ★N» y magias/trampas «Prueba: …»), sin límite de copias, sólo contra la computadora y sin guardar nada. Sirve para probar mientras el catálogo es pequeño; no cambia las reglas reales.
+
+## Puntos y Tienda
+- `js/duelo/shop.js`: puntos ✦, recompensa diaria (racha de 7), premios por partida (`reward`) y catálogo de cosméticos (`ITEMS`). Todo se guarda en `store.pts` (mismo documento que los mazos, sin reglas nuevas). Los cosméticos se aplican con `data-hc/ha/hm/cb/bd/av/fr/ti` en `<html>` (CSS al final de `css/duelo.css`). Son sólo estéticos y cada jugador ve los suyos. Pendiente: cajas (azar), Tienda con ofertas, ranking con rangos y temporadas.

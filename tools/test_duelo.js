@@ -1043,6 +1043,7 @@ async function multiTests() {
 }
 
 require('./test_cartas.js')({ E, Cards, AI, ok, eq, section, act, find, give, mulberry, randomBot, checkInvariants: null, game });
+require('./test_tienda.js')({ ok, eq, section });
 matchTests().then(multiTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);

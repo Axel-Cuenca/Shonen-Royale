@@ -93,9 +93,10 @@
     try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
     if (cloudUser()) D.Account.push(store);
   }
+  D.Shop.init(() => store, save); D.Shop.apply();
   /** Carga los mazos de quien acaba de entrar (null = invitado / sin nube). */
   async function openStore(u) {
-    if (!u || u.guest) { storeKey = KEY; store = readStore(KEY) || defaultStore(); return; }
+    if (!u || u.guest) { storeKey = KEY; store = readStore(KEY) || defaultStore(); D.Shop.apply(); return; }
     storeKey = KEY + '.' + u.uid;
     const local = readStore(storeKey), remote = await D.Account.pull();
     const ok = r => r && Array.isArray(r.decks) && r.decks.length ? r : null;
@@ -109,7 +110,7 @@
       pick.updated = Date.now();
     }
     pick.active = Math.min(pick.active | 0, pick.decks.length - 1);
-    store = clean(pick);
+    store = clean(pick); D.Shop.apply();
     try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
     if (pick !== rem) D.Account.push(store);
   }
@@ -255,6 +256,7 @@
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
     mount(h('div', { class: 'scr' },
       acctBar(),
+      pointsBar(),
       h('h1', null, 'Duelo Pokémon'),
       h('p', { class: 'sub' }, 'Duelos de cartas por turnos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
       C.test ? h('div', { class: 'panel' }, h('div', { class: 'msg ok' }, 'MODO DE PRUEBA: mazo fijo de 30 cartas (Popeye, Creeper, monstruos «Prueba ★N», y magias y trampas «Prueba: …»), sólo contra la computadora. No se guarda nada. Para salir, abre el juego sin «?prueba».')) : null,
@@ -263,6 +265,7 @@
       h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
       h('button', { class: 'menu-btn', disabled: !!bad || few || C.test, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
+      h('button', { class: 'menu-btn', onclick: () => shopScreen() }, 'Tienda', h('small', null, 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…')),
       h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
       h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
   }
@@ -987,7 +990,8 @@
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
       const myTeam = v.team[v.seat], won = v.winner === myTeam, draw = v.winner === 'draw' || v.winner === -1;
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); }
+      let earned = 0;
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!(current && current.match && current.match.kind === 'ia'), won); }
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
       let sub = v.reason || '', list = null;
@@ -1004,7 +1008,7 @@
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
         h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
-          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), list,
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos') : null, list,
           h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
       modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
@@ -1253,7 +1257,7 @@
   function acctBar() {
     const u = D.Account.user;
     if (!D.Account.cloud) return h('div', { class: 'acct' }, h('span', { class: 'sub' }, 'Sin conexión con la nube: tus mazos se guardan sólo en este navegador.'));
-    if (u && !u.guest) return h('div', { class: 'acct' }, h('span', null, '👤 ', h('b', null, u.name)), btn('Cuenta', accountModal, 'ghost sm'));
+    if (u && !u.guest) return h('div', { class: 'acct' }, h('span', { class: 'who fr-' + D.Shop.equipped('fr').id.slice(3) }, (D.Shop.equipped('av').emoji || '👤') + ' ', h('b', null, u.name), D.Shop.equipped('ti').text ? h('small', { class: 'ttl' }, ' · ' + D.Shop.equipped('ti').text) : null), btn('Cuenta', accountModal, 'ghost sm'));
     return h('div', { class: 'acct' }, h('span', { class: 'sub' }, 'Invitado: sin guardar en la nube ni jugar online.'),
       btn('Entrar o crear cuenta', async () => { await D.Account.logout(); D.Online.reset(); loginScreen(); }, 'gold sm'));
   }
@@ -1333,6 +1337,54 @@
   }
 
   // ---------------- novedades ----------------
+  // ---------------- puntos, recompensa diaria y Tienda ----------------
+  let dailyShown = false;
+  function pointsBar() {
+    if (C.test) return null;
+    const info = D.Shop.dailyInfo();
+    if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
+    return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), ' puntos'),
+      info ? btn('🎁 Recompensa diaria: +' + info.amount, dailyModal, 'gold sm') : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
+      btn('Tienda', () => shopScreen(), 'ghost sm'));
+  }
+  function dailyModal() {
+    const info = D.Shop.dailyInfo(); if (!info) return;
+    const got = D.Shop.claimDaily();
+    S.play('confirm');
+    modal(h('div', { class: 'box' }, h('h2', null, '🎁 Recompensa diaria'),
+      h('p', null, `¡Día ${got.day} de racha! Recibes `, h('b', null, '✦ ' + got.amount + ' puntos'), '.'),
+      h('div', { class: 'streak' }, D.Shop.DAILY.map((n, i) => h('div', { class: 'sd' + (i + 1 < got.day ? ' done' : i + 1 === got.day ? ' now' : '') }, h('small', null, 'Día ' + (i + 1)), h('b', null, '+' + n)))),
+      h('p', { class: 'sub' }, 'Entra cada día para no perder la racha. Si te saltas un día, vuelve a empezar. También ganas puntos jugando partidas.'),
+      btn('Genial', () => { closeModal(); menu(); }, 'gold')));
+  }
+  function shopScreen(cat) {
+    cat = cat || 'hc'; S.setTrack('menu');
+    const SH = D.Shop, items = SH.ITEMS.filter(i => i.cat === cat), cinfo = SH.CATS.find(c => c.id === cat);
+    let msg = null;
+    const sample = () => {
+      if (cat === 'cb') return h('div', { class: 'shpv' }, h('div', { class: 'card back', style: 'font-size:14px' }));
+      if (cat === 'bd') return h('div', { class: 'shpv' }, h('div', { class: 'board3d mini' }, [0, 1, 2].map(() => h('div', { class: 'zone mz', style: 'width:5em;height:7em;display:inline-block;margin:.3em' }))));
+      const src = Holo.src('c_popeye');
+      if (!['hc', 'ha', 'hm'].includes(cat)) return null;
+      return h('div', { class: 'shpv' }, h('div', { class: 'zone me shz' }, h('div', { class: 'hbase' }),
+        h('div', { class: 'holo' }, h('div', { class: 'hin' }, src ? h('img', { src, alt: '', draggable: 'false' }) : h('div', { class: 'sub' }, '…')))));
+    };
+    const tile = it => {
+      const own = SH.owns(it.id), on = SH.equipped(cat).id === it.id;
+      const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '∅');
+      return h('div', { class: 'shi r-' + it.rar + (on ? ' on' : '') },
+        prev, h('b', null, it.name), h('small', null, SH.RARITY[it.rar]),
+        on ? h('span', { class: 'tag' }, 'Puesto ✓')
+          : own ? btn('Equipar', () => { SH.equip(it.id); S.play('select'); shopScreen(cat); }, 'ghost sm')
+          : btn('✦ ' + it.price, () => { const r = SH.buy(it.id); if (r.ok) { SH.equip(it.id); S.play('confirm'); shopScreen(cat); } else { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; } }, SH.coins() >= it.price ? 'gold sm' : 'ghost sm'));
+    };
+    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Tienda'),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Se ganan jugando y con la recompensa diaria. Todo es sólo estético.')),
+      h('div', { class: 'tabs shtabs' }, SH.CATS.map(c => h('button', { class: 'tab' + (c.id === cat ? ' on' : ''), onclick: () => shopScreen(c.id) }, c.icon + ' ' + c.name))),
+      sample(), h('div', { class: 'msg err shmsg' }, msg),
+      h('div', { class: 'shgrid' }, items.map(tile))));
+  }
+
   function news() {
     S.setTrack('menu');
     const en = /^en/i.test(navigator.language || '') ? 1 : 0;
