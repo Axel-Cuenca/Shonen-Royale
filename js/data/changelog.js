@@ -6,6 +6,12 @@
  * Cada línea en español y en inglés.
  */
 G.CHANGELOG = [
+  { d: '2026-10-24', title: ['Cajas como en CS2', 'Boxes like CS2'], chg: [
+    ['Las cajas ahora se ven como tarjetas; al tocar una se abre su detalle con la caja grande, las probabilidades y todos los premios posibles, ordenados de común a legendario.',
+     'Boxes now show as cards; tap one to see its detail with the big box, the odds and every possible prize, sorted from common to legendary.'],
+    ['Al abrir una caja los premios pasan en una ruleta horizontal que se va frenando hasta el premio. Se puede saltar con «Saltar».',
+     'Opening a box now spins a horizontal reel of prizes that slows down onto your prize. You can skip it with "Saltar".']
+  ] },
   { d: '2026-10-23', title: ['Llegan 18 cartas nuevas: ya se puede jugar', '18 new cards: you can play now'], new: [
     ['Ya hay 20 cartas y se pueden armar mazos (30 cartas, máximo 2 copias) y jugar contra la computadora y online. Personajes: Bardock, Bardock SSJ, Cell Semi Perfecto, Kratos, Kratos el Fantasma de Esparta, Lara Tybur, Titán Martillo, Ryomen Sukuna 5% y 60%, Shang Tsung, Vegeta y Vegeta Blue Evolution (más Popeye y Creeper, con imagen y sonido nuevos). Magias: Armadura Dorada, Espada del Rey Arruinado, Gema de la Mente, Karma, Superball y Tormenta Eléctrica. Toca una carta para ver lo que hace su habilidad.',
      'There are now 20 cards and you can build decks (30 cards, max 2 copies) and play against the computer and online. Characters: Bardock, Bardock SSJ, Semi-Perfect Cell, Kratos, Kratos the Ghost of Sparta, Lara Tybur, Hammer Titan, Ryomen Sukuna 5% and 60%, Shang Tsung, Vegeta and Vegeta Blue Evolution (plus Popeye and Creeper, with new art and sound). Spells: Golden Armor, Sword of the Ruined King, Mind Gem, Karma, Superball and Electric Storm. Tap a card to see what its ability does.'],

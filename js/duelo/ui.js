@@ -1441,42 +1441,81 @@
       sample(), h('div', { class: 'msg err shmsg' }),
       h('div', { class: 'shgrid' }, items.map(tile))));
   }
-  // ---------------- cajas ----------------
+  // ---------------- cajas (estilo apertura de contenedores de CS2) ----------------
+  const itemPrev = it => it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+  const RAR_ORDER = ['c', 'r', 'e', 'l'];
+  const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name), h('small', null, D.Shop.CATS.find(c => c.id === it.cat).name + (own ? ' ✓' : '')));
+  const pctOf = b => Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
+  /** Lista de cajas: cuadrícula de tarjetas; al tocar una se ve el detalle con todos sus premios. */
   function boxScreen() {
     const SH = D.Shop; S.setTrack('menu');
-    const pctOf = b => Object.keys(b.w).map(r => `${SH.RARITY[r]} ${b.w[r]}%`).join(' · ');
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: () => shopScreen() }, '← Tienda'), h('h1', null, 'Cajas'),
-      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Cada premio sólo sale de su caja.')),
-      h('div', { class: 'shmsg msg err' }),
-      ...SH.BOXES.map(b => {
-        const n = (SH.pts().pity[b.id] | 0), items = SH.poolOf(b);
-        return h('div', { class: 'boxrow', style: `--bc:${b.color}` },
-          h('div', { class: 'bicon' }, b.icon),
-          h('div', { class: 'binfo' }, h('b', null, b.name), h('small', null, pctOf(b)),
-            h('small', null, `${items.length} premios únicos` + (b.pity ? ` · garantía: ${SH.RARITY[b.pity.to]} seguro tras ${b.pity.n} sin suerte (${Math.min(n, b.pity.n)}/${b.pity.n})` : ' · todo lo que sale es legendario')),
-            h('small', { class: 'dupn' }, 'Si te sale uno repetido, te devolvemos parte en puntos.')),
-          h('div', { class: 'bbtn' }, btn('Ver premios', () => boxPrizes(b), 'ghost sm'), btn('Abrir ✦ ' + b.price, () => openBoxFlow(b), SH.coins() >= b.price ? 'gold' : 'ghost')));
-      })));
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Cada premio sólo sale de su caja. Toca una caja para ver sus premios.')),
+      h('div', { class: 'bxgrid' }, SH.BOXES.map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor'), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
+        h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
   }
+  /** Detalle de una caja: la caja grande, sus probabilidades y todos los premios posibles (de común a legendario). */
   function boxPrizes(b) {
-    const SH = D.Shop, by = {}; for (const it of SH.poolOf(b)) (by[it.rar] = by[it.rar] || []).push(it);
-    modal(h('div', { class: 'box' }, h('h2', null, b.icon + ' ' + b.name), ...['l', 'e', 'r', 'c'].filter(r => by[r]).map(r => h('div', null, h('b', { class: 'rr r-' + r }, SH.RARITY[r] + (b.w[r] ? ` (${b.w[r]}%)` : '')),
-      h('div', { class: 'prz' }, by[r].map(it => h('span', { class: 'pz r-' + it.rar + (SH.owns(it.id) ? ' got' : '') }, (it.emoji || '') + ' ' + it.name + ' · ' + SH.CATS.find(c => c.id === it.cat).name + (SH.owns(it.id) ? ' ✓' : '')))))), btn('Cerrar', closeModal, 'ghost')));
+    const SH = D.Shop; S.setTrack('menu');
+    const items = SH.poolOf(b).slice().sort((x, y) => RAR_ORDER.indexOf(x.rar) - RAR_ORDER.indexOf(y.rar));
+    const n = (SH.pts().pity[b.id] | 0);
+    mount(h('div', { class: 'scr bxdet', style: `--bc:${b.color}` }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'),
+      h('h1', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, pctOf(b))),
+      h('div', { class: 'bxstage' }, h('div', { class: 'bxbig' }, b.icon), h('div', { class: 'bxpal' })),
+      h('div', { class: 'shmsg msg err' }),
+      h('div', { class: 'row bxact' }, btn('Abrir ✦ ' + b.price, () => openBoxFlow(b), SH.coins() >= b.price ? 'gold' : 'ghost'), btn('Cancelar', boxScreen, 'ghost')),
+      h('div', { class: 'bxhead' }, 'Abre la caja para recibir una de las siguientes opciones'),
+      h('div', { class: 'bxlist' }, items.map(it => bxTile(it, SH.owns(it.id)))),
+      h('div', { class: 'sub' }, b.pity ? `Garantía: ${SH.RARITY[b.pity.to]} seguro tras ${b.pity.n} sin suerte (${Math.min(n, b.pity.n)}/${b.pity.n}). ` : 'Todo lo que sale es legendario. ', 'Si te sale uno repetido, te devolvemos parte en puntos.')));
   }
+  /** Apertura: ruleta horizontal que se frena en el premio ya sorteado. */
   function openBoxFlow(b) {
     const SH = D.Shop, r = SH.openBox(b.id);
     if (!r.ok) { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; return; }
-    const it = r.item, rar = it.rar;
-    const prev = it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+    const it = r.item, rar = it.rar, pool = SH.poolOf(b), by = {};
+    for (const p of pool) (by[p.rar] = by[p.rar] || []).push(p);
+    const rolls = Object.keys(b.w).filter(k => by[k]);
+    const rnd = () => { let x = Math.random() * rolls.reduce((a, k) => a + b.w[k], 0), k = rolls[0]; for (const q of rolls) { if ((x -= b.w[q]) < 0) { k = q; break; } } return by[k][(Math.random() * by[k].length) | 0]; };
+    const W = 150, GAP = 8, N = 64, WIN = 52;
+    const seq = Array.from({ length: N }, (_, i) => i === WIN ? it : rnd());
+    const rm = document.documentElement.classList.contains('rm');
+    const strip = h('div', { class: 'bx-strip' }, seq.map(x => bxTile(x, false)));
+    const reel = h('div', { class: 'bx-reel' }, strip, h('div', { class: 'bx-mark' }));
+    const skip = btn('Saltar', () => finish(true), 'ghost sm');
     const ov = h('div', { class: 'boxov r-' + rar },
-      h('div', { class: 'bx-rays' }), h('div', { class: 'bx-box' }, b.icon),
-      h('div', { class: 'bx-prize' }, prev, h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.CATS.find(c => c.id === it.cat).name),
+      h('div', { class: 'bx-rays' }),
+      h('div', { class: 'bx-spin' }, h('h2', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)), reel, skip),
+      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.CATS.find(c => c.id === it.cat).name),
         h('div', { class: 'bx-note' }, r.dup ? `Repetido: te devolvemos ✦ ${r.refund} puntos.` : '¡Nuevo! Ya está en tu colección.'),
-        h('div', { class: 'row' }, !r.dup ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Abrir otra', () => { ov.remove(); boxScreen(); }, 'ghost'), btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
+        h('div', { class: 'row' }, !r.dup ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
     document.body.append(ov);
-    S.play(rar === 'l' ? 'win' : 'confirm');
-    try { if (rar === 'l' || rar === 'e') S.jingle && S.jingle('win'); } catch (e) { /* nada */ }
-    setTimeout(() => ov.classList.add('open'), 900);
+    S.play('confirm');
+    let done = false, raf = 0, last = -1, lastT = 0;
+    const finish = (quick) => {
+      if (done) return; done = true; cancelAnimationFrame(raf);
+      if (quick) { strip.style.transition = 'none'; strip.style.transform = `translateX(${target}px)`; }
+      S.play(rar === 'l' ? 'win' : 'confirm');
+      try { if (rar === 'l' || rar === 'e') S.jingle && S.jingle('win'); } catch (e) { /* nada */ }
+      setTimeout(() => ov.classList.add('open'), quick ? 150 : 650);
+    };
+    const off = (Math.random() * .7 - .35) * W;                    // dónde cae dentro del cuadro
+    let target = 0;
+    requestAnimationFrame(() => {
+      const cw = reel.clientWidth; target = -(WIN * (W + GAP) + W / 2 + off) + cw / 2;
+      const dur = rm ? 1.2 : 7;
+      strip.style.transition = `transform ${dur}s cubic-bezier(.08,.62,.08,1)`;
+      strip.style.transform = `translateX(${target}px)`;
+      strip.addEventListener('transitionend', () => finish(false), { once: true });
+      setTimeout(() => finish(false), dur * 1000 + 600);
+      const tick = (t) => {                                          // «clic» cada vez que pasa un cuadro bajo la marca
+        if (done) return;
+        const m = new DOMMatrix(getComputedStyle(strip).transform), i = Math.floor((-m.m41 + cw / 2) / (W + GAP));
+        if (i !== last && t - lastT > 45) { last = i; lastT = t; try { S.play('select'); } catch (e) { /* nada */ } }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    });
   }
 
   function news() {

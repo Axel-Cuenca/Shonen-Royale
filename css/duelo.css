@@ -804,7 +804,7 @@ html[data-ef="arcoiris"] .endscr.win .parts i { width: calc(10px * var(--z)); he
 .boxrow .bicon { font-size: 54px; filter: drop-shadow(0 0 10px var(--bc)); }
 .boxrow .binfo { flex: 1 1 220px; display: flex; flex-direction: column; gap: 3px; } .boxrow .binfo b { font: 800 20px var(--serif); color: var(--bc); }
 .boxrow .binfo small { color: var(--muted); } .boxrow .bbtn { display: flex; flex-direction: column; gap: 6px; }
-.boxov { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--bc) 30%, #000d), #000e 70%); overflow: hidden; animation: endFade .4s both; }
+.boxov { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--bc) 30%, #000f), #000 70%); overflow: hidden; animation: endFade .4s both; }
 .boxov .bx-rays { position: absolute; left: 50%; top: 48%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--bc) 30%, transparent) 0 3deg, transparent 3deg 18deg); opacity: 0; animation: spin 14s linear infinite; }
 .boxov.open .bx-rays { opacity: .7; transition: opacity .5s; }
 .boxov .bx-box { font-size: 120px; filter: drop-shadow(0 0 20px #fff8); animation: bxShake .9s ease-in-out both; }
@@ -839,3 +839,34 @@ html.rm .boxov .bx-rays, html.rm .boxov .bx-box { animation: none; }
 .rkrow.me { border-color: var(--gold); background: #5a4a1a55; }
 .rkrow .pos { width: 2.2em; text-align: right; color: var(--muted); font-weight: 800; } .rkrow b { flex: 1; } .rkrow small { color: var(--muted); } .rkrow .pc { font-weight: 800; color: var(--gold); min-width: 4.5em; text-align: right; }
 .rkinfo { border: 1px solid var(--edge); border-radius: 10px; padding: 8px 12px; background: #0005; } .rkinfo summary { cursor: pointer; font-weight: 700; } .rkinfo ul { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 4px; }
+
+/* ---- cajas estilo CS2: lista, detalle y ruleta ---- */
+.bxgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.bxcard { --bc: #ffd84a; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 10px; color: var(--ink); font: inherit; cursor: pointer; border: 1px solid #fff2; border-bottom: 3px solid var(--bc); border-radius: 6px; background: linear-gradient(#2a3350, #0e1428); transition: transform .12s, box-shadow .12s; }
+.bxcard:hover, .bxcard:focus-visible { transform: translateY(-3px); box-shadow: 0 0 16px color-mix(in srgb, var(--bc) 55%, transparent); outline: none; }
+.bxcard .bxic { font-size: 64px; line-height: 1.1; filter: drop-shadow(0 0 12px var(--bc)); }
+.bxcard b { font: 800 16px var(--serif); color: var(--bc); } .bxcard small { color: var(--muted); }
+.bxcard .bxpr { font-weight: 800; color: var(--gold); } .bxcard.poor .bxpr { color: var(--muted); }
+.bxdet h1 { text-align: center; margin-bottom: 0; } .bxsub { text-align: center; font-size: 18px; margin-bottom: 4px; } .bxsub b { color: var(--bc); }
+.bxstage { position: relative; height: 210px; display: grid; place-items: center; }
+.bxstage .bxbig { font-size: 130px; line-height: 1; z-index: 1; margin-bottom: 26px; filter: drop-shadow(0 0 22px var(--bc)); animation: bxFloat 3s ease-in-out infinite; }
+.bxstage .bxpal { position: absolute; bottom: 22px; left: 50%; width: 260px; height: 26px; margin-left: -130px; border-radius: 3px; background: repeating-linear-gradient(90deg, #7a5a3a 0 46px, #5a4026 46px 52px); box-shadow: 0 10px 18px #000a; }
+@keyframes bxFloat { 50% { transform: translateY(-6px); } }
+.bxact { justify-content: center; }
+.bxhead { text-align: center; font-weight: 700; padding: 8px 0; border-bottom: 1px solid #fff3; }
+.bxlist { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bxt { --tc: #cfd8e8; flex: 0 0 150px; width: 150px; height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px 10px; text-align: center; border-radius: 4px; background: linear-gradient(#6b7280, #3b414c); border-bottom: 4px solid var(--tc); overflow: hidden; }
+.bxlist .bxt { flex-basis: 128px; width: 128px; height: 148px; }
+.bxt.r-c { --tc: #8aa0c8; } .bxt.r-r { --tc: #4b69ff; } .bxt.r-e { --tc: #b04bff; } .bxt.r-l { --tc: #ffd84a; background: linear-gradient(#7a6a2a, #3d3416); }
+.bxt .bxp { height: 60px; display: grid; place-items: center; } .bxt .big { font-size: 46px; line-height: 54px; }
+.bxt .sw { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #fff6; display: grid; place-items: center; color: #fff9; font-size: 20px; } .bxt .sw.none { background: #0004; }
+.bxt .ttlprev { font: italic 700 14px var(--serif); color: var(--gold); }
+.bxt b { font-size: 13px; line-height: 1.15; } .bxt small { color: #dfe6f5; font-size: 11px; opacity: .85; } .bxt.got { filter: saturate(.55) brightness(.85); }
+/* ruleta */
+.boxov .bx-spin { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.boxov .bx-spin h2 { margin: 0; font-size: 30px; } .boxov .bxsub b { color: var(--bc); }
+.boxov.open .bx-spin { display: none; }
+.bx-reel { position: relative; width: min(1100px, 100vw); height: 190px; overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.bx-strip { display: flex; gap: 8px; position: absolute; left: 0; top: 10px; will-change: transform; }
+.bx-mark { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: #ffe14a; box-shadow: 0 0 12px #ffe14a; z-index: 2; }
+html.rm .bxstage .bxbig { animation: none; }
