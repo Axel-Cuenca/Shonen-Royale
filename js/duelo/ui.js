@@ -286,25 +286,89 @@
   let current = null; // partida en curso: { match, cleanup }
   function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
+  // emblema y logo: los mismos del splash (index.html); aquí en dorado
+  const EMB = '<svg class="emb" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 10 L40 38 M52 10 L24 38"/><path d="M8 14 L14 8 M56 14 L50 8"/><path d="M18 42 L26 50 M46 42 L38 50"/><rect x="26" y="34" width="12" height="12" transform="rotate(45 32 40)" style="fill:var(--acc2)"/></svg>';
+  const embEl = () => { const d = document.createElement('div'); d.innerHTML = EMB; return d.firstChild; };
+  const noRm = () => !document.documentElement.classList.contains('rm');
+  // las 3 novedades más recientes para la columna de la derecha del menú
+  function latestNews(n) {
+    const en = /^en/i.test(navigator.language || '') ? 1 : 0, out = [];
+    const cards = C.all().filter(c => c.img);
+    const days = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').slice().sort((x, y) => (x.d < y.d ? 1 : -1));
+    const LB = { new: ['NUEVO', 'NEW'], chg: ['CAMBIO', 'CHANGE'], fix: ['ARREGLO', 'FIX'] };
+    for (const e of days) for (const k of ['new', 'chg', 'fix']) for (const l of (e[k] || []).slice().reverse()) {
+      if (!l || l.length < 4 || out.length >= n) continue;
+      let hs = 0; for (const ch of l[0]) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;
+      out.push({ k: LB[k][en], t: l[en * 2], d: l[en * 2 + 1], img: cards.length ? cards[hs % cards.length].img : null });
+    }
+    return out;
+  }
+  let homeKeys = false;
+
   function menu() {
     endCurrent(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
-    mount(h('div', { class: 'scr' },
-      acctBar(),
-      pointsBar(),
-      h('h1', null, 'Duelo Pokémon'),
-      h('p', { class: 'sub' }, 'Duelos de cartas por turnos. Reglas propias, inspiradas en los juegos de cartas de monstruos.'),
-      C.test ? h('div', { class: 'panel' }, h('div', { class: 'msg ok' }, 'MODO DE PRUEBA: mazo fijo de 30 cartas (Popeye, Creeper, monstruos «Prueba ★N», y magias y trampas «Prueba: …»), sólo contra la computadora. No se guarda nada. Para salir, abre el juego sin «?prueba».')) : null,
-      few ? h('div', { class: 'panel' }, h('div', { class: 'msg err' }, `Todavía no hay cartas suficientes para jugar: hay ${C.all().length} y hacen falta al menos ${Math.ceil(C.DECK_SIZE / C.MAX_COPIES)} distintas para armar un mazo. Se van añadiendo de a poco; mientras tanto puedes ver las cartas en «Mis mazos».`)) : null,
-      h('div', { class: 'panel' }, h('div', null, 'Mazo activo: ', h('b', null, dk.name)), bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null),
-      h('button', { class: 'menu-btn', disabled: !!bad || few, onclick: setupAI }, 'Contra la computadora', h('small', null, '1 contra 1, todos contra todos (3 o 4) o 2 contra 2')),
-      h('button', { class: 'menu-btn', disabled: !!bad || few || C.test, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
-      h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
-      h('button', { class: 'menu-btn', onclick: () => shopScreen() }, 'Tienda', h('small', null, 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…')),
-      h('button', { class: 'menu-btn', onclick: () => rankScreen() }, 'Ranking', h('small', null, 'Tu rango, los mejores de la temporada y cómo se sube')),
-      h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
-      h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
+    const off = !!bad || few;
+    const items = [
+      { t: 'Contra la computadora', d: '1 contra 1, todos contra todos (3 o 4) o 2 contra 2', f: setupAI, off },
+      { t: 'Duelo online con amigos', d: 'De 2 a 4 personas: crea una sala y comparte el código', f: onlineMenu, off: off || C.test },
+      { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
+      { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
+      { t: 'Ranking', d: 'Tu rango, los mejores de la temporada y cómo se sube', f: () => rankScreen() },
+      { t: 'Reglas', d: 'Cómo se juega', f: rules },
+      { t: 'Novedades', d: 'Lo último que se ha añadido', f: news }
+    ];
+    const desc = h('div', { class: 'hdesc' });
+    let on = 0;
+    const btns = items.map((it, i) => h('button', { class: 'menu-btn', style: '--i:' + i, disabled: !!it.off, onclick: it.f, onpointerenter: () => setOn(i), onfocus: () => setOn(i) }, it.t, h('small', null, it.d)));
+    function setOn(i) {
+      on = i; btns.forEach((b, j) => b.classList.toggle('on', j === i));
+      const dl = h('div', { class: 'dl', style: 'min-height:24px' }, items[i].d + '.');
+      desc.replaceChildren(dl, h('div', null, 'Mazo activo: ', h('b', null, dk.name)));
+      desc.classList.toggle('long', items[i].d.length > 52);
+    }
+    setOn(Math.max(0, items.findIndex(it => !it.off)));
+    const notes = [];
+    if (C.test) notes.push(h('div', { class: 'hnote' }, 'MODO DE PRUEBA: mazo fijo de 30 cartas (Popeye, Creeper, monstruos «Prueba ★N», y magias y trampas «Prueba: …»), sólo contra la computadora. No se guarda nada. Para salir, abre el juego sin «?prueba».'));
+    if (few) notes.push(h('div', { class: 'hnote err' }, `Todavía no hay cartas suficientes para jugar: hay ${C.all().length} y hacen falta al menos ${Math.ceil(C.DECK_SIZE / C.MAX_COPIES)} distintas para armar un mazo. Se van añadiendo de a poco; mientras tanto puedes ver las cartas en «Mis mazos».`));
+    if (bad) notes.push(h('div', { class: 'hnote err' }, bad + ' Arréglalo en «Mis mazos».'));
+    const u = D.Account.user;
+    if (!D.Account.cloud) notes.push(h('div', { class: 'hnote' }, 'Sin conexión con la nube: tus mazos se guardan sólo en este navegador.'));
+    else if (!u || u.guest) notes.push(h('div', { class: 'hnote' }, 'Invitado: sin guardar en la nube ni jugar online.'));
+    const nav = [['Jugar', () => btns.find(b => !b.disabled) && btns.find(b => !b.disabled).focus(), true], ['Mazos', deckBuilder], ['Tienda', () => shopScreen()], ['Cajas', () => boxScreen()], ['Ranking', () => rankScreen()], ['Novedades', news]];
+    const nw = latestNews(3), rs = !C.test && D.Rank.state();
+    const info = C.test ? null : D.Shop.dailyInfo();
+    const pb = pointsBar(true);
+    const hero = h('div', { class: 'hhero' }, h('img', { src: 'assets/duelo/home/bardock.webp', alt: '', draggable: 'false' }));
+    const parts = h('div', { class: 'hb-parts' });
+    if (noRm()) for (let i = 0; i < 30; i++) { const sz = 2 + Math.random() * 5, d = 6 + Math.random() * 9; parts.append(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;top:${(40 + Math.random() * 60).toFixed(1)}%;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;--d:${d.toFixed(1)}s;animation-delay:-${(Math.random() * d).toFixed(1)}s;--dx:${((Math.random() - .5) * 120).toFixed(0)}px` })); }
+    const sp = document.getElementById('splash');
+    const home = h('div', { class: 'home' + (sp && !sp.classList.contains('out') ? ' pre' : '') },
+      h('div', { class: 'hbg' }, h('div', { class: 'hb-sky' }), h('div', { class: 'hb-floorwrap' }, h('div', { class: 'hb-floor' }), h('div', { class: 'hb-floorfade' })), h('div', { class: 'hb-tint' }), h('div', { class: 'hb-rays' }), h('div', { class: 'hb-fog' }), h('div', { class: 'hb-halo' }), h('div', { class: 'hb-shadow' }), parts, h('div', { class: 'hb-vig' })),
+      hero,
+      h('header', { class: 'htop' }, h('div', { class: 'brand' }, embEl(), 'DUELO POKÉMON'),
+        h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[2] ? 'on' : '', onclick: n[1] }, n[0]))),
+        h('div', { class: 'hright' }, pb, acctBar())),
+      h('div', { class: 'hmain' },
+        h('div', { class: 'hlist' }, ...btns, desc, ...notes),
+        h('aside', { class: 'hnews' }, h('h3', null, 'NOVEDADES'),
+          ...nw.map(c => h('button', { class: 'ncard', onclick: news }, c.img ? h('img', { src: c.img, alt: '', draggable: 'false' }) : null, h('div', null, h('small', null, c.k), h('b', null, c.t), h('p', null, c.d)))),
+          rs ? h('button', { class: 'hseason', onclick: () => rankScreen() }, 'TEMPORADA', h('b', null, D.Seasons.theme(D.Rank.seasonId()).name), `Termina en ${D.Rank.daysLeft()} días · Tu mejor rango: ${D.Rank.tierOf(rs.best != null ? rs.best : rs.pts).label}`) : null)),
+      h('footer', { class: 'hbot' }, C.test ? h('span') : info ? h('span', null, 'RECOMPENSA DE HOY ', h('b', null, 'DISPONIBLE')) : h('span', null, 'RECOMPENSA DE HOY ', h('b', null, 'COBRADA')), h('span', { class: 'hint' }, '↑ ↓ · ENTER · ELEGIR')));
+    mount(home);
+    if (home.classList.contains('pre')) setTimeout(() => home.classList.remove('pre'), 4000);   // por si el splash no avisa
+    if (!homeKeys) {
+      homeKeys = true;
+      document.addEventListener('keydown', e => {
+        const hm = document.querySelector('.home .hlist'); if (!hm || document.querySelector('.modal') || /^(INPUT|SELECT|TEXTAREA)$/.test((e.target.tagName || ''))) return;
+        const bs = [...hm.querySelectorAll('.menu-btn')], cur = Math.max(0, bs.findIndex(b => b.classList.contains('on')));
+        const go = d => { let i = cur; for (let k = 0; k < bs.length; k++) { i = (i + d + bs.length) % bs.length; if (!bs[i].disabled) { bs[i].dispatchEvent(new Event('pointerenter')); bs[i].focus({ preventScroll: true }); S.play('hover'); return; } } };
+        if (e.key === 'ArrowDown') { e.preventDefault(); go(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+        else if (e.key === 'Enter' && bs[cur] && !bs[cur].disabled && document.activeElement !== bs[cur]) { e.preventDefault(); bs[cur].click(); }
+      });
+    }
+    if (window.DueloSplash) window.DueloSplash.done();
   }
 
   function rules() {
@@ -1508,6 +1572,7 @@
 
   function loginScreen() {
     endCurrent(); showBg(true); S.setTrack('menu'); sndButton(true);
+    setTimeout(() => { if (window.DueloSplash) window.DueloSplash.done(); }, 0);
     let mode = 'login';
     const err = h('div', { class: 'msg err', style: 'display:none' });
     const showErr = t => { err.textContent = t; err.style.display = t ? '' : 'none'; };
@@ -1628,15 +1693,15 @@
 
   // ---------------- puntos, recompensa diaria y Tienda ----------------
   let dailyShown = false, seasonShown = false;
-  function pointsBar() {
+  function pointsBar(slim) {
     if (C.test) return null;
     const info = D.Shop.dailyInfo();
     if (!seasonShown && D.Rank.pending().length) { seasonShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) seasonModal(); }, 300); }
     if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
-    return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), ' puntos'),
-      info ? btn('🎁 Recompensa diaria: +' + info.amount, dailyModal, 'gold sm') : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
+    return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), slim ? '' : ' puntos'),
+      info ? btn('🎁 +' + info.amount, dailyModal, 'gold sm') : slim ? null : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
       D.Rank.state() && D.Account.user && !D.Account.user.guest ? h('button', { class: 'rkchip', onclick: rankScreen, title: 'Ranking' }, rkBadge(D.Rank.state().pts, true), D.Rank.me().label) : null,
-      btn('Tienda', () => shopScreen(), 'ghost sm'), btn('Cajas', () => boxScreen(), 'ghost sm'));
+      slim ? null : btn('Tienda', () => shopScreen(), 'ghost sm'), slim ? null : btn('Cajas', () => boxScreen(), 'ghost sm'));
   }
   function dailyModal() {
     const info = D.Shop.dailyInfo(); if (!info) return;
