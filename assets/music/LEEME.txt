@@ -1,3 +1,5 @@
-Música de las partidas: dbz-lofi.mp3 (Respawn Orchestra, comprimida a 64 kbps).
-Suena en bucle durante la partida; en el menú y la sala suena la música de siempre.
-Si se cambia el archivo, mantener el nombre. Asegúrate de tener derecho a usarla.
+Música (se reproduce en streaming y en bucle):
+- dbz-lofi.mp3: durante la partida (Respawn Orchestra, comprimida a 64 kbps).
+- chrono-cross.mp3: menú, mazos, Tienda, Ranking y sala de espera (Chrono Cross Opening, a 128 kbps).
+Si se cambia un archivo, mantener el nombre. Asegúrate de tener derecho a usarlos.
+Si falta alguno, suena la música de siempre.

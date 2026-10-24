@@ -7,6 +7,8 @@
  */
 G.CHANGELOG = [
   { d: '2026-10-24', title: ['Cajas como en CS2', 'Boxes like CS2'], chg: [
+    ['Música nueva fuera de partida: en el menú, los mazos, la Tienda, el Ranking y la sala de espera suena Chrono Cross (Opening). Durante la partida sigue la música de siempre.',
+     'New music outside matches: Chrono Cross (Opening) plays in the menu, decks, Shop, Ranking and waiting room. Matches keep the usual music.'],
     ['Las cajas ahora se ven como tarjetas; al tocar una se abre su detalle con la caja grande, las probabilidades y todos los premios posibles, ordenados de común a legendario.',
      'Boxes now show as cards; tap one to see its detail with the big box, the odds and every possible prize, sorted from common to legendary.'],
     ['Al abrir una caja los premios pasan en una ruleta horizontal que se va frenando hasta el premio. Se puede saltar con «Saltar».',
