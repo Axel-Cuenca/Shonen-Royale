@@ -55,3 +55,15 @@ servidores, base de datos o costes NO van ahí.
 
 ## Puntos y Tienda
 - `js/duelo/shop.js`: puntos ✦, recompensa diaria (racha de 7), premios por partida (`reward`) y catálogo de cosméticos (`ITEMS`). Todo se guarda en `store.pts` (mismo documento que los mazos, sin reglas nuevas). Los cosméticos se aplican con `data-hc/ha/hm/cb/bd/av/fr/ti` en `<html>` (CSS al final de `css/duelo.css`). Son sólo estéticos y cada jugador ve los suyos. Pendiente: cajas (azar), Tienda con ofertas, ranking con rangos y temporadas.
+- Ranking (`js/duelo/rank.js`): PC tipo Elo, rangos de 300 con 3 peldaños, Gran Maestro desde 1800, temporada = mes con reinicio parcial. Mi estado va en `store.rank`; la tabla pública está en Firestore `ranks/{AAAA-MM}/p/{uid}` y **necesita estas reglas publicadas por el dueño** en la consola de Firebase (sin ellas el ranking funciona en local y la pantalla avisa):
+```
+match /ranks/{season}/p/{uid} {
+  allow read: if request.auth != null;
+  allow create, update: if request.auth != null && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(['name','pts','w','l','u'])
+    && request.resource.data.name is string && request.resource.data.name.size() <= 24
+    && request.resource.data.pts is int && request.resource.data.pts >= 0 && request.resource.data.pts <= 5000
+    && (resource == null || (request.resource.data.pts - resource.data.pts <= 60 && resource.data.pts - request.resource.data.pts <= 60));
+}
+```
+- Cajas y ofertas: en `shop.js` (`BOXES`, `openBox`, `offers`); cada cosmético sale en una sola caja y la Tienda lo vende más caro que esa caja. Los cosméticos viajan en el `hello`/vista (`cos`) y se validan contra el catálogo.

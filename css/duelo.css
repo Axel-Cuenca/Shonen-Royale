@@ -820,3 +820,22 @@ html[data-ef="arcoiris"] .endscr.win .parts i { width: calc(10px * var(--z)); he
 html.rm .boxov .bx-rays, html.rm .boxov .bx-box { animation: none; }
 .pcard .ttl { display: block; color: var(--gold); font-style: italic; font-size: 11px; line-height: 1; margin-top: -1px; }
 .pcard .av { font-size: 20px; }
+
+/* ============ ranking ============ */
+.rkb { --rc: #cd7f32; display: inline-flex; align-items: center; gap: 2px; font: 800 13px var(--ui); color: var(--rc); }
+.rkb i { font-style: normal; font-size: 22px; line-height: 1; filter: drop-shadow(0 0 6px var(--rc)); }
+.rkb.sm i { font-size: 17px; }
+.rkchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--edge); background: #0006; color: var(--ink); font: 700 14px var(--ui); cursor: pointer; }
+.rkres { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 6px 14px; border-radius: 12px; background: #0006; border: 1px solid var(--edge); margin: 4px 0; }
+.rkres b { font: 800 22px var(--serif); } .rkres.up b { color: #8f8; } .rkres.dn b { color: #f99; } .rkres em { color: var(--gold); font-weight: 800; } .rkres em.bad { color: #f99; }
+.rkme { --rc: #cd7f32; display: flex; align-items: center; gap: 16px; padding: 14px; border: 2px solid var(--rc); border-radius: 14px; background: #0007; box-shadow: 0 0 16px color-mix(in srgb, var(--rc) 40%, transparent); }
+.rkme h2 { margin: 0; color: var(--rc); }
+.rkbig { position: relative; width: 84px; height: 84px; display: grid; place-items: center; flex: none; }
+.rkbig i { font-style: normal; font-size: 92px; line-height: 1; color: var(--rc); filter: drop-shadow(0 0 12px var(--rc)); position: absolute; }
+.rkbig b { position: relative; font: 800 22px var(--serif); color: #fff; text-shadow: 0 0 6px #000; }
+.rkbar { height: 8px; border-radius: 999px; background: #0008; margin: 6px 0 2px; overflow: hidden; border: 1px solid var(--edge); } .rkbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--rc), #fff8); }
+.rktable { display: flex; flex-direction: column; gap: 4px; }
+.rkrow { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: #0005; border: 1px solid transparent; }
+.rkrow.me { border-color: var(--gold); background: #5a4a1a55; }
+.rkrow .pos { width: 2.2em; text-align: right; color: var(--muted); font-weight: 800; } .rkrow b { flex: 1; } .rkrow small { color: var(--muted); } .rkrow .pc { font-weight: 800; color: var(--gold); min-width: 4.5em; text-align: right; }
+.rkinfo { border: 1px solid var(--edge); border-radius: 10px; padding: 8px 12px; background: #0005; } .rkinfo summary { cursor: pointer; font-weight: 700; } .rkinfo ul { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 4px; }

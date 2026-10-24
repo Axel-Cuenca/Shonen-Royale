@@ -678,8 +678,8 @@ async function matchTests() {
   section('online: anfitrión + invitado');
   for (const latency of [0, 8]) {
     const [tH, tG] = Match.memoryPair(latency);
-    const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', transport: tH, seed: 21, cos: { hc: 'hc_oro', ha: 'ha_fuego' } });
-    const g = Match.guest({ deck: Cards.presetDeck('electric'), name: 'Amigo', transport: tG, helloMs: 20, cos: { hc: 'hc_violeta', cb: 'x'.repeat(50), zz: 'hack' } });
+    const h = Match.host({ deck: Cards.presetDeck('water'), name: 'Axel', transport: tH, seed: 21, cos: { hc: 'hc_oro', ha: 'ha_fuego' }, rk: 640 });
+    const g = Match.guest({ deck: Cards.presetDeck('electric'), name: 'Amigo', transport: tG, helloMs: 20, cos: { hc: 'hc_violeta', cb: 'x'.repeat(50), zz: 'hack' }, rk: 99999 });
     const vh = [], vg = [];
     let hv = null, gv = null; h.onView(x => { hv = x; vh.push(x); }); g.onView(x => { gv = x; vg.push(x); });
     const status = []; h.onStatus(s => status.push(s.k)); g.onStatus(s => status.push('g:' + s.k));
@@ -687,6 +687,7 @@ async function matchTests() {
     ok(await until(() => hv && gv, 2000), `[${latency}ms] los dos reciben su vista inicial`);
     ok(h.names[1] === 'Amigo' && g.names[0] === 'Axel', 'los apodos llegan');
     ok(gv.seat === 1 && hv.seat === 0, 'asientos');
+    eq(g.rk, [640, 5000], 'los PC de ranking llegan a los dos lados (con tope de 5000)'); eq(g.hum, [true, true], 'se sabe quién es humano');
     eq(g.cos[0], { hc: 'hc_oro', ha: 'ha_fuego' }, 'el invitado recibe los cosméticos del anfitrión'); eq(h.cos[1], { hc: 'hc_violeta' }, 'el anfitrión recibe los del invitado (lo raro se descarta)'); eq(g.cos[1], { hc: 'hc_violeta' }, 'y el invitado ve los suyos en la lista común');
     const bots = [AI.create('normal', 5), AI.create('normal', 6)];
     let guard = 0, illegalSent = false;
@@ -1045,6 +1046,7 @@ async function multiTests() {
 
 require('./test_cartas.js')({ E, Cards, AI, ok, eq, section, act, find, give, mulberry, randomBot, checkInvariants: null, game });
 require('./test_tienda.js')({ ok, eq, section });
+require('./test_rank.js')({ ok, eq, section });
 matchTests().then(multiTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);

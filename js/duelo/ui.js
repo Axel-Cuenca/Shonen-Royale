@@ -93,7 +93,7 @@
     try { localStorage.setItem(storeKey, JSON.stringify(store)); } catch (e) { /* nada */ }
     if (cloudUser()) D.Account.push(store);
   }
-  D.Shop.init(() => store, save); D.Shop.apply();
+  D.Shop.init(() => store, save); D.Shop.apply(); D.Rank.init(() => store, save);
   /** Carga los mazos de quien acaba de entrar (null = invitado / sin nube). */
   async function openStore(u) {
     if (!u || u.guest) { storeKey = KEY; store = readStore(KEY) || defaultStore(); D.Shop.apply(); return; }
@@ -248,7 +248,7 @@
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   function menu() {
     endCurrent(); showBg(true);
@@ -266,6 +266,7 @@
       h('button', { class: 'menu-btn', disabled: !!bad || few || C.test, onclick: onlineMenu }, 'Duelo online con amigos', h('small', null, 'De 2 a 4 personas: crea una sala y comparte el código')),
       h('button', { class: 'menu-btn', onclick: deckBuilder }, 'Mis mazos', h('small', null, '30 cartas, máximo 2 copias de cada una')),
       h('button', { class: 'menu-btn', onclick: () => shopScreen() }, 'Tienda', h('small', null, 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…')),
+      h('button', { class: 'menu-btn', onclick: () => rankScreen() }, 'Ranking', h('small', null, 'Tu rango, los mejores de la temporada y cómo se sube')),
       h('button', { class: 'menu-btn', onclick: rules }, 'Reglas', h('small', null, 'Cómo se juega')),
       h('button', { class: 'menu-btn', onclick: news }, 'Novedades', h('small', null, 'Lo último que se ha añadido'))));
   }
@@ -434,7 +435,7 @@
       });
     } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
     codeEl.textContent = room.code; status.textContent = single ? 'Esperando a tu amigo…' : 'Esperando a tus amigos…';
-    match = D.Match.host({ cos: D.Shop.mine(), deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
+    match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
     match.onStatus(s => {
       if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
       else if (s.k === 'started') room.lock();
@@ -458,7 +459,7 @@
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
     errBox.replaceChildren(h('div', { class: 'msg ok' }, 'Dentro de la sala. Conectando con el anfitrión… Cuando empiece el duelo entrarás solo.'));
     failTimer = setTimeout(() => errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)), 20000);
-    const match = D.Match.guest({ cos: D.Shop.mine(), deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
+    const match = D.Match.guest({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
     match.onStatus(s => {
       if (s.k === 'rejected') errBox.replaceChildren(h('div', { class: 'msg err' }, s.why && /empez/.test(s.why) ? s.why : 'Tu mazo no es válido: ' + s.why));
     });
@@ -530,6 +531,21 @@
     opts = opts || {};
     endCurrent();
     const cur = current = { match, cleanup: opts.cleanup, started: false };
+    // ---- ranking: sólo partidas online con al menos 2 personas y cuenta con nombre ----
+    let rankDone = false, rankRes = null;
+    const rankable = () => match.kind !== 'ia' && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
+    function rankFinish(leaving) {
+      if (rankDone || !v || !rankable()) return null;
+      rankDone = true;
+      const R = D.Rank, mine = (R.state() || {}).pts || 0, rk = q => (match.hum[q] && match.rk && match.rk[q]) ? match.rk[q] : mine;
+      const draw = v.winner === 'draw' || v.winner === -1, won = v.winner === v.team[v.seat];
+      let S, foes;
+      if (leaving) { S = 0; foes = v.players.filter(p => p.seat !== v.seat && v.team[p.seat] !== v.team[v.seat]).map(p => rk(p.seat)); }
+      else if (v.n > 2 && v.mode !== 'teams') { S = draw ? .5 : R.scoreOfPlace(standings().indexOf(v.seat) + 1, v.n); foes = v.players.filter(p => p.seat !== v.seat).map(p => rk(p.seat)); }
+      else { S = draw ? .5 : won ? 1 : 0; foes = v.players.filter(p => v.team[p.seat] !== v.team[v.seat]).map(p => rk(p.seat)); }
+      return (rankRes = R.apply({ S, foes }));
+    }
+    cur.leave = () => { if (v && v.winner === null && v.me.alive) rankFinish(true); };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
@@ -998,7 +1014,7 @@
       if (modalEl && modalEl.dataset.end) return;
       const myTeam = v.team[v.seat], won = v.winner === myTeam, draw = v.winner === 'draw' || v.winner === -1;
       let earned = 0;
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!(current && current.match && current.match.kind === 'ia'), won); }
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!(current && current.match && current.match.kind === 'ia'), won); rankFinish(false); }
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
       let sub = v.reason || '', list = null;
@@ -1015,7 +1031,7 @@
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
         h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
-          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos') : null, list,
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos') : null, rankRes ? rankLine(rankRes) : null, list,
           h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
       modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
@@ -1344,6 +1360,35 @@
   }
 
   // ---------------- novedades ----------------
+  // ---------------- ranking ----------------
+  const rkBadge = (pts, small) => { const t = D.Rank.tierOf(pts); return h('span', { class: 'rkb' + (small ? ' sm' : ''), style: `--rc:${t.tier.color}`, title: t.label + ' · ' + pts + ' PC' }, h('i', null, '⬢'), t.step >= 0 ? D.Rank.ROMAN[t.step] : 'GM'); };
+  const rankLine = r => h('div', { class: 'rkres ' + (r.delta >= 0 ? 'up' : 'dn') }, rkBadge(r.after), h('b', null, (r.delta >= 0 ? '+' : '') + r.delta + ' PC'), h('span', null, r.to.label + ' · ' + r.after + ' PC'),
+    r.rankUp ? h('em', null, '¡Subes a ' + r.to.label + '!') : r.rankDown ? h('em', { class: 'bad' }, 'Bajas a ' + r.to.label) : null);
+  async function rankScreen() {
+    const R = D.Rank, u = D.Account.user, st = R.state(); S.setTrack('menu');
+    const guestMsg = !u || u.guest ? 'Entra con una cuenta (nombre o Google) para jugar partidas con rango.' : null;
+    const info = st ? R.tierOf(st.pts) : null;
+    const tbl = h('div', { class: 'rktable' }, h('p', { class: 'sub' }, 'Cargando la tabla…'));
+    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Ranking'),
+      h('div', { class: 'sub' }, R.seasonName(R.seasonId()) + ' · termina en ' + R.daysLeft() + ' días. Al empezar la siguiente, tus puntos pasan por un reinicio parcial.'),
+      guestMsg ? h('div', { class: 'msg err' }, guestMsg) : null,
+      info ? h('div', { class: 'rkme', style: `--rc:${info.tier.color}` }, h('div', { class: 'rkbig' }, h('i', null, '⬢'), h('b', null, info.step >= 0 ? R.ROMAN[info.step] : 'GM')),
+        h('div', null, h('h2', null, info.label), h('div', { class: 'sub' }, `${st.pts} PC · ${st.w} victorias · ${st.l} derrotas`),
+          info.to ? h('div', { class: 'rkbar' }, h('i', { style: `width:${info.pct}%` })) : null,
+          h('small', null, info.to ? `Te faltan ${info.next} PC para ${R.tierOf(info.to).label}` : 'Eres Gran Maestro: sigue sumando para subir en la tabla.'))) : null,
+      h('h2', null, 'Los mejores de la temporada'), tbl,
+      h('details', { class: 'rkinfo' }, h('summary', null, 'Rangos y cómo se sube'),
+        h('p', null, 'Ganar una partida online suma PC; perder resta. Ganarle a alguien mejor que tú da más; perderle a alguien peor te quita más. En 3 o 4 jugadores cuenta el puesto. Las partidas contra la computadora no cuentan. Si abandonas una partida, cuenta como derrota.'),
+        h('ul', null, R.TIERS.slice(0, 6).map((t, i) => h('li', null, rkBadge(i * 300), ' ', h('b', null, t.name), ` · ${i * 300}–${i * 300 + 299} PC (3 peldaños de 100)`)), h('li', null, rkBadge(1800), ' ', h('b', null, 'Gran Maestro'), ' · desde 1800 PC')))));
+    if (guestMsg) { tbl.replaceChildren(h('p', { class: 'sub' }, 'Inicia sesión para ver la tabla.')); return; }
+    await R.publish();
+    const res = await R.top(100);
+    if (!document.body.contains(tbl)) return;
+    if (!res.ok) { tbl.replaceChildren(h('div', { class: 'msg err' }, res.error === 'denied' ? 'La tabla pública aún no está activada (falta publicar sus reglas en Firebase). Tus PC y tu rango sí cuentan y se guardan.' : 'No se pudo cargar la tabla ahora mismo.')); return; }
+    if (!res.rows.length) { tbl.replaceChildren(h('p', { class: 'sub' }, 'Todavía no hay nadie en la tabla esta temporada. ¡Juega una partida online con rango!')); return; }
+    tbl.replaceChildren(...res.rows.map((r, i) => h('div', { class: 'rkrow' + (u && r.uid === u.uid ? ' me' : '') }, h('span', { class: 'pos' }, String(i + 1)), rkBadge(r.pts, true), h('b', null, r.name || 'Jugador'), h('small', null, `${r.w || 0}V · ${r.l || 0}D`), h('span', { class: 'pc' }, r.pts + ' PC'))));
+  }
+
   // ---------------- puntos, recompensa diaria y Tienda ----------------
   let dailyShown = false;
   function pointsBar() {
@@ -1352,6 +1397,7 @@
     if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
     return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), ' puntos'),
       info ? btn('🎁 Recompensa diaria: +' + info.amount, dailyModal, 'gold sm') : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
+      D.Rank.state() && D.Account.user && !D.Account.user.guest ? h('button', { class: 'rkchip', onclick: rankScreen, title: 'Ranking' }, rkBadge(D.Rank.state().pts, true), D.Rank.me().label) : null,
       btn('Tienda', () => shopScreen(), 'ghost sm'), btn('Cajas', () => boxScreen(), 'ghost sm'));
   }
   function dailyModal() {
