@@ -1334,7 +1334,7 @@
       const txt = direct ? '⚔ ' + who + own + ' → ' + shortOf(a.vs) + ' · ATAQUE DIRECTO' : '🎯 ' + who + own + ' → ' + tgName + (multi() ? ' (' + shortOf(a.vs) + ')' : '');
       const below = by - rh / 2 < 44;                          // si no cabe arriba, el nombre va debajo
       const el = h('div', { class: 'atkfx' + (mine ? ' mine' : ' foe'), style: `--ac:${col}` },
-        h('div', { class: 'ashaft', style: `left:${ax + Math.cos(ang) * s0}px;top:${ay + Math.sin(ang) * s0}px;width:${stop}px;transform:rotate(${ang}rad)` }, h('i')),
+        direct ? null : h('div', { class: 'ashaft', style: `left:${ax + Math.cos(ang) * s0}px;top:${ay + Math.sin(ang) * s0}px;width:${stop}px;transform:rotate(${ang}rad)` }, h('i')),
         h('div', { class: 'areticle' + (direct ? ' direct' : ''), style: `left:${bx}px;top:${by}px;width:${rw}px;height:${rh}px` }, h('b'), h('b'), h('b'), h('b')),
         h('div', { class: 'atag' + (below ? ' below' : ''), style: `left:${Math.min(Math.max(bx, 90), innerWidth - 90)}px;top:${below ? by + rh / 2 + 6 : by - rh / 2 - 6}px` }, txt));
       document.body.append(el);
