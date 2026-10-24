@@ -68,7 +68,7 @@
   function leave() {
     if (gone) return; gone = true;
     const home = document.querySelector('.home');
-    const from = sp.querySelector('.sp-logo .emb'), to = home && home.querySelector('.brand .emb');
+    const from = sp.querySelector('.sp-logo .emb'), to = document.querySelector('.gtop .brand .emb');
     let fly = null;
     try {
       if (from && to && !rm) {
@@ -83,7 +83,7 @@
       }
     } catch (e) { if (to) to.style.visibility = ''; }
     sp.classList.add('out');
-    if (home) home.classList.remove('pre');
+    document.querySelectorAll('.pre').forEach(e => e.classList.remove('pre'));
     setTimeout(() => { sp.remove(); document.documentElement.classList.remove('splashing'); }, rm ? 100 : 1000);
   }
   document.documentElement.classList.add('splashing');

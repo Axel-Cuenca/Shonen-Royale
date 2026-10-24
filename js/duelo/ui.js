@@ -43,7 +43,7 @@
     const e = h('div', { class: 'hbg' }, h('div', { class: 'hb-sky' }), h('div', { class: 'hb-floorwrap' }, h('div', { class: 'hb-floor' }), h('div', { class: 'hb-floorfade' })), h('div', { class: 'hb-tint' }), h('div', { class: 'hb-rays' }), h('div', { class: 'hb-fog' }), h('div', { class: 'hb-halo' }), h('div', { class: 'hb-shadow' }), parts, h('div', { class: 'hb-dim' }), h('div', { class: 'hb-vig' }));
     e.style.display = 'none'; document.body.prepend(e); return e;
   })();
-  const showBg = on => { bgEl.style.display = on ? '' : 'none'; goldBg.style.display = on ? '' : 'none'; document.body.classList.toggle('goldbg', !!on); if (on) D.Scene.toBackdrop(); };
+  const showBg = on => { bgEl.style.display = on ? '' : 'none'; goldBg.style.display = on ? '' : 'none'; document.body.classList.toggle('goldbg', !!on); if (on) D.Scene.toBackdrop(); else { topEl.style.display = 'none'; document.body.classList.remove('gtop-on'); } };
 
   // ---------------- vista previa al pasar el mouse ----------------
   let prevEl = null;
@@ -76,7 +76,29 @@
   }
   const btn = (text, fn, cls) => h('button', { class: 'btn ' + (cls || ''), onclick: fn }, text);
   const typeChip = t => h('span', { class: 'chip', style: 'background:' + C.TYPE_COLOR[t] }, C.TYPE_ES[t] || t);
-  const mount = (...kids) => { app.replaceChildren(...kids); window.scrollTo(0, 0); };
+  // cabecera fija de todas las pantallas de menú (logo, secciones, puntos, rango y cuenta)
+  let curScreen = 'boot', pendScreen = null, introDone = false;
+  const scr = k => { pendScreen = k; };           // cada pantalla dice cuál es antes de montarse
+  const mount = (...kids) => { curScreen = pendScreen || ''; pendScreen = null; app.replaceChildren(...kids); window.scrollTo(0, 0); refreshHeader(); };
+  const topEl = h('header', { class: 'htop gtop' });
+  topEl.style.display = 'none';
+  document.body.prepend(topEl);
+  function refreshHeader() {
+    const show = document.body.classList.contains('goldbg') && curScreen !== 'boot' && curScreen !== 'login';
+    topEl.style.display = show ? '' : 'none';
+    document.body.classList.toggle('gtop-on', show);
+    if (!show) return;
+    const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
+    topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'DUELO POKÉMON'),
+      h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2] }, n[1]))),
+      h('div', { class: 'hright' }, pointsBar(true), acctBar()));
+    if (!introDone) {                               // la primera vez entra con el splash: espera a que se vaya
+      introDone = true; const sp = document.getElementById('splash');
+      if (sp && !sp.classList.contains('out')) { topEl.classList.add('pre'); setTimeout(() => topEl.classList.remove('pre'), 4000); }
+    }
+    document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px');
+  }
+  addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
   // ---------------- mazos guardados ----------------
   // Sin cuenta (invitado o sin nube): en este navegador. Con cuenta: una copia por cuenta en este
@@ -254,7 +276,7 @@
     const pref = v => { try { if (v === undefined) return localStorage.getItem('duelo.fs') === '1'; localStorage.setItem('duelo.fs', v ? '1' : '0'); } catch (e) { return false; } };
     const touch = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
     const api = {
-      wanted: () => touch() && !standalone(),
+      wanted: () => !standalone(),
       icon: () => (cur() ? '⤡' : '⛶'),
       sync: () => document.querySelectorAll('.fsb').forEach(b => { b.textContent = api.icon(); b.title = cur() ? 'Salir de pantalla completa' : 'Pantalla completa'; }),
       toggle: () => {
@@ -269,7 +291,7 @@
         btn('Entendido', () => closeModal(), 'gold'))),
     };
     ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, api.sync));
-    document.addEventListener('pointerdown', () => { if (req && api.wanted() && pref() && !cur()) { try { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (e) { /* nada */ } } }, true);
+    document.addEventListener('pointerdown', () => { if (req && touch() && api.wanted() && pref() && !cur()) { try { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (e) { /* nada */ } } }, true);
     return api;
   })();
   function soundPanel() {
@@ -312,6 +334,7 @@
   let homeKeys = false;
 
   function menu() {
+    scr('jugar');
     endCurrent(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
@@ -342,17 +365,13 @@
     const u = D.Account.user;
     if (!D.Account.cloud) notes.push(h('div', { class: 'hnote' }, 'Sin conexión con la nube: tus mazos se guardan sólo en este navegador.'));
     else if (!u || u.guest) notes.push(h('div', { class: 'hnote' }, 'Invitado: sin guardar en la nube ni jugar online.'));
-    const nav = [['Jugar', () => btns.find(b => !b.disabled) && btns.find(b => !b.disabled).focus(), true], ['Mazos', deckBuilder], ['Tienda', () => shopScreen()], ['Cajas', () => boxScreen()], ['Ranking', () => rankScreen()], ['Novedades', news]];
     const nw = latestNews(3), rs = !C.test && D.Rank.state();
     const info = C.test ? null : D.Shop.dailyInfo();
-    const pb = pointsBar(true);
+    popups();
     const hero = h('div', { class: 'hhero' }, h('img', { src: 'assets/duelo/home/bardock.webp', alt: '', draggable: 'false' }));
     const sp = document.getElementById('splash');
     const home = h('div', { class: 'home' + (sp && !sp.classList.contains('out') ? ' pre' : '') },
       hero,
-      h('header', { class: 'htop' }, h('div', { class: 'brand' }, embEl(), 'DUELO POKÉMON'),
-        h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[2] ? 'on' : '', onclick: n[1] }, n[0]))),
-        h('div', { class: 'hright' }, pb, acctBar())),
       h('div', { class: 'hmain' },
         h('div', { class: 'hlist' }, ...btns, desc, ...notes),
         h('aside', { class: 'hnews' }, h('h3', null, 'NOVEDADES'),
@@ -589,6 +608,7 @@
 
   /** Lista de mazos (entrada): una tarjeta por mazo; Editar abre el editor. */
   function deckBuilder() {
+    scr('mazos');
     endCurrent(); S.setTrack('prep');
     const decks = myDecks();
     const again = () => deckBuilder();
@@ -633,6 +653,7 @@
 
   /** Editor de un mazo: colección al centro, detalle de la carta a la derecha, tu mazo abajo. Escritorio: arrastrar y soltar. Móvil: botones − / +. */
   function deckEditor(idx) {
+    scr('mazos');
     endCurrent(); S.setTrack('prep');
     const ro = !!C.test, decks = myDecks();
     idx = Math.max(0, Math.min(idx | 0, decks.length - 1));
@@ -1566,6 +1587,7 @@
   }
 
   async function afterLogin(isNew) {
+    scr('boot');
     mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Cargando tus mazos…')));
     D.Online.reset();
     await openStore(D.Account.user);
@@ -1574,6 +1596,7 @@
   }
 
   function loginScreen() {
+    scr('login');
     endCurrent(); showBg(true); S.setTrack('menu'); sndButton(true);
     setTimeout(() => { if (window.DueloSplash) window.DueloSplash.done(); }, 0);
     let mode = 'login';
@@ -1646,6 +1669,7 @@
   const rankLine = r => h('div', { class: 'rkres ' + (r.delta >= 0 ? 'up' : 'dn') }, rkBadge(r.after), h('b', null, (r.delta >= 0 ? '+' : '') + r.delta + ' PC'), h('span', null, r.to.label + ' · ' + r.after + ' PC'),
     r.rankUp ? h('em', null, '¡Subes a ' + r.to.label + '!') : r.rankDown ? h('em', { class: 'bad' }, 'Bajas a ' + r.to.label) : null);
   async function rankScreen() {
+    scr('ranking');
     const R = D.Rank, u = D.Account.user, st = R.state(); S.setTrack('menu');
     const guestMsg = !u || u.guest ? 'Entra con una cuenta (nombre o Google) para jugar partidas con rango.' : null;
     const info = st ? R.tierOf(st.pts) : null;
@@ -1696,11 +1720,16 @@
 
   // ---------------- puntos, recompensa diaria y Tienda ----------------
   let dailyShown = false, seasonShown = false;
-  function pointsBar(slim) {
-    if (C.test) return null;
+  // avisos al entrar al menú: premios de temporada y recompensa diaria (una vez por sesión)
+  function popups() {
+    if (C.test) return;
     const info = D.Shop.dailyInfo();
     if (!seasonShown && D.Rank.pending().length) { seasonShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) seasonModal(); }, 300); }
     if (info && !dailyShown) { dailyShown = true; setTimeout(() => { if (!current && document.querySelector('.menu-btn')) dailyModal(); }, 500); }
+  }
+  function pointsBar(slim) {
+    if (C.test) return null;
+    const info = D.Shop.dailyInfo();
     return h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(D.Shop.coins())), slim ? '' : ' puntos'),
       info ? btn('🎁 +' + info.amount, dailyModal, 'gold sm') : slim ? null : h('span', { class: 'sub' }, 'Recompensa de hoy cobrada'),
       D.Rank.state() && D.Account.user && !D.Account.user.guest ? h('button', { class: 'rkchip', onclick: rankScreen, title: 'Ranking' }, rkBadge(D.Rank.state().pts, true), D.Rank.me().label) : null,
@@ -1717,6 +1746,7 @@
       btn('Genial', () => { closeModal(); menu(); }, 'gold')));
   }
   function shopScreen(cat) {
+    scr('tienda');
     cat = cat || 'hc'; S.setTrack('menu');
     const SH = D.Shop, items = SH.ITEMS.filter(i => i.cat === cat);
     const sample = () => {
@@ -1756,6 +1786,7 @@
   const pctOf = b => Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
   /** Lista de cajas: cuadrícula de tarjetas; al tocar una se ve el detalle con todos sus premios. */
   function boxScreen() {
+    scr('cajas');
     const SH = D.Shop; S.setTrack('menu');
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: () => shopScreen() }, '← Tienda'), h('h1', null, 'Cajas'),
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Cada premio sólo sale de su caja. Toca una caja para ver sus premios.')),
@@ -1829,6 +1860,7 @@
   }
 
   function news() {
+    scr('novedades');
     S.setTrack('menu');
     const en = /^en/i.test(navigator.language || '') ? 1 : 0;
     const SEC = [['new', 'Nuevo', 'New', 'NUEVO', 'NEW'], ['chg', 'Cambios', 'Changes', 'CAMBIO', 'CHANGE'], ['fix', 'Arreglos', 'Fixes', 'ARREGLO', 'FIX']];
