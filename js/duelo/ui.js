@@ -1517,7 +1517,7 @@
     for (const p of pool) (by[p.rar] = by[p.rar] || []).push(p);
     const rolls = Object.keys(b.w).filter(k => by[k]);
     const rnd = () => { let x = Math.random() * rolls.reduce((a, k) => a + b.w[k], 0), k = rolls[0]; for (const q of rolls) { if ((x -= b.w[q]) < 0) { k = q; break; } } return by[k][(Math.random() * by[k].length) | 0]; };
-    const W = 150, GAP = 8, N = 64, WIN = 52;
+    const W = 150, GAP = 8, N = 120, WIN = 104;      // más premios pasando antes de llegar al tuyo
     const seq = Array.from({ length: N }, (_, i) => i === WIN ? it : rnd());
     const rm = document.documentElement.classList.contains('rm');
     const strip = h('div', { class: 'bx-strip' }, seq.map(x => bxTile(x, false)));
@@ -1533,29 +1533,30 @@
     document.body.append(ov);
     S.play('confirm');
     let done = false, raf = 0, last = -1, lastT = 0;
+    const off = (Math.random() * .7 - .35) * W;                    // dónde cae dentro del cuadro
+    let target = 0, cw = 0;
     const finish = (quick) => {
       if (done) return; done = true; cancelAnimationFrame(raf);
-      if (quick) { strip.style.transition = 'none'; strip.style.transform = `translateX(${target}px)`; }
+      strip.style.transform = `translateX(${target}px)`;
       S.play(rar === 'l' ? 'win' : 'confirm');
       try { if (rar === 'l' || rar === 'e') S.jingle && S.jingle('win'); } catch (e) { /* nada */ }
-      setTimeout(() => ov.classList.add('open'), quick ? 150 : 650);
+      setTimeout(() => ov.classList.add('open'), quick ? 150 : 900);
     };
-    const off = (Math.random() * .7 - .35) * W;                    // dónde cae dentro del cuadro
-    let target = 0;
+    // Frenado en cuarta potencia: arranca muy rápido y los últimos cuadros van cada vez más despacio (suspenso)
+    const DUR = rm ? 1800 : 12000, ease = t => 1 - Math.pow(1 - t, 4);
     requestAnimationFrame(() => {
-      const cw = reel.clientWidth; target = -(WIN * (W + GAP) + W / 2 + off) + cw / 2;
-      const dur = rm ? 1.2 : 7;
-      strip.style.transition = `transform ${dur}s cubic-bezier(.08,.62,.08,1)`;
-      strip.style.transform = `translateX(${target}px)`;
-      strip.addEventListener('transitionend', () => finish(false), { once: true });
-      setTimeout(() => finish(false), dur * 1000 + 600);
-      const tick = (t) => {                                          // «clic» cada vez que pasa un cuadro bajo la marca
+      cw = reel.clientWidth; target = -(WIN * (W + GAP) + W / 2 + off) + cw / 2;
+      const t0 = performance.now();
+      const frame = (now) => {
         if (done) return;
-        const m = new DOMMatrix(getComputedStyle(strip).transform), i = Math.floor((-m.m41 + cw / 2) / (W + GAP));
-        if (i !== last && t - lastT > 45) { last = i; lastT = t; try { S.play('select'); } catch (e) { /* nada */ } }
-        raf = requestAnimationFrame(tick);
+        const t = Math.min(1, (now - t0) / DUR), x = target * ease(t);
+        strip.style.transform = `translateX(${x}px)`;
+        const i = Math.floor((-x + cw / 2) / (W + GAP));            // «clic» cada vez que pasa un cuadro bajo la marca
+        if (i !== last && now - lastT > 40) { last = i; lastT = now; try { S.play('select'); } catch (e) { /* nada */ } }
+        if (t >= 1) return finish(false);
+        raf = requestAnimationFrame(frame);
       };
-      raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(frame);
     });
   }
 

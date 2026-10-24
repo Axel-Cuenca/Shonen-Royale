@@ -16,8 +16,8 @@ G.CHANGELOG = [
      'New music outside matches: Chrono Cross (Opening) plays in the menu, decks, Shop, Ranking and waiting room. Matches keep the usual music.'],
     ['Las cajas ahora se ven como tarjetas; al tocar una se abre su detalle con la caja grande, las probabilidades y todos los premios posibles, ordenados de común a legendario.',
      'Boxes now show as cards; tap one to see its detail with the big box, the odds and every possible prize, sorted from common to legendary.'],
-    ['Al abrir una caja los premios pasan en una ruleta horizontal que se va frenando hasta el premio. Se puede saltar con «Saltar».',
-     'Opening a box now spins a horizontal reel of prizes that slows down onto your prize. You can skip it with "Saltar".']
+    ['Al abrir una caja los premios pasan en una ruleta horizontal: dura unos 12 segundos, pasan muchos más premios y al final frena poco a poco, con suspenso. Se puede saltar con «Saltar».',
+     'Opening a box now spins a horizontal reel of prizes: it lasts about 12 seconds, many more prizes go by and it slows down gradually at the end for suspense. You can skip it with "Saltar".']
   ] },
   { d: '2026-10-23', title: ['Llegan 18 cartas nuevas: ya se puede jugar', '18 new cards: you can play now'], new: [
     ['Ya hay 20 cartas y se pueden armar mazos (30 cartas, máximo 2 copias) y jugar contra la computadora y online. Personajes: Bardock, Bardock SSJ, Cell Semi Perfecto, Kratos, Kratos el Fantasma de Esparta, Lara Tybur, Titán Martillo, Ryomen Sukuna 5% y 60%, Shang Tsung, Vegeta y Vegeta Blue Evolution (más Popeye y Creeper, con imagen y sonido nuevos). Magias: Armadura Dorada, Espada del Rey Arruinado, Gema de la Mente, Karma, Superball y Tormenta Eléctrica. Toca una carta para ver lo que hace su habilidad.',
