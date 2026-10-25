@@ -16,14 +16,16 @@
     fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra', flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho',
     rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada',
     popeye: 'Popeye', minecraft: 'Minecraft', prueba: 'Prueba',
-    dbz: 'Dragon Ball Z', gow: 'God of War', aot: 'Attack on Titan', jjk: 'Jujutsu Kaisen', mk: 'Mortal Kombat', zodiaco: 'Caballero del Zodiaco'
+    dbz: 'Dragon Ball Z', gow: 'God of War', aot: 'Attack on Titan', jjk: 'Jujutsu Kaisen', mk: 'Mortal Kombat', zodiaco: 'Caballero del Zodiaco',
+    marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
     fighting: '#c22e28', poison: '#a33ea1', ground: '#e2bf65', flying: '#a98ff3', psychic: '#f95587', bug: '#a6b91a',
     rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad',
     popeye: '#2e5aa8', minecraft: '#4a9a3a', prueba: '#8a8fa8',
-    dbz: '#e8761a', gow: '#a3262a', aot: '#6b5a3c', jjk: '#6a3fb5', mk: '#b8312f', zodiaco: '#d4a72c'
+    dbz: '#e8761a', gow: '#a3262a', aot: '#6b5a3c', jjk: '#6a3fb5', mk: '#b8312f', zodiaco: '#d4a72c',
+    marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b'
   };
 
   // ---------------- catálogo ----------------
@@ -60,7 +62,25 @@
     saiyan: ['Sangre Saiyan', 'Si es revivido, vuelve con +500 ATK y +500 DEF.'],
     escudo: ['Escudo Blue Evolution', 'Escudo de 3000: mientras esté activo, los ataques se resuelven sólo contra el escudo (el ATK y la DEF de Vegeta no cuentan, nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta); las magias/trampas que lo destruyan golpean primero al escudo.'],
     bigbang: ['Big Bang', 'Una vez por invocación: destruye a todos los personajes rivales con menos de 2000 ATK.'],
-    xform: ['Transformación', 'Se transforma en otra carta desde tu mano; la carta anterior queda vinculada.']
+    xform: ['Transformación', 'Se transforma en otra carta desde tu mano; la carta anterior queda vinculada.'],
+    zenitsu1: ['Primera Postura del Rayo', 'Cada vez que declara un ataque, obtiene +200 ATK y +200 DEF durante su invocación.'],
+    zenitsu2: ['Respiración de Concentración Total', 'Una vez por invocación: +400 ATK y +400 DEF durante 2 turnos.'],
+    gyomei1: ['Respiración de la Roca', '4 posturas: cada vez que ataca a otro personaje o es atacado por él, consume una y gana +200 ATK y +200 DEF.'],
+    gyomei2: ['Respiración de Concentración Total', 'Una vez por invocación: +400 ATK durante 2 turnos.'],
+    gyomei3: ['Marca de Cazador', 'Una vez por invocación: +500 ATK y DEF durante 3 turnos; al terminar, Gyomei muere.'],
+    yoriichi: ['El Cazador Más Fuerte de la Historia', '13 posturas solares: cada vez que ataca o es atacado por otro personaje consume una y gana +300 ATK y +300 DEF. En sus propios ataques es inmune a las magias, trampas y habilidades enemigas.'],
+    patriarca: ['Despertar del Poder Oculto', 'Un personaje aliado (puede ser él) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
+    kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
+    maestro: ['Maestro de las Artes', 'Enseña a un aliado el Kaio-ken o la Genkidama (una enseñanza por turno, cada habilidad una vez por invocación).'],
+    jogodom: ['Ataúd de la Montaña de Hierro', 'Dominio de 2 turnos: +500 ATK y DEF; sólo los personajes de 7★ o más usan habilidades y nadie activa magias ni trampas.'],
+    llama: ['Llama Infernal', 'Una vez por invocación: +200 ATK y DEF por cada asesinato propio que lleve contado.'],
+    sentido: ['Sentido Arácnido', 'El rival no puede elegirlo como objetivo de magias, trampas ni habilidades (sí puede atacarlo).'],
+    telar: ['Telarañas', 'Sella una habilidad de un personaje enemigo mientras Spider-Man siga en el campo. Hasta 2 veces por invocación.'],
+    corrupt: ['Promesa de Poder', 'Elige a un personaje enemigo con menos estrellas: no puede atacar y, en tu siguiente turno, pasa a servirte.'],
+    asimila: ['Asimilación', 'Se regenera la primera vez que muere en un turno; si muere otra vez ese mismo turno, muere de verdad.'],
+    espada: ['Espada de Exterminio', 'Los personajes que mata Mahoraga son desterrados en lugar de ir al cementerio.'],
+    muerte: ['Acumulación de Muertes', 'Cada vez que muere un personaje, gana +300 ATK de forma permanente.'],
+    counter: ['Total Counter', 'Cuando el rival activa una magia, puedes devolver su efecto contra su dueño y elegir el objetivo.']
   };
   const CUSTOM = [
     mon({
@@ -141,13 +161,13 @@
       sfx: { attack: V('shang-attack') }
     }),
     mon({
-      id: 'c_vegeta', name: 'Vegeta', type: 'dbz', level: 4, atk: 1500, def: 1500, img: I('vegeta'), ab: ['saiyan'], xform: { family: 'Vegeta' },
+      id: 'c_vegeta', name: 'Vegeta', fam: 'Vegeta', type: 'dbz', level: 4, atk: 1500, def: 1500, img: I('vegeta'), ab: ['saiyan'], xform: { family: 'Vegeta' },
       text: 'Sangre Saiyan: si es revivido, vuelve con +500 ATK y +500 DEF. ' +
         'Transformación: puede transformarse en otra carta Vegeta de tu mano (1 turno completo de espera por cada 2 estrellas de diferencia); la anterior queda vinculada.',
       sfx: { attack: V('vegeta-attack'), transform: V('bardock-transform') }
     }),
     mon({
-      id: 'c_vegeta_blue', name: 'Vegeta Blue Evolution', type: 'dbz', level: 10, atk: 2700, def: 2800, img: I('vegeta_blue'), ab: ['escudo', 'bigbang'], xform: { family: 'Vegeta' },
+      id: 'c_vegeta_blue', name: 'Vegeta Blue Evolution', fam: 'Vegeta', type: 'dbz', level: 10, atk: 2700, def: 2800, img: I('vegeta_blue'), ab: ['escudo', 'bigbang'], xform: { family: 'Vegeta' },
       text: 'Escudo Blue Evolution: 3000 de resistencia; los ataques sólo dañan al escudo (su ATK/DEF no cuentan y nadie recibe daño de diferencia), y las magias o trampas que intenten destruirlo sólo destruyen el escudo. ' +
         'Big Bang (una vez): destruye a todos los personajes rivales con menos de 2000 ATK. Se puede llegar a él transformando a un Vegeta.',
       sfx: { attack: V('vegeta-attack'), transform: V('bardock-transform'), ability: V('vegeta_blue-ability') }
@@ -178,7 +198,163 @@
       id: 'c_tormenta', name: 'Tormenta Eléctrica', icon: '⚡', img: I('tormenta'), fx: 'storm', sub: 'cont',
       text: 'Magia continua. Sólo puede usar UNA función, UNA vez en todo el tiempo que esté en el campo; después va al cementerio. Elige: (1) destruye un personaje tuyo de la mano para asesinar a un personaje rival de igual o menos estrellas; o (2) destruye una magia/trampa de tu mano para destruir una magia/trampa rival.',
       sfx: { use: V('tormenta-use') }
-    })
+    }),
+    // ---------------- tanda 2 (25-10-2026) ----------------
+    mon({
+      id: 'c_zenitsu', name: 'Zenitsu Agatsuma', type: 'demonslayer', level: 4, atk: 1000, def: 1000, img: I('zenitsu'), ab: ['zenitsu1', 'zenitsu2'],
+      text: 'Primera Postura del Rayo: cada vez que declara un ataque gana +200 ATK y +200 DEF durante su invocación. ' +
+        'Respiración de Concentración Total (una vez por invocación): +400 ATK y +400 DEF durante 2 turnos.',
+      sfx: { attack: V('zenitsu-attack') }
+    }),
+    mon({
+      id: 'c_patriarca', name: 'Gran Patriarca', type: 'dbz', level: 2, atk: 800, def: 800, img: I('gran_patriarca'), ab: ['patriarca'],
+      text: 'Despertar del Poder Oculto: elige a un personaje aliado del campo (también él mismo): gana +700 ATK y +700 DEF durante su invocación. ' +
+        'Una vez por turno y hasta 3 veces por invocación de Gran Patriarca.'
+    }),
+    mon({
+      id: 'c_gyomei', name: 'Gyomei Himejima', type: 'demonslayer', level: 8, atk: 1900, def: 1900, img: I('gyomei'), ab: ['gyomei1', 'gyomei2', 'gyomei3'],
+      text: 'Respiración de la Roca: 4 posturas; cada vez que ataca a otro personaje o es atacado por uno gasta una y gana +200 ATK y +200 DEF. ' +
+        'Respiración de Concentración Total (una vez): +400 ATK durante 2 turnos. ' +
+        'Marca de Cazador (una vez): +500 ATK y +500 DEF durante 3 turnos, pero al terminar Gyomei muere.'
+    }),
+    mon({
+      id: 'c_yoriichi', name: 'Yoriichi', type: 'demonslayer', level: 11, atk: 2600, def: 2600, img: I('yoriichi'), ab: ['yoriichi'],
+      text: 'El Cazador Más Fuerte de la Historia: 13 posturas de la Respiración Solar; cada vez que ataca a otro personaje o es atacado por uno gasta una y gana +300 ATK y +300 DEF. ' +
+        'Velocidad Inalcanzable: mientras resuelve sus propios ataques en tu turno es inmune a las magias, trampas y habilidades enemigas.'
+    }),
+    mon({
+      id: 'c_goku', name: 'Goku', fam: 'Goku', type: 'dbz', level: 4, atk: 1400, def: 1400, img: I('goku'), ab: ['kaioken'], xform: { family: 'Goku' },
+      text: 'Transformación Saiyan: puede transformarse en otra carta Goku de tu mano (1 turno completo de espera por cada 2 estrellas de diferencia); la anterior queda vinculada. ' +
+        'Kaio-ken (una vez por invocación): +700 ATK y +700 DEF durante 3 turnos.',
+      sfx: { transform: V('goku-transform'), summon: V('goku-summon') }
+    }),
+    mon({
+      id: 'c_super_vegeta', name: 'Super Vegeta', fam: 'Vegeta', type: 'dbz', level: 6, atk: 1800, def: 1600, img: I('super_vegeta'), xform: { family: 'Vegeta' },
+      text: 'Sin habilidades propias. Pertenece a la familia Vegeta: puede transformarse en otra carta Vegeta de tu mano (1 turno completo de espera por cada 2 estrellas de diferencia); la anterior queda vinculada.',
+      sfx: { attack: V('super_vegeta-attack'), transform: V('super_vegeta-transform') }
+    }),
+    mon({
+      id: 'c_kaiosama', name: 'Kaio Sama', type: 'dbz', level: 6, atk: 1500, def: 1500, img: I('kaio_sama'), ab: ['maestro'],
+      text: 'Maestro de las Artes: enseña a un personaje aliado el Kaio-ken (+600 ATK y DEF durante 3 turnos) o la Genkidama (2500 de daño a cada personaje rival). ' +
+        'Una enseñanza por turno; cada habilidad se puede enseñar una vez por invocación de Kaio Sama. Quien la aprende la usa después, una vez por invocación.'
+    }),
+    mon({
+      id: 'c_jogo', name: 'Jogo', type: 'jjk', level: 7, atk: 2100, def: 2100, img: I('jogo'), ab: ['jogodom', 'llama'],
+      text: 'Ataúd de la Montaña de Hierro (dominio, 2 turnos): Jogo gana +500 ATK y DEF; sólo los personajes de 7★ o más usan habilidades y nadie activa magias ni trampas. ' +
+        'Llama Infernal (una vez): +200 ATK y DEF por cada asesinato propio contado.',
+      sfx: { ability: V('jogo-ability') }
+    }),
+    mon({
+      id: 'c_kayn', name: 'Kayn', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn'),
+      text: 'Rhaast: al asesinar a un enemigo en combate desbloquea esa transformación (+300 ATK y DEF, y +100 por cada asesinato posterior). ' +
+        'Asesino Sombra: al infligir daño directo desbloquea esa transformación (+300 ATK por cada enemigo en defensa que asesine estando en ataque, y hasta 2 ataques por turno). ' +
+        'Las transformaciones son opcionales y sólo puede elegir una por invocación.',
+      sfx: { summon: V('kayn-summon') }
+    }),
+    mon({
+      id: 'c_kayn_rhaast', name: 'Rhaast', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_rhaast'), hidden: true,
+      text: 'Forma de Kayn. Gana +100 ATK y +100 DEF por cada personaje enemigo que asesine en combate.', sfx: { transform: V('kayn-rhaast') }
+    }),
+    mon({
+      id: 'c_kayn_sombra', name: 'Asesino Sombra', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_sombra'), hidden: true,
+      text: 'Forma de Kayn. Hasta 2 ataques por turno; +300 ATK cuando, en ataque, asesina a un personaje enemigo en defensa.', sfx: { transform: V('kayn-sombra') }
+    }),
+    mon({
+      id: 'c_meliodas', name: 'Meliodas 5%', type: 'pecados', level: 3, atk: 900, def: 900, img: I('meliodas'), ab: ['counter'],
+      text: 'Total Counter: cuando el rival activa una magia que destruye un personaje, destruye una magia o trampa, o inflige daño, puedes devolver su efecto contra su dueño y elegir el objetivo (el efecto original no se aplica).',
+      sfx: { attack: V('meliodas-attack'), ability: V('meliodas-ability') }
+    }),
+    mon({
+      id: 'c_spiderman', name: 'Spider-Man', type: 'marvel', level: 4, atk: 1300, def: 1500, img: I('spiderman'), ab: ['sentido', 'telar'],
+      text: 'Sentido Arácnido: el rival no puede elegirlo como objetivo de magias, trampas ni habilidades (sí puede atacarlo). Telarañas: sella una habilidad de un personaje enemigo mientras Spider-Man siga en el campo (una vez por turno, hasta 2 veces por invocación).',
+      sfx: { summon: V('spiderman-summon'), ability: V('spiderman-ability') }
+    }),
+    mon({
+      id: 'c_sauron', name: 'Sauron', type: 'anillos', level: 7, atk: 2100, def: 2100, img: I('sauron'), ab: ['corrupt'],
+      text: 'Promesa de Poder: elige a un personaje enemigo con menos estrellas que Sauron. No puede atacar ese turno y, al comenzar tu siguiente turno, pasa a servirte. Cada 3 turnos. ' +
+        'El Regreso del Señor Oscuro: si estás en el cementerio, vuelve al campo cuando se activa una magia de equipamiento.',
+      sfx: { attack: V('sauron-attack'), summon: V('sauron-summon') }
+    }),
+    mon({
+      id: 'c_mahoraga', name: 'General Mahoraga', type: 'jjk', level: 10, atk: 2700, def: 2800, img: I('mahoraga'), ab: ['asimila', 'espada'],
+      text: 'Invocación especial: cuando el rival invoca un personaje de 10★ o más puedes invocar a Mahoraga desde tu mano sin gastar la invocación normal. ' +
+        'Asimilación: la primera vez que muere en un turno se regenera; si muere otra vez ese turno, muere de verdad. ' +
+        'Espada de Exterminio: los personajes que mata son desterrados.',
+      sfx: { ability: V('mahoraga-ability') }
+    }),
+    mon({
+      id: 'c_shen', name: 'Shen', type: 'lol', level: 6, atk: 1600, def: 1800, img: I('shen'),
+      text: 'Protección del Ojo del Crepúsculo: cuando un aliado va a morir por un ataque o una magia enemiga puedes invocar a Shen desde tu mano (sin gastar la invocación normal): cancela ese efecto y el aliado recibe un escudo de 1000 que funciona como el de Vegeta Blue.',
+      sfx: { attack: V('shen-attack'), summon: V('shen-summon') }
+    }),
+    mon({
+      id: 'c_la_muerte', name: 'La Muerte', type: 'shrek', level: 5, atk: 1500, def: 1500, img: I('la_muerte'), ab: ['muerte'],
+      text: 'Aparición de la Muerte: cuando un personaje se salva de una muerte, puedes invocarla especialmente desde tu mano. ' +
+        'Acumulación de Muertes: cada vez que muere un personaje gana +300 ATK de forma permanente.',
+      sfx: { summon: V('la_muerte-summon') }
+    }),
+    mon({
+      id: 'c_antivenom', name: 'Anti-Venom', type: 'marvel', level: 6, atk: 1000, def: 1000, img: I('anti_venom'), couple: true,
+      text: 'Acoplamiento: al invocarlo (con sus tributos) se acopla a un personaje aliado sin ocupar casilla; el anfitrión gana +1000 ATK y DEF. ' +
+        'Evolución Adaptativa: cuando el anfitrión asesina a un enemigo elige UNA vez: Adaptación Ofensiva (+400 ATK y DEF por activación, 1 por turno, hasta 3) o Depredador de Magia (destruye una magia o trampa rival, 1 por turno, hasta 3). ' +
+        'Si el anfitrión sale del campo, Anti-Venom va con él.'
+    }),
+    spell({
+      id: 'c_gema_poder', name: 'Gema del Poder', icon: '💎', img: I('gema_poder'), fx: 'equip', sub: 'equip', eAtk: 800, eDef: 800, pgem: true,
+      text: 'Equipa a un personaje tuyo: +800 ATK y DEF. Sus habilidades de «una vez» se pueden usar dos veces, las de un uso por turno dos veces por turno y sus aumentos se duplican. Si muere, el equipo se pierde.'
+    }),
+    spell({
+      id: 'c_susano', name: 'Susano', icon: '🔥', img: I('susano'), fx: 'equip', sub: 'equip', susano: true,
+      text: 'Equipa a un personaje tuyo. Despierta cuando muere otro personaje de su mismo tipo (de cualquier equipo): le da +400 ATK y DEF y un escudo de 2300 que funciona como el de Vegeta Blue.'
+    }),
+    spell({
+      id: 'c_despertar_bestia', name: 'El Despertar de la Bestia', icon: '🐺', img: I('despertar_bestia'), fx: 'equip', sub: 'equip', beast: true,
+      text: 'Elige a un personaje aliado. Cuando muere otro personaje de tu equipo, el elegido gana +800 ATK y +800 DEF durante su invocación y esta carta va al cementerio.',
+      sfx: { use: V('despertar_bestia-use') }
+    }),
+    spell({
+      id: 'c_anillo_promesa', name: 'Anillo de la Promesa', icon: '💍', img: I('anillo_promesa'), fx: 'equip', sub: 'equip', eAtk: 200, eDef: 200, promise: true,
+      text: 'Equipa a un personaje tuyo: +200 ATK y DEF. Mientras lo lleve, Rika Orimoto es feliz y gana +700 ATK y DEF (+1200 si el portador es Yuta Okkotsu) y deja de estar obligada a atacar.'
+    }),
+    spell({
+      id: 'c_anillo_unico', name: 'Anillo Único', icon: '💍', img: I('anillo_unico'), fx: 'equip', sub: 'equip', ring1: true,
+      text: 'Equipa a un personaje tuyo: 1-4★ +500 ATK y DEF y muere a los 2 turnos; 5-6★ +600 y 3 turnos; 7★ o más +700 y 5 turnos (y puede usar una vez la Promesa de Poder). Sauron gana +1000 y no muere.'
+    }),
+    spell({
+      id: 'c_pothala', name: 'Pothala', icon: '☯️', img: I('pothala'), fx: 'pothala',
+      text: 'Fusiona a dos personajes aliados del campo durante 2 turnos completos: ATK y DEF = suma de ambos ×2, y tiene las habilidades de los dos (duplicados sus usos y aumentos).',
+      sfx: { use: V('pothala-use') }
+    }),
+    spell({
+      id: 'c_esferas', name: 'Esferas del Dragón', icon: '🐉', img: I('esferas'), fx: 'esferas',
+      text: 'Pide un deseo: (1) revive a un personaje tuyo del cementerio de 7★ o menos, (2) recupera 1500 PV o (3) invoca especialmente de tu mano un personaje de 7★ o menos.',
+      sfx: { use: V('esferas-use') }
+    }),
+    spell({
+      id: 'c_cana_gon', name: 'Caña de Pescar de Gon', icon: '🎣', img: I('cana_gon'), fx: 'cana',
+      text: 'Devuelve a tu mano a un personaje tuyo que esté desterrado.',
+      sfx: { use: V('cana_gon-use') }
+    }),
+    spell({
+      id: 'c_uno_dos', name: 'Uno, Dos', icon: '✌️', img: I('uno_dos'), fx: 'uno',
+      text: 'Un personaje tuyo puede atacar hasta 2 veces este turno.'
+    }),
+    spell({
+      id: 'c_voto', name: 'Voto Vinculante', icon: '📜', img: I('voto_vinculante'), fx: 'voto',
+      text: 'Elige a un aliado y a un enemigo: sacrifica su DEF para copiar el ATK del enemigo, su ATK para copiar la DEF, o su ATK y DEF para copiar una habilidad. Dura toda la invocación.'
+    }),
+    spell({
+      id: 'c_gokumonkyo', name: 'Gokumonkyo', icon: '📕', img: I('gokumonkyo'), fx: 'gokumon', sub: 'cont', unstop: true,
+      text: 'Sella a un personaje enemigo (nada lo impide, ni siquiera los Seis Ojos) durante 5 turnos completos; vuelve después. No se puede anular.'
+    }),
+    spell({
+      id: 'c_guerrero', name: 'Guerrero del Infinito', icon: '👁️', img: I('guerrero_infinito'), fx: 'guerrero', sub: 'cont', cost: 2000,
+      text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable, y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
+    }),
+    {
+      kind: 'trap', id: 'c_rayo_solar', name: 'Rayo de Luz Solar', icon: '☀️', img: I('rayo_solar'), trigger: 'attack', fx: 'destroyAttacker',
+      text: 'Cuando un personaje enemigo declara un ataque: destrúyelo y cancela ese ataque.', sfx: { use: V('rayo_solar-use') }
+    }
   ];
   for (const c of CUSTOM) BY_ID.set(c.id, c);
 
@@ -276,7 +452,7 @@
     get: id => BY_ID.get(id),
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
     custom: CUSTOM, AB,
-    all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST),
+    all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST).filter(c => !c.hidden),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,
     tributesFor: level => level >= 10 ? 3 : level >= 7 ? 2 : level >= 5 ? 1 : 0
