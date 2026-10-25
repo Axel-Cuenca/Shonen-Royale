@@ -1221,3 +1221,6 @@ html[data-fs="xl"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom
 .vcap b { color: #f2c862; }
 
 .menu-btn .bdg { margin: -6px 0 0 10px; }
+
+.vs-side.flip .vs-fig { animation: vsflip .45s ease-out; }
+@keyframes vsflip { from { transform: rotateY(90deg); } to { transform: none; } }

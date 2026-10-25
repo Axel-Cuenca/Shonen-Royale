@@ -1500,10 +1500,15 @@
         else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.transform); const to = / se transforma en (.+)$/.exec(t); cin(d, '¡TRANSFORMACIÓN!' + (to ? ' → ' + to[1] : '')); } }
         else if (/ usa Big Bang| activa Relicario/.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, / Big Bang/.test(t) ? 'BIG BANG' : 'RELICARIO DEMONÍACO'); } }
         else if (/^(.+?) (?:usa|absorbe) /.test(t) && !/ inmune/.test(t)) { const m = /^(.+?) (usa (.+?)(?: contra .*|: .*)?|absorbe a .*)$/.exec(t), d = m && byName[m[1]]; if (d) { snd = 'epic'; fileSfx(d.sfx && d.sfx.ability); cin(d, m[3] ? m[3].toUpperCase() : 'ABSORCIÓN'); } }
+        else if (l.rv && /^se revela: /.test(t)) {          // el objetivo boca abajo se voltea: el aviso «versus» muestra ya su carta
+          const q = atkTg.find(x => x.vs === l.rv.vs && x.tg === l.rv.z && x.ti == null);
+          if (q) { q.ti = l.rv.ti; q.tpos = l.rv.tpos; q.tv = null; }
+          else revealMark(l.rv);
+        }
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
-          if (l.a) atkTg.push({ p: l.p, z: l.a.z, tg: l.a.tg, vs: l.a.vs, who: nm && nm[1] });
+          if (l.a) atkTg.push(Object.assign({ p: l.p, who: nm && nm[1] }, l.a));
           if (d && d.sfx) fileSfx(d.sfx.attack);
           cin(d, d && d.voice && d.voice.say && d.type !== 'popeye' ? d.voice.say : '¡ATAQUE!');
         }
@@ -1547,7 +1552,18 @@
           h('div', { class: 'vs-tx' }, h('b', null, td ? td.name : 'Carta boca abajo'), h('small', null, (td ? (a.tpos === 'atk' ? '⚔ ATK ' : '🛡 DEF ') + a.tv + ' · ' : '') + owner(a.vs))));
       const el = h('div', { class: 'vsban' }, left, h('div', { class: 'vs-mid' }, '⚔'), right);
       document.body.append(el);
-      setTimeout(() => el.remove(), 2300);
+      curBan = { el, a, right };
+      setTimeout(() => { el.remove(); if (curBan && curBan.el === el) curBan = null; }, direct || td ? 2300 : 3200);
+    }
+    let curBan = null;
+    /** Un monstruo boca abajo atacado se revela: el aviso que ya está en pantalla cambia el «?» por su carta. */
+    function revealMark(r) {
+      const b = curBan; if (!b || !b.el.isConnected || b.a.vs !== r.vs || b.a.tg !== r.z) return;
+      const d = C.get(r.ti); if (!d) return;
+      const fig = b.right.querySelector('.vs-fig'), tx = b.right.querySelector('.vs-tx');
+      if (fig) fig.replaceChildren(d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56));
+      if (tx) tx.replaceChildren(h('b', null, d.name), h('small', null, (r.tpos === 'atk' ? '⚔ ' : '🛡 ') + 'Se revela · ' + (r.vs === v.seat ? 'Tú' : shortOf(r.vs))));
+      b.right.classList.add('flip');
     }
     window.__duelo_atkMark = a => atkMark(a);
     function runFx() {

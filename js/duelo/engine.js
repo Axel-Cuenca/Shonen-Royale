@@ -691,7 +691,7 @@
     const dm = op.mz[a.target];
     if (!dm) return;
     const dd = mdef(dm), defender = { p: vs, uid: dm.c.uid };
-    if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); }
+    if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); st.log[st.log.length - 1].rv = { vs, z: a.target, ti: dm.c.id, tpos: dm.pos }; }   // lo que se ve en el aviso «versus»
     let A = atkOf(st, me, a.z);
     // Espada del Rey Arruinado: +500 ATK al atacante y -500 DEF al objetivo sólo durante este combate
     const sword = me.st.some(s => s && !s.down && s.equipTo === a.z && def(s.c).sword);
