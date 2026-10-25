@@ -105,6 +105,7 @@
       switch (a.t) {
         case 'endTurn': return 1;
         case 'toBattle': {
+          if (!v.legal.some(x => x.t === 'endTurn')) return 30;      // obligada a atacar (Rika sin Yuta ni Anillo)
           // ¿hay algún ataque que valga la pena?
           let good = false;
           for (const m of me.mz) {
@@ -171,7 +172,14 @@
             case 'azul': return 55;
             case 'purpura': return a.target && a.target.area === 'mz' ? 64 + ((tm && tm.atk) || 0) / 200 : 45;
             case 'avpred': return 52;
-            case 'marca': return -1;
+            case 'marca': {                                                  // Gyomei muere a los 3 turnos: sólo si decide el combate o la partida
+              if (!m || m.pos !== 'atk') return -1;
+              const op = v.opp;
+              if (!info.count && m.atk < op.lp && m.atk + 500 >= op.lp) return 95;
+              for (const q of allFoes) for (const t of q.mz) if (t && !t.down && t.pos === 'atk' && t.atk >= m.atk && t.atk < m.atk + 500) return 56 + t.atk / 200;
+              return -1;
+            }
+            case 'ydominio': return info.count >= 1 ? 50 : -1;
           }
           return -1;
         }
@@ -227,7 +235,12 @@
             case 'pothala': return myMons.length >= 2 && info.count ? 50 : -1;
             case 'gokumon': { const t = opp.mz[a.target.z]; return t ? 60 + (t.atk || 0) / 100 : -1; }
             case 'guerrero': return me.lp > 6000 ? 40 : -1;
-            case 'voto': return -1;
+            case 'voto': {                                                   // sacrifica la DEF de un aliado a cambio del ATK de un enemigo mucho mayor
+              const t = a.target, mine = me.mz[t.z], foe = v.players[t.vs] && v.players[t.vs].mz[t.ez];
+              if (!mine || !foe || t.mode !== 1 || mine.pos !== 'atk' || !info.count) return -1;
+              const gain = (foe.atk || 0) - (mine.atk || 0);
+              return gain >= 600 ? 42 + Math.min(30, gain / 60) : -1;
+            }
             case 'karma': {
               const m = me.mz[a.target.z];
               return m && !m.down && info.count ? 41 : -1;
@@ -249,6 +262,7 @@
       if (a.t === 'endTurn') return 0;
       if (a.t !== 'attack') return scoreMain(v, a, info);        // poderes que se pueden usar en la fase de batalla (Furia, Big Bang, Cañón…)
       const m = v.me.mz[a.zone], opp = targetOf(v, a);
+      if (a.vs != null && a.vs === v.seat) return -4;                // Rika obligada a atacar a un aliado: último recurso
       if (a.target === 'direct') return (m.atk >= opp.lp ? 200 : 70) + m.atk / 100 + (8000 - opp.lp) / 400;
       const t = opp.mz[a.target];
       if (t.down) return m.atk >= 1800 ? 38 : -1;

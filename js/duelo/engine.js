@@ -79,12 +79,15 @@
   /** Habilidades que puede usar ahora (los dominios apagan las de los personajes de pocas estrellas; las selladas por Telarañas no cuentan). */
   function abil(st, m) {
     if (!m) return [];
-    if (st.domain && lvl(m) < (st.domain.min || 10)) return [];
+    if (st.domain && lvl(m) < (st.domain.min || 10) && st.domain.uid !== m.c.uid) return [];
     let a = rawAbil(m);
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
     return a;
   }
   const has = (st, m, id) => abil(st, m).includes(id);
+  /** Dominio de Yuta: las magias y trampas que ya estaban en el campo quedan desactivadas mientras dure. */
+  const stOff = st => !!(st.domain && st.domain.noST);
+  const isYuta = m => !!m && !m.down && m.c.id === 'c_yuta' && !m.copy;
 
   function mkSlot(st, inst, o) {
     const m = Object.assign({ c: inst, pos: 'atk', down: false, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 }, o || {});
@@ -221,9 +224,10 @@
   function heal(st, p, n) { st.players[p].lp += n; }
 
   // ---------------- stats en el campo ----------------
-  function equipBonus(P, z, key) {
+  function equipBonus(P, z, key, st) {
     const m = P.mz[z];
     let n = 0;
+    if (st && stOff(st)) return 0;
     for (const s of P.st) if (s && !s.down && s.equipTo === z) {
       const d = def(s.c), k = key === 'eAtk' ? 'atk' : 'def';
       n += (d.eType && m && mdef(m).type === d.eType.type) ? d.eType[k] : (d[key] || 0);
@@ -253,28 +257,37 @@
     if (m.fur && m.fur === st.turn) n += 700 * (m.furX || 1);
     if (m.cFury && m.cFury === st.turn) n += 700;                       // Furia copiada por Shang Tsung: dura lo mismo que en el original
     if (m.cDom && st.domain && st.domain.uid === m.cDom) n += 500;      // dominio copiado: dura mientras dure el dominio
-    if (m.c.id === 'c_rika') n += rikaBonus(P);                         // Anillo de la Promesa
+    if (has(st, m, 'rikavinc')) n += rikaState(st).bonus;               // Rika feliz: Yuta o el Anillo de la Promesa
     return n;
   }
-  /** Rika Orimoto es feliz mientras el Anillo de la Promesa siga en su portador: +700, o +1200 si el portador es Yuta Okkotsu. */
-  function rikaBonus(P) {
-    for (const s of P.st) {
-      if (!s || s.down || !s.promise || s.equipTo == null || !P.mz[s.equipTo]) continue;
-      return P.mz[s.equipTo].c.id === 'c_yuta' ? 1200 : 700;
+  /** Estado de Rika Orimoto: feliz si hay un Yuta Okkotsu boca arriba en el campo o el Anillo de la Promesa (activo) en su portador original. */
+  function rikaState(st) {
+    let yuta = false, ring = false, ringYuta = false;
+    for (const P of st.players) {
+      if (!P.alive) continue;
+      for (const m of P.mz) if (isYuta(m)) yuta = true;
+      if (stOff(st)) continue;
+      for (const s of P.st) {
+        if (!s || s.down || !s.promise || s.equipTo == null) continue;
+        const bm = P.mz[s.equipTo];
+        if (!bm || bm.c.uid !== s.bearer) continue;                       // el anillo sólo funciona en su portador original
+        ring = true;
+        if (isYuta(bm)) ringYuta = true;
+      }
     }
-    return 0;
+    return { yuta, ring, ringYuta, happy: yuta || ring, bonus: ringYuta ? 1200 : (yuta || ring) ? 700 : 0 };
   }
   // m.base: valores propios de esta aparición en el campo (p. ej. Popeye revivido con 1500/1500)
   const baseOf = m => ((m.copy || m.form) ? mdef(m) : (m.base || def(m.c)));
   function atkOf(st, P, z) {
     const m = P.mz[z];
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
-    return Math.max(0, baseOf(m).atk + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk') + passiveBonus(st, P, z));
+    return Math.max(0, baseOf(m).atk + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
   }
   function defOf(st, P, z) {
     const m = P.mz[z];
     if (m.fused) return Math.max(0, m.fused.def + modSum(m, 'def'));
-    return Math.max(0, baseOf(m).def + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef') + passiveBonus(st, P, z));
+    return Math.max(0, baseOf(m).def + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
   }
   const shieldOf = m => { const u = uOf(m); if (u.sh == null) u.sh = SHIELD_MAX; return u.sh; };
   /** Escudo que recibe los ataques ahora mismo: el de Shen, el de Susano o el de Vegeta Blue (por ese orden). */
@@ -282,7 +295,7 @@
     const m = P.mz[z];
     if (!m) return null;
     if (m.shen && m.shen.sh > 0) return { kind: 'shen', cur: m.shen.sh, max: SHEN_SH, set: v => { m.shen.sh = v; } };
-    for (const s of P.st) if (s && !s.down && s.equipTo === z && s.susano && s.susano.awake && s.susano.sh > 0) return { kind: 'susano', cur: s.susano.sh, max: SUSANO_SH, slot: s, set: v => { s.susano.sh = v; } };
+    if (!stOff(st)) for (const s of P.st) if (s && !s.down && s.equipTo === z && s.susano && s.susano.awake && s.susano.sh > 0) return { kind: 'susano', cur: s.susano.sh, max: SUSANO_SH, slot: s, set: v => { s.susano.sh = v; } };
     if (has(st, m, 'escudo') && shieldOf(m) > 0) return { kind: 'vegeta', cur: shieldOf(m), max: SHIELD_MAX, set: v => { uOf(m).sh = v; } };
     return null;
   }
@@ -334,7 +347,7 @@
       }
       for (let i = 0; i < ZONES; i++) {
         const s = Q.st[i];
-        if (!s || s.down) continue;
+        if (!s || s.down || stOff(st)) continue;
         if (s.beast && !s.beast.done && st.team[p] === st.team[q] && s.equipTo != null) {      // El Despertar de la Bestia
           const ch = Q.mz[s.equipTo];
           if (ch && ch.c.uid !== m.c.uid) {
@@ -394,6 +407,7 @@
     const ab = abil(st, m), nm = mdef(m).name;
     const fromCard = ctx.src === 'spell' || ctx.src === 'trap';
     if (m.six && !ctx.ignoreSix && ctx.src !== 'mark') { log(st, p, `${nm} es intocable: los Seis Ojos lo protegen`); return false; }
+    if (fromCard && ab.includes('rikaprot')) { log(st, p, `${nm} es inmune: las magias y trampas no la afectan`); return false; }
     if (ctx.src !== 'combat' && ctx.src !== 'mark' && ctx.bp != null && st.team[ctx.bp] !== st.team[p] && yoriFast(st, p, z)) {
       log(st, p, `${nm} es demasiado rápido: el efecto no lo alcanza`);
       return false;
@@ -409,6 +423,7 @@
       noteSaved(st, nm);
       return false;
     }
+    if (ctx.src === 'combat' && ctx.defn && m.av && m.av.on && m.av.uid != null) { avDies(st, p, z, m); return false; }     // Anti-Venom muere en su lugar
     if (ctx.src !== 'mark') {
       const gi = P.st.findIndex(q => q && !q.down && q.equipTo === z && def(q.c).pgem);          // Gema del Poder: se sacrifica en su lugar
       if (gi >= 0) { removeST(st, p, gi); log(st, p, `La Gema del Poder se sacrifica: ${nm} se salva`); noteSaved(st, nm); return false; }
@@ -435,6 +450,20 @@
       if (cap && (ku.stolen || 0) < cap && opts.length) st.trig.push({ k: 'steal', p: killer.p, uid: killer.m.c.uid, from: nm, opts: Array.from(new Set(opts)) });
     }
     return true;
+  }
+  /** Anti-Venom: si atacan a su anfitrión y éste iba a ser destruido, muere Anti-Venom (va al cementerio) y el anfitrión queda normal. */
+  function avDies(st, p, z, m) {
+    const av = m.av, i = (m.link || []).findIndex(c => c.uid === av.uid);
+    const inst = i >= 0 ? m.link.splice(i, 1)[0] : null;
+    dropMods(m, 'av-base'); dropMods(m, 'av-atk'); m.av = null;
+    const nm = mdef(m).name;
+    if (!inst) return;
+    const O = st.players[m.owner != null ? m.owner : p];
+    O.grave.push(inst);
+    log(st, p, `${def(inst).name} muere en lugar de ${nm}: ${nm} se salva y queda normal`);
+    st.log[st.log.length - 1].avd = 1;
+    noteSaved(st, nm);
+    onDeath(st, p, { c: inst }, 'grave');
   }
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
@@ -502,6 +531,12 @@
         const hi = handIdx(P, 'c_la_muerte');
         if (hi < 0 || spot(P, def(P.hand[hi])) < 0 || P.mz.some(m => m && m.c.id === 'c_la_muerte')) continue;
         st.pending = { k: 'ability', ab: 'muerte', player: t.p, uid: P.hand[hi].uid, stage: 'ask', nm: t.nm };
+      } else if (t.k === 'yutalearn') {                 // Copia de Técnicas: Yuta puede aprender la habilidad que acaba de ver
+        const y = slotByUid(st, t.p, t.uid);
+        if (!y || !isYuta(y.m) || !has(st, y.m, 'copia')) continue;
+        const u = uOf(y.m);
+        if (u.lrnT === st.turn || (u.learned || []).length >= 3 || (u.learned || []).includes(t.id) || rawAbil(y.m).includes(t.id)) continue;
+        st.pending = { k: 'ability', ab: 'yutalearn', player: t.p, uid: t.uid, stage: 'ask', id: t.id, nm: (C().AB[t.id] || [t.id])[0], from: t.from };
       } else if (t.k === 'avchoice') {                  // Evolución Adaptativa: elige una sola vez
         const hv = slotByUid(st, t.p, t.uid);
         if (!hv || !hv.m.av || !hv.m.av.on || hv.m.av.choice) continue;
@@ -570,9 +605,12 @@
   /** Zonas de monstruos rivales con carta boca arriba. */
   function zoneTargetsUp(st, p) {
     const out = [];
-    for (const e of foes(st, p)) for (const z of zonesWith(st.players[e].mz)) if (!st.players[e].mz[z].down && canTarget(st, p, e, z)) out.push(multi(st) ? { vs: e, z } : { z });
+    for (const e of foes(st, p)) for (const z of zonesWith(st.players[e].mz)) if (!st.players[e].mz[z].down && canTarget(st, p, e, z) && !rikaUp(st, st.players[e].mz[z])) out.push(multi(st) ? { vs: e, z } : { z });
     return out;
   }
+  /** Rika Orimoto (Protección Absoluta): las magias y trampas no pueden elegirla ni afectarla. */
+  const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot'));
+  const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
   const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1 };
   const FX = {
     heal: {
@@ -631,7 +669,7 @@
       resolve: (st, p, d, t) => { const e = foeOf(st, p, t); log(st, p, `inflige ${d.n} de daño directo`); if (multi(st)) st.log[st.log.length - 1].q = e; lose(st, e, d.n); }
     },
     boost: {
-      targets: (st, p) => zonesUp(st.players[p]).map(z => ({ z })),
+      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
       resolve: (st, p, d, t) => {
         const m = st.players[p].mz[t && t.z];
         if (!m) { log(st, p, 'no tiene objetivo'); return; }
@@ -640,11 +678,11 @@
       }
     },
     equip: {
-      targets: (st, p) => zonesUp(st.players[p]).map(z => ({ z })),
+      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
       resolve: () => { /* se coloca en continueSpell */ }
     },
     karma: {
-      targets: (st, p) => zonesUp(st.players[p]).map(z => ({ z })),
+      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
       resolve: () => { /* se coloca en continueSpell */ }
     },
     // Gema de la Mente: controla a un personaje enemigo (boca arriba)
@@ -660,7 +698,7 @@
     // ---------- tanda 2 ----------
     // Uno, Dos: un personaje tuyo puede atacar hasta 2 veces este turno
     uno: {
-      targets: (st, p) => zonesUp(st.players[p]).map(z => ({ z })),
+      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
       resolve: (st, p, d, t) => {
         const m = st.players[p].mz[t && t.z];
         if (!m) { log(st, p, 'no tiene objetivo'); return; }
@@ -711,11 +749,11 @@
     voto: {
       targets: (st, p) => {
         const P = st.players[p], out = [];
-        for (const z of zonesUp(P)) {
+        for (const z of rikaOwn(st, P)) {
           if (P.mz[z].wide) continue;
           for (const e of foeChars(st, p)) {
             const tm = st.players[e.vs].mz[e.z];
-            if (tm.down) continue;
+            if (tm.down || rikaUp(st, tm)) continue;
             out.push({ z, vs: e.vs, ez: e.z, mode: 1 }, { z, vs: e.vs, ez: e.z, mode: 2 });
             for (const ab of Array.from(new Set(rawAbil(tm)))) if (!abil(st, P.mz[z]).includes(ab)) out.push({ z, vs: e.vs, ez: e.z, mode: 3, ab });
           }
@@ -741,7 +779,7 @@
     // Pothala: fusiona a dos personajes tuyos durante 2 turnos completos
     pothala: {
       targets: (st, p) => {
-        const P = st.players[p], zs = zonesUp(P).filter(z => !P.mz[z].wide && !P.mz[z].fused), out = [];
+        const P = st.players[p], zs = rikaOwn(st, P).filter(z => !P.mz[z].wide && !P.mz[z].fused), out = [];
         for (let i = 0; i < zs.length; i++) for (let j = i + 1; j < zs.length; j++) out.push({ z: zs[i], z2: zs[j] });
         return out;
       },
@@ -802,7 +840,7 @@
   function zoneTargets(st, p, area) {
     const out = [];
     for (const e of foes(st, p)) for (const z of zonesWith(st.players[e][area])) {
-      if (area === 'mz' ? !canTarget(st, p, e, z) : st.players[e].st[z].prison) continue;      // Seis Ojos, Spider-Man y Gokumonkyo no se eligen
+      if (area === 'mz' ? (!canTarget(st, p, e, z) || rikaUp(st, st.players[e].mz[z])) : st.players[e].st[z].prison) continue;      // Seis Ojos, Spider-Man y Gokumonkyo no se eligen
       out.push(multi(st) ? { vs: e, z } : { z });
     }
     return out;
@@ -843,6 +881,46 @@
     return z;
   }
   const HOSTILE = { destroyOne: 1, destroyST: 1, burn: 1 };
+  /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
+  const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1 };
+  /** Habilidades hostiles que Total Counter puede devolver. */
+  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'purpura', 'avpred', 'genki'];
+  /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
+  /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
+  function meliFor(st, byP, victimP) {
+    for (const q of foes(st, byP)) {
+      if (victimP != null && st.team[q] !== st.team[victimP]) continue;
+      const z = st.players[q].mz.findIndex(m => m && !m.down && has(st, m, 'counter') && uOf(m).cT !== st.turn);
+      if (z >= 0) return { q, z };
+    }
+    return null;
+  }
+  const meliUse = (st, q, z) => { const m = st.players[q].mz[z]; if (m) uOf(m).cT = st.turn; };
+  /** Rika Orimoto de un Yuta del equipo de la víctima que aún puede interceptar: { q, z } o null. */
+  function rikaGuard(st, victimP) {
+    for (let i = 0; i < st.n; i++) {
+      const q = (victimP + i) % st.n, Q = st.players[q];
+      if (!Q.alive || st.team[q] !== st.team[victimP]) continue;
+      for (let z = 0; z < ZONES; z++) {
+        const m = Q.mz[z];
+        if (!m || m.down || !has(st, m, 'rikaint')) continue;
+        const u = uOf(m), g = gx(Q, z);
+        if ((u.rk || 0) >= 2 * g || (u.rkT === st.turn && (u.rkTn || 0) >= g)) continue;
+        return { q, z };
+      }
+    }
+    return null;
+  }
+  /** Rika intercepta: gasta un uso y deja constancia (turno, aliado protegido y efecto). */
+  function rikaSpend(st, q, z, ally, fx) {
+    const m = st.players[q].mz[z], u = uOf(m);
+    u.rk = (u.rk || 0) + 1; u.rkTn = u.rkT === st.turn ? (u.rkTn || 0) + 1 : 1; u.rkT = st.turn;
+    u.rkLast = { t: st.turn, ally, fx };
+    log(st, q, `Rika Orimoto intercepta ${fx} y protege a ${ally} (${Math.max(0, 2 * gx(st.players[q], z) - u.rk)}/${2 * gx(st.players[q], z)} usos)`);
+    st.log[st.log.length - 1].int = 1;
+  }
   /** ¿Alguien puede intervenir antes de que esta magia se resuelva? Devuelve el pending a abrir. */
   function spellGuard(st, ch) {
     const d = def(ch.inst), t = ch.target, done = ch.done || [];
@@ -853,10 +931,13 @@
       if (q >= 0 && st.team[vp] !== st.team[ch.p]) return { k: 'ability', ab: 'shen', player: q, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
     }
     if (!done.includes('meli')) {
-      for (const q of foes(st, ch.p)) {
-        const hit = st.players[q].mz.find(m => m && !m.down && has(st, m, 'counter'));
-        if (hit) return { k: 'ability', ab: 'meliodas', player: q, stage: 'ask', ch, nm: d.name };
-      }
+      const mm = meliFor(st, ch.p, null);
+      if (mm) return { k: 'ability', ab: 'meliodas', kind: 'spell', player: mm.q, mz: mm.z, stage: 'ask', ch, nm: d.name };
+    }
+    if (d.fx === 'destroyOne' && t && !done.includes('rika')) {
+      const vp = foeOf(st, ch.p, t), vm = st.players[vp].mz[t.z];
+      const r = vm && st.team[vp] !== st.team[ch.p] && !has(st, vm, 'rikaprot') ? rikaGuard(st, vp) : null;
+      if (r) return { k: 'ability', ab: 'rika', kind: 'spell', player: r.q, zy: r.z, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
     }
     return null;
   }
@@ -878,6 +959,169 @@
       log(st, q, `Total Counter: ${d.name} se devuelve (${d.n} de daño directo)`);
       if (multi(st)) st.log[st.log.length - 1].q = ch.p;
       lose(st, ch.p, d.n);
+    }
+  }
+  /** Personajes (o cartas de magia/trampa) del equipo de `user` que quien devuelve el poder puede elegir como objetivo. */
+  function powerReflectCands(st, q, user, a) {
+    const out = [];
+    for (let i = 0; i < st.n; i++) {
+      if (!st.players[i].alive || st.team[i] !== st.team[user]) continue;
+      const P = st.players[i];
+      if (a.pw === 'desmantelar' || a.pw === 'avpred') { for (const z of zonesWith(P.st)) if (!P.st[z].prison) out.push({ vs: i, z }); continue; }
+      for (const z of zonesWith(P.mz)) {
+        const tm = P.mz[z];
+        if (!canTarget(st, q, i, z)) continue;
+        if (a.pw === 'telar' && (tm.down || !rawAbil(tm).includes(a.ab) || (tm.sealed || []).some(x => x.ab === a.ab))) continue;
+        out.push(a.pw === 'purpura' ? { vs: i, z, area: 'mz' } : { vs: i, z });
+      }
+    }
+    return out;
+  }
+  /** La habilidad hostil se devuelve: el mismo efecto cae sobre el equipo de quien la usó (y gasta su uso). */
+  function powerReflect(st, q, user, a, tgt) {
+    const U = st.players[user], m = U.mz[a.zone];
+    if (!m) return;
+    const nm = mdef(m).name, u = uOf(m);
+    log(st, q, `Total Counter: la habilidad de ${nm} se devuelve contra su dueño`);
+    if (multi(st)) st.log[st.log.length - 1].q = user;
+    if (a.pw === 'azul') {
+      u.azul = true;
+      log(st, user, 'Azul se vuelve contra su dueño: sus magias y trampas son destruidas');
+      for (let i = 0; i < st.n; i++) if (st.team[i] === st.team[user]) for (const z of zonesWith(st.players[i].st)) if (!st.players[i].st[z].prison) removeST(st, i, z);
+    } else if (a.pw === 'genki') {
+      markOnce(u, 'gen');
+      log(st, user, `${nm} es alcanzado por su propia Genkidama`);
+      genkidama(st, user, m, { src: 'power', by: { p: user, uid: m.c.uid }, bp: user }, [user].concat(allyTeam(st, user)));
+    } else doPower(st, user, Object.assign({}, a, { target: tgt }));
+  }
+  const allyTeam = (st, p) => { const r = []; for (let i = 0; i < st.n; i++) if (i !== p && st.players[i].alive && st.team[i] === st.team[p]) r.push(i); return r; };
+  /** ¿Total Counter o Rika pueden intervenir en este poder? Devuelve el pending a abrir (o null). */
+  function powerGuard(st, p, a, done) {
+    done = done || [];
+    const U = st.players[p], m = U.mz[a.zone];
+    if (!m) return null;
+    if (REFL_POW.includes(a.pw) && !done.includes('meli')) {
+      const victims = a.target ? [a.target.vs] : foes(st, p);
+      for (const v of victims) {
+        if (st.team[v] === st.team[p]) continue;
+        const mm = meliFor(st, p, v);
+        if (mm) return { k: 'ability', ab: 'meliodas', kind: 'power', player: mm.q, mz: mm.z, stage: 'ask', pp: p, pa: a, nm: mdef(m).name };
+      }
+    }
+    if (a.pw === 'canon' && a.target && !done.includes('rika')) {
+      const v = a.target.vs, vm = st.players[v].mz[a.target.z];
+      const r = vm && st.team[v] !== st.team[p] ? rikaGuard(st, v) : null;
+      if (r) return { k: 'ability', ab: 'rika', kind: 'power', player: r.q, zy: r.z, stage: 'ask', pp: p, pa: a, victim: { p: v, z: a.target.z }, nm: mdef(vm).name };
+    }
+    return null;
+  }
+  /** Ejecuta un poder pasando por Total Counter y Rika. */
+  function runPower(st, p, a, done) {
+    const gd = powerGuard(st, p, a, done);
+    if (gd) { st.pending = gd; return; }
+    const m = st.players[p].mz[a.zone], nmU = m ? mdef(m).name : '', yutaU = isYuta(m);
+    doPower(st, p, a);
+    const idn = PW_AB[a.pw];
+    if (idn && !yutaU && !(a.pw === 'corromper' && a.ring)) {      // Copia de Técnicas: cualquier Yuta en el campo puede aprenderla
+      for (let q = 0; q < st.n; q++) {
+        if (!st.players[q].alive) continue;
+        for (const y of st.players[q].mz) if (isYuta(y) && has(st, y, 'copia')) st.trig.push({ k: 'yutalearn', p: q, uid: y.c.uid, id: idn, from: nmU });
+      }
+    }
+  }
+  /** Tras elegir una trampa: Total Counter y Rika pueden intervenir antes de que haga efecto. */
+  function trapResolve(st, resp, d, pd, done) {
+    const vict = (d.fx === 'destroyAttacker' || d.fx === 'mirror') && st.atk ? st.atk.p : (d.fx === 'destroySummoned' && st.summon ? st.summon.p : null);
+    if (vict != null && st.team[vict] !== st.team[resp]) {
+      if (HOSTILE_TRAP[d.fx] && !done.includes('meli')) {
+        const mm = meliFor(st, resp, vict);
+        if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'trap', player: mm.q, mz: mm.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, nm: d.name }; return; }
+      }
+      if ((d.fx === 'destroyAttacker' || d.fx === 'destroySummoned') && !done.includes('rika')) {
+        const vz = d.fx === 'destroyAttacker' ? st.atk.z : st.summon.z, vm = st.players[vict].mz[vz];
+        const r = vm && !has(st, vm, 'rikaprot') ? rikaGuard(st, vict) : null;        // la propia Rika ya es inmune a las trampas
+        if (r) { st.pending = { k: 'ability', ab: 'rika', kind: 'trap', player: r.q, zy: r.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, victim: { p: vict, z: vz }, nm: mdef(vm).name }; return; }
+      }
+    }
+    applyTrap(st, resp, d);
+    respondRest(st, pd);
+  }
+  function respondRest(st, pd) {
+    if (st.winner !== null) return;
+    const more = !(pd.trigger === 'spell' && st.chain && st.chain.negated) && pd.rest && pd.rest.length && nextWindow(st, pd.trigger, pd.cont, pd.rest);
+    if (!more) afterRespond(st, pd.cont);
+  }
+  /** Candidatos del Total Counter (null = se devuelve sin elegir objetivo). */
+  function meliCands(st, q, pd) {
+    const k = pd.kind || 'spell';
+    if (k === 'spell') {
+      const d = def(pd.ch.inst);
+      if (d.fx === 'burn') return null;
+      const cands = [];
+      if (d.fx === 'destroyOne') { const Cp = st.players[pd.ch.p]; zonesWith(Cp.mz).forEach(z => { if (canTarget(st, q, pd.ch.p, z)) cands.push({ vs: pd.ch.p, z }); }); }
+      else for (const z of zonesWith(st.players[pd.ch.p].st)) if (!st.players[pd.ch.p].st[z].prison) cands.push({ vs: pd.ch.p, z });
+      return cands;
+    }
+    if (k === 'trap') {
+      if (pd.tid && C().get(pd.tid).fx === 'mirror') return null;
+      const cands = [];
+      for (const z of zonesWith(st.players[pd.tp].mz)) if (canTarget(st, q, pd.tp, z)) cands.push({ vs: pd.tp, z });
+      return cands;
+    }
+    if (k === 'power') {
+      if (pd.pa.pw === 'azul' || pd.pa.pw === 'genki') return null;
+      return powerReflectCands(st, q, pd.pp, pd.pa);
+    }
+    if (k === 'attack') {
+      const a = pd.a, cands = [];
+      for (let i = 0; i < st.n; i++) {
+        if (!st.players[i].alive || st.team[i] !== st.team[a.p]) continue;
+        for (const z of zonesWith(st.players[i].mz)) if (!(i === a.p && z === a.z) && !st.players[i].mz[z].six && canTarget(st, q, i, z)) cands.push({ vs: i, z });
+      }
+      return cands.length ? cands : null;
+    }
+    return [];
+  }
+  function meliDecline(st, pd) {
+    const k = pd.kind || 'spell';
+    if (k === 'spell') { pd.ch.done = (pd.ch.done || []).concat('meli'); st.chain = pd.ch; continueSpell(st); }
+    else if (k === 'trap') trapResolve(st, pd.tp, C().get(pd.tid), pd.rp, (pd.done || []).concat('meli'));
+    else if (k === 'power') runPower(st, pd.pp, pd.pa, ['meli']);
+    else if (k === 'attack') { st.atk = Object.assign({}, pd.a, { meli: true }); continueAttack(st); }
+  }
+  function meliApply(st, q, pd, tgt) {
+    const k = pd.kind || 'spell';
+    meliUse(st, q, pd.mz);
+    if (k === 'spell') { reflectSpell(st, q, pd.ch, tgt ? tgt.vs : pd.ch.p, tgt ? tgt.z : 0); return; }
+    if (k === 'trap') {
+      const d = C().get(pd.tid);
+      if (d.fx === 'mirror') { log(st, q, `Total Counter: ${d.name} se devuelve (800 de daño directo)`); lose(st, pd.tp, 800); }
+      else {
+        const m = st.players[tgt.vs].mz[tgt.z];
+        log(st, q, `Total Counter: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
+        if (multi(st)) st.log[st.log.length - 1].q = tgt.vs;
+        if (m) destroyMonster(st, tgt.vs, tgt.z, { src: 'trap', bp: q });
+      }
+      respondRest(st, pd.rp);
+      return;
+    }
+    if (k === 'power') { powerReflect(st, q, pd.pp, pd.pa, tgt); return; }
+    if (k === 'attack') {
+      const a = pd.a, at = st.players[a.p].mz[a.z];
+      if (!at) return;
+      const nm = mdef(at).name;
+      if (!tgt) {
+        const dmg = atkOf(st, st.players[a.p], a.z);
+        log(st, q, `Total Counter: el ataque de ${nm} se devuelve (${dmg} de daño directo a su dueño)`);
+        if (multi(st)) st.log[st.log.length - 1].q = a.p;
+        lose(st, a.p, dmg);
+        return;
+      }
+      const tm = st.players[tgt.vs].mz[tgt.z];
+      log(st, q, `Total Counter: el ataque de ${nm} se devuelve contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
+      if (multi(st)) st.log[st.log.length - 1].q = tgt.vs;
+      st.atk = { p: a.p, z: a.z, target: tgt.z, vs: tgt.vs, negated: false, meli: true };
+      continueAttack(st);
     }
   }
   /** Cálculo previo del combate: quién va a morir (sin espadas, escudos ni regeneraciones). */
@@ -915,7 +1159,7 @@
       const tz = (d.fx === 'equip' || d.fx === 'karma') ? (t && t.z) : null;
       const slot = { c: ch.inst, down: false, setTurn: st.turn, equipTo: tz };
       let okp = z >= 0;
-      if (d.fx === 'equip' || d.fx === 'karma') okp = okp && !!P.mz[tz];
+      if (d.fx === 'equip' || d.fx === 'karma') okp = okp && !!P.mz[tz] && !has(st, P.mz[tz], 'rikaprot');
       if (d.fx === 'karma' && okp) slot.karma = { phase: 'ally', owner: ch.p, allyUid: P.mz[tz].c.uid };
       if (d.fx === 'equip' && okp) {
         const bm = P.mz[tz];
@@ -926,7 +1170,7 @@
       }
       if (d.fx === 'gem') {
         const tv = foeOf(st, ch.p, t), tm = st.players[tv].mz[t && t.z];
-        okp = okp && !!tm && !tm.down;
+        okp = okp && !!tm && !tm.down && !has(st, tm, 'rikaprot');
         if (okp) slot.gem = { vs: tv, uid: tm.c.uid, uses: 0, usedTurn: -1 };
       }
       if (d.fx === 'storm') slot.storm = { usedTurn: -1 };
@@ -980,7 +1224,7 @@
   }
   /** Quién puede responder: en un ataque, el atacado; si no, los rivales del que actúa por orden de turno. */
   function responders(st, trigger, by) {
-    if (trigger === 'attack' && st.atk && st.atk.vs != null) return [st.atk.vs];
+    if (trigger === 'attack' && st.atk && st.atk.vs != null) return st.team[st.atk.vs] === st.team[st.atk.p] ? [] : [st.atk.vs];
     return foes(st, by);
   }
   function nextWindow(st, trigger, cont, list) {
@@ -1034,7 +1278,7 @@
     for (const z of tributes) removeMonster(st, p, z, 'grave');
     const h = P.mz[hz], g = gx(P, hz);
     h.link = (h.link || []).concat([inst]);
-    h.av = { on: true, choice: null, n: 0, turn: -1, tn: 0 };
+    h.av = { on: true, choice: null, n: 0, turn: -1, tn: 0, uid: inst.uid };
     addMod(st, h, 'av-base', 1000 * g, 1000 * g, 0);
     P.normalUsed = true;
     if (tributes.length) log(st, p, `ofrece ${tributes.length} tributo${tributes.length > 1 ? 's' : ''}`);
@@ -1105,10 +1349,23 @@
   function continueAttack(st) {
     const a = st.atk; st.atk = null;
     if (!a || a.negated || st.winner !== null) return;
+    const at0 = st.players[a.p].mz[a.z];
+    if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
+      const mm = meliFor(st, a.p, a.vs);
+      if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'attack', player: mm.q, mz: mm.z, stage: 'ask', a, nm: mdef(at0).name }; return; }
+    }
+    const deaths = combatDeaths(st, a);
     if (!a.noShen) {
-      for (const v of combatDeaths(st, a)) {
+      for (const v of deaths) {
         const q = shenOwner(st, v.p);
         if (q >= 0) { st.pending = { k: 'ability', ab: 'shen', player: q, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
+      }
+    }
+    if (!a.noRika) {
+      for (const v of deaths) {
+        if (v.p === a.p && v.z === a.z) continue;      // el propio atacante no es el «objetivo» del ataque: Rika no lo protege
+        const r = rikaGuard(st, v.p);
+        if (r) { st.pending = { k: 'ability', ab: 'rika', kind: 'attack', player: r.q, zy: r.z, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
       }
     }
     resolveCombat(st, a);
@@ -1140,18 +1397,18 @@
     const boom = boomReady(st, at) || boomReady(st, dm);
     const boomName = boomReady(st, at) ? ad.name : dd.name;
     const shd = shieldInfo(st, op, a.target), shielded = !!shd;
-    const kill = (pl, z, nm, by) => { if (!boom) { if (destroyMonster(st, pl, z, { src: 'combat', by })) log(st, -1, `${nm} es destruido`); } };
+    const kill = (pl, z, nm, by, defn) => { if (!boom) { if (destroyMonster(st, pl, z, { src: 'combat', by, defn })) log(st, -1, `${nm} es destruido`); } };
     // Escudo Blue Evolution activo: el combate se resuelve sólo contra el escudo. El ATK/DEF de Vegeta no cuentan,
     // nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta.
     if (shielded) { /* se resuelve más abajo */ }
     else if (dm.pos === 'atk') {
       const B = atkOf(st, op, a.target);
-      if (A > B) { if (!shielded) { kill(vs, a.target, dd.name, atker); lose(st, vs, A - B); } }
-      else if (A === B) { if (!boom) { destroyMonster(st, a.p, a.z, { src: 'combat', by: defender }); if (!shielded) destroyMonster(st, vs, a.target, { src: 'combat', by: atker }); log(st, -1, shielded ? `${ad.name} es destruido` : 'Los dos monstruos son destruidos'); } }
+      if (A > B) { if (!shielded) { kill(vs, a.target, dd.name, atker, true); lose(st, vs, A - B); } }
+      else if (A === B) { if (!boom) { destroyMonster(st, a.p, a.z, { src: 'combat', by: defender }); if (!shielded) destroyMonster(st, vs, a.target, { src: 'combat', by: atker, defn: true }); log(st, -1, shielded ? `${ad.name} es destruido` : 'Los dos monstruos son destruidos'); } }
       else { kill(a.p, a.z, ad.name, defender); lose(st, a.p, B - A); }
     } else {
       const B = Math.max(0, defOf(st, op, a.target) - swordN);
-      if (A > B) { if (!shielded) kill(vs, a.target, dd.name, atker); }
+      if (A > B) { if (!shielded) kill(vs, a.target, dd.name, atker, true); }
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
@@ -1183,7 +1440,7 @@
   }
   /** Al empezar un turno: fin del dominio de Sukuna y cuenta atrás de Karma. */
   function timers(st) {
-    if (st.domain && st.turn - st.domain.t0 - 1 >= 2) { st.domain = null; log(st, -1, 'El dominio de Sukuna termina'); }
+    if (st.domain && st.turn - st.domain.t0 - 1 >= 2) { log(st, -1, `El dominio ${st.domain.nm || 'de Sukuna'} termina`); st.domain = null; }
     expireMods(st);
     prisons(st);
     corruptions(st);
@@ -1397,15 +1654,54 @@
     return out;
   }
   const ringOf = (P, z) => P.st.find(s => s && !s.down && s.equipTo === z && s.ring);
+  /** Habilidades activables de los personajes boca arriba del campo (aliados o enemigos) que Yuta puede usar dentro de su dominio. */
+  function borrowable(st, y, have) {
+    const out = [];
+    for (const Q of st.players) {
+      if (!Q.alive) continue;
+      for (const m of Q.mz) {
+        if (!m || m.down || m === y) continue;
+        for (const x of rawAbil(m)) if (POWER_IDS.includes(x) && !have.includes(x) && !out.includes(x) && !(m.sealed || []).some(q => q.ab === x)) out.push(x);
+      }
+    }
+    return out;
+  }
+  /** Rika Orimoto sin Yuta ni Anillo: ataques que debe hacer (a cualquier personaje del campo, o directo si no hay ninguno). [] = no está obligada. */
+  function rikaOptions(st, p, z) {
+    const P = st.players[p], mu = multi(st), out = [];
+    let chars = 0;
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive) continue;
+      for (const tz of zonesWith(st.players[q].mz)) {
+        if ((q === p && tz === z) || st.players[q].mz[tz].six) continue;
+        chars++;
+        const foe = st.team[q] !== st.team[p];
+        out.push(foe && !mu ? { t: 'attack', zone: z, target: tz } : { t: 'attack', zone: z, vs: q, target: tz });
+      }
+    }
+    if (chars) return out;
+    for (const e of foes(st, p)) if (!zonesWith(st.players[e].mz).length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
+    return out;
+  }
+  /** Zonas de Rika que deben atacar este turno (Maldición Incontrolable). */
+  function forcedRika(st, p) {
+    const P = st.players[p], out = [];
+    if (st.current !== p || st.pending || !canAttackNow(st) || rikaState(st).happy) return out;
+    P.mz.forEach((m, z) => { if (m && !m.down && has(st, m, 'rikamal') && canAttackSlot(st, m) && rikaOptions(st, p, z).length) out.push(z); });
+    return out;
+  }
   /** Poderes de los monstruos del jugador: [{ t:'power', zone, pw, ... }]. */
   function powerActs(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
     P.mz.forEach((m, z) => {
       if (!m || m.down) return;
-      const ab = abil(st, m), u = uOf(m), g = gx(P, z);
+      let ab = abil(st, m);
+      const u = uOf(m), g = gx(P, z);
+      if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
+      if (ab.includes('yutadom') && !st.domain) push({ pw: 'ydominio' });
       if (ab.includes('canon') && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
-      if (ab.includes('absorb') && canOnce(P, z, u, 'absorb')) {
+      if (ab.includes('absorb') && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
           const tm = st.players[q].mz[tz];
           if ((q === p && tz === z) || tm.down || !st.players[q].alive || lvl(tm) > lvl(m) || !canTarget(st, p, q, tz)) continue;
@@ -1583,15 +1879,16 @@
       P.mz.forEach((m, z) => {
         if (!m) return;
         if (m.down && m.summonedTurn < st.turn) out.push({ t: 'flip', zone: z });
-        if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn) out.push({ t: 'pos', zone: z });
+        if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn && !(m.pos === 'atk' && has(st, m, 'rikamal') && !rikaState(st).happy)) out.push({ t: 'pos', zone: z });
       });
       out.push(...powerActs(st, p), ...spowerActs(st, p));
       if (canAttackNow(st) && P.mz.some(m => m && !m.down && m.pos === 'atk')) out.push({ t: 'toBattle' });
-      out.push({ t: 'endTurn' });
+      if (!forcedRika(st, p).length) out.push({ t: 'endTurn' });
     } else if (st.phase === 'battle') {
-      const mu = multi(st), fl = foes(st, p);
+      const mu = multi(st), fl = foes(st, p), fr = forcedRika(st, p);
       P.mz.forEach((m, z) => {
         if (!canAttackSlot(st, m)) return;
+        if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         for (const e of fl) {
           const all = zonesWith(st.players[e].mz), targets = all.filter(tz => !st.players[e].mz[tz].six);      // los Seis Ojos no se pueden atacar
           if (!all.length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
@@ -1599,7 +1896,7 @@
         }
       });
       out.push(...powerActs(st, p).filter(a => ['furia', 'bigbang', 'canon', 'relicario', 'genki'].includes(a.pw)));
-      out.push({ t: 'endTurn' });
+      if (!fr.length) out.push({ t: 'endTurn' });
     }
     return out;
   }
@@ -1721,6 +2018,11 @@
         log(st, p, `${nm} activa el dominio Ataúd de la Montaña de Hierro`);
         break;
       }
+      case 'ydominio': {
+        st.domain = { p, uid: m.c.uid, t0: st.turn, x: g, min: 11, nm: 'de Yuta', noST: true };
+        log(st, p, `${nm} activa el dominio Amor Mutuo y Verdadero`);
+        break;
+      }
       case 'llama': {
         markOnce(u, 'llama');
         const n = u.kills || 0;
@@ -1813,8 +2115,8 @@
     }
   }
   /** Genkidama: 2500 de daño a cada personaje rival (no se elige objetivo); lo que no resiste, muere. */
-  function genkidama(st, p, m, ctx) {
-    for (const e of foes(st, p)) for (let z = 0; z < ZONES; z++) {
+  function genkidama(st, p, m, ctx, victims) {
+    for (const e of (victims || foes(st, p))) for (let z = 0; z < ZONES; z++) {
       const E = st.players[e], tm = E.mz[z];
       if (!tm || tm.six) continue;
       const nmT = mdef(tm).name, sh = shieldInfo(st, E, z);
@@ -1847,7 +2149,7 @@
     P.mz[z] = null;
     P.mz[nz] = mkSlot(st, inst, { pos: old.pos, down: false, summonedTurn: old.summonedTurn, attacked: old.attacked, atkN: old.atkN, moved: old.moved, atkMod: old.atkMod || 0, owner: old.owner, link, since: st.turn, wide: !!nd.wide });
     // los equipos siguen a la nueva forma
-    for (const s of P.st) if (s && !s.down && s.equipTo === z) { s.equipTo = nz; if (s.karma && s.karma.phase === 'ally') s.karma.allyUid = inst.uid; }
+    for (const s of P.st) if (s && !s.down && s.equipTo === z) { s.equipTo = nz; if (s.bearer === old.c.uid) s.bearer = inst.uid; if (s.karma && s.karma.phase === 'ally') s.karma.allyUid = inst.uid; }
     if (st.domain && st.domain.uid === old.c.uid) st.domain = null;
     log(st, p, `${oldName} se transforma en ${nd.name}`);
   }
@@ -1916,7 +2218,7 @@
         log(st, p, `${mdef(m).name} cambia a ${m.pos === 'atk' ? 'ataque' : 'defensa'}`);
         break;
       }
-      case 'power': doPower(st, p, a); break;
+      case 'power': runPower(st, p, a); break;
       case 'spow': doSpower(st, p, a); break;
       case 'toBattle': st.phase = 'battle'; log(st, p, 'pasa a la fase de batalla'); break;
       case 'attack': declareAttack(st, p, a.zone, a.target, a.vs); break;
@@ -1926,13 +2228,9 @@
         if (a.activate) {
           const s = P.st[a.zone], d = def(s.c);
           log(st, p, `activa la trampa ${d.name}`);
-          applyTrap(st, p, d);
           P.st[a.zone] = null; P.grave.push(s.c);
-        }
-        if (st.winner === null) {
-          const more = !(pd.trigger === 'spell' && st.chain && st.chain.negated) && pd.rest && pd.rest.length && nextWindow(st, pd.trigger, pd.cont, pd.rest);
-          if (!more) afterRespond(st, pd.cont);
-        }
+          trapResolve(st, p, d, pd, []);
+        } else respondRest(st, pd);
         break;
       }
       case 'pick': {
@@ -2008,23 +2306,47 @@
         return;
       }
       if (pd.ch) { pd.ch.done = (pd.ch.done || []).concat('shen'); st.chain = pd.ch; continueSpell(st); }
-      else resolveCombat(st, Object.assign({}, pd.a, { noShen: true }));
+      else { st.atk = Object.assign({}, pd.a, { noShen: true }); continueAttack(st); }
       return;
     }
     if (pd.ab === 'meliodas') {
-      const ch = pd.ch, d = def(ch.inst);
       if (pd.stage === 'ask') {
-        if (!a.use) { ch.done = (ch.done || []).concat('meli'); st.chain = ch; continueSpell(st); return; }
-        if (d.fx === 'burn') { reflectSpell(st, p, ch, ch.p, 0); return; }
-        const cands = [];
-        if (d.fx === 'destroyOne') { const Cp = st.players[ch.p]; zonesWith(Cp.mz).forEach(z => { if (canTarget(st, p, ch.p, z)) cands.push({ vs: ch.p, z }); }); }
-        else for (const z of zonesWith(st.players[ch.p].st)) if (!st.players[ch.p].st[z].prison) cands.push({ vs: ch.p, z });
-        if (!cands.length) { log(st, p, 'Total Counter no puede reflejar el efecto'); ch.done = (ch.done || []).concat('meli'); st.chain = ch; continueSpell(st); return; }
-        st.pending = { k: 'ability', ab: 'meliodas', player: p, stage: 'target', ch, cands, nm: pd.nm, area: d.fx === 'destroyST' ? 'st' : 'mz' };
+        if (!a.use) { meliDecline(st, pd); return; }
+        const cands = meliCands(st, p, pd);
+        if (cands === null) { meliApply(st, p, pd, null); return; }
+        if (!cands.length) { log(st, p, 'Total Counter no puede reflejar el efecto'); meliDecline(st, pd); return; }
+        const k = pd.kind || 'spell', fx = k === 'spell' ? def(pd.ch.inst).fx : k === 'power' ? pd.pa.pw : '';
+        st.pending = Object.assign({}, pd, { stage: 'target', cands, area: (fx === 'destroyST' || fx === 'desmantelar' || fx === 'avpred') ? 'st' : 'mz' });
         return;
       }
       if (!pd.cands.some(c => c.vs === a.vs && c.z === a.z)) { st.pending = pd; return; }
-      reflectSpell(st, p, ch, a.vs, a.z);
+      const tgt = pd.cands.find(c => c.vs === a.vs && c.z === a.z);
+      meliApply(st, p, pd, tgt);
+      return;
+    }
+    if (pd.ab === 'rika') {
+      const ym = P.mz[pd.zy], vm = pd.victim ? st.players[pd.victim.p].mz[pd.victim.z] : null;
+      const k = pd.kind;
+      if (a.use && ym && has(st, ym, 'rikaint') && vm) {
+        const fxs = k === 'attack' ? 'el ataque' : k === 'spell' ? 'la magia' : k === 'trap' ? 'la trampa' : 'la habilidad';
+        rikaSpend(st, p, pd.zy, pd.nm, fxs);
+        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
+        else if (k === 'trap') { if (st.atk && C().get(pd.tid).fx === 'destroyAttacker') st.atk.negated = true; respondRest(st, pd.rp); }
+        return;
+      }
+      if (k === 'attack') { st.atk = Object.assign({}, pd.a, { noRika: true }); continueAttack(st); }
+      else if (k === 'spell') { pd.ch.done = (pd.ch.done || []).concat('rika'); st.chain = pd.ch; continueSpell(st); }
+      else if (k === 'trap') trapResolve(st, pd.tp, C().get(pd.tid), pd.rp, (pd.done || []).concat('rika'));
+      else if (k === 'power') runPower(st, pd.pp, pd.pa, ['rika', 'meli']);
+      return;
+    }
+    if (pd.ab === 'yutalearn') {
+      const y = slotByUid(st, p, pd.uid);
+      if (!a.use || !y) { if (!a.use) log(st, p, 'decide no aprender la habilidad'); return; }
+      const u = uOf(y.m), nmA = (C().AB[pd.id] || [pd.id])[0];
+      y.m.ext = (y.m.ext || []).concat([pd.id]); y.m.extFrom = Object.assign({}, y.m.extFrom); y.m.extFrom[pd.id] = pd.from;
+      u.learned = (u.learned || []).concat([pd.id]); u.lrnT = st.turn;
+      log(st, p, `Yuta Okkotsu aprende ${nmA} de ${pd.from} (${u.learned.length}/3)`);
       return;
     }
     if (pd.ab === 'steal') {
@@ -2106,7 +2428,7 @@
     if (s.abs) v.absorbed = s.abs.c.id;
     if (s.fur && s.fur === st.turn) v.fury = true;
     if (st.domain && st.domain.uid === s.c.uid) v.domain = true;
-    if (st.domain && lvl(s) < (st.domain.min || 10) && (mdef(s).ab || []).length) v.muted = true;
+    if (st.domain && lvl(s) < (st.domain.min || 10) && st.domain.uid !== s.c.uid && (mdef(s).ab || []).length) v.muted = true;
     const sh = shieldInfo(st, P, z);
     if (sh) v.sh = { kind: sh.kind, cur: sh.cur, max: sh.max };
     if (s.six) v.six = Math.min(SIX_TURNS, Math.max(0, SIX_TURNS - (st.turn - s.six.t0 - 1)));
@@ -2119,6 +2441,15 @@
     if (s.owner != null && s.owner !== st.players.indexOf(P)) v.owner = s.owner;
     if (s.promesa) v.promesa = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
+    if (s.c.id === 'c_yuta') {          // Yuta: usos de Rika, habilidades aprendidas y dominio
+      const yu = uOf(s), gg = gx(P, z);
+      v.yuta = { rk: Math.max(0, 2 * gg - (yu.rk || 0)), rkMax: 2 * gg, rkTurn: yu.rkT === st.turn, rkNext: !(yu.rkT === st.turn && (yu.rkTn || 0) >= gg), rkLast: yu.rkLast || null, learned: (yu.learned || []).slice(), lrnTurn: yu.lrnT === st.turn, dom: !!(st.domain && st.domain.uid === s.c.uid) };
+      if (v.yuta.dom) v.yuta.borrow = borrowable(st, s, abil(st, s));
+    }
+    if (s.c.id === 'c_rika') {          // Rika: feliz o bajo Maldición Incontrolable
+      const rs = rikaState(st);
+      v.rika = { happy: rs.happy, bonus: rs.bonus, yuta: rs.yuta, ring: rs.ring, ringYuta: rs.ringYuta, forced: !rs.happy && has(st, s, 'rikamal'), imm: has(st, s, 'rikaprot') };
+    }
 
     const u = uOf(s);
     if (u.kills) v.kills = u.kills;
@@ -2140,7 +2471,7 @@
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };
     if (s.karma) v.karma = { phase: s.karma.phase, left: s.karma.phase === 'foe' ? Math.max(0, 3 - (st.turn - s.karma.t0 - 1)) : null };
     if (s.ring) v.ring = { atk: s.ring.atk, stars: s.ring.stars, sauron: !!s.ring.sauron, left: s.ring.sauron ? null : Math.min(s.ring.n, Math.max(0, s.ring.n - (st.turn - s.ring.t0 - 1))), promesa: !!s.ring.promesaUsed, can: s.ring.stars >= 7 };
-    if (s.promise) v.promise = true;
+    if (s.promise) { v.promise = true; const bh = findByUid(st, s.bearer); v.bearer = bh ? bh.m.c.id : null; v.bearerOn = !!(bh && s.equipTo != null); }
     if (s.susano) v.susano = { awake: !!s.susano.awake, sh: s.susano.sh, max: SUSANO_SH };
     if (s.beast) v.beast = { done: !!s.beast.done };
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
@@ -2179,6 +2510,9 @@
         if (pd.k === 'ability') {
           pending.ab = pd.ab; pending.stage = pd.stage;
           if (pd.nm) pending.nm = pd.nm;
+          if (pd.kind) pending.kind = pd.kind;
+          if (pd.id) pending.id = pd.id;
+          if (pd.from && !pd.opts) pending.from = pd.from;
           if (pd.victim) pending.victim = pd.victim;
           if (pd.area) pending.area = pd.area;
           const P = st.players[seat], all = P.hand.concat(P.grave, P.mz.filter(Boolean).map(s => s.c), P.st.filter(Boolean).map(s => s.c));
@@ -2201,7 +2535,7 @@
       winner: st.winner, reason: st.reason, actor: actor(st),
       me: players[seat], opp: players[oppSeat], players,
       pending,
-      domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (st.turn - st.domain.t0 - 1)) } : null,
+      domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (st.turn - st.domain.t0 - 1)), nm: st.domain.nm || 'de Sukuna', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
       log: st.log.slice(-60),
@@ -2233,7 +2567,7 @@
       if (st.turn !== turn0 || st.current !== cur0) break;
       const p = actor(st); if (p < 0) break;
       const L = legal(st, p);
-      const a = L.find(x => x.t === 'respond' && !x.activate) || L.find(x => x.t === 'ability' && x.use === false) || L.find(x => x.t === 'endTurn') || L[0];
+      const a = L.find(x => x.t === 'respond' && !x.activate) || L.find(x => x.t === 'ability' && x.use === false) || L.find(x => x.t === 'endTurn') || L.find(x => x.t === 'toBattle') || L.find(x => x.t === 'attack') || L[0];
       if (!a || !apply(st, p, a).ok) break;
     }
   }

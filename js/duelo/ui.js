@@ -956,7 +956,7 @@
     /** Nombre de cada poder (los de la tanda 2 no coinciden con el id de la habilidad). */
     const PWN = { conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', marca: 'Marca de Cazador', desp: 'Despertar del Poder Oculto',
       kaioken: 'Kaio-ken', kaioken6: 'Kaio-ken', genki: 'Genkidama', teach: 'Maestro de las Artes', dominio: 'Ataúd de la Montaña de Hierro', llama: 'Llama Infernal',
-      kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia' };
+      kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Rhaast', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva' };
@@ -970,6 +970,19 @@
       if (s.fury) o.push('Furia de Esparta activa');
       if (s.kills) o.push('Bajas: ' + s.kills);
       if (s.domain) o.push('Su dominio cubre el campo');
+      if (s.yuta) {
+        const y = s.yuta;
+        o.push('Rika (intercepción): ' + y.rk + '/' + y.rkMax + ' usos' + (y.rkTurn ? ' · usada este turno' : '') + (y.rkNext ? ' · puede volver a usarse este turno' : ' · no puede usarse más este turno'));
+        if (y.rkLast) o.push('Última intercepción (turno ' + y.rkLast.t + '): ' + y.rkLast.fx + ' → protegió a ' + y.rkLast.ally);
+        o.push('Técnicas copiadas: ' + y.learned.length + '/3' + (y.learned.length ? ' (' + y.learned.map(abn).join(', ') + ')' : '') + (y.lrnTurn ? ' · ya aprendió una este turno' : ''));
+        if (y.dom) o.push('Dominio activo: +500 ATK/DEF, magias y trampas suspendidas, sólo habilidades de más de 10★' + (y.borrow && y.borrow.length ? ' · puede copiar: ' + y.borrow.map(pwName).join(', ') : ''));
+      }
+      if (s.rika) {
+        const r = s.rika;
+        o.push(r.happy ? 'Rika contenta (+' + r.bonus + ' ATK/DEF): ataca cuando quieras' : 'Maldición Incontrolable: debe atacar cada turno a un personaje del campo (o directo si no hay)');
+        o.push('Yuta en el campo: ' + (r.yuta ? 'sí' : 'no') + ' · Anillo de la Promesa equipado: ' + (r.ring ? 'sí' : 'no'));
+        if (r.imm) o.push('Inmune a equipamientos, magias y trampas');
+      }
       if (s.muted) o.push('Habilidades silenciadas por el dominio');
       if (s.karma) o.push('Karma: muere en ' + s.karma.left + ' turno(s)');
       if (s.gem) o.push('Mente controlada (' + s.gem.left + ' uso(s) de la Gema)');
@@ -988,7 +1001,7 @@
       return o;
     }
     const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
-      zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
+      yutadom: 'Una vez por turno; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
@@ -1022,6 +1035,8 @@
       if ((s.ext && s.ext.length) || s.absorbed) b.push('🌀');
       if (s.fury) b.push('🔥');
       if (s.domain) b.push('👹');
+      if (s.yuta && s.yuta.dom) b.push('💞');
+      if (s.rika) b.push(s.rika.happy ? '😊' : '😡');
       if (s.muted) b.push('🔇');
       if (s.kills) b.push('☠️' + s.kills);
       if (s.karma) b.push('☯️' + s.karma.left);
@@ -1167,7 +1182,7 @@
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
       if (s.prison) return `Tiene sellado a ${nameId(s.prison.c)}: vuelve en ${s.prison.left} turno(s).`;
-      if (s.promise) return 'Rika Orimoto es feliz mientras el portador siga en el campo.';
+      if (s.promise) return 'Rika Orimoto es feliz mientras el portador siga en el campo. El portador no puede cambiar durante la partida' + (s.bearer ? ' (portador: ' + nameId(s.bearer) + ').' : '.');
       return null;
     }
     function myStClick(z) {
@@ -1255,12 +1270,22 @@
           h('div', { class: 'acts' }, btn('Sí, invocar a Shen', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'meliodas' && pd.stage === 'ask') {
-        const box = h('div', { class: 'box' }, h('h2', null, '⚔️ Total Counter'), h('p', { class: 'sub' }, `El rival activa ${pd.nm || 'una magia'}. Puedes devolver su efecto contra su dueño y elegir el objetivo; el efecto original no se aplica.`),
+        const box = h('div', { class: 'box' }, h('h2', null, '⚔️ Total Counter'), h('p', { class: 'sub' }, `${({ spell: 'El rival activa la magia', trap: 'El rival activa la trampa', power: 'El rival usa la habilidad de', attack: 'El rival ataca con' })[pd.kind || 'spell']} ${pd.nm || ''}. Puedes devolver su efecto contra su dueño y elegir el objetivo; el efecto original no se aplica (una vez por turno).`),
           h('div', { class: 'acts' }, btn('Devolver el efecto', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'meliodas') {
         const box = h('div', { class: 'box' }, h('h2', null, '⚔️ Total Counter: elige el objetivo'), h('p', { class: 'sub' }, 'El efecto vuelve contra su dueño. ¿A quién o a qué golpea?'),
           h('div', { class: 'acts' }, L().filter(a => a.z != null).map(a => { const sl = v.players[a.vs] && v.players[a.vs][pd.area || 'mz'][a.z]; const nm = sl && sl.c ? nameId(sl.c.id) : 'Carta'; return btn(`${nm} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'rika') {
+        const box = h('div', { class: 'box' }, h('h2', null, '👁️ Rika Orimoto: Intercepción Protectora'), h('p', { class: 'sub' }, `${pd.nm || 'Un aliado'} está a punto de morir por ${({ attack: 'un ataque', spell: 'una magia', trap: 'una trampa', power: 'una habilidad' })[pd.kind] || 'un efecto'}. Rika puede interceptarlo: el efecto no le afecta, sin daño ni reflejo. (2 usos por invocación de Yuta, 1 por turno)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_rika'))),
+          h('div', { class: 'acts' }, btn('Interceptar', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'yutalearn') {
+        const box = h('div', { class: 'box' }, h('h2', null, '📖 Copia de Técnicas'), h('p', { class: 'sub' }, `${pd.from || 'Un personaje'} usó «${pd.nm || 'una habilidad'}». ¿Yuta Okkotsu la aprende? Se conserva aunque el original salga del campo (1 por turno, máximo 3).`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_yuta'))),
+          h('div', { class: 'acts' }, btn('Aprender', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'avchoice') {
         const box = h('div', { class: 'box' }, h('h2', null, '🧬 Evolución Adaptativa'), h('p', { class: 'sub' }, 'Tu anfitrión asesinó a un enemigo. Elige UNA evolución; es permanente durante esta invocación de Anti-Venom.'),
@@ -1599,7 +1624,10 @@
         else if (/ sella con sus telarañas /.test(t)) { snd = 'epic'; const d = byName[/^(.+?) sella /.exec(t)[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TELARAÑAS'); } }
         else if (/^Total Counter: /.test(t)) { snd = 'shield'; const d = byName['Meliodas 5%']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TOTAL COUNTER', { mine: l.p === v.seat }); } }
         else if (/\(Asimilación\)/.test(t)) { snd = 'epic'; const d = byName['General Mahoraga']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'ASIMILACIÓN'); } }
+        else if (/^Rika Orimoto intercepta /.test(t)) { snd = 'shield'; needShake = true; const d = byName['Yuta Okkotsu']; if (d) { fileSfx(d.sfx && d.sfx.rika); cin(d, 'RIKA · INTERCEPCIÓN', { mine: l.p === v.seat }); } }
         else if (/ intercepta /.test(t)) { snd = 'shield'; needShake = true; }
+        else if (/^Yuta Okkotsu aprende /.test(t)) { snd = 'epic'; const d = byName['Yuta Okkotsu']; if (d) cin(d, 'COPIA DE TÉCNICAS'); }
+        else if (/ muere en lugar de /.test(t)) { snd = 'destroy'; needShake = true; }
         else if (/sucumbe a la corrupción|La Marca de Cazador se cumple/.test(t)) { snd = 'destroy'; needShake = true; }
         else if (/^(.+?) (?:usa|absorbe) /.test(t) && !/ inmune/.test(t)) { const m = /^(.+?) (usa (.+?)(?: contra .*|: .*)?|absorbe a .*)$/.exec(t), d = m && byName[m[1]]; if (d) { snd = 'epic'; fileSfx(d.sfx && d.sfx.ability); cin(d, m[3] ? m[3].toUpperCase() : 'ABSORCIÓN'); } }
         else if (l.rv && /^se revela: /.test(t)) {          // el objetivo boca abajo se voltea: el aviso «versus» muestra ya su carta

@@ -80,7 +80,13 @@
     asimila: ['Asimilación', 'Se regenera la primera vez que muere en un turno; si muere otra vez ese mismo turno, muere de verdad.'],
     espada: ['Espada de Exterminio', 'Los personajes que mata Mahoraga son desterrados en lugar de ir al cementerio.'],
     muerte: ['Acumulación de Muertes', 'Cada vez que muere un personaje, gana +300 ATK de forma permanente.'],
-    counter: ['Total Counter', 'Cuando el rival activa una magia, puedes devolver su efecto contra su dueño y elegir el objetivo.']
+    counter: ['Total Counter', 'Una vez por turno, cuando el rival te lanza una magia, una trampa, una habilidad o un ataque hostil, puedes devolver su efecto contra su dueño y elegir el objetivo.'],
+    yutadom: ['Amor Mutuo y Verdadero', 'Dominio de 2 turnos: +500 ATK y DEF; sólo los personajes de más de 10★ usan habilidades, las magias y trampas del campo quedan desactivadas, y Yuta puede usar las habilidades de cualquier personaje boca arriba.'],
+    copia: ['Copia de Técnicas', 'Cuando otro personaje usa una habilidad estando Yuta en el campo, puedes aprenderla (1 por turno, máximo 3, sin repetir). Se conserva aunque el original se vaya.'],
+    rikaint: ['Rika Orimoto: Intercepción Protectora', 'Cuando un aliado va a morir por un ataque, una magia, una trampa o una habilidad, Rika intercepta el efecto y el aliado se salva. 2 usos por invocación, 1 por turno.'],
+    rikamal: ['Maldición Incontrolable', 'Si no hay un Yuta Okkotsu en el campo ni un Anillo de la Promesa equipado, Rika debe atacar cada turno a un personaje del campo (aliado o enemigo) y sólo ataca directo si no hay ninguno.'],
+    rikaprot: ['Protección Absoluta', 'No puede recibir equipamientos ni ser afectada por magias o trampas.'],
+    rikavinc: ['El Vínculo con Yuta', 'Con Yuta Okkotsu en el campo, o un Anillo de la Promesa equipado a cualquier personaje, Rika es feliz: +700 ATK y DEF y ataca cuando quiera (+1200 si el portador del anillo es Yuta). No se acumulan.']
   };
   const CUSTOM = [
     mon({
@@ -261,7 +267,7 @@
     }),
     mon({
       id: 'c_meliodas', name: 'Meliodas 5%', type: 'pecados', level: 3, atk: 900, def: 900, img: I('meliodas'), ab: ['counter'],
-      text: 'Total Counter: cuando el rival activa una magia que destruye un personaje, destruye una magia o trampa, o inflige daño, puedes devolver su efecto contra su dueño y elegir el objetivo (el efecto original no se aplica).',
+      text: 'Total Counter: una vez por turno, cuando el rival te lanza una magia, trampa, habilidad o ataque hostil, puedes devolver su efecto contra su dueño y elegir el objetivo (el efecto original no se aplica).',
       sfx: { attack: V('meliodas-attack'), ability: V('meliodas-ability') }
     }),
     mon({
@@ -297,7 +303,21 @@
       id: 'c_antivenom', name: 'Anti-Venom', type: 'marvel', level: 6, atk: 1000, def: 1000, img: I('anti_venom'), couple: true,
       text: 'Acoplamiento: al invocarlo (con sus tributos) se acopla a un personaje aliado sin ocupar casilla; el anfitrión gana +1000 ATK y DEF. ' +
         'Evolución Adaptativa: cuando el anfitrión asesina a un enemigo elige UNA vez: Adaptación Ofensiva (+400 ATK y DEF por activación, 1 por turno, hasta 3) o Depredador de Magia (destruye una magia o trampa rival, 1 por turno, hasta 3). ' +
-        'Si el anfitrión sale del campo, Anti-Venom va con él.'
+        'Si atacan al anfitrión y vencería según las reglas del combate, muere Anti-Venom (va al cementerio) y el anfitrión se salva y queda normal. Si el anfitrión sale del campo por otra causa, Anti-Venom va con él.'
+    }),
+    mon({
+      id: 'c_yuta', name: 'Yuta Okkotsu', type: 'jjk', level: 10, atk: 2500, def: 2500, img: I('yuta'), ab: ['yutadom', 'copia', 'rikaint'],
+      text: 'Amor Mutuo y Verdadero (dominio, 2 turnos): +500 ATK y DEF; sólo los personajes de más de 10★ usan habilidades, las magias y trampas del campo quedan desactivadas y Yuta usa las habilidades de cualquier personaje boca arriba. ' +
+        'Copia de Técnicas: aprende hasta 3 habilidades que vea usar (1 por turno). ' +
+        'Rika Orimoto, Intercepción Protectora: intercepta la muerte de un aliado (2 usos por invocación, 1 por turno).',
+      sfx: { attack: V('yuta-attack'), ability: V('yuta-ability'), rika: V('yuta-rika') }
+    }),
+    mon({
+      id: 'c_rika', name: 'Rika Orimoto', type: 'jjk', level: 9, atk: 2500, def: 2500, img: I('rika'), ab: ['rikamal', 'rikaprot', 'rikavinc'],
+      text: 'Maldición Incontrolable: sin Yuta Okkotsu en el campo ni Anillo de la Promesa equipado, debe atacar cada turno a un personaje del campo (aliado o enemigo). ' +
+        'Protección Absoluta: no recibe equipamientos ni la afectan magias ni trampas. ' +
+        'El Vínculo con Yuta: con Yuta o el Anillo en el campo es feliz: +700 ATK y DEF y ataca cuando quiere.',
+      sfx: { attack: V('rika-attack'), summon: V('rika-attack') }
     }),
     spell({
       id: 'c_gema_poder', name: 'Gema del Poder', icon: '💎', img: I('gema_poder'), fx: 'equip', sub: 'equip', eAtk: 800, eDef: 800, pgem: true,
@@ -314,7 +334,7 @@
     }),
     spell({
       id: 'c_anillo_promesa', name: 'Anillo de la Promesa', icon: '💍', img: I('anillo_promesa'), fx: 'equip', sub: 'equip', eAtk: 200, eDef: 200, promise: true,
-      text: 'Equipa a un personaje tuyo: +200 ATK y DEF. Mientras lo lleve, Rika Orimoto es feliz y gana +700 ATK y DEF (+1200 si el portador es Yuta Okkotsu) y deja de estar obligada a atacar.'
+      text: 'Equipa a un personaje tuyo: +200 ATK y DEF. Mientras lo lleve, Rika Orimoto es feliz y gana +700 ATK y DEF (+1200 si el portador es Yuta Okkotsu) y deja de estar obligada a atacar. El portador no puede cambiar durante toda la partida.'
     }),
     spell({
       id: 'c_anillo_unico', name: 'Anillo Único', icon: '💍', img: I('anillo_unico'), fx: 'equip', sub: 'equip', ring1: true,
