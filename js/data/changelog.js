@@ -50,6 +50,7 @@ G.CHANGELOG = [
     ["Botón de Ajustes", "El icono del volumen ahora es una ruedita (Ajustes); abre el panel de sonido, gráficos y letra.", "Settings button", "The volume icon is now a gear (Settings); it opens the sound, graphics and text-size panel."],
     ["La computadora usa las cartas nuevas", "La computadora ahora sabe usar los poderes y las magias de la segunda tanda y responde a Shen, Mahoraga, La Muerte y Meliodas.", "The computer uses the new cards", "The computer now knows how to use the powers and spells of the second batch and answers Shen, Mahoraga, Death and Meliodas."]
   ], fix: [
+    ["Personaje del menú más fluido", "El personaje del menú principal ya no se ve pixelado ni «tildado» al subir y bajar, y quedó un poco más pequeño.", "Smoother menu character", "The main-menu character no longer looks pixelated or stuttery as it floats up and down, and it is slightly smaller."],
     ["Novedades no abría", "Se arregló la pantalla de Novedades, que no se abría desde el menú ni desde la barra.", "News screen wouldn't open", "Fixed the News screen, which would not open from the menu or the top bar."],
   ] },
   { d: "2026-10-24", title: ["Cajas como en CS2 y premios de temporada","CS2-style boxes and season rewards"], new: [
