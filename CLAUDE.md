@@ -24,10 +24,13 @@ No quitar `updater.js` ni la escritura de `version.json` en `tools/build.js`.
 
 ## Novedades (changelog)
 Cada cambio de juego o arreglo de fallos va también en `js/data/changelog.js`, en `new` / `chg` / `fix` de la fecha de hoy
-(se ve en «Novedades» del menú). **Cada cambio es UNA entrada propia**: `[tituloES, descripcionES, tituloEN, descripcionEN]`.
-El título es corto y representativo («Skins de cartas», «Ruleta de cajas más larga»), sin prefijos tipo «Música: …»
-dentro de la descripción; la descripción dice qué hace o cambia. Un cambio = una entrada (no mezclar varios en una).
+(se ve en «Novedades» del menú). **Regla del dueño (25-10-2026): un PARCHE por tanda, no una lista de widgets.**
+Cuando llegan varias cartas, mejoras o arreglos a la vez, se redactan en UNA sola entrada
+`[tituloES, descripcionES, tituloEN, descripcionEN]` (p. ej. «Tercera tanda de personajes») con un texto corrido que cuenta
+lo que se agregó (nombres y lo esencial), sin una entrada ni un título por cada carta o mejora. Sólo si un cambio es
+claramente independiente del resto (otro tema) puede llevar su propia entrada. Título corto, sin prefijos tipo «Música: …».
 Los cambios de servidores, base de datos o costes NO van ahí.
+(Las entradas de hoy 25-10 anteriores a esta regla siguen sueltas.)
 
 ## Servidores
 - Firebase: proyecto **pokesurvivor-free** (autenticación normal: cuentas gratis sin límite).
