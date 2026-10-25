@@ -136,6 +136,10 @@ licencia en `assets/fonts/OFL.txt`). El juego usa una versión modificada,
 "Pixelify PS", con los números redibujados para distinguirlos mejor
 (`tools/make_font.py`).
 
+## Tipografía
+
+GFS Didot (Greek Font Society), licencia SIL OFL 1.1, servida desde `assets/fonts/` (paquete `@fontsource/gfs-didot`).
+
 ## Marca
 
 Pokémon es propiedad de Nintendo, Creatures Inc. y GAME FREAK.

@@ -316,7 +316,7 @@
   function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
-  const EMB = '<svg class="emb" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 10 L40 38 M52 10 L24 38"/><path d="M8 14 L14 8 M56 14 L50 8"/><path d="M18 42 L26 50 M46 42 L38 50"/><rect x="26" y="34" width="12" height="12" transform="rotate(45 32 40)" style="fill:var(--acc2)"/></svg>';
+  const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
   const embEl = () => { const d = document.createElement('div'); d.innerHTML = EMB; return d.firstChild; };
   // las 3 novedades más recientes para la columna de la derecha del menú
   function latestNews(n) {

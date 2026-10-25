@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://www.gstatic.com https://apis.google.com https://*.firebaseio.com https://*.firebasedatabase.app; object-src 'none'; base-uri 'self'">
-<meta name="theme-color" content="#0a1430">
+<meta name="theme-color" content="#12080a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +15,7 @@
 <link rel="icon" type="image/png" sizes="96x96" href="assets/icons/icon-96.png">
 <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
 <link rel="preload" as="image" href="assets/duelo/home/sukuna.webp">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/GFSDidot-400.woff2">
 <link rel="preconnect" href="https://www.gstatic.com">
 <!-- Firebase (misma versión que SDK en js/duelo/account.js): se pide ya, mientras carga el resto -->
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js">
@@ -24,43 +25,44 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" id="gfonts" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Rajdhani:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="css/duelo.css?v=027b0a73db">
+<link rel="stylesheet" href="css/duelo.css?v=20eb007172">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="lgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8"/><stop offset=".5" stop-color="#f2c862"/><stop offset="1" stop-color="#a8741a"/></linearGradient><linearGradient id="lgR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd0c0"/><stop offset=".5" stop-color="#ff4d3d"/><stop offset="1" stop-color="#7a0f0a"/></linearGradient></defs></svg>
 <div id="splash" aria-hidden="true">
 <div class="sp-sky"></div><div class="sp-floorwrap"><div class="sp-floor"></div><div class="sp-floorfade"></div></div><div class="sp-tint"></div><div class="sp-curt"></div><div class="sp-fog"></div>
 <div class="sp-halo"></div><div class="sp-shadow"></div>
 <div class="sp-hero"><img src="assets/duelo/home/sukuna.webp" alt="" draggable="false"><div class="sp-fire"></div></div>
 <div class="sp-parts"></div><div class="sp-vig"></div>
-<div class="sp-logo"><svg class="emb" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 10 L40 38 M52 10 L24 38"/><path d="M8 14 L14 8 M56 14 L50 8"/><path d="M18 42 L26 50 M46 42 L38 50"/><rect x="26" y="34" width="12" height="12" transform="rotate(45 32 40)" style="fill:var(--acc2)"/></svg><div class="l1">SHONEN</div><div class="l2">ROYALE</div><div class="tag">Duelos de cartas por turnos</div></div>
+<div class="sp-logo"><svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg><div class="l1" aria-label="Shonen Royale"><span class="w1">SHONEN</span> <span class="w2">ROYALE</span></div><div class="tag">Duelos de cartas por turnos</div></div>
 <div class="sp-ldr"><div class="sp-bar"><b></b></div><p class="sp-pct">Cargando · 0 %</p><p class="sp-lab"></p></div>
 </div>
 <main id="app"><p class="loading">Cargando…</p></main>
 <!-- scripts:begin (build.js les pone ?v=huella; el orden importa) -->
-<script src="js/core/splash.js?v=027b0a73db"></script>
-<script src="js/duelo/shim.js?v=027b0a73db"></script>
-<script src="js/core/util.js?v=027b0a73db"></script>
-<script src="js/data/music.js?v=027b0a73db"></script>
-<script src="js/core/audio.js?v=027b0a73db"></script>
-<script src="js/data/types.js?v=027b0a73db"></script>
-<script src="js/data/changelog.js?v=027b0a73db"></script>
-<script src="js/core/firebase-config.js?v=027b0a73db"></script>
-<script src="js/net/net.js?v=027b0a73db"></script>
-<script src="js/duelo/floor.js?v=027b0a73db"></script>
-<script src="js/duelo/scene.js?v=027b0a73db"></script>
-<script src="js/duelo/cards.js?v=027b0a73db"></script>
-<script src="js/duelo/engine.js?v=027b0a73db"></script>
-<script src="js/duelo/ai.js?v=027b0a73db"></script>
-<script src="js/duelo/match.js?v=027b0a73db"></script>
-<script src="js/duelo/sound.js?v=027b0a73db"></script>
-<script src="js/duelo/account.js?v=027b0a73db"></script>
-<script src="js/duelo/seasons.js?v=027b0a73db"></script>
-<script src="js/duelo/shop.js?v=027b0a73db"></script>
-<script src="js/duelo/rank.js?v=027b0a73db"></script>
-<script src="js/duelo/online.js?v=027b0a73db"></script>
-<script src="js/duelo/ui.js?v=027b0a73db"></script>
-<script src="js/core/updater.js?v=027b0a73db"></script>
-<script src="js/core/pwa.js?v=027b0a73db"></script>
+<script src="js/core/splash.js?v=20eb007172"></script>
+<script src="js/duelo/shim.js?v=20eb007172"></script>
+<script src="js/core/util.js?v=20eb007172"></script>
+<script src="js/data/music.js?v=20eb007172"></script>
+<script src="js/core/audio.js?v=20eb007172"></script>
+<script src="js/data/types.js?v=20eb007172"></script>
+<script src="js/data/changelog.js?v=20eb007172"></script>
+<script src="js/core/firebase-config.js?v=20eb007172"></script>
+<script src="js/net/net.js?v=20eb007172"></script>
+<script src="js/duelo/floor.js?v=20eb007172"></script>
+<script src="js/duelo/scene.js?v=20eb007172"></script>
+<script src="js/duelo/cards.js?v=20eb007172"></script>
+<script src="js/duelo/engine.js?v=20eb007172"></script>
+<script src="js/duelo/ai.js?v=20eb007172"></script>
+<script src="js/duelo/match.js?v=20eb007172"></script>
+<script src="js/duelo/sound.js?v=20eb007172"></script>
+<script src="js/duelo/account.js?v=20eb007172"></script>
+<script src="js/duelo/seasons.js?v=20eb007172"></script>
+<script src="js/duelo/shop.js?v=20eb007172"></script>
+<script src="js/duelo/rank.js?v=20eb007172"></script>
+<script src="js/duelo/online.js?v=20eb007172"></script>
+<script src="js/duelo/ui.js?v=20eb007172"></script>
+<script src="js/core/updater.js?v=20eb007172"></script>
+<script src="js/core/pwa.js?v=20eb007172"></script>
 <!-- scripts:end -->
 </body>
 </html>

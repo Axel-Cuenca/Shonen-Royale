@@ -43,6 +43,30 @@
   }
   sp.classList.toggle('wave', wave);
 
+  // máquina de escribir: el nombre y la frase se escriben letra a letra con el cursor parpadeando
+  const l1 = sp.querySelector('.l1'), tg = sp.querySelector('.tag');
+  const queue = [];
+  const prep = (root) => {
+    const walk = (n) => { [...n.childNodes].forEach(c => {
+      if (c.nodeType === 3) { const f = document.createDocumentFragment(); for (const ch of c.textContent) { if (ch === ' ') f.append(' '); else { const sp2 = document.createElement('span'); sp2.className = 'tw'; sp2.textContent = ch; f.append(sp2); queue.push(sp2); } } c.replaceWith(f); }
+      else if (c.nodeType === 1) walk(c); }); };
+    walk(root);
+  };
+  const caret = document.createElement('i'); caret.className = 'cur';
+  let typed = false;
+  if (!rm && l1 && tg) {
+    prep(l1); const nLogo = queue.length; prep(tg);
+    let i = 0, t = 0;
+    const step = () => {
+      if (gone) return;
+      if (i >= queue.length) { typed = true; return; }          // fin: el cursor sigue parpadeando
+      const c = queue[i++]; c.classList.add('on'); c.after(caret);
+      if (i === nLogo) { setTimeout(step, 380); return; }          // pausa entre el nombre y la frase
+      setTimeout(step, (i <= nLogo ? 85 : 32) + Math.random() * 40);
+    };
+    setTimeout(step, 350);
+  } else typed = true;
+
   // progreso real: scripts de la lista que ya terminaron de bajar
   const bar = sp.querySelector('.sp-bar b'), txt = sp.querySelector('.sp-pct'), lab = sp.querySelector('.sp-lab');
   const srcs = [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src').split('?')[0]);
@@ -91,7 +115,7 @@
   window.DueloSplash = {
     done() {
       if (finished) return; finished = true;
-      const wait = Math.max(0, 1500 - (performance.now() - t0));      // se ve al menos 1,5 s (que no parpadee)
+      const wait = Math.max(0, (rm ? 1200 : 3000) - (performance.now() - t0));   // se ve al menos 3 s: da tiempo a escribir el nombre
       setTimeout(() => setTimeout(leave, 350), wait);                  // y deja llegar la barra al 100 %
     }
   };
