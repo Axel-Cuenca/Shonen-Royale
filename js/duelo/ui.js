@@ -394,7 +394,7 @@
     ];
     const desc = h('div', { class: 'hdesc' });
     let on = 0;
-    const btns = items.map((it, i) => h('button', { class: 'menu-btn', style: '--i:' + i, disabled: !!it.off, onclick: it.f, onpointerenter: () => setOn(i), onfocus: () => setOn(i) }, it.t, h('small', null, it.d)));
+    const btns = items.map((it, i) => h('button', { class: 'menu-btn', style: '--i:' + i, disabled: !!it.off, onclick: it.f, onpointerenter: () => setOn(i), onfocus: () => setOn(i) }, it.t, (() => { const bd = badges()[{ 'Contra la computadora': 'jugar', 'Tienda': 'tienda', 'Ranking': 'ranking', 'Novedades': 'novedades' }[it.t]]; return bd ? h('i', { class: 'bdg', 'aria-label': bd, title: bd }) : null; })(), h('small', null, it.d)));
     function setOn(i) {
       on = i; btns.forEach((b, j) => b.classList.toggle('on', j === i));
       const dl = h('div', { class: 'dl', style: 'min-height:24px' }, items[i].d + '.');
