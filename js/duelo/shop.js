@@ -185,6 +185,8 @@
     if (n > 0) { p.coins += n; saveStore(); }
     return n;
   }
+  /** Lo ganado hoy contra la computadora y el tope diario. */
+  function aiToday() { const p = pts(); if (!p) return { got: 0, cap: AI_DAILY_CAP }; return { got: p.aiDay === today() ? p.aiGot || 0 : 0, cap: AI_DAILY_CAP }; }
   // ofertas del día: 3 cosméticos con 30 % de descuento, iguales para todos ese día
   const OFFER_OFF = 0.3;
   function offers() {
@@ -287,5 +289,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

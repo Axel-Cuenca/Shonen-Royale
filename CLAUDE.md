@@ -33,7 +33,7 @@ Los cambios de servidores, base de datos o costes NO van ahí.
 - Firebase: proyecto **pokesurvivor-free** (autenticación normal: cuentas gratis sin límite).
   **Nunca** activar "Identity Platform" ni nada que lo active (funciones de bloqueo, MFA,
   "Actualizar para habilitar"): cobra por usuario. El proyecto viejo pokesurvivor-jpter se borró el 13-10-2026 (con su facturación).
-- Dominio: el sitio vive en `axel-cuenca.github.io/duelo/` (GitHub Pages; el repo se llama `duelo` desde el 22-10-2026). `pokesurvivor.com` NO es nuestro (es de otra persona): no usarlo. El Worker y el TURN
+- Dominio: el sitio vive en `axel-cuenca.github.io/Shonen-Royale/` (GitHub Pages; el repo se llama `Shonen-Royale` desde el 24-10-2026 (antes `duelo`)). `pokesurvivor.com` NO es nuestro (es de otra persona): no usarlo. El Worker y el TURN
   (Cloudflare Realtime) se quitaron el 15-10-2026: el cooperativo va sólo con conexión directa
   (STUN gratis de Google). No volver a añadir nada de pago.
 
@@ -53,7 +53,7 @@ Los cambios de servidores, base de datos o costes NO van ahí.
   no se tocan.
 - Tablero: 3 zonas de monstruo + 3 de magia/trampa por jugador (`ZONES` en `engine.js`).
 - Las imágenes de las cartas van en `assets/cards/` y las voces de habilidad en `assets/voices/` (las pone el dueño).
-- Modo de prueba: abrir el sitio con `?prueba` (p. ej. `axel-cuenca.github.io/duelo/?prueba`) da un mazo fijo de 30 (Popeye, Creeper, monstruos «Prueba ★N» y magias/trampas «Prueba: …»), sin límite de copias, sólo contra la computadora y sin guardar nada. Sirve para probar mientras el catálogo es pequeño; no cambia las reglas reales.
+- Modo de prueba: abrir el sitio con `?prueba` (p. ej. `axel-cuenca.github.io/Shonen-Royale/?prueba`) da un mazo fijo de 30 (Popeye, Creeper, monstruos «Prueba ★N» y magias/trampas «Prueba: …»), sin límite de copias, sólo contra la computadora y sin guardar nada. Sirve para probar mientras el catálogo es pequeño; no cambia las reglas reales.
 
 ## Mazos (pantalla «Mis mazos»)
 - `deckBuilder()` en `ui.js` es la lista de mazos (tarjetas, hasta 6, «Mazo activo» = `store.active`, el que se usa al jugar); `deckEditor(i)` es el editor: colección (centro), carta seleccionada con skin (derecha), tu mazo en 30 casillas (abajo) y lista de mazos (izquierda). Editar un mazo NO cambia el activo (hay «Usar para jugar»). Escritorio: arrastrar y soltar con Pointer Events propios (`drag()`; zonas `data-drop="pool|deck"`; en táctil se desactiva para no romper el scroll); doble clic añade/quita. Móvil (≤ 860 px): pestañas Colección / Tu mazo, botones − / +, tocar una carta abre su ventana, barra con la cuenta fija. Las reglas del mazo no cambian. Los elementos del editor usan `data-did` (no `data-cid`, que activa la vista previa al pasar el ratón).
@@ -79,3 +79,10 @@ match /ranks/{season}/p/{uid} {
 - Marca: logo C (sello circular con llama, degradados `#lgG`/`#lgR` definidos en un SVG oculto de `index.html`; `EMB` en `ui.js`), nombre «SHONEN ROYALE» en GFS Didot (`assets/fonts/GFSDidot-400.woff2`, OFL). Iconos en `assets/icons/` y `favicon.ico` salen de ese logo. El splash escribe nombre y frase con efecto máquina de escribir (`splash.js`, `.tw`/`.cur`; mínimo 3 s visible). Fondo dorado global (`goldBg`) y cabecera fija (`refreshHeader`) en todas las pantallas.
 - Splash (`#splash` en `index.html`, CSS «Splash» al final de `css/duelo.css`, `js/core/splash.js` va el PRIMER script): Sukuna carmesí; la llama del brazo (`assets/duelo/home/sukuna_fire.webp`, capa aparte de `sukuna.webp`) y las cortinas de luz «ondean como bandera» con franjas que suben y bajan desfasadas (sólo `transform`). Se apaga con Gráficos bajos/sin WebGL, Efectos reducidos y pantallas pequeñas. La barra mide los scripts que ya llegaron; `ui.js` llama a `DueloSplash.done()` al montar el primer menú o la pantalla de entrada (mínimo 1,5 s visible; a los 25 s se va sola). El emblema del logo viaja al logo del menú.
 - Menú Oro (`menu()` en `ui.js`, clases `.home/.hbg/.hhero/.htop/.hmain/.hlist/.hnews/.hbot` en `duelo.css`): fondo con suelo de piedra (`assets/duelo/home/suelo.webp`), Bardock (`bardock.webp`), lista a la izquierda con la descripción de la opción (flechas + Enter), 3 últimas novedades y la temporada a la derecha. Los botones siguen siendo `.menu-btn` (otros códigos lo usan para saber que se está en el menú). Splash y menú comparten emblema (`EMB` en `ui.js` = el SVG de `index.html`). Pendiente: que el héroe y los colores roten con el tema del mes (`TEMAS` de `seasons.js`).
+
+## Interfaz: avisos, tutorial y accesibilidad (24-10-2026)
+- Resultado de partida (`showEnd` en `ui.js`): motivo explicado + pista de la regla, resumen 1 contra 1 (`.recap`) y puntos con el tope diario contra la computadora (`D.Shop.aiToday()`, `AI_DAILY_CAP` = 50).
+- Tutorial de la primera partida contra la computadora (`tutorial()` en `ui.js`, `TUT`; se marca en `localStorage` `duelo.tut`; se repite desde «Reglas»). «Reglas» va en pestañas con ejemplos (`rules(tab)`).
+- Puntitos rojos de aviso en la barra (`badges()`): recompensa diaria, ofertas de hoy (`duelo.offSeen`), caja abrible, premio de temporada y novedades sin leer (`duelo.newsSeen`).
+- Accesibilidad (Sonido y efectos): tamaño de letra de menús y ventanas (`data-fs` en `<html>`, `zoom`, `duelo.fs`) y subtítulos de voces (`S.onVoice`, `duelo.subs`). Las «Novedades» del menú usan un icono por categoría (`NICO`), no cartas.
+

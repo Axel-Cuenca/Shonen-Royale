@@ -83,6 +83,25 @@
   const topEl = h('header', { class: 'htop gtop' });
   topEl.style.display = 'none';
   document.body.prepend(topEl);
+  // puntitos de aviso en la barra: recompensa por cobrar, ofertas de hoy, cajas que ya puedes abrir, premio de temporada y novedades sin leer
+  const localDay = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* nada */ } };
+  const newsSig = () => { const l = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19'); return l.length ? l[l.length - 1].d + ':' + ['new', 'chg', 'fix'].reduce((n, k) => n + l.reduce((m, e) => m + ((e[k] || []).length), 0), 0) : ''; };
+  function badges() {
+    const b = {};
+    try {
+      if (C.test || !D.Shop) return b;
+      if (D.Shop.dailyInfo()) b.jugar = 'Recompensa diaria por cobrar';
+      const day = localDay();
+      if (lsGet('duelo.offSeen') !== day) b.tienda = 'Ofertas nuevas de hoy';
+      const min = Math.min(...D.Shop.BOXES.map(x => x.price));
+      if (D.Shop.coins() >= min) b.cajas = 'Ya puedes abrir una caja';
+      if (D.Rank.pending && D.Rank.pending().length) b.ranking = 'Premio de temporada por cobrar';
+      if (newsSig() && lsGet('duelo.newsSeen') !== newsSig()) b.novedades = 'Novedades sin leer';
+    } catch (e) { /* nada */ }
+    return b;
+  }
   function refreshHeader() {
     const show = document.body.classList.contains('goldbg') && curScreen !== 'boot' && curScreen !== 'login';
     topEl.style.display = show ? '' : 'none';
@@ -90,7 +109,7 @@
     if (!show) return;
     const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
     topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'SHONEN ROYALE'),
-      h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2] }, n[1]))),
+      h('nav', { class: 'hnav' }, nav.map(n => { const bd = badges()[n[0]]; return h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2], title: bd || null }, n[1], bd ? h('i', { class: 'bdg', 'aria-label': bd }) : null); })),
       h('div', { class: 'hright' }, pointsBar(true), acctBar()));
     if (!introDone) {                               // la primera vez entra con el splash: espera a que se vaya
       introDone = true; const sp = document.getElementById('splash');
@@ -294,6 +313,22 @@
     document.addEventListener('pointerdown', () => { if (req && touch() && api.wanted() && pref() && !cur()) { try { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (e) { /* nada */ } } }, true);
     return api;
   })();
+  // ---------------- accesibilidad: tamaño de letra y subtítulos de voces ----------------
+  const FS_KEY = 'duelo.fs', SUB_KEY = 'duelo.subs';
+  const fsGet = () => { const v = lsGet(FS_KEY); return v === 'l' || v === 'xl' ? v : 'n'; };
+  const fsSet = v => { lsSet(FS_KEY, v); document.documentElement.dataset.fs = v; setTimeout(() => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); }, 50); };
+  const subsGet = () => lsGet(SUB_KEY) !== '0';
+  const subsSet = on => lsSet(SUB_KEY, on ? '1' : '0');
+  document.documentElement.dataset.fs = fsGet();
+  let capEl = null, capT = 0;
+  S.onVoice = card => {
+    if (!subsGet() || !card) return;
+    const say = card.voice && card.voice.say;
+    if (capEl) capEl.remove();
+    capEl = h('div', { class: 'vcap', role: 'status' }, h('b', null, card.name || ''), say ? ' — «' + say + '»' : ' (voz)');
+    document.body.append(capEl); clearTimeout(capT);
+    const el = capEl; capT = setTimeout(() => { el.remove(); if (capEl === el) capEl = null; }, 2800);
+  };
   function soundPanel() {
     const LBL = { master: 'Volumen general', music: 'Música', ui: 'Interfaz y cartas', combat: 'Combate', voice: 'Voces y sonidos de las cartas', amb: 'Ambiente', notify: 'Avisos' };
     const rows = S.CATS.map(k => {
@@ -306,14 +341,18 @@
       h('option', { value: 'auto' }, 'Gráficos: automático'), h('option', { value: 'low' }, 'Gráficos: bajos'), h('option', { value: 'mid' }, 'Gráficos: medios'), h('option', { value: 'high' }, 'Gráficos: altos'), h('option', { value: 'off' }, 'Gráficos: sin WebGL'));
     gfx.value = D.Floor.quality();
     const note = h('p', { class: 'sub' }, '');
+    const fs = h('select', { 'aria-label': 'Tamaño de letra', onchange: () => { fsSet(fs.value); note.textContent = 'Se aplica a menús y ventanas; el tablero mantiene su tamaño.'; } },
+      h('option', { value: 'n' }, 'Letra: normal'), h('option', { value: 'l' }, 'Letra: grande'), h('option', { value: 'xl' }, 'Letra: muy grande'));
+    fs.value = fsGet();
     modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Sonido y efectos'), ...rows,
       h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
-      h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
+      h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
@@ -321,16 +360,21 @@
   // las 3 novedades más recientes para la columna de la derecha del menú
   function latestNews(n) {
     const en = /^en/i.test(navigator.language || '') ? 1 : 0, out = [];
-    const cards = C.all().filter(c => c.img);
     const days = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').slice().sort((x, y) => (x.d < y.d ? 1 : -1));
     const LB = { new: ['NUEVO', 'NEW'], chg: ['CAMBIO', 'CHANGE'], fix: ['ARREGLO', 'FIX'] };
     for (const e of days) for (const k of ['new', 'chg', 'fix']) for (const l of (e[k] || []).slice().reverse()) {
       if (!l || l.length < 4 || out.length >= n) continue;
-      let hs = 0; for (const ch of l[0]) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;
-      out.push({ k: LB[k][en], t: l[en * 2], d: l[en * 2 + 1], img: cards.length ? cards[hs % cards.length].img : null });
+      out.push({ k: LB[k][en], kind: k, t: l[en * 2], d: l[en * 2 + 1] });
     }
     return out;
   }
+  // icono de cada categoría de novedad (nuevo = el emblema, cambio = flechas, arreglo = llave)
+  const NICO = {
+    new: EMB,
+    chg: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 18h30M30 9l9 9-9 9M40 32H10M18 23l-9 9 9 9"/></svg>',
+    fix: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M30 8a10 10 0 0 0-9 14L8 35a4 4 0 0 0 5 5l13-13a10 10 0 0 0 14-9l-7 6-5-2-2-5z"/></svg>'
+  };
+  const nicoEl = k => { const d = document.createElement('span'); d.className = 'nico ' + k; d.innerHTML = NICO[k] || NICO.new; d.setAttribute('aria-hidden', 'true'); return d; };
   let homeKeys = false;
 
   function menu() {
@@ -375,7 +419,7 @@
       h('div', { class: 'hmain' },
         h('div', { class: 'hlist' }, ...btns, desc, ...notes),
         h('aside', { class: 'hnews' }, h('h3', null, 'NOVEDADES'),
-          ...nw.map(c => h('button', { class: 'ncard', onclick: news }, c.img ? h('img', { src: c.img, alt: '', draggable: 'false' }) : null, h('div', null, h('small', null, c.k), h('b', null, c.t), h('p', null, c.d)))),
+          ...nw.map(c => h('button', { class: 'ncard', onclick: news }, nicoEl(c.kind), h('div', null, h('small', null, c.k), h('b', null, c.t), h('p', null, c.d)))),
           rs ? h('button', { class: 'hseason', onclick: () => rankScreen() }, 'TEMPORADA', h('b', null, D.Seasons.theme(D.Rank.seasonId()).name), `Termina en ${D.Rank.daysLeft()} días · Tu mejor rango: ${D.Rank.tierOf(rs.best != null ? rs.best : rs.pts).label}`) : null)),
       h('footer', { class: 'hbot' }, C.test ? h('span') : info ? h('span', null, 'RECOMPENSA DE HOY ', h('b', null, 'DISPONIBLE')) : h('span', null, 'RECOMPENSA DE HOY ', h('b', null, 'COBRADA')), h('span', { class: 'hint' }, '↑ ↓ · ENTER · ELEGIR')));
     mount(home);
@@ -393,26 +437,43 @@
     if (window.DueloSplash) window.DueloSplash.done();
   }
 
-  function rules() {
+  function rules(tab) {
     S.setTrack('menu');
     sndButton(true);
-    mount(h('div', { class: 'scr rules' },
-      h('button', { class: 'back', onclick: menu }, '← Menú'),
-      h('h1', null, 'Reglas'),
-      h('div', { class: 'panel' },
+    // mini ejemplo visual: dos fichas con ATK/DEF y lo que pasa
+    const mini = (n, stat, cls) => h('div', { class: 'mini ' + (cls || '') }, h('b', null, n), h('span', null, stat));
+    const ex = (a, vs, b, out) => h('div', { class: 'rexample' }, h('div', { class: 'rexrow' }, a, h('i', null, vs), b), h('p', null, out));
+    const TABS = [
+      ['turno', 'Turno y objetivo', () => [
         h('h2', null, 'Objetivo'), h('p', null, 'Deja los Puntos de Vida (PV) del rival en 0. Empiezas con 8000. También pierdes si tienes que robar y tu mazo está vacío.'),
+        ex(mini('Tú', '8000 PV'), 'vs', mini('Rival', '0 PV', 'dead'), '¡Ganas! El rival se quedó sin PV.'),
         h('h2', null, 'Un turno'),
         h('ul', null,
           h('li', null, 'Robas 1 carta (quien empieza no roba ni ataca en su primer turno). Mano inicial: 5. Al terminar, máximo 7 cartas en mano.'),
           h('li', null, 'Fase principal: invoca o coloca 1 monstruo por turno (invocación normal), activa magias, coloca magias y trampas.'),
           h('li', null, 'Monstruos de nivel 5-6 piden sacrificar 1 monstruo tuyo; nivel 7-9, 2 monstruos; nivel 10 o más, 3 monstruos. Niveles 1-4, ninguno. Las invocaciones especiales y las transformaciones no piden sacrificios.'),
           h('li', null, '«Colocar» deja el monstruo boca abajo en defensa. Al turno siguiente puedes voltearlo (queda en ataque) o cambiarle la posición.'),
-          h('li', null, 'Fase de combate: cada monstruo en ataque puede atacar una vez a un monstruo rival, o directo si no tiene monstruos.')),
+          h('li', null, 'Fase de combate: cada monstruo en ataque puede atacar una vez a un monstruo rival, o directo si no tiene monstruos.'))]],
+      ['combate', 'Combate', () => [
         h('h2', null, 'Combate'),
         h('ul', null,
           h('li', null, 'Ataque contra ataque: gana el mayor ATK; el perdedor se destruye y su dueño pierde la diferencia en PV. Si empatan, se destruyen los dos.'),
           h('li', null, 'Ataque contra defensa: si el ATK supera a la DEF, el defensor se destruye (sin daño). Si no, el atacante pierde la diferencia en PV.'),
           h('li', null, 'No hay ventajas de tipo: sólo cuentan el ATK y la DEF.')),
+        h('h3', null, 'Ejemplos'),
+        ex(mini('Tuyo', 'ATK 1800'), '⚔', mini('Rival', 'ATK 1200', 'dead'), 'Gana el tuyo. El monstruo rival se destruye y el rival pierde 600 PV (1800 − 1200).'),
+        ex(mini('Tuyo', 'ATK 1000', 'dead'), '⚔', mini('Rival', 'ATK 1500'), 'Pierde el tuyo: se destruye y tú pierdes 500 PV (1500 − 1000).'),
+        ex(mini('Tuyo', 'ATK 1600'), '⚔', mini('Rival', 'DEF 1200 🛡', 'dead'), 'El ATK supera a la DEF: el defensor se destruye y no hay daño en PV.'),
+        ex(mini('Tuyo', 'ATK 1000', 'warn'), '⚔', mini('Rival', 'DEF 1400 🛡'), 'El ATK no supera a la DEF: no se destruye nada y tú pierdes 400 PV (1400 − 1000).'),
+        ex(mini('Tuyo', 'ATK 1500'), '⚔', mini('Rival', 'sin monstruos'), 'Ataque directo: el rival pierde 1500 PV.')]],
+      ['magia', 'Magias y trampas', () => [
+        h('h2', null, 'Magias y trampas'),
+        h('ul', null,
+          h('li', null, 'Las magias se activan desde la mano o boca abajo, en tu fase principal.'),
+          h('li', null, 'Las trampas se colocan boca abajo y pueden responder (ataque, magia rival, invocación) a partir del turno siguiente.'),
+          h('li', null, `Cartas disponibles ahora: ${C.all().length}. Toca cualquier carta para leerla.`)),
+        ex(mini('Turno 1', 'colocas una trampa 🂠'), '→', mini('Turno 2 del rival', 'ataca', 'warn'), 'La trampa ya puede responder al ataque del rival.')]],
+      ['multi', '3 o 4 jugadores', () => [
         h('h2', null, '3 o 4 jugadores'),
         h('ul', null,
           h('li', null, 'Todos contra todos (3 o 4): cada uno tiene su campo y sus 8000 PV. Se juega por turnos en orden; quien llega a 0 PV (o no puede robar) queda fuera y su mano y su campo van al cementerio. Gana el último en pie.'),
@@ -420,12 +481,24 @@
           h('li', null, 'Al atacar eliges a quién. Un monstruo sólo ataca directo al rival que no tiene monstruos. En la primera ronda nadie ataca.'),
           h('li', null, 'Trampas: si te atacan, sólo puede responder el atacado. Con una magia o una invocación, pueden responder todos los rivales de quien actúa, por orden de turno.'),
           h('li', null, 'Magias con rival (destruir un monstruo, destruir una magia/trampa, daño directo) te dejan elegir el rival. «Destruir todos los monstruos» afecta a todos, también a los tuyos y a los de tu equipo.'),
-          h('li', null, 'En el tablero ves los campos de todos a la vez; para atacar o elegir objetivo, toca directamente en el campo del rival. Si te sacan del duelo puedes seguir mirando hasta el final.')),
-        h('h2', null, 'Magias y trampas'),
-        h('ul', null,
-          h('li', null, 'Las magias se activan desde la mano o boca abajo, en tu fase principal.'),
-          h('li', null, 'Las trampas se colocan boca abajo y pueden responder (ataque, magia rival, invocación) a partir del turno siguiente.'),
-          h('li', null, `Cartas disponibles ahora: ${C.all().length}. Toca cualquier carta para leerla.`)))));
+          h('li', null, 'En el tablero ves los campos de todos a la vez; para atacar o elegir objetivo, toca directamente en el campo del rival. Si te sacan del duelo puedes seguir mirando hasta el final.'))]]
+    ];
+    const body = h('div', { class: 'panel rbody' });
+    const bar = h('div', { class: 'rtabs', role: 'tablist' });
+    const bs = TABS.map(t => h('button', { class: 'rtab', role: 'tab', onclick: () => pick(t[0]) }, t[1]));
+    bs.forEach(b => bar.append(b));
+    function pick(id) {
+      const i = Math.max(0, TABS.findIndex(t => t[0] === id));
+      bs.forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
+      body.replaceChildren(...TABS[i][2]());
+      S.play('hover');
+    }
+    mount(h('div', { class: 'scr rules' },
+      h('button', { class: 'back', onclick: menu }, '← Menú'),
+      h('h1', null, 'Reglas'),
+      bar, body,
+      h('div', { class: 'row' }, btn('Ver el tutorial en una partida', () => { try { localStorage.removeItem(TUT_KEY); } catch (e) { /* nada */ } setupAI(); }, 'ghost'))));
+    pick(typeof tab === 'string' ? tab : 'turno');
   }
 
   // ---------------- contra la computadora ----------------
@@ -798,6 +871,37 @@
     mount(root); renderAll();
   }
 
+
+  // ---------------- tutorial de la primera partida contra la computadora ----------------
+  const TUT_KEY = 'duelo.tut';
+  const tutSeen = () => { try { return localStorage.getItem(TUT_KEY) === '1'; } catch (e) { return true; } };
+  const tutMark = () => { try { localStorage.setItem(TUT_KEY, '1'); } catch (e) { /* nada */ } };
+  const TUT = [
+    ['Objetivo', 'Cada uno empieza con 8000 PV. Gana quien deje los PV del rival en 0. Tu campo está abajo y el del rival arriba.'],
+    ['Tu mano', 'Tus cartas están abajo. Robas 1 por turno. Toca una carta para verla y elegir qué hacer con ella.'],
+    ['Monstruos', 'Puedes invocar o colocar 1 monstruo por turno. «Colocar» lo deja boca abajo en defensa. Los de nivel 5 o más piden sacrificar monstruos tuyos.'],
+    ['Magias y trampas', 'Las magias se activan en tu fase principal. Las trampas se colocan boca abajo y responden a un ataque o a una jugada del rival desde el turno siguiente.'],
+    ['Combate', 'Con «⚔ Combate» tus monstruos en ataque pueden atacar una vez. Gana el mayor ATK y el perdedor paga la diferencia en PV. Si el rival no tiene monstruos, pegas directo a sus PV.'],
+    ['Terminar el turno', 'Cuando termines, pulsa «Terminar turno». Si tardas demasiado, el contador lo pasa solo. Quien empieza no roba ni ataca en su primer turno. ¡Suerte!']
+  ];
+  function tutorial(cur, force) {
+    if (C.test || (!force && tutSeen())) return;
+    let i = 0, el = null;
+    const end = () => { if (el) { el.remove(); el = null; } tutMark(); };
+    cur.tutEnd = () => { if (el) { el.remove(); el = null; } };
+    const draw = () => {
+      const b = h('div', { class: 'tutbox', role: 'dialog', 'aria-label': 'Tutorial' },
+        h('div', { class: 'tuth' }, h('small', null, `Tutorial · ${i + 1}/${TUT.length}`), h('b', null, TUT[i][0])),
+        h('p', null, TUT[i][1]),
+        h('div', { class: 'row' },
+          btn('Saltar', () => end(), 'ghost'),
+          btn(i === TUT.length - 1 ? 'Entendido' : 'Siguiente', () => { if (i >= TUT.length - 1) end(); else { i++; draw(); } }, 'gold')));
+      if (el) el.replaceWith(b); else document.body.append(b);
+      el = b;
+    };
+    setTimeout(() => { if (current === cur) draw(); }, 1200);
+  }
+
   // ---------------- la partida ----------------
   function game(match, opts) {
     opts = opts || {};
@@ -822,6 +926,7 @@
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
+    if (match.kind === 'ia') tutorial(cur);
     // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
     const TURN_SECS = 45;
     let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
@@ -1284,11 +1389,14 @@
       const winners = v.players.filter(q => v.team[q.seat] === win).map(q => q.seat);
       return winners.concat(v.rank.slice().reverse().filter(q => !winners.includes(q)));
     }
+    let endEarned = 0;
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
       const myTeam = v.team[v.seat], won = v.winner === myTeam, draw = v.winner === 'draw' || v.winner === -1;
       let earned = 0;
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!(current && current.match && current.match.kind === 'ia'), won); rankFinish(false); }
+      const vsAI = !!(current && current.match && current.match.kind === 'ia');
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
+      else earned = endEarned;
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
       let sub = v.reason || '', list = null;
@@ -1302,10 +1410,31 @@
           list = h('div', { class: 'standings' }, order.map((q, i) => h('div', { class: 'st' + (i === 0 ? ' w' : '') + (q === v.seat ? ' me' : '') }, h('b', null, i === 0 ? '🏆' : (i + 1) + '.º'), nameOf(q))));
         }
       }
+      if (current && current.tutEnd) { current.tutEnd(); tutMark(); }           // el tutorial no se queda encima del resultado
+      // motivo explicado + pista de la regla (1 contra 1)
+      let hint = '';
+      if (!multi() && !draw) {
+        if (/sin PV/.test(v.reason || '')) { sub = won ? 'Los PV del rival llegaron a 0.' : 'Tus PV llegaron a 0.'; hint = 'Gana quien deja los PV del rival en 0 (se empieza con 8000).'; }
+        else if (/robar/.test(v.reason || '')) { sub = won ? 'Al rival no le quedaban cartas para robar.' : 'No te quedaban cartas para robar.'; hint = 'Si tienes que robar y tu mazo está vacío, pierdes.'; }
+      }
+      // puntos ganados y tope diario contra la computadora
+      let ptsLine = null;
+      if (!C.test && vsAI) {
+        const t = D.Shop.aiToday();
+        ptsLine = earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos', h('small', null, ` · hoy ${t.got}/${t.cap} contra la computadora`))
+          : t.got >= t.cap ? h('p', { class: 'earned cap' }, 'Llegaste al máximo de hoy contra la computadora (' + t.cap + '/' + t.cap + ' ✦).', h('small', null, 'Mañana vuelve a sumar. Online y la recompensa diaria no tienen este tope.')) : null;
+      } else if (earned) ptsLine = h('p', { class: 'earned' }, '✦ +' + earned + ' puntos');
+      // resumen de la partida (1 contra 1)
+      let recap = null;
+      if (!multi() && v.me && v.players.length === 2) {
+        const foe = v.players.find(q => q.seat !== v.seat), lp = x => Math.max(0, x.lp), kills = x => (x.grave || []).length;
+        const cell = (a, b) => h('div', null, h('b', null, b), h('small', null, a));
+        recap = h('div', { class: 'recap' }, cell('Turnos', v.turn), cell('Tus PV', lp(v.me)), cell('PV rival', lp(foe)), cell('Tu cementerio', kills(v.me)), cell('Cementerio rival', kills(foe)));
+      }
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
         h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
-          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos') : null, rankRes ? rankLine(rankRes) : null, list,
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), hint ? h('p', { class: 'hintr' }, hint) : null, recap, ptsLine, rankRes ? rankLine(rankRes) : null, list,
           h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
       modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
@@ -1746,7 +1875,7 @@
       btn('Genial', () => { closeModal(); menu(); }, 'gold')));
   }
   function shopScreen(cat) {
-    scr('tienda');
+    scr('tienda'); lsSet('duelo.offSeen', localDay());
     cat = cat || 'hc'; S.setTrack('menu');
     const SH = D.Shop, items = SH.ITEMS.filter(i => i.cat === cat);
     const sample = () => {
@@ -1860,7 +1989,7 @@
   }
 
   function news() {
-    scr('novedades');
+    scr('novedades'); lsSet('duelo.newsSeen', newsSig());
     S.setTrack('menu');
     const en = /^en/i.test(navigator.language || '') ? 1 : 0;
     const SEC = [['new', 'Nuevo', 'New', 'NUEVO', 'NEW'], ['chg', 'Cambios', 'Changes', 'CAMBIO', 'CHANGE'], ['fix', 'Arreglos', 'Fixes', 'ARREGLO', 'FIX']];

@@ -192,6 +192,7 @@
   function voice(card) {
     const v = card && card.voice;
     if (!v || !st.sfxOn || st.muted) return;
+    try { if (D.Sound && D.Sound.onVoice) D.Sound.onVoice(card); } catch (e) { /* nada */ }
     const vol = Math.min(1, st.master * st.voice);
     const fallback = () => {
       try {

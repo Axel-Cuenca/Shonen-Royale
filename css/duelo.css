@@ -1162,3 +1162,60 @@ body:not(:has(.home)) .hb-halo, body:not(:has(.home)) .hb-shadow { display: none
 }
 html.rm .hhero, html.rm .hb-rays, html.rm .hb-fog, html.rm .hb-halo { animation: none; }
 html.rm .hb-parts { display: none; }
+
+/* Novedades del menú: icono por categoría */
+.ncard .nico { width: 84px; height: 84px; flex: none; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #24180f, #0b0708); color: #6fb4ff; }
+.ncard .nico svg { width: 52px; height: 52px; }
+.ncard .nico.new svg { width: 62px; height: 62px; filter: drop-shadow(0 0 8px #ff6a3d88); }
+.ncard .nico.chg { color: #6fb4ff; } .ncard .nico.fix { color: #7ddc8a; }
+
+/* Resultado: pista, resumen y tope diario */
+.endbox .hintr { font: 600 15px var(--ui); color: #e9d9a8; margin: -2px 0 8px; opacity: .9; }
+.endbox .recap { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin: 8px 0; padding: 8px 14px; background: #0008; border: 1px solid #ffffff22; border-radius: 10px; }
+.endbox .recap div { text-align: center; min-width: 64px; }
+.endbox .recap b { display: block; font: 800 22px var(--ui); color: #ffe08a; }
+.endbox .recap small { font: 600 12px var(--ui); color: #cdd5e6; letter-spacing: .5px; }
+.endbox .earned small { display: inline; font: 600 14px var(--ui); color: #cdd5e6; }
+.endbox .earned.cap { font-size: 16px; color: #ffcf7a; }
+.endbox .earned.cap small { display: block; margin-top: 3px; }
+
+/* Tutorial de la primera partida */
+.tutbox { position: fixed; z-index: 400; right: 14px; top: 34%; width: min(340px, calc(100vw - 24px)); padding: 12px 16px 12px; background: linear-gradient(#171a2cf2, #0b0d1af2); border: 1px solid #f2c862; border-radius: 12px; box-shadow: 0 10px 40px #000a, 0 0 0 3px #f2c86233; animation: tutin .35s ease-out; }
+.tutbox .tuth small { display: block; font: 700 12px var(--ui); letter-spacing: 3px; color: #f2c862; text-transform: uppercase; }
+.tutbox .tuth b { font: 800 21px var(--ui); color: #fff; }
+.tutbox p { margin: 6px 0 10px; font: 500 16px / 1.35 var(--ui); color: #e6ebf7; }
+.tutbox .row { display: flex; gap: 8px; justify-content: flex-end; }
+@keyframes tutin { from { opacity: 0; translate: 0 -12px; } }
+@media (max-width: 860px) { .tutbox { right: 12px; left: 12px; width: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 178px); padding: 8px 12px; } .tutbox p { font-size: 14.5px; margin: 4px 0 8px; } .tutbox .tuth b { font-size: 18px; } }
+
+/* Reglas en pestañas con ejemplos */
+.rtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.rtab { padding: 9px 16px; font: 700 16px var(--ui); color: #cdd5e6; background: #0b1020cc; border: 1px solid #ffffff2e; border-radius: 8px; cursor: pointer; }
+.rtab.on { color: #1a1205; background: linear-gradient(#ffe08a, #c9962c); border-color: #f2c862; }
+.rbody h3 { margin: 14px 0 6px; font: 800 17px var(--ui); color: #f2c862; }
+.rexample { margin: 10px 0; padding: 10px 12px; background: #0a0d1acc; border: 1px solid #ffffff22; border-left: 3px solid #f2c862; border-radius: 8px; }
+.rexrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rexrow i { font-style: normal; font: 800 20px var(--ui); color: #f2c862; }
+.rexample p { margin: 8px 0 0; }
+.mini { min-width: 130px; padding: 7px 12px; text-align: center; background: linear-gradient(#1d2744, #121a30); border: 1px solid #6fb4ff66; border-radius: 8px; }
+.mini b { display: block; font: 700 12px var(--ui); letter-spacing: 2px; text-transform: uppercase; color: #9fb4e8; }
+.mini span { font: 800 18px var(--ui); color: #fff; }
+.mini.dead { border-color: #ff6a6a; opacity: .75; } .mini.dead span { text-decoration: line-through; color: #ffb0b0; }
+.mini.warn { border-color: #ffb454; }
+@media (max-width: 860px) { .rtab { flex: 1 1 45%; padding: 10px 8px; font-size: 15px; } .mini { min-width: 110px; } }
+
+/* Avisos (puntitos) en la barra */
+.hnav button { position: relative; }
+.hnav .bdg { display: inline-block; vertical-align: middle; margin: -10px 0 0 6px; width: 9px; height: 9px; border-radius: 50%; background: #ff4d3d; box-shadow: 0 0 0 2px #0a0708, 0 0 8px #ff4d3d; animation: bdgp 1.8s ease-in-out infinite; }
+@keyframes bdgp { 50% { transform: scale(1.25); } }
+.rm .hnav .bdg { animation: none; }
+/* Accesibilidad: letra más grande en menús y ventanas (no en el tablero) */
+html[data-fs="l"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom: 1.15; }
+html[data-fs="xl"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom: 1.3; }
+/* Contraste de los textos pequeños */
+.ncard p { font-size: 14px; color: #e6ebf7; }
+.hnote, .hdesc, .hbot { color: #e6ebf7; }
+.hbot .hint { color: #cdd5e6; }
+/* Subtítulos de voces */
+.vcap { position: fixed; z-index: 450; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18%); transform: translateX(-50%); max-width: min(680px, calc(100vw - 24px)); padding: 8px 16px; font: 600 19px / 1.3 var(--ui); color: #fff; text-align: center; background: #000d; border: 1px solid #ffffff33; border-radius: 8px; pointer-events: none; animation: tutin .2s ease-out; }
+.vcap b { color: #f2c862; }
