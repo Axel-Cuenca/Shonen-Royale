@@ -1084,9 +1084,36 @@
         return vsList.length === 1 ? act(list[0]) : pickFoe(vsList, q => act(list.find(a => a.target.vs === q)), '¿A quién le haces daño?');
       }
       if (d.fx === 'special') return chooseHand(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje de tu mano');
-      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem', area = d.fx === 'destroyST' ? 'st' : 'mz';
+      if (d.fx === 'esferas') return wishMenu(list);
+      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
+    }
+    /** Esferas del Dragón: menú con los tres deseos. Los que no se pueden cumplir salen apagados y con el motivo. */
+    function wishMenu(list) {
+      const by = w => list.filter(a => a.target && a.target.wish === w);
+      const opts = [
+        { w: 'revive', title: 'Resurrección', text: 'Devuelve al campo un personaje tuyo del cementerio de hasta 7★.', why: 'No tienes en el cementerio un personaje de 7★ o menos, o no hay espacio libre en tu campo.',
+          run: as => chooseGrave(as.map(a => a.target.u), u => act(as.find(a => a.target.u === u)), 'Elige el personaje de tu cementerio') },
+        { w: 'heal', title: 'Restaurar vida', text: 'Recuperas exactamente 1500 PV.', why: 'No se puede pedir este deseo ahora.', run: as => act(as[0]) },
+        { w: 'summon', title: 'Invocación especial', text: 'Invoca de tu mano un personaje tuyo de hasta 7★.', why: 'No tienes en la mano un personaje de 7★ o menos que se pueda invocar, o no hay espacio libre en tu campo.',
+          run: as => chooseHand(as.map(a => a.target.u), u => act(as.find(a => a.target.u === u)), 'Elige el personaje de tu mano') }
+      ];
+      modal(h('div', { class: 'box' }, h('h2', null, 'Esferas del Dragón: pide un deseo'),
+        h('p', { class: 'sub' }, 'Sólo se cumple un deseo. La carta no se gasta hasta que el deseo se cumple.'),
+        h('div', { class: 'acts', style: 'flex-direction:column;align-items:stretch;gap:8px' }, opts.map(o => {
+          const as = by(o.w), b = btn(o.title, () => { closeModal(); o.run(as); }, as.length ? 'gold' : 'ghost');
+          if (!as.length) { b.disabled = true; b.style.opacity = '.55'; b.style.cursor = 'not-allowed'; }
+          return h('div', { style: 'text-align:center' }, b, h('small', { style: 'display:block;margin-top:3px;opacity:.85' }, as.length ? o.text : o.why));
+        })),
+        btn('Cancelar', closeModal, 'ghost')));
+    }
+    /** Ventana para elegir una carta de tu cementerio por uid. */
+    function chooseGrave(uids, done, text) {
+      const cs = uids.map(u => v.me.grave.find(c => c && c.uid === u)).filter(Boolean);
+      modal(h('div', { class: 'box' }, h('h2', null, text),
+        h('div', { class: 'cands' }, cs.map(c => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); done(c.uid); } }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))),
+        btn('Cancelar', closeModal, 'ghost')));
     }
     /** Ventana para elegir una carta de la mano por uid. */
     function chooseHand(uids, done, text) {

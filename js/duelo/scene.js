@@ -303,6 +303,7 @@
     textures();
     const parts = [];
     parts.push(el('ground', ''));
+    parts.push(el('tabimg', ''));
     parts.push(el('river r1', ''), el('river r2', ''));
     // muros alrededor del suelo (altura 10)
     parts.push(prism(-34, -36, W + 68, 36, 10, 'wl'), prism(-34, H, W + 68, 40, 10, 'wl'), prism(-34, 0, 34, H, 10, 'wl'), prism(W, 0, 34, H, 10, 'wl'));

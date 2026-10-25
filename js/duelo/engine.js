@@ -723,13 +723,13 @@
       targets: (st, p) => {
         const P = st.players[p], out = [];
         P.grave.forEach(i => { const c = def(i); if (c.kind === 'monster' && c.level <= 7 && spot(P, c) >= 0) out.push({ wish: 'revive', u: i.uid }); });
-        if (P.lp < START_LP) out.push({ wish: 'heal' });
+        out.push({ wish: 'heal' });
         P.hand.forEach(i => { const c = def(i); if (c.kind === 'monster' && !c.sp && c.level <= 7 && spot(P, c) >= 0) out.push({ wish: 'summon', u: i.uid }); });
         return out;
       },
       resolve: (st, p, d, t) => {
         const P = st.players[p];
-        if (t && t.wish === 'heal') { const n = Math.min(1500, START_LP - P.lp); if (n > 0) { heal(st, p, n); log(st, p, `pide el deseo de recuperar vida: +${n} PV`); } return; }
+        if (t && t.wish === 'heal') { heal(st, p, 1500); log(st, p, 'pide el deseo de recuperar vida: +1500 PV'); return; }
         if (t && t.wish === 'revive') {
           const inst = P.grave.find(c => c.uid === t.u);
           if (!inst || def(inst).level > 7) { log(st, p, 'no tiene objetivo'); return; }
@@ -1179,7 +1179,8 @@
       if (d.fx === 'gokumon') {
         pe = foeOf(st, ch.p, t);
         prisoner = st.players[pe].mz[t && t.z];
-        okp = okp && !!prisoner;
+        // se vuelve a comprobar quién controla al objetivo: el que tiene en su campo manda; debe ser de un rival vivo, nunca un aliado
+        okp = okp && !!prisoner && foes(st, ch.p).includes(pe);
       }
       if (!okp) { P.grave.push(ch.inst); log(st, ch.p, `${d.name} no tiene objetivo`); return; }
       if (d.fx === 'gokumon') {                          // Prisión Absoluta: nada impide el sellado

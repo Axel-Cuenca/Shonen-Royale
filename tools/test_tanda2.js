@@ -392,6 +392,25 @@ module.exports = function (T) {
     ok(!L(st2, 0).some(x => x.t === 'activate' && x.target.wish === 'revive'), 'sin objetivo válido no se ofrece el deseo');
   }
   {
+    // Esferas (corrección 25-10): los tres deseos funcionan, cada uno con su objetivo, y la carta va al cementerio una sola vez
+    const st = fresh(); give(st, 0, ['c_esferas', 'c_zenitsu', 'c_yoriichi']);
+    st.players[0].grave.push({ uid: st.nextUid++, id: 'c_goku' }, { uid: st.nextUid++, id: 'c_mahoraga' });
+    const ws = L(st, 0).filter(x => x.t === 'activate' && x.target && x.target.wish);
+    ok(['revive', 'heal', 'summon'].every(w => ws.some(x => x.target.wish === w)), 'Esferas ofrece los tres deseos');
+    const rv = ws.filter(x => x.target.wish === 'revive'), sm = ws.filter(x => x.target.wish === 'summon');
+    eq(rv.length, 1, 'resurrección: sólo el personaje de 7★ o menos del cementerio (Mahoraga, 10★, queda fuera)');
+    eq(sm.length, 1, 'invocación especial: sólo el personaje de 7★ o menos de la mano (Yoriichi, 11★, queda fuera)');
+    act(st, 0, ws.find(x => x.target.wish === 'heal'));
+    eq(st.players[0].lp, 9500, 'restaurar vida: exactamente +1500 PV');
+    eq(st.players[0].grave.filter(c => c.id === 'c_esferas').length, 1, 'las Esferas van una sola vez al cementerio');
+    const st2 = fresh(); give(st2, 0, ['c_esferas']); st2.players[0].grave.push({ uid: st2.nextUid++, id: 'c_goku' });
+    act(st2, 0, L(st2, 0).find(x => x.t === 'activate' && x.target.wish === 'revive'));
+    ok(st2.players[0].mz.some(m => m && m.c.id === 'c_goku') && !grave(st2, 0, 'c_goku') && grave(st2, 0, 'c_esferas'), 'resurrección: Goku vuelve al campo y las Esferas van al cementerio');
+    const st3 = fresh(); give(st3, 0, ['c_esferas', 'c_zenitsu']);
+    act(st3, 0, L(st3, 0).find(x => x.t === 'activate' && x.target.wish === 'summon'));
+    ok(st3.players[0].mz.some(m => m && m.c.id === 'c_zenitsu') && grave(st3, 0, 'c_esferas'), 'invocación especial: Zenitsu sale de la mano al campo');
+  }
+  {
     const st = fresh(); st.players[0].banish.push({ uid: 995, id: 'c_goku' }); give(st, 0, ['c_cana_gon']);
     act(st, 0, find(st, 0, x => x.t === 'activate'));
     ok(st.players[0].hand.some(c => c.id === 'c_goku') && !banish(st, 0, 'c_goku'), 'Caña: el desterrado vuelve a la mano');
@@ -433,6 +452,13 @@ module.exports = function (T) {
     const st2 = fresh(); put(st2, 1, 0, 'c_goku'); putST(st2, 1, 0, 't_negate', { down: true, setTurn: 0 });
     cast(st2, 0, 'c_gokumonkyo', { z: 0 });
     ok(!st2.players[1].mz[0] && !st2.pending, 'Gokumonkyo no se puede anular');
+    // sólo enemigos: un personaje propio nunca es objetivo, ni siquiera forzando la acción
+    const st3 = fresh(); put(st3, 0, 0, 'c_goku'); give(st3, 0, ['c_gokumonkyo']);
+    ok(!find(st3, 0, x => x.t === 'activate'), 'Gokumonkyo no se puede activar si sólo hay personajes aliados');
+    ok(E.apply(st3, 0, { t: 'activate', hand: 0, target: { z: 0 } }).ok === false && !!st3.players[0].mz[0], 'forzar un objetivo aliado se rechaza y no lo sella');
+    put(st3, 1, 1, 'c_zenitsu');
+    const zs = L(st3, 0).filter(x => x.t === 'activate').map(x => x.target.z);
+    eq(zs, [1], 'con un aliado y un enemigo, sólo se ofrece el enemigo');
   }
   {
     const st = fresh(); st.players[0].lp = 1000; give(st, 0, ['c_guerrero']);
