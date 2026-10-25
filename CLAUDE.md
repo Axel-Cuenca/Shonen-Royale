@@ -45,7 +45,7 @@ Los cambios de servidores, base de datos o costes NO van ahí.
 - La nube sólo funciona desde `axel-cuenca.github.io` (y localhost); la lista está en `HOSTS` de `account.js`.
 
 ## Cartas
-- El catálogo del juego (`js/duelo/cards.js`) son sólo las cartas propias del array `CUSTOM` (20 desde el 23-10-2026: 14
+- El catálogo del juego (`js/duelo/cards.js`) son sólo las cartas propias del array `CUSTOM` (51 desde el 25-10-2026: 49 visibles + 2 formas ocultas de Kayn `c_kayn_rhaast`/`c_kayn_sombra`, que `all()` filtra; antes 20: 14
   personajes y 6 magias; sus habilidades están en la tabla `AB` y en `engine.js`; imágenes `.webp` en `assets/cards/`):
   el dueño pasa las cartas de a una o por lotes (ZIP). El catálogo antiguo (Pokémon, 12 magias, 5 trampas) vive en
   `tools/legacy_catalog.js` y lo usan SÓLO las pruebas. Con menos de 15 cartas distintas no se puede armar un
@@ -86,3 +86,10 @@ match /ranks/{season}/p/{uid} {
 - Puntitos rojos de aviso en la barra (`badges()`): recompensa diaria, ofertas de hoy (`duelo.offSeen`), caja abrible, premio de temporada y novedades sin leer (`duelo.newsSeen`).
 - Accesibilidad (Sonido y efectos): tamaño de letra de menús y ventanas (`data-fs` en `<html>`, `zoom`, `duelo.fs`) y subtítulos de voces (`S.onVoice`, `duelo.subs`). Las «Novedades» del menú usan un icono por categoría (`NICO`), no cartas.
 
+
+## Segunda tanda de cartas (25-10-2026)
+- Pruebas nuevas en `tools/test_tanda2.js` (las carga `test_duelo.js`). Las cartas `xs_`/`xt_` sólo existen con `?prueba`; los tests usan ids del catálogo antiguo (`s_beam`, `t_negate`, `t_barrier`).
+- Campo `fam` (familia: Vegeta, Goku…) para transformarse entre cartas de la misma familia. `couple:true` (Anti-Venom) se acopla con la acción legal `couple` y queda en el `link` del anfitrión, sin ocupar casilla. Otros flags: `pgem`, `susano`, `beast`, `ring1`, `promise`, `unstop` (Gokumonkyo), `cost:2000` (Guerrero), trampa `c_rayo_solar`.
+- Pendings nuevos para reacciones (Shen, Mahoraga, La Muerte, Meliodas, elección de Anti-Venom): serializables, con `ch` (cadena) o `a` (ataque). Los equipos viven en `P.st` (ring, promise, susano, beast, guerrero, prison, held, gem, storm). Escudos con `shieldInfo` (prioridad shen > susano > vegeta); Seis Ojos vía `canTarget`, `SIX_TURNS = 3`.
+- Simplificaciones: Meliodas sólo devuelve magias `destroyOne`/`destroyST`/`burn` (sin límite de usos); Shen sólo cubre ataques mortales y magias `destroyOne`; el equipo es sólo de personajes propios; la Promesa de Rika no impide cambiar de portador; Anti-Venom no tiene muerte propia y se acopla sin ventana de invocación; la computadora no usa Voto Vinculante ni la Marca de Cazador.
+- Rika Orimoto y Yuta Okkotsu: llegaron con el .txt vacío; no se convirtieron ni cargaron (esperan prompt).

@@ -2020,7 +2020,7 @@
         if (d.fx === 'destroyOne') { const Cp = st.players[ch.p]; zonesWith(Cp.mz).forEach(z => { if (canTarget(st, p, ch.p, z)) cands.push({ vs: ch.p, z }); }); }
         else for (const z of zonesWith(st.players[ch.p].st)) if (!st.players[ch.p].st[z].prison) cands.push({ vs: ch.p, z });
         if (!cands.length) { log(st, p, 'Total Counter no puede reflejar el efecto'); ch.done = (ch.done || []).concat('meli'); st.chain = ch; continueSpell(st); return; }
-        st.pending = { k: 'ability', ab: 'meliodas', player: p, stage: 'target', ch, cands, nm: pd.nm };
+        st.pending = { k: 'ability', ab: 'meliodas', player: p, stage: 'target', ch, cands, nm: pd.nm, area: d.fx === 'destroyST' ? 'st' : 'mz' };
         return;
       }
       if (!pd.cands.some(c => c.vs === a.vs && c.z === a.z)) { st.pending = pd; return; }
@@ -2180,6 +2180,7 @@
           pending.ab = pd.ab; pending.stage = pd.stage;
           if (pd.nm) pending.nm = pd.nm;
           if (pd.victim) pending.victim = pd.victim;
+          if (pd.area) pending.area = pd.area;
           const P = st.players[seat], all = P.hand.concat(P.grave, P.mz.filter(Boolean).map(s => s.c), P.st.filter(Boolean).map(s => s.c));
           pending.card = { uid: pd.uid, id: (all.find(c => c.uid === pd.uid) || {}).id };
           if (pd.opts) { pending.opts = pd.opts.slice(); pending.from = pd.from; }

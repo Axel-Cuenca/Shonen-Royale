@@ -60,7 +60,7 @@
         return best;
       }
       if (pd.k === 'ability') {
-        if (pd.ab === 'karma') {                       // arrastra al rival más fuerte
+        if (pd.ab === 'karma' || pd.stage === 'target') {                       // arrastra (o golpea) al rival más fuerte
           let best = L[0], bs = -1;
           for (const a of L) { const m = v.players[a.vs] && v.players[a.vs].mz[a.z]; const sc = m ? (m.atk || 0) + (v.team[a.vs] !== v.team[v.seat] ? 5000 : 0) : 0; if (sc > bs) { bs = sc; best = a; } }
           return best;
@@ -157,10 +157,26 @@
             case 'gematk': return tm && v.team[a.target.vs] === v.team[v.seat] ? 31 : -1;
             case 'storm1': { const hd = cardOf(me.hand[a.hand]); return 44 + ((tm && tm.atk) || 0) / 100 - hd.atk / 200; }
             case 'storm2': return 40 - cardOf(me.hand[a.hand]).atk / 200 + (cardOf(me.hand[a.hand]).kind === 'monster' ? 0 : 0);
+            // ----- tanda 2 -----
+            case 'conc': case 'conc2': case 'kaioken': case 'kaioken6': return info.count ? 52 : -1;
+            case 'desp': return tm && v.team[a.target.vs] === v.team[v.seat] ? 48 + (tm.atk || 0) / 500 : -1;
+            case 'genki': return info.count ? 60 : -1;
+            case 'teach': return 40;
+            case 'dominio': return info.count >= 2 ? 46 : -1;
+            case 'llama': return 55;
+            case 'kform': return 56;
+            case 'telar': return 38;
+            case 'corromper': return 62 + ((tm && tm.atk) || 0) / 200;
+            case 'rojo': return 58 + ((tm && tm.atk) || 0) / 200;
+            case 'azul': return 55;
+            case 'purpura': return a.target && a.target.area === 'mz' ? 64 + ((tm && tm.atk) || 0) / 200 : 45;
+            case 'avpred': return 52;
+            case 'marca': return -1;
           }
           return -1;
         }
         case 'special': return 63;
+        case 'couple': return 49 + (me.mz[a.host] && me.mz[a.host].atk ? me.mz[a.host].atk / 400 : 0);
         case 'activate': case 'activateSet': {
           const card = a.t === 'activate' ? me.hand[a.hand] : me.st[a.zone].c;
           const d = cardOf(card);
@@ -199,6 +215,19 @@
               return hc ? 46 + cardOf(hc).atk / 100 : -1;
             }
             case 'gem': case 'storm': return myMons.length || d.fx === 'gem' ? 42 : -1;
+            case 'esferas': {
+              const w = a.target && a.target.wish;
+              if (w === 'heal') return lowLp ? 62 : -1;
+              if (w === 'revive') { const best = me.grave.reduce((n, c) => Math.max(n, cardOf(c).kind === 'monster' && cardOf(c).level <= 7 ? cardOf(c).atk : 0), 0); return best >= 1200 ? 56 : -1; }
+              if (w === 'summon') return 47;
+              return -1;
+            }
+            case 'cana': return 45;
+            case 'uno': { const m = me.mz[a.target.z]; return m && m.pos === 'atk' && info.count ? 44 : -1; }
+            case 'pothala': return myMons.length >= 2 && info.count ? 50 : -1;
+            case 'gokumon': { const t = opp.mz[a.target.z]; return t ? 60 + (t.atk || 0) / 100 : -1; }
+            case 'guerrero': return me.lp > 6000 ? 40 : -1;
+            case 'voto': return -1;
             case 'karma': {
               const m = me.mz[a.target.z];
               return m && !m.down && info.count ? 41 : -1;
@@ -206,6 +235,7 @@
             case 'equip': {
               const m = me.mz[a.target.z];
               if (!m || m.down) return -1;
+              if (d.ring1 && !(cardOf(m.c).level >= 7)) return -1;      // el Anillo Único mata a los personajes de pocas estrellas
               return 44 + (m.atk >= myBest ? 6 : 0);
             }
           }
