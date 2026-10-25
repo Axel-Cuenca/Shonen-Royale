@@ -276,7 +276,7 @@
   // ---------------- sonido ----------------
   let sndEl = null, fsEl = null;
   function sndButton(show) {
-    if (!sndEl) { sndEl = h('button', { class: 'sndbtn', title: 'Sonido y música', onclick: soundPanel }, '🔊'); document.body.append(sndEl); }
+    if (!sndEl) { sndEl = h('button', { class: 'sndbtn', title: 'Ajustes', 'aria-label': 'Ajustes', onclick: soundPanel }, '⚙️'); document.body.append(sndEl); }
     sndEl.style.display = show ? '' : 'none';
     if (FS.wanted()) {
       if (!fsEl) { fsEl = h('button', { class: 'sndbtn fsbtn fsb', title: 'Pantalla completa', onclick: FS.toggle }, FS.icon()); document.body.append(fsEl); }
@@ -345,7 +345,7 @@
     const fs = h('select', { 'aria-label': 'Tamaño de letra', onchange: () => { fsSet(fs.value); note.textContent = 'Se aplica a menús y ventanas; el tablero mantiene su tamaño.'; } },
       h('option', { value: 'n' }, 'Letra: normal'), h('option', { value: 'l' }, 'Letra: grande'), h('option', { value: 'xl' }, 'Letra: muy grande'));
     fs.value = fsGet();
-    modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Sonido y efectos'), ...rows,
+    modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Ajustes'), ...rows,
       h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs), note, btn('Cerrar', () => closeModal(), 'ghost')));
@@ -1795,7 +1795,7 @@
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
         multi() ? null : pcard(v.opp.seat),
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
-        h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Sonido' }, '🔊'),
+        h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
           h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
