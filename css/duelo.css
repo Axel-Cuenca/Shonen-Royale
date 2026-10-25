@@ -1047,7 +1047,7 @@ html.splashing, html.splashing body { overflow: hidden; }
 .sp-fly { position: fixed; z-index: 10000; margin: 0; pointer-events: none; transform-origin: 0 0; color: #ff4d3d; --acc2: #7a0f0a; }
 .sp-logo .l1 { font: 900 calc(118 * var(--u)) / 1 'Cinzel', 'Times New Roman', serif; letter-spacing: calc(10 * var(--u)); background: linear-gradient(#fff, var(--acc) 55%, var(--acc2)); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 calc(6 * var(--u)) 0 #000a) drop-shadow(0 0 calc(22 * var(--u)) var(--glow)); }
-.sp-logo .l2 { font: 700 calc(40 * var(--u)) 'Cinzel', 'Times New Roman', serif; letter-spacing: calc(34 * var(--u)); margin-top: calc(2 * var(--u)); color: #fff; text-shadow: 0 3px 0 #000, 0 0 18px var(--glow); }
+.sp-logo .l2 { font: 700 calc(40 * var(--u)) 'Cinzel', 'Times New Roman', serif; letter-spacing: calc(66 * var(--u)); margin-top: calc(2 * var(--u)); color: #fff; text-shadow: 0 3px 0 #000, 0 0 18px var(--glow); }
 .sp-logo .tag { font: 600 calc(22 * var(--u)) 'Rajdhani', Arial, sans-serif; letter-spacing: calc(6 * var(--u)); color: #e8e8f2; text-transform: uppercase; margin-top: calc(16 * var(--u)); text-shadow: 0 2px 6px #000; }
 .sp-ldr { left: calc(96 * var(--u)); bottom: calc(54 * var(--u)); width: calc(600 * var(--u)); }
 .sp-bar { height: 6px; background: #0008; border: 1px solid #fff3; border-radius: 4px; overflow: hidden; }

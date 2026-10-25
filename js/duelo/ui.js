@@ -1,4 +1,4 @@
-/* ============ duelo/ui.js — pantallas del Duelo Pokémon ============ */
+/* ============ duelo/ui.js — pantallas de Shonen Royale ============ */
 (function () {
   'use strict';
   const D = window.Duelo, C = D.Cards, E = D.Engine;
@@ -89,7 +89,7 @@
     document.body.classList.toggle('gtop-on', show);
     if (!show) return;
     const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
-    topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'DUELO POKÉMON'),
+    topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'SHONEN ROYALE'),
       h('nav', { class: 'hnav' }, nav.map(n => h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2] }, n[1]))),
       h('div', { class: 'hright' }, pointsBar(true), acctBar()));
     if (!introDone) {                               // la primera vez entra con el splash: espera a que se vaya
@@ -1620,7 +1620,7 @@
     } }, h('div', { class: 'tabs' }, tabs), nameI, passI, err, go,
       h('a', { href: '#', class: 'sub', onclick: e => { e.preventDefault(); forgot.style.display = forgot.style.display ? '' : 'none'; } }, '¿Olvidaste la contraseña?'), forgot);
     const googleBtn = D.Account.cloud ? btn('Entrar con Google', async () => { showErr(''); finish(await D.Account.google()); }, '') : null;
-    mount(h('div', { class: 'scr' }, h('h1', null, 'Duelo Pokémon'),
+    mount(h('div', { class: 'scr' }, h('h1', null, 'Shonen Royale'),
       h('p', { class: 'sub' }, 'Entra o crea tu cuenta gratis para guardar tus mazos en la nube y jugar online con tus amigos.'),
       form, googleBtn,
       btn('Jugar como invitado', () => { D.Account.guest(); afterLogin(false); }, 'ghost'),

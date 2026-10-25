@@ -1,7 +1,7 @@
 {
-  "name": "Duelo Pokémon",
-  "short_name": "Duelo Pokémon",
-  "description": "Duelos de cartas con los Pokémon como monstruos. Contra la computadora o online con amigos, hasta 4 jugadores. Gratis.",
+  "name": "Shonen Royale",
+  "short_name": "Shonen Royale",
+  "description": "Duelos de cartas por turnos con personajes shonen. Contra la computadora o online con amigos, hasta 4 jugadores. Gratis.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

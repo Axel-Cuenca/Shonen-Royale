@@ -1,4 +1,4 @@
-/* ============ duelo/engine.js — reglas del Duelo Pokémon ============
+/* ============ duelo/engine.js — reglas de Shonen Royale ============
  * Lógica pura (sin DOM): el mismo código corre en el navegador y en Node.
  * El estado es JSON plano. Quien lleva la partida (tú contra la IA, o el
  * anfitrión en online) llama a apply(); los demás sólo reciben vistas

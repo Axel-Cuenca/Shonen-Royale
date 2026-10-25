@@ -1,4 +1,4 @@
-/* Pruebas del Duelo Pokémon (motor + IA + protocolo online), sin navegador.
+/* Pruebas de Shonen Royale (motor + IA + protocolo online), sin navegador.
  *   node tools/test_duelo.js
  */
 'use strict';

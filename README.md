@@ -1,7 +1,7 @@
-# Duelo Pokémon
+# Shonen Royale
 
-Duelos de cartas por turnos con los Pokémon como monstruos: 8000 PV, nivel, ATK y DEF
-sacados de cada Pokémon, 12 magias y 5 trampas. Se juega contra la computadora o **online con
+(Antes «Duelo Pokémon».) Duelos de cartas por turnos con personajes shonen: 8000 PV, nivel, ATK y DEF,
+monstruos, magias y trampas. Se juega contra la computadora o **online con
 amigos**, en 1 contra 1, todos contra todos (3 o 4 jugadores) y 2 contra 2.
 
 Es una copia propia, derivada de [PokéSurvivor](https://github.com/JPTER78/pokesurvivor) de

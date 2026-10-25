@@ -1,4 +1,4 @@
-# Duelo Pokémon — cómo se trabaja y se publica
+# Shonen Royale (antes «Duelo Pokémon») — cómo se trabaja y se publica
 
 Normas fijas del dueño del proyecto. Se aplican SIEMPRE.
 
