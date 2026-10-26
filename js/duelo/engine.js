@@ -1734,7 +1734,7 @@
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
       if (ab.includes('yutadom') && !st.domain) push({ pw: 'ydominio' });
-      if (ab.includes('canon') && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
+      if (ab.includes('canon') && !u.canon && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
       if (ab.includes('absorb') && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
           const tm = st.players[q].mz[tz];
@@ -1768,10 +1768,10 @@
       if (ab.includes('zenitsu2') && canOnce(P, z, u, 'conc')) push({ pw: 'conc' });
       if (ab.includes('gyomei2') && canOnce(P, z, u, 'conc2')) push({ pw: 'conc2' });
       if (ab.includes('gyomei3') && canOnce(P, z, u, 'marca')) push({ pw: 'marca' });
-      if (ab.includes('patriarca') && (u.pat || 0) < 3 * g && (u.patT !== st.turn || (u.patTn || 0) < g)) for (const t of allyChars(st, p)) push({ pw: 'desp', target: t });
+      if (ab.includes('patriarca') && (u.pat || 0) < 3 * g && (u.patT !== st.turn || (u.patTn || 0) < g)) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z)) push({ pw: 'desp', target: t });      // nunca sobre sí mismo
       if (ab.includes('kaioken') && canOnce(P, z, u, 'kk')) push({ pw: 'kaioken' });
-      if (m.learn && m.learn.kaioken && canOnce(P, z, u, 'kk6')) push({ pw: 'kaioken6' });
-      if (m.learn && m.learn.genki && canOnce(P, z, u, 'gen') && fl.some(e => zonesWith(st.players[e].mz).length)) push({ pw: 'genki' });
+      if (m.learn && m.learn.kaioken && !u.kk6) push({ pw: 'kaioken6' });
+      if (m.learn && m.learn.genki && !u.gen && fl.some(e => zonesWith(st.players[e].mz).length)) push({ pw: 'genki' });
       if (ab.includes('maestro') && u.tTurn !== st.turn) {
         for (const sk of ['kaioken', 'genki']) if (!u['t_' + sk]) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z) && !(st.players[t.vs].mz[t.z].learn || {})[sk]) push({ pw: 'teach', skill: sk, target: t });
       }
@@ -1941,6 +1941,8 @@
     const ctx = { src: 'power', by: { p, uid: m.c.uid }, bp: p }, g = gx(P, a.zone);
     switch (a.pw) {
       case 'canon': {
+        if (u.canon) break;      // una sola vez por invocación
+        u.canon = true;
         const e = a.target.vs, tm = st.players[e].mz[a.target.z];
         log(st, p, `${nm} usa Cañón Espiritual Final contra ${mdef(tm).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
@@ -2017,6 +2019,7 @@
         break;
       }
       case 'desp': {
+        if (a.target.vs === p && a.target.z === a.zone) break;      // revalida: Gran Patriarca no puede potenciarse a sí mismo
         const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
         u.pat = (u.pat || 0) + 1; u.patTn = u.patT === st.turn ? (u.patTn || 0) + 1 : 1; u.patT = st.turn;
         addMod(st, tm, 'desp', 700 * g, 700 * g, 0);
@@ -2029,12 +2032,12 @@
         break;
       }
       case 'kaioken6': {
-        markOnce(u, 'kk6'); addMod(st, m, 'kaioken', 600 * g, 600 * g, 3);
+        u.kk6 = true; addMod(st, m, 'kaioken', 600 * g, 600 * g, 3);
         log(st, p, `${nm} usa Kaio-ken: +${600 * g} ATK y DEF durante 3 turnos`);
         break;
       }
       case 'genki': {
-        markOnce(u, 'gen');
+        u.gen = true;
         log(st, p, `${nm} lanza la Genkidama`);
         genkidama(st, p, m, ctx);
         break;
@@ -2468,6 +2471,7 @@
     if (s.owner != null && s.owner !== st.players.indexOf(P)) v.owner = s.owner;
     if (s.promesa) v.promesa = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
+    { const uu = uOf(s); if (uu.canon || uu.kk6 || uu.gen) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen }; }
     if (s.c.id === 'c_yuta') {          // Yuta: usos de Rika, habilidades aprendidas y dominio
       const yu = uOf(s), gg = gx(P, z);
       v.yuta = { rk: Math.max(0, 2 * gg - (yu.rk || 0)), rkMax: 2 * gg, rkTurn: yu.rkT === st.turn, rkNext: !(yu.rkT === st.turn && (yu.rkTn || 0) >= gg), rkLast: yu.rkLast || null, learned: (yu.learned || []).slice(), lrnTurn: yu.lrnT === st.turn, dom: !!(st.domain && st.domain.uid === s.c.uid) };
@@ -2584,6 +2588,7 @@
     if (st.chain && st.chain.p === p) n++;
     // lo absorbido por Cell cuenta para su dueño original
     for (const Q of st.players) for (const s of Q.mz) if (s && s.abs && s.abs.owner === p) n += 1 + (s.abs.link ? s.abs.link.length : 0);
+    for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.m.abs && s.prison.m.abs.owner === p) n += 1 + (s.prison.m.abs.link ? s.prison.m.abs.link.length : 0);      // lo absorbido por un personaje sellado
     return n;
   }
 

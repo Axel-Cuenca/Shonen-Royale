@@ -97,6 +97,8 @@ module.exports = function (T) {
   section('Gran Patriarca, Goku, Kaio Sama y Super Vegeta');
   {
     const st = fresh(); put(st, 0, 0, 'c_patriarca'); put(st, 0, 1, 'c_creeper');
+    ok(!L(st, 0).some(x => x.pw === 'desp' && x.target.vs === 0 && x.target.z === 0), 'Gran Patriarca no puede elegirse a sí mismo');
+    const solo = fresh(); put(solo, 0, 0, 'c_patriarca'); ok(!pw(solo, 0, 'desp'), 'sin otros aliados no hay objetivo (él no cuenta)');
     const a = pw(st, 0, 'desp', x => x.target.z === 1); ok(!!a, 'Gran Patriarca despierta a un aliado');
     act(st, 0, a);
     eq(stat(st, 0, 1), [1700, 1700], 'Despertar: +700/+700');
@@ -118,6 +120,7 @@ module.exports = function (T) {
     ok(!pw(st2, 0, 'teach'), 'una enseñanza por turno');
     act(st2, 0, pw(st2, 0, 'kaioken6'));
     eq(stat(st2, 0, 1), [1600, 1600], 'Kaio-ken aprendido: +600/+600');
+    ok(!pw(st2, 0, 'kaioken6') && E.view(st2, 0).players[0].mz[1].used.kk6, 'Kaio-ken aprendido: una sola vez, marcado como usado');
     pass(st2, 2);
     ok(!!pw(st2, 0, 'teach', x => x.skill === 'genki'), 'al turno siguiente enseña la Genkidama');
     ok(!pw(st2, 0, 'teach', x => x.skill === 'kaioken'), 'el Kaio-ken sólo se enseña una vez');
@@ -129,6 +132,8 @@ module.exports = function (T) {
     const g = pw(st2, 0, 'genki'); ok(!!g, 'el alumno puede lanzar la Genkidama en la fase de batalla');
     act(st2, 0, g);
     ok(grave(st2, 1, 'c_creeper') && grave(st2, 1, 'c_titan'), 'Genkidama: 2500 de daño a cada personaje rival');
+    ok(!pw(st2, 0, 'genki') && E.view(st2, 0).players[0].mz[1].used.gen, 'Genkidama aprendida: una sola vez, marcada como usada');
+    pass(st2, 2); toBattle(st2, 0); ok(!pw(st2, 0, 'genki') && !pw(st2, 0, 'kaioken6'), 'cambiar de turno no reinicia los contadores');
   }
   {
     // Super Vegeta pertenece a la familia Vegeta

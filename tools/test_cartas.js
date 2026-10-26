@@ -161,6 +161,7 @@ module.exports = function (T) {
     eq(cs.map(a => a.target.z), [1], 'Cañón: sin 10★, sin boca abajo; sólo Kratos (4★)');
     act(st, 0, cs[0]);
     ok(grave(st, 1, 'c_kratos'), 'Kratos muere');
+    ok(!L(st, 0).some(a => a.pw === 'canon') && E.view(st, 0).players[0].mz[0].used.canon, 'Cañón: una sola vez por invocación, marcado como usado');
     // muere SSJ → los dos al cementerio
     const st2 = fresh(); const s2 = put(st2, 0, 0, 'c_bardock_ssj'); s2.link = [{ uid: 900, id: 'c_bardock' }];
     st2.players[0].deck.pop();

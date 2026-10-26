@@ -1054,7 +1054,7 @@
     // ----- acciones al tocar -----
     function sheet(card, acts, hint) {
       const box = h('div', { class: 'box' }, detailBox(card, hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null),
-        acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null,
+        acts.length ? h('div', { class: 'acts' }, acts.map(a => { const b = btn(a.label, () => { if (a.off) return; closeModal(); a.run(); }, a.cls || 'gold'); if (a.off) b.disabled = true; return b; })) : null,
         btn('Cerrar', closeModal, 'ghost'));
       modal(box);
     }
@@ -1212,6 +1212,11 @@
           else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
           else acts.push({ label: pwName(k), run: () => act(g[0]) });
         }
+      }
+      if (s.used) {        // habilidades de un solo uso ya gastadas en esta invocación: se muestran deshabilitadas
+        if (s.used.canon) acts.push({ label: abn('canon') + ' (usada)', off: true, cls: 'ghost' });
+        if (s.used.kk6) acts.push({ label: 'Kaio-ken (usada)', off: true, cls: 'ghost' });
+        if (s.used.gen) acts.push({ label: 'Genkidama (usada)', off: true, cls: 'ghost' });
       }
       for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
       const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, stolenBox(s));
