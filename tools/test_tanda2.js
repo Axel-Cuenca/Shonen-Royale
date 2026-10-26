@@ -173,7 +173,7 @@ module.exports = function (T) {
     ok(!pw(st, 0, 'kform'), 'sólo una transformación por invocación');
     ok(E.view(st, 0).players[0].mz[0].c.id === 'c_kayn_rhaast', 'la carta muestra la forma Rhaast');
     put(st, 1, 0, 'c_lara', { pos: 'def' }); toBattle(st, 0); atk(st, 0, 0, 0);
-    eq(stat(st, 0, 0), [1800, 1800], 'Rhaast: +100/+100 por asesinato');
+    eq(stat(st, 0, 0), [2000, 2000], 'Rhaast: +300/+300 por asesinato');
   }
   {
     const st = fresh(); const k = put(st, 0, 0, 'c_kayn'); st.turn = 7; toBattle(st, 0);

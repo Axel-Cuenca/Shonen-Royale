@@ -81,7 +81,7 @@
     espada: ['Espada de Exterminio', 'Los personajes que mata Mahoraga son desterrados en lugar de ir al cementerio.'],
     muerte: ['Acumulación de Muertes', 'Cada vez que muere un personaje, gana +300 ATK de forma permanente.'],
     counter: ['Total Counter', 'Una vez por turno, cuando el rival te lanza una magia, una trampa, una habilidad o un ataque hostil, puedes devolver su efecto contra su dueño y elegir el objetivo.'],
-    yutadom: ['Amor Mutuo y Verdadero', 'Una vez por invocación. Dominio de 2 turnos: +500 ATK y DEF; sólo los personajes de más de 10★ usan habilidades, las magias y trampas del campo quedan desactivadas, y Yuta puede usar las habilidades de cualquier personaje boca arriba.'],
+    yutadom: ['Amor Mutuo y Verdadero', 'Una sola vez por invocación (también con la Gema del Poder). Dominio de 2 turnos: +500 ATK y DEF; sólo los personajes de más de 10★ usan habilidades, las magias y trampas del campo quedan desactivadas, y Yuta puede usar las habilidades de cualquier personaje boca arriba.'],
     copia: ['Copia de Técnicas', 'Cuando otro personaje usa una habilidad estando Yuta en el campo, puedes aprenderla (1 por turno, máximo 3, sin repetir). Se conserva aunque el original se vaya.'],
     rikaint: ['Rika Orimoto: Intercepción Protectora', 'Cuando un aliado va a morir por un ataque, una magia, una trampa o una habilidad, Rika intercepta el efecto y el aliado se salva. 2 usos por invocación, 1 por turno.'],
     rikamal: ['Maldición Incontrolable', 'Si no hay un Yuta Okkotsu en el campo ni un Anillo de la Promesa equipado, Rika debe atacar cada turno a un personaje del campo (aliado o enemigo) y sólo ataca directo si no hay ninguno.'],
@@ -252,14 +252,14 @@
     }),
     mon({
       id: 'c_kayn', name: 'Kayn', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn'),
-      text: 'Rhaast: al asesinar a un enemigo en combate desbloquea esa transformación (al transformarse, +300 ATK y +300 DEF; después, +100 ATK y DEF más por cada asesinato en combate). ' +
+      text: 'Rhaast: al asesinar a un enemigo en combate desbloquea esa transformación (al transformarse, +300 ATK y +300 DEF; después, +300 ATK y DEF más por cada asesinato en combate). ' +
         'Asesino Sombra: al infligir daño directo desbloquea esa transformación (+300 ATK por cada enemigo en defensa que asesine estando en ataque, y hasta 2 ataques por turno). ' +
         'Las transformaciones son opcionales y sólo puede elegir una por invocación.',
       sfx: { summon: V('kayn-summon') }
     }),
     mon({
       id: 'c_kayn_rhaast', name: 'Rhaast', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_rhaast'), hidden: true,
-      text: 'Forma de Kayn. Al transformarse gana +300 ATK y +300 DEF (una sola vez por invocación); después, +100 ATK y +100 DEF más por cada personaje enemigo que asesine en combate.', sfx: { transform: V('kayn-rhaast') }
+      text: 'Forma de Kayn. Al transformarse gana +300 ATK y +300 DEF (una sola vez por invocación); después, +300 ATK y +300 DEF más por cada personaje enemigo que asesine en combate.', sfx: { transform: V('kayn-rhaast') }
     }),
     mon({
       id: 'c_kayn_sombra', name: 'Asesino Sombra', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_sombra'), hidden: true,

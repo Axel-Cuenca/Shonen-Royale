@@ -39,6 +39,12 @@ module.exports = function (T) {
     st.players[0].mz[0] = null; put(st, 0, 0, 'c_yuta');
     ok(!!pw(st, 0, 'ydominio'), 'una invocación nueva de Yuta puede volver a usarlo');
     ok(!(E.view(st, 0).players[0].mz[0].used || {}).ydom, 'y la ficha ya no la marca como usada');
+    // con la Gema del Poder sigue siendo una sola vez
+    const s2 = fresh(0); put(s2, 0, 0, 'c_yuta'); putST(s2, 0, 0, 'c_gema_poder', { equipTo: 0 });
+    act(s2, 0, pw(s2, 0, 'ydominio'));
+    pass(s2, 6); ready(s2, 0, s2.turn + 2);
+    ok(!s2.domain && !pw(s2, 0, 'ydominio'), 'con la Gema del Poder tampoco se puede usar dos veces');
+    ok((E.view(s2, 0).players[0].mz[0].used || {}).ydom, 'y la ficha la marca como usada');
   }
 
   section('correcciones 26-10: técnicas de los Seis Ojos en la vista');
@@ -102,5 +108,11 @@ module.exports = function (T) {
     eq(stat(st, 0, 0), [1700, 1700], 'el bonus no se acumula');
     eq(E.view(st, 0).players[0].mz[0].mods.filter(m => m.k === 'rhaast').length, 1, 'un solo bonus de transformación');
     ok(/\+300 ATK y \+300 DEF/.test(Cards.get('c_kayn_rhaast').text), 'la carta Rhaast explica el +300');
+    // cada asesinato en combate como Rhaast: +300 ATK y DEF más
+    for (const [n, want] of [[1, 2000], [2, 2300]]) {
+      put(st, 1, 0, 'c_lara', { pos: 'def' }); ready(st, 0, 7 + 2 * n); st.phase = 'battle'; k.attacked = false; k.atkN = 0;
+      act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
+      eq(stat(st, 0, 0), [want, want], 'Rhaast tras ' + n + ' asesinato(s): +300/+300 por cada uno');
+    }
   }
 };

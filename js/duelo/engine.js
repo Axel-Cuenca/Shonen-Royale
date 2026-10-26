@@ -483,7 +483,7 @@
     if (ctx.src === 'combat' && km.c.id === 'c_kayn') {
       const f = km.form;
       if (!f) { if (!kn.rh) { kn.rh = true; log(st, killer.p, 'Kayn desbloquea la transformación en Rhaast'); } }
-      else if (f === 'c_kayn_rhaast') { addMod(st, km, 'rhaastk', 100, 100, 0); log(st, killer.p, 'Rhaast se fortalece por el asesinato: +100 ATK y +100 DEF'); }
+      else if (f === 'c_kayn_rhaast') { addMod(st, km, 'rhaastk', 300, 300, 0); log(st, killer.p, 'Rhaast se fortalece por el asesinato: +300 ATK y +300 DEF'); }
       else if (f === 'c_kayn_sombra' && km.pos === 'atk' && victim.pos === 'def') { addMod(st, km, 'sombra', 300, 0, 0); log(st, killer.p, 'Asesino Sombra gana 300 ATK'); }
     }
     if (km.av && (ctx.src === 'combat' || ctx.src === 'power') && km.av.on) {
@@ -1744,7 +1744,7 @@
       const u = uOf(m), g = gx(P, z);
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
-      if (ab.includes('yutadom') && canOnce(P, z, u, 'ydom') && !st.domain) push({ pw: 'ydominio' });      // una vez por invocación de Yuta
+      if (ab.includes('yutadom') && !u.ydom && !st.domain) push({ pw: 'ydominio' });      // una sola vez por invocación de Yuta (también con la Gema)
       if (ab.includes('canon') && !u.canon && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
       if (ab.includes('absorb') && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
@@ -2067,8 +2067,8 @@
         break;
       }
       case 'ydominio': {
-        if (!canOnce(P, a.zone, u, 'ydom') || st.domain) break;      // revalidado al resolver: nunca dos veces por invocación
-        markOnce(u, 'ydom');
+        if (u.ydom || st.domain) break;      // revalidado al resolver: nunca dos veces por invocación
+        u.ydom = true;
         st.domain = { p, uid: m.c.uid, t0: st.turn, x: g, min: 11, nm: 'de Yuta', noST: true };
         log(st, p, `${nm} activa el dominio Amor Mutuo y Verdadero`);
         break;
@@ -2490,7 +2490,7 @@
     if (s.owner != null && s.owner !== st.players.indexOf(P)) v.owner = s.owner;
     if (s.promesa) v.promesa = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
-    { const uu = uOf(s), yd = !!uu.ydom && !canOnce(P, z, uu, 'ydom') && abil(st, s).includes('yutadom');
+    { const uu = uOf(s), yd = !!uu.ydom && abil(st, s).includes('yutadom');
       if (uu.canon || uu.kk6 || uu.gen || yd) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen, ydom: yd }; }
     if (s.c.id === 'c_yuta') {          // Yuta: usos de Rika, habilidades aprendidas y dominio
       const yu = uOf(s), gg = gx(P, z);
