@@ -1085,6 +1085,7 @@
       }
       if (d.fx === 'special') return chooseHand(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje de tu mano');
       if (d.fx === 'esferas') return wishMenu(list);
+      if (d.fx === 'cana') return chooseGrave(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje desterrado que vuelve a tu mano', 'banish');
       const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
@@ -1108,9 +1109,9 @@
         })),
         btn('Cancelar', closeModal, 'ghost')));
     }
-    /** Ventana para elegir una carta de tu cementerio por uid. */
-    function chooseGrave(uids, done, text) {
-      const cs = uids.map(u => v.me.grave.find(c => c && c.uid === u)).filter(Boolean);
+    /** Ventana para elegir una carta de tu cementerio (o de tu zona de desterradas, con from = 'banish') por uid. */
+    function chooseGrave(uids, done, text, from) {
+      const cs = uids.map(u => v.me[from || 'grave'].find(c => c && c.uid === u)).filter(Boolean);
       modal(h('div', { class: 'box' }, h('h2', null, text),
         h('div', { class: 'cands' }, cs.map(c => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); done(c.uid); } }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))),
         btn('Cancelar', closeModal, 'ghost')));
