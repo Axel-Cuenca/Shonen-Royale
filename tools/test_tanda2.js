@@ -438,6 +438,17 @@ module.exports = function (T) {
     eq(stat(st3, 0, 0), [0, 0], 'Voto 3: sacrifica ATK y DEF');
     ok(!!pw(st3, 0, 'kaioken'), 'y obtiene la habilidad copiada');
   }
+  section('Primera ronda sin ataques (duelo de 2)');
+  {
+    const st = game({ seed: 11 }); const seen = [];
+    for (let i = 0; i < 4; i++) {
+      const p = E.actor(st), P = st.players[p];
+      P.mz[0] = { c: { uid: st.nextUid++, id: 'c_goku' }, pos: 'atk', down: false, summonedTurn: 0, attacked: false, moved: false, atkMod: 0 };
+      seen.push([st.turn, L(st, p).some(a => a.t === 'toBattle' || a.t === 'attack')]);
+      act(st, p, find(st, p, x => x.t === 'endTurn') || find(st, p, x => x.t === 'discard'));
+    }
+    eq(seen, [[1, false], [2, false], [3, true], [4, true]], 'nadie ataca en la primera ronda; el combate llega en el turno 3');
+  }
   section('Gokumonkyo, Guerrero del Infinito y Rayo de Luz Solar');
   {
     const st = fresh(); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_zenitsu'); give(st, 1, []);

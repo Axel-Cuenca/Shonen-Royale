@@ -1566,8 +1566,8 @@
       if (m && m.sealed && m.sealed.length) { m.sealed = m.sealed.filter(x => findByUid(st, x.by)); if (!m.sealed.length) delete m.sealed; }
     }
   }
-  /** Primer turno (de la partida) en que se puede atacar: tras la primera ronda si hay más de dos. */
-  const canAttackNow = st => st.turn > (st.n > 2 ? st.n : 1);
+  /** Primer turno (de la partida) en que se puede atacar: siempre tras la primera ronda completa (en un duelo, tras el turno 2). */
+  const canAttackNow = st => st.turn > st.n;
   /** Deja la partida en un estado jugable tras una acción o una baja: salta turnos y respuestas de quien ya no está. */
   function settle(st) {
     for (let guard = 0; st.winner === null && guard < 16; guard++) {

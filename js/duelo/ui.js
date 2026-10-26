@@ -450,7 +450,7 @@
         ex(mini('Tú', '8000 PV'), 'vs', mini('Rival', '0 PV', 'dead'), '¡Ganas! El rival se quedó sin PV.'),
         h('h2', null, 'Un turno'),
         h('ul', null,
-          h('li', null, 'Robas 1 carta (quien empieza no roba ni ataca en su primer turno). Mano inicial: 5. Al terminar, máximo 7 cartas en mano.'),
+          h('li', null, 'Robas 1 carta (quien empieza no roba en su primer turno). En la primera ronda nadie ataca: el primer ataque llega en el tercer turno de la partida. Mano inicial: 5. Al terminar, máximo 7 cartas en mano.'),
           h('li', null, 'Fase principal: invoca o coloca 1 monstruo por turno (invocación normal), activa magias, coloca magias y trampas.'),
           h('li', null, 'Monstruos de nivel 5-6 piden sacrificar 1 monstruo tuyo; nivel 7-9, 2 monstruos; nivel 10 o más, 3 monstruos. Niveles 1-4, ninguno. Las invocaciones especiales y las transformaciones no piden sacrificios.'),
           h('li', null, '«Colocar» deja el monstruo boca abajo en defensa. Al turno siguiente puedes voltearlo (queda en ataque) o cambiarle la posición.'),
@@ -883,7 +883,7 @@
     ['Monstruos', 'Puedes invocar o colocar 1 monstruo por turno. «Colocar» lo deja boca abajo en defensa. Los de nivel 5 o más piden sacrificar monstruos tuyos.'],
     ['Magias y trampas', 'Las magias se activan en tu fase principal. Las trampas se colocan boca abajo y responden a un ataque o a una jugada del rival desde el turno siguiente.'],
     ['Combate', 'Con «⚔ Combate» tus monstruos en ataque pueden atacar una vez. Gana el mayor ATK y el perdedor paga la diferencia en PV. Si el rival no tiene monstruos, pegas directo a sus PV.'],
-    ['Terminar el turno', 'Cuando termines, pulsa «Terminar turno». Si tardas demasiado, el contador lo pasa solo. Quien empieza no roba ni ataca en su primer turno. ¡Suerte!']
+    ['Terminar el turno', 'Cuando termines, pulsa «Terminar turno». Si tardas demasiado, el contador lo pasa solo. Quien empieza no roba en su primer turno y en la primera ronda nadie ataca. ¡Suerte!']
   ];
   function tutorial(cur, force) {
     if (C.test || (!force && tutSeen())) return;
