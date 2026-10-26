@@ -959,7 +959,21 @@
       kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
-      llama: 'Llama Infernal', rhaast: 'Rhaast', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva' };
+      llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva' };
+    /** Técnicas de los Seis Ojos (Guerrero del Infinito): efecto real de cada una, según doPower de engine.js. */
+    const SIX_INFO = {
+      rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
+      azul: ['Azul', 'Sin objetivo: destruye todas las magias y trampas del rival (salvo una Gokumonkyo que tenga a alguien sellado).'],
+      purpura: ['Púrpura', 'Elige un personaje del rival o una de sus magias/trampas (salvo una Gokumonkyo que tenga a alguien sellado): queda desterrado, no va al cementerio.']
+    };
+    const SIX_RULE = 'Cada técnica una vez por invocación; Rojo y Azul se pueden usar las dos, Púrpura sólo si aún no usaste ninguna y después bloquea las otras.';
+    /** Botón de acción de la ficha; con descripción debajo si la tiene, y deshabilitado si está gastado o bloqueado. */
+    function actBtn(a) {
+      if (a.note) return h('small', { class: 'actn' }, a.note);
+      const b = btn(a.label, () => { if (a.off || !a.run) return; closeModal(); a.run(); }, a.cls || 'gold');
+      if (a.off || !a.run) b.disabled = true;
+      return a.desc ? h('div', { class: 'actd' }, b, h('small', null, a.desc)) : b;
+    }
     /** Estados de un monstruo en el tablero, en texto (ventana de detalle). */
     function statusText(s) {
       const o = [];
@@ -1001,7 +1015,7 @@
       return o;
     }
     const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
-      yutadom: 'Una vez por turno; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
+      yutadom: 'Una vez por invocación; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
@@ -1188,13 +1202,14 @@
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });
       }
+      const groups = {};
+      const tgtList = (g, area) => g.map(a => ({ seat: a.target.vs, area: area || a.target.area || 'mz', z: a.target.z }));
+      const choose = (g, area, text) => pickTargets(tgtList(g, area), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z && (area || a.target.area || 'mz') === t.area)), text || 'Elige el objetivo');
       if (myTurn() && !v.pending) {
-        const groups = {};
         for (const a of L().filter(a => a.t === 'power' && a.zone === z)) (groups[a.pw] = groups[a.pw] || []).push(a);
-        const tgtList = (g, area) => g.map(a => ({ seat: a.target.vs, area: area || a.target.area || 'mz', z: a.target.z }));
-        const choose = (g, area, text) => pickTargets(tgtList(g, area), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z && (area || a.target.area || 'mz') === t.area)), text || 'Elige el objetivo');
         for (const k of Object.keys(groups)) {
           const g = groups[k];
+          if (SIX_INFO[k]) continue;      // Rojo, Azul y Púrpura: más abajo, con su descripción
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }
           else if (k === 'bite') acts.push({ label: abn(k) + ' (−500 PV)', run: () => act(g[0]) });
           else if (k === 'kform') { for (const a of g) acts.push({ label: 'Transformarse en ' + (a.form === 'c_kayn_rhaast' ? 'Rhaast' : 'Asesino Sombra'), run: () => act(a) }); }
@@ -1206,7 +1221,6 @@
               modal(h('div', { class: 'box' }, h('h2', null, '🕸️ ¿Qué habilidad sellas?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
             }, 'Elige al personaje enemigo') });
           }
-          else if (k === 'purpura') acts.push({ label: 'Púrpura…', run: () => choose(g, null, 'Elige qué desterrar (personaje o carta de magia/trampa)') });
           else if (k === 'desmantelar' || k === 'avpred') acts.push({ label: pwName(k) + '…', run: () => choose(g, 'st', 'Elige la magia o trampa rival') });
           else if (k === 'corromper') acts.push({ label: (g[0].ring ? 'Promesa de Poder (Anillo Único)' : 'Promesa de Poder') + '…', run: () => choose(g, 'mz', 'Elige al personaje enemigo que quedará bajo tu poder') });
           else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
@@ -1217,10 +1231,27 @@
         if (s.used.canon) acts.push({ label: abn('canon') + ' (usada)', off: true, cls: 'ghost' });
         if (s.used.kk6) acts.push({ label: 'Kaio-ken (usada)', off: true, cls: 'ghost' });
         if (s.used.gen) acts.push({ label: 'Genkidama (usada)', off: true, cls: 'ghost' });
+        if (s.used.ydom) acts.push({ label: 'Amor Mutuo y Verdadero (usada)', desc: 'Una vez por invocación de Yuta: vuelve a estar disponible si Yuta sale del campo y se invoca de nuevo.', off: true, cls: 'ghost' });
+      }
+      if (s.six && s.sixU) {        // Seis Ojos: las tres técnicas, con lo que hace cada una antes de lanzarla
+        const u = s.sixU, can = myTurn() && !v.pending;
+        acts.push({ note: 'Seis Ojos (' + s.six + ' turno(s)): ' + SIX_RULE });
+        for (const k of ['rojo', 'azul', 'purpura']) {
+          const g = groups[k], [nm, txt] = SIX_INFO[k];
+          let why = null;
+          if (u[k]) why = 'Ya usada en esta invocación.';
+          else if (k !== 'purpura' && u.purpura) why = 'Bloqueada: ya lanzaste Púrpura.';
+          else if (k === 'purpura' && (u.rojo || u.azul)) why = 'Bloqueada: ya lanzaste ' + (u.rojo ? 'Rojo' : 'Azul') + '.';
+          else if (!can) why = 'Sólo en tu turno.';
+          else if (!g) why = k === 'azul' ? 'El rival no tiene magias ni trampas que destruir.' : 'No hay objetivos válidos ahora.';
+          const run = !g ? null : k === 'rojo' ? () => choose(g, 'mz', 'Rojo: elige al personaje enemigo que pierde 1000 ATK y 1000 DEF')
+            : k === 'purpura' ? () => choose(g, null, 'Púrpura: elige qué desterrar (personaje o magia/trampa rival)') : () => act(g[0]);
+          acts.push({ label: nm + (g && !why && k !== 'azul' ? '…' : ''), desc: txt + (why ? ' — ' + why : ''), run, off: !!why, cls: why ? 'ghost' : 'gold' });
+        }
       }
       for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
       const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, stolenBox(s));
-      modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(a => btn(a.label, () => { closeModal(); a.run(); }, a.cls || 'gold'))) : null, btn('Cerrar', closeModal, 'ghost')));
+      modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(actBtn)) : null, btn('Cerrar', closeModal, 'ghost')));
     }
     function stormFlow(list) {
       const hands = [...new Set(list.map(a => a.hand))];
@@ -1674,7 +1705,7 @@
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) { cutAdd({ k: 'card', d, trap: true, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
         else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
         else if (/^Lara Tybur muere y se invoca especialmente a /.test(t)) { snd = 'epic'; needShake = true; const d = byName['Lara Tybur']; if (d) { fileSfx(d.sfx && d.sfx.transform); cin(d, '¡TRANSFORMACIÓN! → Titán Martillo'); } }
-        else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) { const to = / se transforma en (.+)$/.exec(t), toD = to && byName[to[1]]; fileSfx((toD && toD.sfx && toD.sfx.transform) || (d.sfx && d.sfx.transform)); cin(d, '¡TRANSFORMACIÓN!' + (to ? ' → ' + to[1] : '')); } }
+        else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) { const to = / se transforma en ([^:]+?)(?::|$)/.exec(t), toD = to && byName[to[1]]; fileSfx((toD && toD.sfx && toD.sfx.transform) || (d.sfx && d.sfx.transform)); cin(d, '¡TRANSFORMACIÓN!' + (to ? ' → ' + to[1] : '')); } }
         else if (/ usa Big Bang| activa Relicario| activa el dominio /.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, / Big Bang/.test(t) ? 'BIG BANG' : / el dominio /.test(t) ? 'ATAÚD DE LA MONTAÑA DE HIERRO' : 'RELICARIO DEMONÍACO'); } }
         else if (/ sella con sus telarañas /.test(t)) { snd = 'epic'; const d = byName[/^(.+?) sella /.exec(t)[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TELARAÑAS'); } }
         else if (/^Total Counter: /.test(t)) { snd = 'shield'; const d = byName['Meliodas 5%']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TOTAL COUNTER', { mine: l.p === v.seat }); } }

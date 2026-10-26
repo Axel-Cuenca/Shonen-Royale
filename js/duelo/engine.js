@@ -483,7 +483,7 @@
     if (ctx.src === 'combat' && km.c.id === 'c_kayn') {
       const f = km.form;
       if (!f) { if (!kn.rh) { kn.rh = true; log(st, killer.p, 'Kayn desbloquea la transformación en Rhaast'); } }
-      else if (f === 'c_kayn_rhaast') { addMod(st, km, 'rhaast', 100, 100, 0); log(st, killer.p, 'Rhaast se fortalece: +100 ATK y +100 DEF'); }
+      else if (f === 'c_kayn_rhaast') { addMod(st, km, 'rhaastk', 100, 100, 0); log(st, killer.p, 'Rhaast se fortalece por el asesinato: +100 ATK y +100 DEF'); }
       else if (f === 'c_kayn_sombra' && km.pos === 'atk' && victim.pos === 'def') { addMod(st, km, 'sombra', 300, 0, 0); log(st, killer.p, 'Asesino Sombra gana 300 ATK'); }
     }
     if (km.av && (ctx.src === 'combat' || ctx.src === 'power') && km.av.on) {
@@ -610,7 +610,18 @@
       m.six = { t0: st.turn };
       log(st, p, `${mdef(m).name} recibe los Seis Ojos durante 3 turnos`);
     }
-    if (lvl(m) >= 10) for (const e of foes(st, p)) if (st.players[e].hand.some(c => c.id === 'c_mahoraga')) st.trig.push({ k: 'mahoraga', p: e, uid: m.c.uid, by: p });
+    mahoragaCall(st, p, m);
+  }
+  /** General Mahoraga: un personaje de 10★ o más acaba de llegar boca arriba al campo de p (invocación normal, especial,
+   *  volteo o transformación). Cada rival con Mahoraga en la mano puede responder invocándolo desde allí. Nunca por
+   *  invocaciones propias ni de compañeros, y una sola pregunta por jugador y por llegada. */
+  function mahoragaCall(st, p, m) {
+    if (!m || m.down || lvl(m) < 10) return;
+    for (const e of foes(st, p)) {
+      if (!st.players[e].alive || !st.players[e].hand.some(c => c.id === 'c_mahoraga')) continue;
+      if ((st.trig || []).some(t => t.k === 'mahoraga' && t.p === e && t.uid === m.c.uid)) continue;
+      (st.trig = st.trig || []).push({ k: 'mahoraga', p: e, uid: m.c.uid, by: p });
+    }
   }
   // ---------------- magias ----------------
   const monsterCands = (P, f) => P.deck.filter(i => def(i).kind === 'monster' && f(def(i)));
@@ -1733,7 +1744,7 @@
       const u = uOf(m), g = gx(P, z);
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
-      if (ab.includes('yutadom') && !st.domain) push({ pw: 'ydominio' });
+      if (ab.includes('yutadom') && canOnce(P, z, u, 'ydom') && !st.domain) push({ pw: 'ydominio' });      // una vez por invocación de Yuta
       if (ab.includes('canon') && !u.canon && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
       if (ab.includes('absorb') && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
@@ -2056,6 +2067,8 @@
         break;
       }
       case 'ydominio': {
+        if (!canOnce(P, a.zone, u, 'ydom') || st.domain) break;      // revalidado al resolver: nunca dos veces por invocación
+        markOnce(u, 'ydom');
         st.domain = { p, uid: m.c.uid, t0: st.turn, x: g, min: 11, nm: 'de Yuta', noST: true };
         log(st, p, `${nm} activa el dominio Amor Mutuo y Verdadero`);
         break;
@@ -2069,9 +2082,10 @@
       }
       case 'kform': {
         const nd = C().get(a.form);
+        if (m.form) break;      // una sola transformación por invocación: el bonus nunca se aplica dos veces
         m.form = a.form;
-        if (a.form === 'c_kayn_rhaast') addMod(st, m, 'rhaast', 300, 300, 0);
-        log(st, p, `${nm} se transforma en ${nd.name}`);
+        if (a.form === 'c_kayn_rhaast') { addMod(st, m, 'rhaast', 300, 300, 0); log(st, p, `${nm} se transforma en ${nd.name}: +300 ATK y +300 DEF`); }
+        else log(st, p, `${nm} se transforma en ${nd.name}`);
         break;
       }
       case 'telar': {
@@ -2189,6 +2203,7 @@
     for (const s of P.st) if (s && !s.down && s.equipTo === z) { s.equipTo = nz; if (s.bearer === old.c.uid) s.bearer = inst.uid; if (s.karma && s.karma.phase === 'ally') s.karma.allyUid = inst.uid; }
     if (st.domain && st.domain.uid === old.c.uid) st.domain = null;
     log(st, p, `${oldName} se transforma en ${nd.name}`);
+    mahoragaCall(st, p, P.mz[nz]);      // llegar a 10★ o más transformándose también es invocar desde la mano
   }
   function doSpower(st, p, a) {
     const P = st.players[p], s = P.st[a.zone], nm = def(s.c).name;
@@ -2245,6 +2260,7 @@
         const m = P.mz[a.zone];
         m.down = false; m.pos = 'atk'; m.moved = true;
         log(st, p, `voltea a ${mdef(m).name} (ATK ${atkOf(st, P, a.zone)})`);
+        mahoragaCall(st, p, m);
         st.summon = { p, z: a.zone };
         if (!openWindow(st, 'summon', { k: 'summon', by: p })) st.summon = null;
         break;
@@ -2461,7 +2477,10 @@
     if (st.domain && lvl(s) < (st.domain.min || 10) && st.domain.uid !== s.c.uid && (mdef(s).ab || []).length) v.muted = true;
     const sh = shieldInfo(st, P, z);
     if (sh) v.sh = { kind: sh.kind, cur: sh.cur, max: sh.max };
-    if (s.six) v.six = Math.min(SIX_TURNS, Math.max(0, SIX_TURNS - (elapsed(st, s.six.t0))));
+    if (s.six) {
+      v.six = Math.min(SIX_TURNS, Math.max(0, SIX_TURNS - (elapsed(st, s.six.t0))));
+      const su = uOf(s); v.sixU = { rojo: !!su.rojo, azul: !!su.azul, purpura: !!su.purpura };      // técnicas de los Seis Ojos ya lanzadas
+    }
     if (s.fused) v.fused = { b: s.fused.b.c.id, left: Math.min(2, Math.max(0, 2 - (elapsed(st, s.fused.t0)))) };
     if (s.mods && s.mods.length) v.mods = s.mods.map(x => ({ k: x.k, atk: x.atk, def: x.def, left: x.n ? Math.min(x.n, Math.max(0, x.n - (elapsed(st, x.t0)))) : null }));
     if (s.av && s.av.on) v.av = { choice: s.av.choice, n: s.av.n, turn: s.av.turn === st.turn };
@@ -2471,7 +2490,8 @@
     if (s.owner != null && s.owner !== st.players.indexOf(P)) v.owner = s.owner;
     if (s.promesa) v.promesa = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
-    { const uu = uOf(s); if (uu.canon || uu.kk6 || uu.gen) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen }; }
+    { const uu = uOf(s), yd = !!uu.ydom && !canOnce(P, z, uu, 'ydom') && abil(st, s).includes('yutadom');
+      if (uu.canon || uu.kk6 || uu.gen || yd) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen, ydom: yd }; }
     if (s.c.id === 'c_yuta') {          // Yuta: usos de Rika, habilidades aprendidas y dominio
       const yu = uOf(s), gg = gx(P, z);
       v.yuta = { rk: Math.max(0, 2 * gg - (yu.rk || 0)), rkMax: 2 * gg, rkTurn: yu.rkT === st.turn, rkNext: !(yu.rkT === st.turn && (yu.rkTn || 0) >= gg), rkLast: yu.rkLast || null, learned: (yu.learned || []).slice(), lrnTurn: yu.lrnT === st.turn, dom: !!(st.domain && st.domain.uid === s.c.uid) };

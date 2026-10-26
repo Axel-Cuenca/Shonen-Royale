@@ -1234,3 +1234,9 @@ html[data-fs="xl"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom
 .board3d .zone.mz { background: linear-gradient(160deg, rgba(40, 50, 110, .16), rgba(14, 18, 60, .28)); }
 .board3d .zone.opp { background: linear-gradient(160deg, rgba(34, 8, 4, .16), rgba(14, 3, 2, .26)); }
 .board3d .zone.opp.ally { background: linear-gradient(160deg, rgba(20, 90, 60, .16), rgba(10, 44, 32, .28)); }
+
+/* Ficha del personaje: acción con su descripción debajo (técnicas de los Seis Ojos, habilidades usadas) */
+.actd { display: flex; flex-direction: column; gap: 3px; }
+.actd > small { font-size: 12px; line-height: 1.35; opacity: .85; padding: 0 6px 4px; text-align: left; }
+.actn { display: block; font-size: 12px; line-height: 1.35; opacity: .8; margin-top: 4px; }
+.acts .btn:disabled { opacity: .55; cursor: not-allowed; }
