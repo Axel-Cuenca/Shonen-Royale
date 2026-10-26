@@ -261,6 +261,10 @@ module.exports = function (T) {
     const st3 = fresh(); put(st3, 0, 0, 'c_titan'); st3.players[0].hand = [{ uid: 912, id: 'c_shen' }];
     put(st3, 1, 0, 'c_lara'); st3.turn = 7; st3.current = 1; st3.phase = 'battle'; atk(st3, 1, 0, 0);
     ok(!st3.pending || st3.pending.ab !== 'shen', 'Shen sólo reacciona ante efectos mortales');
+    // si muere el propio atacante, Shen (en su mano) no interviene: sólo cuenta el golpe enemigo
+    const st4 = fresh(); put(st4, 0, 0, 'c_titan'); put(st4, 1, 0, 'c_lara'); st4.players[1].hand = [{ uid: 914, id: 'c_shen' }];
+    st4.turn = 7; st4.current = 1; st4.phase = 'battle'; atk(st4, 1, 0, 0);
+    ok(!st4.pending || st4.pending.ab !== 'shen', 'Shen no protege al atacante que muere por su propio ataque');
   }
   {
     // Shen contra una magia que destruye

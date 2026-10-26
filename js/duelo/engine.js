@@ -1370,6 +1370,7 @@
     const deaths = combatDeaths(st, a);
     if (!a.noShen) {
       for (const v of deaths) {
+        if (st.team[v.p] === st.team[a.p]) continue;      // sólo cuenta el golpe ENEMIGO: si muere el propio atacante, Shen no interviene
         const q = shenOwner(st, v.p);
         if (q >= 0) { st.pending = { k: 'ability', ab: 'shen', player: q, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
       }
