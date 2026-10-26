@@ -1675,6 +1675,7 @@
         else if (/^Total Counter: /.test(t)) { snd = 'shield'; const d = byName['Meliodas 5%']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TOTAL COUNTER', { mine: l.p === v.seat }); } }
         else if (/\(Asimilación\)/.test(t)) { snd = 'epic'; const d = byName['General Mahoraga']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'ASIMILACIÓN'); } }
         else if (/^Rika Orimoto intercepta /.test(t)) { snd = 'shield'; needShake = true; const d = byName['Yuta Okkotsu']; if (d) { fileSfx(d.sfx && d.sfx.rika); cin(d, 'RIKA · INTERCEPCIÓN', { mine: l.p === v.seat }); } }
+        else if (/^Protección del Ojo del Crepúsculo — /.test(t)) { snd = 'shield'; needShake = true; const d = byName['Shen']; if (d) cin(d, 'PROTECCIÓN DEL OJO DEL CREPÚSCULO', { mine: l.p === v.seat }); pops.push({ t: t.replace(/^.*? — /, ''), cls: 'weak' }); }
         else if (/ intercepta /.test(t)) { snd = 'shield'; needShake = true; }
         else if (/^Yuta Okkotsu aprende /.test(t)) { snd = 'epic'; const d = byName['Yuta Okkotsu']; if (d) cin(d, 'COPIA DE TÉCNICAS'); }
         else if (/ muere en lugar de /.test(t)) { snd = 'destroy'; needShake = true; }

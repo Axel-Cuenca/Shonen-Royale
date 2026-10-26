@@ -879,6 +879,20 @@
     }
     return -1;
   }
+  /** Protección del Ojo del Crepúsculo: Shen interviene SOLO (sin preguntar) cuando se cumplen las condiciones de su carta.
+   *  Devuelve true si interceptó (el efecto queda cancelado); false si no pudo invocarse. */
+  function shenAuto(st, pd) {
+    const v = pd.victim, V = st.players[v.p].mz[v.z];
+    if (!V || V.shen || !st.players[pd.player].alive) return false;
+    const vn = mdef(V).name;
+    const src = pd.ch ? `la magia ${def(pd.ch.inst).name}` : `el ataque de ${(() => { const am = st.players[pd.a.p].mz[pd.a.z]; return am ? mdef(am).name : 'un enemigo'; })()}`;
+    if (summonFromHand(st, pd.player, 'c_shen', 'Protección del Ojo del Crepúsculo: invoca especialmente a') < 0) return false;
+    V.shen = { sh: SHEN_SH };
+    log(st, pd.player, `Protección del Ojo del Crepúsculo — Shen intercepta ${src}: ${vn} iba a morir y queda protegido con un escudo de ${SHEN_SH}`);
+    st.log[st.log.length - 1].int = 1;
+    if (pd.ch) st.players[pd.ch.p].grave.push(pd.ch.inst);
+    return true;
+  }
   /** Saca una carta de la mano al campo (invocación especial que no gasta la normal ni abre ventana). */
   function summonFromHand(st, q, id, why) {
     const Q = st.players[q], hi = handIdx(Q, id);
@@ -940,7 +954,11 @@
     if (d.fx === 'destroyOne' && t && !done.includes('shen')) {
       const vp = foeOf(st, ch.p, t), vm = st.players[vp].mz[t.z];
       const q = vm ? shenOwner(st, vp) : -1;
-      if (q >= 0 && st.team[vp] !== st.team[ch.p]) return { k: 'ability', ab: 'shen', player: q, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
+      if (q >= 0 && st.team[vp] !== st.team[ch.p]) {
+        const pd = { k: 'ability', ab: 'shen', player: q, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
+        if (shenAuto(st, pd)) return { auto: true };
+        return pd;
+      }
     }
     if (!done.includes('meli')) {
       const mm = meliFor(st, ch.p, null);
@@ -1214,6 +1232,7 @@
       return;
     }
     const gd = spellGuard(st, ch);
+    if (gd && gd.auto) return;
     if (gd) { st.pending = gd; return; }
     P.grave.push(ch.inst);
     FX[d.fx].resolve(st, ch.p, d, ch.target);
@@ -1372,7 +1391,11 @@
       for (const v of deaths) {
         if (st.team[v.p] === st.team[a.p]) continue;      // sólo cuenta el golpe ENEMIGO: si muere el propio atacante, Shen no interviene
         const q = shenOwner(st, v.p);
-        if (q >= 0) { st.pending = { k: 'ability', ab: 'shen', player: q, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
+        if (q >= 0) {
+          const pd = { k: 'ability', ab: 'shen', player: q, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name };
+          if (shenAuto(st, pd)) return;
+          st.pending = pd; return;
+        }
       }
     }
     if (!a.noRika) {
