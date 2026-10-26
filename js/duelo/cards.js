@@ -342,7 +342,7 @@
     }),
     spell({
       id: 'c_pothala', name: 'Pothala', icon: '☯️', img: I('pothala'), fx: 'pothala',
-      text: 'Fusiona a dos personajes aliados del campo durante 2 turnos completos: ATK y DEF = suma de ambos ×2, y tiene las habilidades de los dos (duplicados sus usos y aumentos).',
+      text: 'Fusiona a dos personajes aliados del campo durante 2 turnos completos: ATK y DEF = suma de ambos, y tiene las habilidades de los dos.',
       sfx: { use: V('pothala-use') }
     }),
     spell({

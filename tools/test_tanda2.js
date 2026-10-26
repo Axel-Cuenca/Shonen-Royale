@@ -376,7 +376,7 @@ module.exports = function (T) {
   {
     const st = fresh(); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_zenitsu');
     cast(st, 0, 'c_pothala', { z: 0, z2: 1 });
-    eq(stat(st, 0, 0), [4800, 4800], 'Pothala: (1400+1000)×2');
+    eq(stat(st, 0, 0), [2400, 2400], 'Pothala: 1400+1000 (suma, sin duplicar)');
     ok(st.players[0].mz[1] === null && E.view(st, 0).players[0].sealed.includes(1), 'la segunda zona queda reservada');
     pass(st, 2); ok(E.view(st, 0).players[0].mz[0].fused, 'la fusión sigue en el primer turno');
     pass(st, 2); ok(E.view(st, 0).players[0].mz[0].fused, 'y en el segundo');

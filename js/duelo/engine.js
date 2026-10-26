@@ -253,10 +253,10 @@
   const modSum = (m, key) => (m.mods || []).reduce((n, x) => n + (x[key] || 0), 0);
   function addMod(st, m, k, atk, def, n) { const e = { k, atk: atk || 0, def: def || 0, t0: st.turn, n: n || 0 }; (m.mods = m.mods || []).push(e); return e; }
   const dropMods = (m, k) => { if (m.mods) m.mods = m.mods.filter(x => x.k !== k); };
-  /** Gema del Poder o fusión de Pothala: duplica los usos y los aumentos de las habilidades. */
-  const gemOn = (P, z) => !!(P.mz[z] && P.mz[z].fused) || P.st.some(s => s && !s.down && s.equipTo === z && def(s.c).pgem);
+  /** Gema del Poder: duplica los usos y los aumentos de las habilidades. */
+  const gemOn = (P, z) => P.st.some(s => s && !s.down && s.equipTo === z && def(s.c).pgem);
   const gx = (P, z) => (gemOn(P, z) ? 2 : 1);
-  /** Usos de una habilidad «una vez por invocación»: con la Gema (o fusionado) se puede una segunda vez. */
+  /** Usos de una habilidad «una vez por invocación»: con la Gema se puede una segunda vez. */
   const canOnce = (P, z, u, key) => !u[key] || (gx(P, z) > 1 && !u[key + '2']);
   const markOnce = (u, key) => { if (u[key]) u[key + '2'] = true; else u[key] = true; };
   /** Aumentos de habilidades que dependen del momento (iguales para ATK y DEF). */
@@ -798,7 +798,7 @@
       resolve: (st, p, d, t) => {
         const P = st.players[p], A = P.mz[t && t.z], B = P.mz[t && t.z2];
         if (!A || !B || A.down || B.down || A.fused || B.fused) { log(st, p, 'no tiene objetivo'); return; }
-        const atk = 2 * (atkOf(st, P, t.z) + atkOf(st, P, t.z2)), df = 2 * (defOf(st, P, t.z) + defOf(st, P, t.z2));
+        const atk = atkOf(st, P, t.z) + atkOf(st, P, t.z2), df = defOf(st, P, t.z) + defOf(st, P, t.z2);
         A.fused = { zb: t.z2, t0: st.turn, b: B, atk, def: df, from: [atkOf(st, P, t.z), atkOf(st, P, t.z2), defOf(st, P, t.z), defOf(st, P, t.z2)] };
         A.link = (A.link || []).concat([B.c], B.link || []);
         P.mz[t.z2] = null; P.sealed = (P.sealed || []).concat([t.z2]);
