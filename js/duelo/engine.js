@@ -25,7 +25,7 @@
  *   · cada monstruo en el campo es una «casilla» m con su propio estado: m.uBy[forma] (usos de habilidades
  *     por invocación), m.bonus (aumentos que dura la invocación), m.ext (habilidades robadas o absorbidas),
  *     m.link (cartas vinculadas que siguen su mismo destino), m.abs (personaje absorbido), m.copy (Shang Tsung)
- *   · «turno completo» = un turno numerado del juego (st.turn): lo que pasa entre dos turnos de un jugador
+ *   · «turno» = una RONDA: pasa cuando todos los jugadores han jugado (st.round; st.turn cuenta el turno de cada jugador). Las duraciones («durante 3 turnos»…) cuentan rondas completas con elapsed()
  *   · Titán Martillo ocupa 2 zonas contiguas (m.wide en la primera; la segunda queda «sombreada»)
  *
  * API:  newGame(decks, opts) · actor(st) · legal(st, p) · apply(st, p, action)
@@ -151,13 +151,25 @@
     return st;
   }
 
+  /** Ronda a la que pertenece el turno numerado t (si no se guardó, se calcula por el número de jugadores). */
+  function roundAt(st, t) { return st.rmap && st.rmap[t] != null ? st.rmap[t] : Math.max(1, Math.ceil(t / st.n)); }
+  function curRound(st) { return roundAt(st, st.turn); }
+  /** Rondas completas que pasaron desde el turno numerado t0 (no cuenta la ronda en que empezó). */
+  function elapsed(st, t0) { return curRound(st) - roundAt(st, t0) - 1; }
+
   function startTurn(st) {
     st.turn++;
+    // ronda = todos los jugadores han jugado su turno; el contador que se ve y las duraciones cuentan rondas
+    const rel = (st.current - st.first + st.n) % st.n;
+    const prev = st.turn === 1 ? 0 : roundAt(st, st.turn - 1);
+    st.round = st.turn === 1 ? 1 : (st.lastRel != null && rel <= st.lastRel ? prev + 1 : prev);
+    st.lastRel = rel;
+    (st.rmap = st.rmap || [])[st.turn] = st.round;
     const P = st.players[st.current];
     P.normalUsed = false;
     for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; }
     st.phase = 'main';
-    log(st, st.current, `Turno ${st.turn}`);
+    log(st, st.current, `Turno ${st.round}`);
     if (st.turn > 1) drawCards(st, st.current, 1);
     timers(st);
   }
@@ -1441,7 +1453,7 @@
   }
   /** Al empezar un turno: fin del dominio de Sukuna y cuenta atrás de Karma. */
   function timers(st) {
-    if (st.domain && st.turn - st.domain.t0 - 1 >= 2) { log(st, -1, `El dominio ${st.domain.nm || 'de Sukuna'} termina`); st.domain = null; }
+    if (st.domain && elapsed(st, st.domain.t0) >= 2) { log(st, -1, `El dominio ${st.domain.nm || 'de Sukuna'} termina`); st.domain = null; }
     expireMods(st);
     prisons(st);
     corruptions(st);
@@ -1450,7 +1462,7 @@
       if (!P.alive) continue;
       for (let i = 0; i < ZONES; i++) {      // Anillo Único: el portador sucumbe a la corrupción
         const s = P.st[i];
-        if (!s || !s.ring || s.ring.sauron || st.turn - s.ring.t0 - 1 < s.ring.n || s.equipTo == null) continue;
+        if (!s || !s.ring || s.ring.sauron || elapsed(st, s.ring.t0) < s.ring.n || s.equipTo == null) continue;
         const bm = P.mz[s.equipTo];
         if (!bm) continue;
         log(st, p, `${mdef(bm).name} sucumbe a la corrupción del Anillo Único`);
@@ -1459,7 +1471,7 @@
       }
       for (let i = 0; i < ZONES; i++) {
         const s = P.st[i];
-        if (!s || !s.karma || s.karma.phase !== 'foe' || st.turn - s.karma.t0 - 1 < 3 || st.domain) continue;
+        if (!s || !s.karma || s.karma.phase !== 'foe' || elapsed(st, s.karma.t0) < 3 || st.domain) continue;
         const kz = s.karma;
         const foe = slotByUid(st, kz.foeP, kz.foeUid);
         P.st[i] = null; P.grave.push(s.c);
@@ -1479,7 +1491,7 @@
         const m = P.mz[z];
         if (!m) continue;
         if (m.mods && m.mods.length) {
-          const gone = m.mods.filter(x => x.n && st.turn - x.t0 - 1 >= x.n);
+          const gone = m.mods.filter(x => x.n && elapsed(st, x.t0) >= x.n);
           if (gone.length) {
             m.mods = m.mods.filter(x => !gone.includes(x));
             let died = false;
@@ -1491,8 +1503,8 @@
           }
         }
         const m2 = P.mz[z];
-        if (m2 && m2.six && st.turn - m2.six.t0 - 1 >= SIX_TURNS) endSix(st, p, z);
-        if (m2 && m2.fused && st.turn - m2.fused.t0 - 1 >= 2) unfuse(st, p, z);
+        if (m2 && m2.six && elapsed(st, m2.six.t0) >= SIX_TURNS) endSix(st, p, z);
+        if (m2 && m2.fused && elapsed(st, m2.fused.t0) >= 2) unfuse(st, p, z);
       }
     }
   }
@@ -1519,7 +1531,7 @@
       const P = st.players[p];
       for (let i = 0; i < ZONES; i++) {
         const s = P.st[i];
-        if (!s || !s.prison || st.turn - s.prison.t0 - 1 < 5) continue;
+        if (!s || !s.prison || elapsed(st, s.prison.t0) < 5) continue;
         const pr = s.prison, O = st.players[pr.owner], pm = pr.m, nm = mdef(pm).name;
         const z = O.alive ? spot(O, mdef(pm)) : -1;
         if (z < 0) { if (O.alive) pr.wait = true; continue; }
@@ -1610,7 +1622,7 @@
     return s.size;
   }
   /** Turnos completos que pasaron desde que esta forma está en el campo. */
-  const turnsOn = (st, m) => st.turn - Math.max(m.summonedTurn, m.since || 0) - 1;
+  const turnsOn = (st, m) => elapsed(st, Math.max(m.summonedTurn, m.since || 0));
   /** Cartas de la mano a las que puede transformarse este monstruo (índices) y turnos que debe esperar. */
   function xformCands(st, p, z) {
     const P = st.players[p], m = P.mz[z], d = mdef(m), out = [];
@@ -1757,7 +1769,7 @@
       }
       {   // Sauron, o quien lleve el Anillo Único siendo de 7★ o más: corromper a un personaje enemigo de menos estrellas
         const rg = ringOf(P, z), viaRing = !!rg && rg.ring.stars >= 7 && !rg.ring.sauron && !rg.ring.promesaUsed;
-        const sau = ab.includes('corrupt') && (u.corrT == null || st.turn - u.corrT >= 3);
+        const sau = ab.includes('corrupt') && (u.corrT == null || curRound(st) - roundAt(st, u.corrT) >= 3);
         if (sau || viaRing) {
           for (const t of foeChars(st, p)) {
             const tm = st.players[t.vs].mz[t.z];
@@ -2432,9 +2444,9 @@
     if (st.domain && lvl(s) < (st.domain.min || 10) && st.domain.uid !== s.c.uid && (mdef(s).ab || []).length) v.muted = true;
     const sh = shieldInfo(st, P, z);
     if (sh) v.sh = { kind: sh.kind, cur: sh.cur, max: sh.max };
-    if (s.six) v.six = Math.min(SIX_TURNS, Math.max(0, SIX_TURNS - (st.turn - s.six.t0 - 1)));
-    if (s.fused) v.fused = { b: s.fused.b.c.id, left: Math.min(2, Math.max(0, 2 - (st.turn - s.fused.t0 - 1))) };
-    if (s.mods && s.mods.length) v.mods = s.mods.map(x => ({ k: x.k, atk: x.atk, def: x.def, left: x.n ? Math.min(x.n, Math.max(0, x.n - (st.turn - x.t0 - 1))) : null }));
+    if (s.six) v.six = Math.min(SIX_TURNS, Math.max(0, SIX_TURNS - (elapsed(st, s.six.t0))));
+    if (s.fused) v.fused = { b: s.fused.b.c.id, left: Math.min(2, Math.max(0, 2 - (elapsed(st, s.fused.t0)))) };
+    if (s.mods && s.mods.length) v.mods = s.mods.map(x => ({ k: x.k, atk: x.atk, def: x.def, left: x.n ? Math.min(x.n, Math.max(0, x.n - (elapsed(st, x.t0)))) : null }));
     if (s.av && s.av.on) v.av = { choice: s.av.choice, n: s.av.n, turn: s.av.turn === st.turn };
     if (s.kn) v.kn = { rh: !!s.kn.rh, sh: !!s.kn.sh };
     if (s.form) v.form = s.form;
@@ -2458,7 +2470,7 @@
     if (u.sun) v.sun = u.sun;
     // Karma puesta sobre este monstruo (de cualquiera): cuenta atrás
     for (let q = 0; q < st.n; q++) for (const k of st.players[q].st) {
-      if (k && k.karma && k.karma.phase === 'foe' && k.karma.foeUid === s.c.uid) v.karma = { left: Math.max(0, 3 - (st.turn - k.karma.t0 - 1)), owner: q };
+      if (k && k.karma && k.karma.phase === 'foe' && k.karma.foeUid === s.c.uid) v.karma = { left: Math.max(0, 3 - (elapsed(st, k.karma.t0))), owner: q };
     }
     const gm = gemOf(st, s.c.uid);
     if (gm) v.gem = { owner: gm.p, left: 2 - gm.s.gem.uses };
@@ -2470,13 +2482,13 @@
     const v = { down: !!s.down, c: { uid: s.c.uid, id: s.c.id }, setTurn: s.setTurn, equipTo: s.equipTo };
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };
-    if (s.karma) v.karma = { phase: s.karma.phase, left: s.karma.phase === 'foe' ? Math.max(0, 3 - (st.turn - s.karma.t0 - 1)) : null };
-    if (s.ring) v.ring = { atk: s.ring.atk, stars: s.ring.stars, sauron: !!s.ring.sauron, left: s.ring.sauron ? null : Math.min(s.ring.n, Math.max(0, s.ring.n - (st.turn - s.ring.t0 - 1))), promesa: !!s.ring.promesaUsed, can: s.ring.stars >= 7 };
+    if (s.karma) v.karma = { phase: s.karma.phase, left: s.karma.phase === 'foe' ? Math.max(0, 3 - (elapsed(st, s.karma.t0))) : null };
+    if (s.ring) v.ring = { atk: s.ring.atk, stars: s.ring.stars, sauron: !!s.ring.sauron, left: s.ring.sauron ? null : Math.min(s.ring.n, Math.max(0, s.ring.n - (elapsed(st, s.ring.t0)))), promesa: !!s.ring.promesaUsed, can: s.ring.stars >= 7 };
     if (s.promise) { v.promise = true; const bh = findByUid(st, s.bearer); v.bearer = bh ? bh.m.c.id : null; v.bearerOn = !!(bh && s.equipTo != null); }
     if (s.susano) v.susano = { awake: !!s.susano.awake, sh: s.susano.sh, max: SUSANO_SH };
     if (s.beast) v.beast = { done: !!s.beast.done };
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
-    if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (st.turn - s.prison.t0 - 1))), owner: s.prison.owner };
+    if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;
     return v;
   }
@@ -2532,11 +2544,11 @@
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {
       seat, n: st.n, mode: st.mode, team: st.team.slice(), rank: st.rank.slice(),
-      seq: st.seq || 0, turn: st.turn, phase: st.phase, current: st.current, first: st.first,
+      seq: st.seq || 0, turn: st.turn, round: curRound(st), phase: st.phase, current: st.current, first: st.first,
       winner: st.winner, reason: st.reason, actor: actor(st),
       me: players[seat], opp: players[oppSeat], players,
       pending,
-      domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (st.turn - st.domain.t0 - 1)), nm: st.domain.nm || 'de Sukuna', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
+      domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (elapsed(st, st.domain.t0))), nm: st.domain.nm || 'de Sukuna', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
       log: st.log.slice(-60),

@@ -450,7 +450,7 @@
         ex(mini('Tú', '8000 PV'), 'vs', mini('Rival', '0 PV', 'dead'), '¡Ganas! El rival se quedó sin PV.'),
         h('h2', null, 'Un turno'),
         h('ul', null,
-          h('li', null, 'Robas 1 carta (quien empieza no roba en su primer turno). En la primera ronda nadie ataca: el primer ataque llega en el tercer turno de la partida. Mano inicial: 5. Al terminar, máximo 7 cartas en mano.'),
+          h('li', null, 'Robas 1 carta (quien empieza no roba en su primer turno). El contador de «Turno» sube cuando todos han jugado (una ronda), y los efectos «durante N turnos» cuentan rondas completas. En la primera ronda nadie ataca: el primer ataque llega en la segunda. Mano inicial: 5. Al terminar, máximo 7 cartas en mano.'),
           h('li', null, 'Fase principal: invoca o coloca 1 monstruo por turno (invocación normal), activa magias, coloca magias y trampas.'),
           h('li', null, 'Monstruos de nivel 5-6 piden sacrificar 1 monstruo tuyo; nivel 7-9, 2 monstruos; nivel 10 o más, 3 monstruos. Niveles 1-4, ninguno. Las invocaciones especiales y las transformaciones no piden sacrificios.'),
           h('li', null, '«Colocar» deja el monstruo boca abajo en defensa. Al turno siguiente puedes voltearlo (queda en ataque) o cambiarle la posición.'),
@@ -1085,6 +1085,28 @@
       }
       if (d.fx === 'special') return chooseHand(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje de tu mano');
       if (d.fx === 'esferas') return wishMenu(list);
+      if (d.fx === 'pothala') {              // elegir los dos personajes aliados que se fusionan
+        const mine = z => ({ seat: v.seat, area: 'mz', z });
+        const firsts = [...new Set(list.flatMap(a => [a.target.z, a.target.z2]))];
+        return pickTargets(firsts.map(mine), t1 => {
+          const partners = [...new Set(list.filter(a => a.target.z === t1.z || a.target.z2 === t1.z).map(a => (a.target.z === t1.z ? a.target.z2 : a.target.z)))];
+          pickTargets(partners.map(mine), t2 => act(list.find(a => (a.target.z === t1.z && a.target.z2 === t2.z) || (a.target.z === t2.z && a.target.z2 === t1.z))), 'Elige el segundo personaje a fusionar');
+        }, 'Elige el primer personaje a fusionar');
+      }
+      if (d.fx === 'voto') {                 // tu personaje que se sacrifica, el enemigo que copias y qué copias
+        const zs = [...new Set(list.map(a => a.target.z))];
+        return pickTargets(zs.map(z => ({ seat: v.seat, area: 'mz', z })), t1 => {
+          const sub = list.filter(a => a.target.z === t1.z), seen = new Set(), foes = [];
+          for (const a of sub) { const k = a.target.vs + ':' + a.target.ez; if (!seen.has(k)) { seen.add(k); foes.push({ seat: a.target.vs, area: 'mz', z: a.target.ez }); } }
+          pickTargets(foes, t2 => {
+            const opts = sub.filter(a => a.target.vs === t2.seat && a.target.ez === t2.z);
+            const lab = a => (a.target.mode === 1 ? 'Copiar su ATK (tu DEF se sacrifica)' : a.target.mode === 2 ? 'Copiar su DEF (tu ATK se sacrifica)' : 'Copiar su habilidad: ' + (C.AB && C.AB[a.target.ab] ? C.AB[a.target.ab][0] : a.target.ab) + ' (tu ATK y DEF se sacrifican)');
+            modal(h('div', { class: 'box' }, h('h2', null, 'Voto Vinculante: ¿qué copias?'),
+              h('div', { class: 'acts', style: 'flex-direction:column;align-items:stretch;gap:8px' }, opts.map(a => btn(lab(a), () => { closeModal(); act(a); }, 'gold'))),
+              btn('Cancelar', closeModal, 'ghost')));
+          }, 'Elige al enemigo del que copias');
+        }, 'Elige a tu personaje que hace el sacrificio');
+      }
       if (d.fx === 'cana') return chooseGrave(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje desterrado que vuelve a tu mano', 'banish');
       const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
@@ -1579,7 +1601,7 @@
       if (!multi() && v.me && v.players.length === 2) {
         const foe = v.players.find(q => q.seat !== v.seat), lp = x => Math.max(0, x.lp), kills = x => (x.grave || []).length;
         const cell = (a, b) => h('div', null, h('b', null, b), h('small', null, a));
-        recap = h('div', { class: 'recap' }, cell('Turnos', v.turn), cell('Tus PV', lp(v.me)), cell('PV rival', lp(foe)), cell('Tu cementerio', kills(v.me)), cell('Cementerio rival', kills(foe)));
+        recap = h('div', { class: 'recap' }, cell('Turnos', v.round != null ? v.round : v.turn), cell('Tus PV', lp(v.me)), cell('PV rival', lp(foe)), cell('Tu cementerio', kills(v.me)), cell('Cementerio rival', kills(foe)));
       }
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
@@ -1814,7 +1836,7 @@
       const canBattle = my && !v.pending && L().some(a => a.t === 'toBattle');
       const canEnd = my && !v.pending && L().some(a => a.t === 'endTurn');
       const whose = v.current === v.seat ? 'Tu turno' : multi() ? 'Turno de ' + shortOf(v.current) : 'Turno rival';
-      const turnTxt = `Turno ${v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
+      const turnTxt = `Turno ${v.round != null ? v.round : v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
       const tkey = v.turn + ':' + v.current + ':' + (v.seq || 0);   // cada acción reinicia la cuenta
       if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false };

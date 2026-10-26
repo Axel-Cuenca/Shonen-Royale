@@ -162,8 +162,8 @@ module.exports = function (T) {
     ok(v.players[1].mz[0].muted, 'Sukuna (10★) tampoco: el enemigo también queda silenciado');
     ok(!!st.domain && E.view(st, 0).domain.nm === 'de Yuta' && E.view(st, 0).domain.noST, 'la vista informa del dominio de Yuta');
     // dura 2 turnos completos
-    pass(st); pass(st); pass(st);
-    ok(!st.domain, 'el dominio termina tras 2 turnos completos');
+    pass(st, 6);
+    ok(!st.domain, 'el dominio termina tras 2 turnos (rondas) completos');
     eq(stat(st, 0, 0), [2500, 2500], 'se retira sólo su bonificación');
   }
   {
@@ -176,7 +176,7 @@ module.exports = function (T) {
       const before = stat(st, 0, 0)[0];
       act(st, 0, pw(st, 0, 'ydominio'));
       ok(stat(st, 0, 0)[0] < before + 1 && stat(st, 0, 0)[0] === before - (eqSpell.eAtk || 0) - 800, 'los equipamientos dejan de dar estadísticas durante el dominio');
-      pass(st); pass(st); pass(st);
+      pass(st, 6);
       eq(stat(st, 0, 0)[0], before, 'al terminar el dominio las magias recuperan su funcionamiento');
       ok(st.players[0].st[1] && st.players[0].st[1].c.id === eqSpell.id, 'el dominio no destruye las cartas');
     }

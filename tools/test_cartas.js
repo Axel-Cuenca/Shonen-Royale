@@ -146,7 +146,7 @@ module.exports = function (T) {
     st.players[0].mz[1] = null;
     eq(stat(st, 0, 0), [1800, 1800], 'al quedar solo lo recupera');
     ok(!pw(st, 0, 'xform'), 'no se puede transformar el mismo turno ni antes de un turno completo');
-    st.turn = 7; ready(st, 0, 7);
+    st.turn = 9; ready(st, 0, 9);
         const tot0 = total(st, 0);
     const x = pw(st, 0, 'xform'); ok(!!x && st.players[0].hand[x.hand].id === 'c_bardock_ssj', 'tras un turno completo puede transformarse (SSJ en la mano)');
     act(st, 0, x);
@@ -172,9 +172,9 @@ module.exports = function (T) {
   section('Vegeta, Blue Evolution y Big Bang');
   {
     const st = fresh(); put(st, 0, 0, 'c_vegeta', { summonedTurn: 6 }); give(st, 0, ['c_vegeta_blue']);
-    ready(st, 0, 8); ok(!pw(st, 0, 'xform'), '4★→10★ pide 3 turnos completos: a los 2 no');
-    ready(st, 0, 9); ok(!pw(st, 0, 'xform'), 'a los 2 completos todavía no');
-    ready(st, 0, 10); const x = pw(st, 0, 'xform'); ok(!!x, 'a los 3 turnos completos sí');
+    ready(st, 0, 10); ok(!pw(st, 0, 'xform'), '4★→10★ pide 3 turnos completos: a 1 no');
+    ready(st, 0, 12); ok(!pw(st, 0, 'xform'), 'a los 2 completos todavía no');
+    ready(st, 0, 14); const x = pw(st, 0, 'xform'); ok(!!x, 'a los 3 turnos completos sí');
     act(st, 0, x);
     const m = st.players[0].mz[0];
     ok(m.c.id === 'c_vegeta_blue' && m.link[0].id === 'c_vegeta', 'Blue ocupa el sitio con Vegeta vinculado');

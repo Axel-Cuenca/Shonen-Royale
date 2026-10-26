@@ -66,10 +66,12 @@ module.exports = function (T) {
     act(st, 0, c);
     eq(stat(st, 0, 0), [1400, 1400], 'Concentración Total: +400/+400');
     ok(!pw(st, 0, 'conc'), 'sólo una vez por invocación');
-    pass(st); pass(st);   // turno del rival y vuelta
-    eq(stat(st, 0, 0), [1400, 1400], 'dura 2 turnos completos: sigue activa');
-    pass(st); pass(st);
-    eq(stat(st, 0, 0), [1000, 1000], 'al terminar los 2 turnos vuelve a 1000/1000');
+    pass(st, 2);   // turno del rival y vuelta: una ronda
+    eq(stat(st, 0, 0), [1400, 1400], 'dura 2 turnos (rondas) completos: sigue activa');
+    pass(st, 2);
+    eq(stat(st, 0, 0), [1400, 1400], 'tras la segunda ronda sigue activa');
+    pass(st, 2);
+    eq(stat(st, 0, 0), [1000, 1000], 'al terminar los 2 turnos (rondas) vuelve a 1000/1000');
   }
   {
     // Gyomei: 4 posturas y Marca de Cazador
@@ -80,7 +82,7 @@ module.exports = function (T) {
     const st2 = fresh(); put(st2, 0, 0, 'c_gyomei'); put(st2, 1, 0, 'c_lara');
     act(st2, 0, pw(st2, 0, 'marca'));
     eq(stat(st2, 0, 0), [2400, 2400], 'Marca de Cazador: +500/+500');
-    for (let i = 0; i < 6 && st2.players[0].mz[0]; i++) pass(st2);
+    for (let i = 0; i < 14 && st2.players[0].mz[0]; i++) pass(st2);
     ok(grave(st2, 0, 'c_gyomei'), 'Marca de Cazador: Gyomei muere a los 3 turnos');
   }
   {
@@ -132,7 +134,7 @@ module.exports = function (T) {
     // Super Vegeta pertenece a la familia Vegeta
     const st = fresh(); put(st, 0, 0, 'c_vegeta', { summonedTurn: 0 }); give(st, 0, ['c_super_vegeta']);
     ok(!!pw(st, 0, 'xform'), 'Vegeta puede transformarse en Super Vegeta');
-    const st2 = fresh(); put(st2, 0, 0, 'c_super_vegeta', { summonedTurn: 0 }); give(st2, 0, ['c_vegeta_blue']);
+    const st2 = fresh(); put(st2, 0, 0, 'c_super_vegeta', { summonedTurn: 0 }); give(st2, 0, ['c_vegeta_blue']); ready(st2, 0, 8);
     ok(!!pw(st2, 0, 'xform'), 'Super Vegeta puede transformarse en Vegeta Blue (2 turnos de espera)');
     const st3 = fresh(); put(st3, 0, 0, 'c_goku', { summonedTurn: 5 }); give(st3, 0, ['c_super_vegeta']);
     ok(!pw(st3, 0, 'xform'), 'Goku no se transforma en Vegeta');
@@ -148,8 +150,8 @@ module.exports = function (T) {
     ok(E.view(st, 0).players[0].mz[1].muted, 'Lara (2★) pierde sus habilidades durante el dominio de Jogo');
     ok(!E.view(st, 1).players[1].mz[0].muted || true, 'Zenitsu (4★) también');
     ok(!L(st, 0).some(a => a.t === 'activate' || a.t === 'activateSet'), 'nadie activa magias durante el dominio');
-    pass(st, 5);
-    ok(!st.domain, 'el dominio termina a los 2 turnos');
+    pass(st, 6);
+    ok(!st.domain, 'el dominio termina a los 2 turnos (rondas)');
     eq(stat(st, 0, 0), [2100, 2100], 'Jogo vuelve a 2100/2100');
     // Llama Infernal con 2 asesinatos
     const m = st.players[0].mz[0]; E.uOf && 0;
@@ -327,7 +329,7 @@ module.exports = function (T) {
     eq(bonus('c_jogo'), [2800, 2800], 'Anillo Único 7★: +700/+700');
     eq(bonus('c_sauron'), [3100, 3100], 'Anillo Único en Sauron: +1000/+1000');
     const st = fresh(); put(st, 0, 0, 'c_zenitsu'); cast(st, 0, 'c_anillo_unico', { z: 0 });
-    pass(st, 2); ok(st.players[0].mz[0], 'a los 2 turnos aún no ha muerto'); pass(st, 2);
+    pass(st, 2); ok(st.players[0].mz[0], 'a los 2 turnos aún no ha muerto'); pass(st, 4);
     ok(grave(st, 0, 'c_zenitsu') && grave(st, 0, 'c_anillo_unico'), '1-4★: sucumbe a la corrupción a los 2 turnos y el anillo va al cementerio');
     const st2 = fresh(); put(st2, 0, 0, 'c_sauron'); cast(st2, 0, 'c_anillo_unico', { z: 0 }); pass(st2, 14);
     ok(st2.players[0].mz[0] && st2.players[0].mz[0].c.id === 'c_sauron', 'Sauron no muere por la corrupción');
@@ -377,6 +379,7 @@ module.exports = function (T) {
     eq(stat(st, 0, 0), [4800, 4800], 'Pothala: (1400+1000)×2');
     ok(st.players[0].mz[1] === null && E.view(st, 0).players[0].sealed.includes(1), 'la segunda zona queda reservada');
     pass(st, 2); ok(E.view(st, 0).players[0].mz[0].fused, 'la fusión sigue en el primer turno');
+    pass(st, 2); ok(E.view(st, 0).players[0].mz[0].fused, 'y en el segundo');
     pass(st, 2);
     ok(!E.view(st, 0).players[0].mz[0].fused && st.players[0].mz[1], 'a los 2 turnos completos se separan');
     eq(stat(st, 0, 0), [1400, 1400], 'vuelven sus estadísticas');
@@ -449,6 +452,19 @@ module.exports = function (T) {
     }
     eq(seen, [[1, false], [2, false], [3, true], [4, true]], 'nadie ataca en la primera ronda; el combate llega en el turno 3');
   }
+  section('Turno = ronda completa (contador y duraciones)');
+  {
+    const rounds = (st, n) => { const r = []; for (let i = 0; i < n; i++) { const p = E.actor(st); r.push(E.view(st, p).round); act(st, p, find(st, p, x => x.t === 'endTurn') || find(st, p, x => x.t === 'discard')); } return r; };
+    eq(rounds(game({ seed: 11 }), 6), [1, 1, 2, 2, 3, 3], 'duelo: el contador sube cuando los dos terminan la ronda');
+    eq(rounds(game({ seed: 11, first: 1 }), 6), [1, 1, 2, 2, 3, 3], 'duelo empezando el segundo asiento: igual');
+    const mk = () => E.newGame([Cards.presetDeck('fire'), Cards.presetDeck('water'), Cards.presetDeck('fire')], { seed: 5, mode: 'ffa', first: 2 });
+    eq(rounds(mk(), 7), [1, 1, 1, 2, 2, 2, 3], '3 jugadores empezando el asiento 2: una ronda son los tres turnos');
+    // una magia de «3 turnos» dura 3 rondas completas, no 3 turnos de jugador
+    const st = fresh(); put(st, 0, 0, 'c_goku'); const kk = pw(st, 0, 'kaioken'); act(st, 0, kk);
+    eq(stat(st, 0, 0), [2100, 2100], 'Kaio-ken: +700/+700');
+    pass(st, 6); eq(stat(st, 0, 0), [2100, 2100], 'sigue activo tras 3 turnos de cada jugador (2 rondas)');
+    pass(st, 2); eq(stat(st, 0, 0), [1400, 1400], 'termina al empezar la ronda siguiente a las 3 completas');
+  }
   section('Gokumonkyo, Guerrero del Infinito y Rayo de Luz Solar');
   {
     const st = fresh(); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_zenitsu'); give(st, 1, []);
@@ -456,7 +472,7 @@ module.exports = function (T) {
     ok(!st.players[1].mz[0], 'Gokumonkyo saca al personaje del campo');
     ok(!grave(st, 1, 'c_goku') && !banish(st, 1, 'c_goku'), 'no está ni en el cementerio ni desterrado');
     const v = E.view(st, 0).players[0].st[0]; ok(v.prison && v.prison.left === 5, 'cuenta atrás de 5 turnos');
-    pass(st, 4); ok(!st.players[1].mz[0], 'sigue sellado antes de los 5 turnos completos');
+    pass(st, 10); ok(!st.players[1].mz[0], 'sigue sellado antes de los 5 turnos (rondas) completos');
     pass(st, 2);
     ok(st.players[1].mz.some(m => m && m.c.id === 'c_goku') && grave(st, 0, 'c_gokumonkyo'), 'a los 5 turnos vuelve al campo y Gokumonkyo va al cementerio');
     // no se puede anular
@@ -484,7 +500,7 @@ module.exports = function (T) {
     give(st, 1, ['s_beam']);
     ok(!L(st, 1).some(x => x.t === 'attack' && x.target === 0) || true, 'no puede ser atacado');
     ok(!!pw(st, 0, 'rojo'), 'con los Seis Ojos puede lanzar Rojo');
-    pass(st, 7); ok(!E.view(st, 0).players[0].mz[0].six, 'los Seis Ojos se apagan a los 3 turnos');
+    pass(st, 9); ok(!E.view(st, 0).players[0].mz[0].six, 'los Seis Ojos se apagan a los 3 turnos (rondas)');
   }
   {
     // Rayo de Luz Solar
