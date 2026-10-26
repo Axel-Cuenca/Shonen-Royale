@@ -245,7 +245,8 @@ module.exports = function (T) {
     const st = fresh(); put(st, 0, 0, 'c_popeye'); st.players[0].hand = [{ uid: 910, id: 'c_shen' }];
     put(st, 1, 0, 'c_titan'); st.turn = 7; st.current = 1; st.phase = 'battle';
     atk(st, 1, 0, 0);
-    ok(!st.pending, 'Shen interviene solo: no pide confirmación');
+    ok(st.pending && st.pending.ab === 'shen' && st.pending.player === 0, 'Shen pregunta antes del golpe mortal');
+    answer(st, 0, { use: true });
     ok(st.log.some(l => /^Protección del Ojo del Crepúsculo — Shen intercepta el ataque de Titán/.test(l.t) && /Popeye/.test(l.t)), 'mensaje especial con atacante y protegido');
     ok(st.players[0].mz.some(m => m && m.c.id === 'c_shen') && st.players[0].mz[0] && !grave(st, 0, 'c_popeye'), 'Shen entra y el aliado sobrevive');
     ok(st.players[0].lp === 8000, 'el ataque se cancela: sin daño');
@@ -255,7 +256,9 @@ module.exports = function (T) {
     // si dice que no, el ataque se resuelve
     const st2 = fresh(); put(st2, 0, 0, 'c_popeye'); st2.players[0].hand = [{ uid: 911, id: 'c_shen' }];
     put(st2, 1, 0, 'c_titan'); st2.turn = 7; st2.current = 1; st2.phase = 'battle'; atk(st2, 1, 0, 0);
-    ok(!st2.pending && !grave(st2, 0, 'c_popeye'), 'Shen actúa antes de que el aliado vaya al cementerio');
+    ok(st2.pending && st2.pending.ab === 'shen' && !grave(st2, 0, 'c_popeye'), 'la pregunta llega antes de que el aliado vaya al cementerio');
+    answer(st2, 0, { use: false });
+    ok(grave(st2, 0, 'c_popeye') || banish(st2, 0, 'c_popeye'), 'si el jugador dice que no, el golpe se resuelve');
     const st5 = fresh(); put(st5, 0, 0, 'c_popeye'); st5.players[0].hand = [{ uid: 915, id: 'c_shen' }];
     for (let z = 1; z < st5.players[0].mz.length; z++) put(st5, 0, z, 'c_lara');
     put(st5, 1, 0, 'c_titan'); st5.turn = 7; st5.current = 1; st5.phase = 'battle'; atk(st5, 1, 0, 0);
@@ -275,7 +278,8 @@ module.exports = function (T) {
     st.current = 1; ready(st, 1); give(st, 1, ['s_beam']);
     if (Cards.get('s_beam')) {
       act(st, 1, find(st, 1, a => a.t === 'activate'));
-      ok(!st.pending, 'Shen intercepta la magia solo');
+      ok(st.pending && st.pending.ab === 'shen', 'Shen puede interceptar la magia');
+      answer(st, 0, { use: true });
       ok(!grave(st, 0, 'c_popeye') && st.players[1].grave.some(c => c.id === 's_beam'), 'la magia se cancela y el aliado vive');
     }
   }

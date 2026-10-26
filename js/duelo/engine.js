@@ -879,7 +879,7 @@
     }
     return -1;
   }
-  /** Protección del Ojo del Crepúsculo: Shen interviene SOLO (sin preguntar) cuando se cumplen las condiciones de su carta.
+  /** Protección del Ojo del Crepúsculo: Shen entra de la mano, cancela el efecto y protege al aliado (el jugador lo decide antes).
    *  Devuelve true si interceptó (el efecto queda cancelado); false si no pudo invocarse. */
   function shenAuto(st, pd) {
     const v = pd.victim, V = st.players[v.p].mz[v.z];
@@ -956,7 +956,6 @@
       const q = vm ? shenOwner(st, vp) : -1;
       if (q >= 0 && st.team[vp] !== st.team[ch.p]) {
         const pd = { k: 'ability', ab: 'shen', player: q, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
-        if (shenAuto(st, pd)) return { auto: true };
         return pd;
       }
     }
@@ -1232,7 +1231,6 @@
       return;
     }
     const gd = spellGuard(st, ch);
-    if (gd && gd.auto) return;
     if (gd) { st.pending = gd; return; }
     P.grave.push(ch.inst);
     FX[d.fx].resolve(st, ch.p, d, ch.target);
@@ -1393,7 +1391,6 @@
         const q = shenOwner(st, v.p);
         if (q >= 0) {
           const pd = { k: 'ability', ab: 'shen', player: q, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name };
-          if (shenAuto(st, pd)) return;
           st.pending = pd; return;
         }
       }
@@ -2334,14 +2331,7 @@
       return;
     }
     if (pd.ab === 'shen') {
-      const v = pd.victim, V = st.players[v.p].mz[v.z];
-      if (a.use && V && summonFromHand(st, p, 'c_shen', 'Protección del Ojo del Crepúsculo: invoca especialmente a') >= 0) {
-        V.shen = { sh: SHEN_SH };
-        log(st, p, `Shen intercepta ${pd.ch ? 'la magia' : 'el ataque'} y protege a ${mdef(V).name} con un escudo de ${SHEN_SH}`);
-        st.log[st.log.length - 1].int = 1;
-        if (pd.ch) st.players[pd.ch.p].grave.push(pd.ch.inst);
-        return;
-      }
+      if (a.use && shenAuto(st, pd)) return;      // el jugador decide: si acepta, Shen entra, cancela el efecto y protege
       if (pd.ch) { pd.ch.done = (pd.ch.done || []).concat('shen'); st.chain = pd.ch; continueSpell(st); }
       else { st.atk = Object.assign({}, pd.a, { noShen: true }); continueAttack(st); }
       return;
