@@ -30,7 +30,7 @@ Cuando llegan varias cartas, mejoras o arreglos a la vez, se redactan en UNA sol
 lo que se agregó (nombres y lo esencial), sin una entrada ni un título por cada carta o mejora. Sólo si un cambio es
 claramente independiente del resto (otro tema) puede llevar su propia entrada. Título corto, sin prefijos tipo «Música: …».
 Los cambios de servidores, base de datos o costes NO van ahí.
-(Las entradas de hoy 25-10 anteriores a esta regla siguen sueltas.)
+Desde el 25-10-2026 cada fecha lleva UNA sola entrada (en `new`) que lo cuenta todo corrido: nada de listas por carta, por mejora ni por arreglo, y sin `chg` ni `fix` sueltos. Si en el mismo día llegan más cambios, se amplía ese texto.
 
 ## Servidores
 - Firebase: proyecto **pokesurvivor-free** (autenticación normal: cuentas gratis sin límite).
