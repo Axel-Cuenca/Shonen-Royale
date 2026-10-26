@@ -1052,6 +1052,7 @@ require('./test_tienda.js')({ ok, eq, section });
 require('./test_rank.js')({ ok, eq, section });
 require('./test_temporada.js')({ ok, eq, section });
 require('./test_skins.js')({ ok, eq, section });
+require('./test_cofre.js')({ ok, eq, section, Cards });
 matchTests().then(multiTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);

@@ -208,16 +208,26 @@
       });
     }
     return {
-      prepare() { for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.kind === 'monster' && c.img && !cache.has(c.id)) { cache.set(c.id, null); cutout(c.img).then(u => cache.set(c.id, u)); } },
-      src: id => cache.get(id) || null
+      // la caché va por imagen (no por carta): así cada skin de ilustración tiene su propio recorte
+      prepare() {
+        for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.kind === 'monster' && c.img) want(c.img);
+        if (D.Shop && D.Shop.skinPool) for (const it of D.Shop.skinPool()) want(it.img);
+      },
+      /** Recorte listo de esa carta (con la skin `img` si se da) o null mientras se prepara. */
+      src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k); return cache.get(k) || null; }
     };
+    function want(k) { if (!cache.has(k)) { cache.set(k, null); cutout(k).then(u => cache.set(k, u)); } }
   })();
   setTimeout(() => Holo.prepare(), 0);
 
-  function sprite(card, px) {
-    if (card.img) {                       // carta propia con ilustración (no es de la Pokédex)
+  /** Imagen de la skin de ilustración que YO le puse a esa carta, o null (imagen original). */
+  const myArt = id => { const it = D.Shop && D.Shop.artOf && D.Shop.artOf(id); return it ? it.img : null; };
+  /** Imagen de la skin que puso el dueño de la carta (cosméticos `cs` ya saneados con D.Shop.clean/mine), o null. */
+  const cosArt = (cs, id) => { const sid = cs && cs.si && cs.si[id], it = sid && D.Shop.get(sid); return it && it.cat === 'si' && it.card === id ? it.img : null; };
+  function sprite(card, px, art) {
+    if (card.img) {                       // carta propia con ilustración (no es de la Pokédex); `art`: skin de ilustración
       const b = h('div', { class: 'art', style: px ? `font-size:${px}px;width:1em;height:1em;flex:none;margin:0` : '' });
-      b.append(h('img', { class: 'cimg', src: card.img, alt: card.name, draggable: 'false' }));
+      b.append(h('img', { class: 'cimg', src: art || card.img, alt: card.name, draggable: 'false' }));
       return b;
     }
     const m = window.G.SPRITE_META && G.SPRITE_META[card.dex], a = m && m.a && m.a.Idle;
@@ -228,7 +238,7 @@
     box.append(s);
     return box;
   }
-  /** o: { down, pos, atk, def } (atk/def efectivos del tablero) */
+  /** o: { down, pos, atk, def } (atk/def efectivos del tablero), art: imagen de la skin (sin dar: la mía; null: la original) */
   function cardEl(card, o) {
     o = o || {};
     if (o.down && !card) return h('div', { class: 'card back' + (o.pos === 'def' ? ' def' : '') });
@@ -238,7 +248,7 @@
       const cls = (v, base) => v > base ? 'up' : v < base ? 'dn' : '';
       const mySk = D.Shop && D.Shop.skinOf(d.id);
       return h('div', Object.assign({ class: 'card m' + (d.level >= 7 ? ' hi' : d.level >= 5 ? ' lvmid' : '') + (o.pos === 'def' ? ' def' : '') + (o.down ? ' dis' : ''), 'data-cid': d.id, style: '--tc:' + C.TYPE_COLOR[d.type] }, mySk && !o.down ? { 'data-sk': D.Shop.slug(mySk.id) } : {}),
-        h('div', { class: 'cn' }, d.name), sprite(d),
+        h('div', { class: 'cn' }, d.name), sprite(d, 0, o.down ? null : o.art !== undefined ? o.art : myArt(d.id)),
         h('div', { class: 'cl' }, '★'.repeat(d.level)),
         h('div', { class: 'cs' }, h('b', { class: cls(atk, d.atk) }, atk), h('b', { class: cls(def, d.def) }, def)));
     }
@@ -671,7 +681,7 @@
   /** Miniatura de una carta (con la skin que tenga puesta). */
   function thumbEl(card) {
     const sk = card.kind === 'monster' && D.Shop.skinOf(card.id);
-    const el = h('div', { class: 'tmb ' + card.kind }, card.img ? h('img', { class: 'cimg', src: card.img, alt: card.name, draggable: 'false' }) : h('span', { class: 'ico' }, card.icon || '?'));
+    const el = h('div', { class: 'tmb ' + card.kind }, card.img ? h('img', { class: 'cimg', src: (card.kind === 'monster' && myArt(card.id)) || card.img, alt: card.name, draggable: 'false' }) : h('span', { class: 'ico' }, card.icon || '?'));
     if (sk) el.dataset.sk = D.Shop.slug(sk.id);
     return el;
   }
@@ -759,15 +769,26 @@
       if (narrow()) cardModal(C.get(id));
     }
 
-    /** Skins (de las cajas) que tengo, para ponerle una a este personaje. */
+    /** Skins de ilustración de ESTE personaje (Cofre de skins) y efectos de las cajas que tengo, para ponérselos. */
     function skinPicker(card, again) {
       const SH = D.Shop, mine = SH.mySkins();
       if (card.kind !== 'monster' || !card.img) return null;
-      const cur = SH.skinOf(card.id), row = h('div', { class: 'skpick' }, h('b', null, 'Skin'));
-      if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Aún no tienes skins. Salen en las cajas (Tienda → Cajas) y valen para cualquier personaje.')); return row; }
-      const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); S.play('select'); again(); renderPool(); renderDeck(); } }, label);
+      const redo = () => { S.play('select'); again(); renderPool(); renderDeck(); };
+      const box = h('div', null);
+      const arts = SH.artsFor(card.id);
+      if (arts.length) {             // otra ilustración para esta carta: sólo las que tengo se pueden poner
+        const cur = SH.artOf(card.id), row = h('div', { class: 'skpick si' }, h('b', null, 'Skin'));
+        const opt = (label, it) => h('button', { class: (it ? cur && cur.id === it.id : !cur) ? 'on' : '', onclick: () => { SH.setArt(card.id, it ? it.id : null); redo(); } }, label);
+        row.append(opt('Original', null), ...arts.map(it => SH.owns(it.id) ? opt(it.name, it) : h('button', { class: 'lock', disabled: true, title: 'Sale en el Cofre de skins (Cajas)' }, '🔒 ' + it.name)));
+        if (!arts.some(it => SH.owns(it.id))) row.append(h('small', { class: 'sub' }, 'Te faltan: salen en el Cofre de skins (Tienda → Cajas), todas con la misma probabilidad.'));
+        box.append(row);
+      }
+      const cur = SH.skinOf(card.id), row = h('div', { class: 'skpick' }, h('b', null, 'Efecto'));
+      if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Aún no tienes efectos. Salen en las cajas (Tienda → Cajas) y valen para cualquier personaje.')); box.append(row); return box; }
+      const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); redo(); } }, label);
       row.append(opt('Normal', null), ...mine.map(it => opt(it.name, it)));
-      return row;
+      box.append(row);
+      return box;
     }
     /** Ventana de una carta (móvil): detalle, skin y botones de añadir y quitar. */
     function cardModal(card) {
@@ -1414,21 +1435,22 @@
       const cs = cosOf(seat);
       const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
-      let cur = null, landing = false;
+      let cur = null, landing = false, art = null;
       if (s) {
         let c;
-        if (area === 'mz') c = s.c ? cardEl(C.get(s.c.id), { down: s.down, pos: s.pos, atk: s.atk, def: s.def }) : cardEl(null, { down: true, pos: 'def' });
+        art = area === 'mz' && s.c && !s.down ? cosArt(cs, s.c.id) : null;      // skin de ilustración que le puso SU dueño
+        if (area === 'mz') c = s.c ? cardEl(C.get(s.c.id), { down: s.down, pos: s.pos, atk: s.atk, def: s.def, art }) : cardEl(null, { down: true, pos: 'def' });
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
         const skId = area === 'mz' && s.c && !s.down && s.c.id && cs.sk ? cs.sk[s.c.id] : null;      // skin que le puso SU dueño
         if (skId) { el.dataset.sk = D.Shop.slug(skId); c.dataset.sk = el.dataset.sk; } else delete c.dataset.sk;
         el.append(c);
-        const hsrc = area === 'mz' && s.c && !s.down ? Holo.src(s.c.id) : null;
+        const hsrc = area === 'mz' && s.c && !s.down ? Holo.src(s.c.id, art) : null;
         if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero)) el.append(h('span', { class: 'eqm' }, s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
-        cur = curOf(s, area);
+        cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');
           const d = cur.id ? C.get(cur.id) : null;
@@ -1440,11 +1462,11 @@
         el.classList.add('shadowz'); el.append(h('span', { class: 'shd' }, '↔ ocupada por un gigante'));
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
-      if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id)) el.append(...holoEls(s, key, cur, landing, chosen));
+      if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id, art)) el.append(...holoEls(s, key, cur, landing, chosen, art));
       return el;
     }
     /** Figura de pie + anillo de luz (y, al aparecer, haz de luz y onda). */
-    function holoEls(s, key, cur, landing, chosen) {
+    function holoEls(s, key, cur, landing, chosen, art) {
       const d = C.get(s.c.id), now = performance.now(), hi = d.level >= 7, lo = d.level <= 4;
       const ms = hi ? 2100 : lo ? 1000 : 1500;
       if (landing) enterMem.set(key, { uid: cur.uid, t0: now, ms });
@@ -1454,7 +1476,7 @@
       const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
       const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
       const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
-      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, h('img', { src: Holo.src(d.id), alt: d.name, draggable: 'false', style: bob }), stat);
+      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, h('img', { src: Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob }), stat);
       const out = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` }), h('div', { class: cls, style: `--ms:${ms}ms` }, fig)];
       if (entering) out.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
       return out;
@@ -1756,16 +1778,16 @@
       if (current !== cur || innerWidth <= 560) return;   // en el móvil no se muestra (ocupa demasiado)
       if ((cutBusy || cutQ.length) && (tries || 0) < 40) { setTimeout(() => atkMark(a, (tries || 0) + 1), 150); return; }
       const direct = a.tg === 'direct', mine = a.p === v.seat, ally = mine || isAlly(a.p);
-      const fig = (d, big) => d ? (d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56)) : h('span', { class: 'qm' }, '?');
+      const fig = (d, q) => d ? (d.img ? h('img', { src: cosArt(cosOf(q), d.id) || d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56)) : h('span', { class: 'qm' }, '?');      // con la skin de su dueño
       const ad = a.ci ? C.get(a.ci) : (a.who && byName[a.who]) || null, td = a.ti ? C.get(a.ti) : null;
       const owner = q => (q === v.seat ? 'Tú' : shortOf(q));
-      const left = h('div', { class: 'vs-side l ' + (ally ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(ad)),
+      const left = h('div', { class: 'vs-side l ' + (ally ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(ad, a.p)),
         h('div', { class: 'vs-tx' }, h('b', null, (ad && ad.name) || a.who || 'Monstruo'), h('small', null, '⚔ ' + (a.at != null ? 'ATK ' + a.at + ' · ' : '') + owner(a.p))));
       const rightAlly = a.vs === v.seat || isAlly(a.vs);
       const right = direct
         ? h('div', { class: 'vs-side r ' + (rightAlly ? 'good' : 'bad') }, h('div', { class: 'vs-fig av' }, lookOf(a.vs).emoji || (owner(a.vs)[0] || '?').toUpperCase()),
           h('div', { class: 'vs-tx' }, h('b', null, owner(a.vs)), h('small', null, '💥 ATAQUE DIRECTO')))
-        : h('div', { class: 'vs-side r ' + (rightAlly ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(td)),
+        : h('div', { class: 'vs-side r ' + (rightAlly ? 'good' : 'bad') }, h('div', { class: 'vs-fig' }, fig(td, a.vs)),
           h('div', { class: 'vs-tx' }, h('b', null, td ? td.name : 'Carta boca abajo'), h('small', null, (td ? (a.tpos === 'atk' ? '⚔ ATK ' : '🛡 DEF ') + a.tv + ' · ' : '') + owner(a.vs))));
       const el = h('div', { class: 'vsban' }, left, h('div', { class: 'vs-mid' }, '⚔'), right);
       document.body.append(el);
@@ -1778,7 +1800,7 @@
       const b = curBan; if (!b || !b.el.isConnected || b.a.vs !== r.vs || b.a.tg !== r.z) return;
       const d = C.get(r.ti); if (!d) return;
       const fig = b.right.querySelector('.vs-fig'), tx = b.right.querySelector('.vs-tx');
-      if (fig) fig.replaceChildren(d.img ? h('img', { src: d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56));
+      if (fig) fig.replaceChildren(d.img ? h('img', { src: cosArt(cosOf(r.vs), d.id) || d.img, alt: d.name, draggable: 'false' }) : sprite(d, 56));
       if (tx) tx.replaceChildren(h('b', null, d.name), h('small', null, (r.tpos === 'atk' ? '⚔ ' : '🛡 ') + 'Se revela · ' + (r.vs === v.seat ? 'Tú' : shortOf(r.vs))));
       b.right.classList.add('flip');
     }
@@ -1807,9 +1829,9 @@
         if (f.type === 'gone' && f.fam) elemFx(r.left + r.width / 2, r.top + r.height / 2, r.width * 2.6, f.fam, true);
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2, zel = document.querySelector('.zone[data-k="' + f.k + '"]'), zs = (parseFloat(getComputedStyle(zel).fontSize) || 10) * (r.width / zel.offsetWidth);
         if (f.type === 'gone') {
-          const c = f.card, hs = c.id && !c.down && Holo.src(c.id);
+          const c = f.card, hs = c.id && !c.down && Holo.src(c.id, c.art);
           const g = hs ? h('div', { class: 'ghostholo', style: `left:${cx}px;top:${cy - r.height * .35}px;width:${r.width * 1.1}px;height:${r.height * 1.5}px` }, h('img', { src: hs, alt: '' }))
-            : h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos }) : cardEl(null, { down: true }));
+            : h('div', { class: 'ghostcard', style: `left:${cx}px;top:${cy}px;font-size:${zs}px` }, c.id ? cardEl(C.get(c.id), { down: c.down, pos: c.pos, art: c.art || null }) : cardEl(null, { down: true }));
           document.body.append(g); setTimeout(() => g.remove(), 800);
         } else {
           const size = r.width * (f.type === 'epic' ? 3.8 : f.type === 'small' ? 2 : 3);
@@ -2142,21 +2164,27 @@
   }
   // ---------------- cajas (estilo apertura de contenedores de CS2) ----------------
   const skSample = () => C.all().find(c => c.kind === 'monster' && c.img);
-  const itemPrev = it => it.cat === 'sk' ? h('span', { class: 'skprev', 'data-sk': D.Shop.slug(it.id) }, skSample() ? h('img', { class: 'cimg', src: skSample().img, alt: '', draggable: 'false' }) : '🃏') : it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+  const itemPrev = it => it.cat === 'si' ? h('span', { class: 'siprev' }, h('img', { class: 'cimg', src: it.img, alt: it.name, draggable: 'false' })) : it.cat === 'sk' ? h('span', { class: 'skprev', 'data-sk': D.Shop.slug(it.id) }, skSample() ? h('img', { class: 'cimg', src: skSample().img, alt: '', draggable: 'false' }) : '🃏') : it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
   const RAR_ORDER = ['c', 'r', 'e', 'l'];
-  const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name), h('small', null, D.Shop.catName(it.cat) + (own ? ' ✓' : '')));
-  const pctOf = b => Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
+  const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name),
+    h('small', null, (it.cat === 'si' ? cardName(it.card) + ' · ' + fmtPct(D.Shop.skinChance()) + ' %' : D.Shop.catName(it.cat)) + (own ? ' ✓' : '')));
+  const pctOf = b => b.kind === 'skins' ? 'Cada skin: ' + fmtPct(D.Shop.skinChance()) + ' % (todas igual, sin rarezas)' : Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
+  const cardName = id => (C.get(id) || {}).name || id;
+  /** Porcentaje legible: 20 → «20», 33,333… → «33,33». */
+  const fmtPct = n => (Math.round(n * 100) / 100).toLocaleString('es', { maximumFractionDigits: 2 });
+  let boxBusy = false;      // una apertura a la vez: evita abrir dos veces con clics rápidos
   /** Lista de cajas: cuadrícula de tarjetas; al tocar una se ve el detalle con todos sus premios. */
   function boxScreen() {
     scr('cajas');
     const SH = D.Shop; S.setTrack('menu');
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: () => shopScreen() }, '← Tienda'), h('h1', null, 'Cajas'),
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Cada premio sólo sale de su caja. Toca una caja para ver sus premios.')),
-      h('div', { class: 'bxgrid' }, SH.BOXES.map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor'), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
-        h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
+      h('div', { class: 'bxgrid' }, [SH.SKIN_BOX].concat(SH.BOXES).map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor') + (b.kind === 'skins' ? ' skc' : ''), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
+        h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, b.kind === 'skins' ? SH.poolOf(b).length + ' skins · ' + fmtPct(SH.skinChance()) + ' % cada una' : SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
   }
   /** Detalle de una caja: la caja grande, sus probabilidades y todos los premios posibles (de común a legendario). */
   function boxPrizes(b) {
+    if (b.kind === 'skins') return skinBox(b);
     const SH = D.Shop; S.setTrack('menu');
     const items = SH.poolOf(b).slice().sort((x, y) => RAR_ORDER.indexOf(x.rar) - RAR_ORDER.indexOf(y.rar));
     const n = (SH.pts().pity[b.id] | 0);
@@ -2170,27 +2198,65 @@
       h('div', { class: 'bxlist' }, items.map(it => bxTile(it, SH.owns(it.id)))),
       h('div', { class: 'sub' }, b.pity ? `Garantía: ${SH.RARITY[b.pity.to]} seguro tras ${b.pity.n} sin suerte (${Math.min(n, b.pity.n)}/${b.pity.n}). ` : 'Todo lo que sale es legendario. ', 'Si te sale uno repetido, te devolvemos parte en puntos.')));
   }
-  /** Apertura: ruleta horizontal que se frena en el premio ya sorteado. */
+  /** Cofre de skins: todas las skins con su probabilidad (la misma para todas), tu colección y equipar. */
+  function skinBox(b) {
+    scr('cajas');
+    const SH = D.Shop; S.setTrack('menu');
+    const pool = SH.skinPool(), got = pool.filter(i => SH.owns(i.id)).length, pc = fmtPct(SH.skinChance());
+    const colRow = it => {
+      const own = SH.owns(it.id), on = own && SH.artOf(it.card) && SH.artOf(it.card).id === it.id;
+      const set = id => { SH.setArt(it.card, id); S.play('select'); skinBox(b); };
+      return h('div', { class: 'sicol' + (own ? ' own' : ' miss') + (on ? ' on' : '') },
+        h('div', { class: 'sicmp' }, h('figure', null, h('img', { class: 'cimg', src: C.get(it.card).img, alt: '', draggable: 'false' }), h('figcaption', null, 'Original')), h('span', null, '→'),
+          h('figure', null, h('img', { class: 'cimg', src: it.img, alt: it.name, draggable: 'false' }), h('figcaption', null, 'Skin'))),
+        h('b', null, it.name), h('small', null, cardName(it.card) + ' · ' + pc + ' %'),
+        !own ? h('span', { class: 'tag miss' }, '🔒 Te falta')
+          : on ? h('div', { class: 'row' }, h('span', { class: 'tag' }, 'Puesta ✓'), btn('Quitar', () => set(null), 'ghost sm'))
+          : btn('Equipar', () => set(it.id), 'gold sm'));
+    };
+    mount(h('div', { class: 'scr bxdet', style: `--bc:${b.color}` }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'),
+      h('h1', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, pctOf(b))),
+      h('div', { class: 'bxstage' }, h('div', { class: 'bxbig' }, b.icon), h('div', { class: 'bxpal' })),
+      h('div', { class: 'shmsg msg err' }),
+      h('div', { class: 'row bxact' }, btn('Abrir ✦ ' + b.price, () => openBoxFlow(b), SH.coins() >= b.price && pool.length ? 'gold' : 'ghost'), btn('Cancelar', boxScreen, 'ghost')),
+      h('div', { class: 'bxhead' }, `Abre el cofre para recibir una de estas ${pool.length} skins: todas tienen la misma probabilidad (${pc} %)`),
+      h('div', { class: 'bxlist' }, pool.map(it => bxTile(it, SH.owns(it.id)))),
+      h('div', { class: 'sub' }, `Las skins sólo cambian el aspecto de la carta: nombre, estrellas, ATK, DEF, tipo y habilidades no cambian. Si te sale una que ya tienes, te devolvemos ✦ ${b.dupRefund}.`),
+      h('h2', null, `Tu colección de skins (${got}/${pool.length})`),
+      h('div', { class: 'sub' }, 'Equipa una skin a su carta: la verás en tu mano, en el tablero y en tus mazos, y tus rivales también la verán. Sin skin puesta, la carta usa su imagen original.'),
+      h('div', { class: 'sigrid' }, pool.map(colRow))));
+  }
+  /** Apertura: ruleta horizontal que se frena en el premio ya sorteado (el resultado se decide y se guarda ANTES de la animación). */
   function openBoxFlow(b) {
+    if (boxBusy) return;
     const SH = D.Shop, r = SH.openBox(b.id);
     if (!r.ok) { S.play('error'); const m = document.querySelector('.shmsg'); if (m) m.textContent = r.error; return; }
-    const it = r.item, rar = it.rar, pool = SH.poolOf(b), by = {};
+    boxBusy = true;
+    const it = r.item, rar = it.rar, pool = SH.poolOf(b), by = {}, skins = b.kind === 'skins';
     for (const p of pool) (by[p.rar] = by[p.rar] || []).push(p);
-    const rolls = Object.keys(b.w).filter(k => by[k]);
-    const rnd = () => { let x = Math.random() * rolls.reduce((a, k) => a + b.w[k], 0), k = rolls[0]; for (const q of rolls) { if ((x -= b.w[q]) < 0) { k = q; break; } } return by[k][(Math.random() * by[k].length) | 0]; };
+    const rolls = skins ? [] : Object.keys(b.w).filter(k => by[k]);
+    // relleno de la ruleta (sólo decorado): en el cofre de skins, todas por igual
+    const rnd = skins ? () => pool[(Math.random() * pool.length) | 0]
+      : () => { let x = Math.random() * rolls.reduce((a, k) => a + b.w[k], 0), k = rolls[0]; for (const q of rolls) { if ((x -= b.w[q]) < 0) { k = q; break; } } return by[k][(Math.random() * by[k].length) | 0]; };
+    const back = () => { boxBusy = false; ov.remove(); if (skins) skinBox(b); else boxScreen(); };
     const W = 150, GAP = 8, N = 120, WIN = 104;      // más premios pasando antes de llegar al tuyo
     const seq = Array.from({ length: N }, (_, i) => i === WIN ? it : rnd());
     const rm = document.documentElement.classList.contains('rm');
     const strip = h('div', { class: 'bx-strip' }, seq.map(x => bxTile(x, false)));
     const reel = h('div', { class: 'bx-reel' }, strip, h('div', { class: 'bx-mark' }));
     const skip = btn('Saltar', () => finish(true), 'ghost sm');
-    const ov = h('div', { class: 'boxov r-' + rar },
+    const ov = h('div', { class: 'boxov r-' + rar, style: skins ? `--bc:${b.color}` : null },
       h('div', { class: 'bx-rays' }),
       h('div', { class: 'bx-spin' }, h('h2', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)), reel, skip),
-      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, SH.RARITY[rar].toUpperCase()), h('h2', null, it.name), h('small', null, SH.catName(it.cat)),
+      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, it.cat === 'si' ? 'SKIN · ' + cardName(it.card).toUpperCase() : SH.RARITY[rar].toUpperCase()), h('h2', null, it.name),
+        h('small', null, it.cat === 'si' ? 'Skin de ' + cardName(it.card) + ' · ' + fmtPct(SH.skinChance()) + ' % de probabilidad' : SH.catName(it.cat)),
         h('div', { class: 'bx-note' }, r.dup ? `Repetido: te devolvemos ✦ ${r.refund} puntos.` : '¡Nuevo! Ya está en tu colección.'),
         it.cat === 'sk' ? h('small', { class: 'sub' }, 'Pónsela a un personaje en el constructor de mazos (ℹ de la carta).') : null,
-        h('div', { class: 'row' }, !r.dup && it.cat !== 'sk' ? btn('Equipar', () => { SH.equip(it.id); ov.remove(); boxScreen(); }, 'gold') : null, btn('Seguir', () => { ov.remove(); boxScreen(); }, 'ghost'))));
+        h('div', { class: 'row' },
+          it.cat === 'si' && !(SH.artOf(it.card) && SH.artOf(it.card).id === it.id) ? btn('Equipar en ' + cardName(it.card), () => { SH.setArt(it.card, it.id); back(); }, 'gold')
+            : !r.dup && it.cat !== 'sk' && it.cat !== 'si' ? btn('Equipar', () => { SH.equip(it.id); back(); }, 'gold') : null,
+          btn('Seguir', back, 'ghost'))));
     document.body.append(ov);
     S.play('confirm');
     let done = false, raf = 0, last = -1, lastT = 0;

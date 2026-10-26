@@ -1240,3 +1240,20 @@ html[data-fs="xl"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom
 .actd > small { font-size: 12px; line-height: 1.35; opacity: .85; padding: 0 6px 4px; text-align: left; }
 .actn { display: block; font-size: 12px; line-height: 1.35; opacity: .8; margin-top: 4px; }
 .acts .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---- Cofre de skins (skins de ilustración, todas con la misma probabilidad) ---- */
+.bxt.r-u { --tc: #4fd1c5; background: linear-gradient(#1f4f4b, #12302d); }
+.bxcard.skc { box-shadow: 0 0 18px color-mix(in srgb, var(--bc) 45%, transparent); }
+.siprev { display: inline-block; width: 64px; height: 64px; } .siprev img { width: 100%; height: 100%; object-fit: contain; }
+.bxt .siprev { height: 58px; width: 58px; }
+.boxov .bx-prize .siprev { width: 180px; height: 220px; filter: drop-shadow(0 0 18px var(--bc)); }
+.sigrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 10px 0 24px; }
+.sicol { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px 12px; text-align: center; border: 1.5px solid var(--edge); border-radius: 12px; background: #0008; }
+.sicol.own { border-color: color-mix(in srgb, #4fd1c5 60%, transparent); } .sicol.on { border-color: #4fd1c5; box-shadow: 0 0 14px #4fd1c566; }
+.sicol.miss .sicmp figure:last-child img { filter: grayscale(1) brightness(.45); }
+.sicol b { font-size: 14px; } .sicol small { color: #dfe6f5; opacity: .85; font-size: 12px; }
+.sicol .tag.miss { color: var(--muted); }
+.sicmp { display: flex; align-items: center; gap: 6px; } .sicmp span { opacity: .6; }
+.sicmp figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sicmp img { width: 62px; height: 86px; object-fit: contain; } .sicmp figcaption { font-size: 10px; opacity: .7; }
+.skpick.si .lock { opacity: .5; cursor: not-allowed; }

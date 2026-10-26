@@ -2,7 +2,7 @@
  * Todo lo que se guarda va dentro del mismo `store` que los mazos (campo `pts`), así viaja
  * a la nube con ellos (saves/{uid}.save.duelo) sin tocar reglas ni servidores.
  *
- *   store.pts = { coins, day, streak, aiDay, aiGot, owned: [ids], eq: { cat: id } }
+ *   store.pts = { coins, day, streak, aiDay, aiGot, owned: [ids], eq: { cat: id }, sk: { carta: efecto }, si: { carta: skin } }
  *
  * Los cosméticos NO dan ventaja en las partidas. Cada jugador ve los suyos en su pantalla.
  * Los premios se calculan en el navegador (sin servidor): entre amigos es suficiente.
@@ -103,6 +103,19 @@
     I('sk_neon', 'sk', 'Neón', 'e', { box: 1 }), I('sk_negativo', 'sk', 'Negativo', 'e', { box: 1 }), I('sk_dorada', 'sk', 'Dorada', 'e', { box: 1 }), I('sk_cromo', 'sk', 'Cromada', 'e', { box: 1 }),
     I('sk_arcoiris', 'sk', 'Arcoíris', 'l', { box: 1 }), I('sk_llamarada', 'sk', 'Llamarada', 'l', { box: 1 }), I('sk_galaxia', 'sk', 'Galaxia', 'l', { box: 1 })
   ];
+  // ---------------- skins de cartas con ilustración propia (si) ----------------
+  // Cada skin es OTRA imagen para UN personaje concreto: sólo cambia el aspecto (nombre, estrellas, ATK, DEF, tipo y
+  // habilidades siguen siendo los de la carta). Todas salen del Cofre de skins con la MISMA probabilidad, sin rarezas.
+  // Para añadir una: pon la imagen en assets/skins/ y una línea aquí [id (≤ 24 letras), id de la carta, nombre, archivo];
+  // entra sola en el cofre y las probabilidades se recalculan.
+  const SKINS = [
+    ['si_vegeta_guerra', 'c_vegeta', 'Vegeta traje de guerra', 'vegeta_guerra'],
+    ['si_goku_dbz', 'c_goku', 'Goku DBZ', 'goku_dbz'],
+    ['si_zenitsu_postura', 'c_zenitsu', 'Primera postura nro. 2', 'zenitsu_postura'],
+    ['si_bardock_super', 'c_bardock', 'Bardock super', 'bardock_super'],
+    ['si_shen_frozen', 'c_shen', 'Frozen Shen', 'shen_frozen']
+  ];
+  for (const [id, card, name, file] of SKINS) ITEMS.push({ id, cat: 'si', name, rar: 'u', price: 0, box: 1, card, img: 'assets/skins/' + file + '.webp' });
   const BY = new Map(ITEMS.map(i => [i.id, i]));
   /** Cosmético por id: del catálogo o de temporada (D.Seasons, exclusivos por rango; no están en la Tienda ni en cajas). */
   const byId = id => BY.get(id) || (D.Seasons ? D.Seasons.item(id) : null) || undefined;
@@ -120,15 +133,21 @@
     { id: 'especial', name: 'Caja Especial', price: 600, w: { e: 80, l: 20 }, pity: { n: 5, to: 'l' }, color: '#ff7a4a', icon: '🔮' },
     { id: 'legendaria', name: 'Caja Legendaria', price: 1100, w: { l: 100 }, pity: null, color: '#fff2a8', icon: '👑' }
   ];
-  const BOX_BY = new Map(BOXES.map(b => [b.id, b]));
+  // Cofre de skins: todas las skins de ilustración, cada una con la misma probabilidad (100 % / cantidad de skins).
+  // Va aparte de BOXES (no tiene rarezas ni garantía) pero se abre con el mismo openBox() y la misma ruleta.
+  const SKIN_BOX = { id: 'skins', kind: 'skins', name: 'Cofre de skins', price: 250, dupRefund: 60, color: '#4fd1c5', icon: '🎴' };
+  const skinPool = () => ITEMS.filter(i => i.cat === 'si');
+  /** Probabilidad (%) de cada skin del cofre: igual para todas. */
+  const skinChance = () => { const n = skinPool().length; return n ? 100 / n : 0; };
+  const BOX_BY = new Map(BOXES.concat([SKIN_BOX]).map(b => [b.id, b]));
   const boxOf = {};
   for (const R of ['c', 'r', 'e', 'l']) {
     const bs = BOXES.filter(b => b.w[R]), its = ITEMS.filter(i => i.rar === R && !i.free && !i.box), sks = ITEMS.filter(i => i.rar === R && i.box);
     its.forEach((it, k) => { boxOf[it.id] = bs[k % bs.length].id; });
     sks.forEach((it, k) => { boxOf[it.id] = bs[k % bs.length].id; });      // las skins se reparten aparte: así cada caja trae al menos una
   }
-  const poolOf = (box, R) => ITEMS.filter(i => boxOf[i.id] === box.id && (!R || i.rar === R));
-  const dupRefund = it => Math.round(PRICE[it.rar] * 0.2);
+  const poolOf = (box, R) => box && box.kind === 'skins' ? skinPool() : ITEMS.filter(i => boxOf[i.id] === box.id && (!R || i.rar === R));
+  const dupRefund = it => it.cat === 'si' ? SKIN_BOX.dupRefund : Math.round(PRICE[it.rar] * 0.2);
 
   // ---------------- economía ----------------
   const DAILY = [20, 25, 30, 35, 40, 50, 80];          // día 1..7 de la racha (luego vuelve a empezar)
@@ -154,6 +173,8 @@
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
     p.sk = p.sk && typeof p.sk === 'object' && !Array.isArray(p.sk) ? p.sk : {};
+    p.si = p.si && typeof p.si === 'object' && !Array.isArray(p.si) ? p.si : {};
+    for (const cid of Object.keys(p.si)) { const it = BY.get(p.si[cid]); if (!it || it.cat !== 'si' || it.card !== cid) delete p.si[cid]; }      // skin de otra carta o que ya no existe
     return p;
   }
   const owns = id => { const it = byId(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
@@ -199,9 +220,32 @@
   }
   const priceOf = id => { const it = byId(id); return !it ? 0 : offers().includes(id) ? Math.round(it.price * (1 - OFFER_OFF)) : it.price; };
   const rand = () => { try { const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] / 4294967296; } catch (e) { return Math.random(); } };
+  /** Entero al azar en [0, n) sin sesgo (rechazo sobre 32 bits con crypto). */
+  function randInt(n) {
+    try {
+      const u = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n;
+      do crypto.getRandomValues(u); while (u[0] >= lim);
+      return u[0] % n;
+    } catch (e) { return Math.min(n - 1, Math.floor(Math.random() * n)); }
+  }
+  /** Cofre de skins: cobra, sortea UNA skin entre todas con la misma probabilidad y la guarda ANTES de mostrar nada.
+   *  La animación sólo enseña este resultado. Si ya la tenías, devuelve parte en puntos. */
+  function openSkinBox() {
+    const p = pts(), b = SKIN_BOX, pool = skinPool();
+    if (!p) return { ok: false, error: 'No existe.' };
+    if (!pool.length) return { ok: false, error: 'Aún no hay skins en el cofre.' };
+    if (p.coins < b.price) return { ok: false, error: 'Te faltan ' + (b.price - p.coins) + ' puntos.' };
+    const it = pool[randInt(pool.length)];
+    p.coins -= b.price;
+    const dup = p.owned.includes(it.id), refund = dup ? b.dupRefund : 0;
+    if (dup) p.coins += refund; else p.owned.push(it.id);
+    saveStore();
+    return { ok: true, item: it, dup, refund };
+  }
   /** Abre una caja: cobra, sortea (con garantía) y entrega el premio; si ya lo tenías, devuelve parte en puntos. */
   function openBox(boxId) {
     const p = pts(), b = BOX_BY.get(boxId);
+    if (b && b.kind === 'skins') return openSkinBox();
     if (!p || !b) return { ok: false, error: 'No existe.' };
     if (p.coins < b.price) return { ok: false, error: 'Te faltan ' + (b.price - p.coins) + ' puntos.' };
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
@@ -244,7 +288,7 @@
   const exclusive = cat => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.excl && i.cat === cat).sort((a, b) => (b.season + b.tier).localeCompare(a.season + a.tier)) : []; };
   function equip(id) {
     const p = pts(), it = byId(id);
-    if (!p || !it || !owns(id) || it.cat === 'sk') return false;     // las skins se ponen a un personaje (setSkin)
+    if (!p || !it || !owns(id) || it.cat === 'sk' || it.cat === 'si') return false;     // las skins se ponen a un personaje (setSkin / setArt)
     p.eq[it.cat] = id; saveStore(); apply();
     return true;
   }
@@ -258,7 +302,18 @@
     p.sk[cardId] = skinId; saveStore(); return true;
   }
   const mySkins = () => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.cat === 'sk') : []; };
-  const catName = c => { const k = CATS.find(x => x.id === c); return k ? k.name : c === 'sk' ? 'Skin de cartas' : c; };
+  /** Skin de ilustración que tengo puesta a un personaje (item) o null: entonces se ve la imagen original. */
+  function artOf(cardId) { const p = pts(), id = p && p.si[cardId], it = id && BY.get(id); return it && it.cat === 'si' && it.card === cardId && owns(id) ? it : null; }
+  /** Pone (o quita, con null) una skin de ilustración. Sólo si la tengo y es de ESA carta. */
+  function setArt(cardId, skinId) {
+    const p = pts(); if (!p || typeof cardId !== 'string' || !/^[\w-]{1,40}$/.test(cardId)) return false;
+    if (skinId == null) { delete p.si[cardId]; saveStore(); return true; }
+    const it = BY.get(skinId); if (!it || it.cat !== 'si' || it.card !== cardId || !owns(skinId)) return false;
+    p.si[cardId] = skinId; saveStore(); return true;
+  }
+  /** Skins de ilustración de una carta (todas, las tenga o no). */
+  const artsFor = cardId => skinPool().filter(i => i.card === cardId);
+  const catName = c => { const k = CATS.find(x => x.id === c); return k ? k.name : c === 'sk' ? 'Efecto de carta' : c === 'si' ? 'Skin de carta' : c; };
   const equipped = cat => { const p = pts(), id = p && p.eq[cat]; return byId(owns(id) ? id : DEFAULT_EQ[cat]); };
 
   /** Lo que ven los demás de mí (sólo los ids de las categorías que se muestran en la partida). */
@@ -269,6 +324,9 @@
     const p = pts(), sk = {}; let n = 0;
     if (p) for (const cid of Object.keys(p.sk)) { const it = skinOf(cid); if (it && n++ < MAX_SK) sk[cid] = it.id; }
     if (n) o.sk = sk;
+    const si = {}; let m = 0;
+    if (p) for (const cid of Object.keys(p.si)) { const it = artOf(cid); if (it && m++ < MAX_SK) si[cid] = it.id; }
+    if (m) o.si = si;
     return o;
   }
   /** Sanea lo que manda otro jugador: sólo ids que existen en su categoría. Devuelve { cat: 'id' }. */
@@ -280,6 +338,11 @@
       for (const cid of Object.keys(o.sk)) { const it = byId(o.sk[cid]); if (it && it.cat === 'sk' && /^[\w-]{1,40}$/.test(cid) && n++ < MAX_SK) sk[cid] = it.id; }
       if (n) out.sk = sk;
     }
+    if (o && o.si && typeof o.si === 'object') {            // skins de ilustración: { idCarta: 'si_…' }, sólo la de ESA carta
+      const si = {}; let n = 0;
+      for (const cid of Object.keys(o.si)) { const it = BY.get(o.si[cid]); if (it && it.cat === 'si' && it.card === cid && n++ < MAX_SK) si[cid] = it.id; }
+      if (n) out.si = si;
+    }
     return out;
   }
   const slug = id => { const it = byId(id); return it ? id.slice(it.cat.length + 1) : ''; };
@@ -289,5 +352,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

@@ -115,7 +115,7 @@
   const cleanChat = t => String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   /** Cosméticos que manda un jugador ({ hc:'hc_oro', … }): sólo textos cortos; la pantalla los vuelve a validar contra el catálogo. */
   const cleanCos = c => { const out = {}; if (c && typeof c === 'object') for (const k of ['hc', 'ha', 'hm', 'cb', 'av', 'fr', 'ti']) if (typeof c[k] === 'string' && c[k].length <= 24) out[k] = c[k];
-    if (c && c.sk && typeof c.sk === 'object') { const sk = {}; let n = 0; for (const k of Object.keys(c.sk)) if (n < 60 && k.length <= 40 && typeof c.sk[k] === 'string' && c.sk[k].length <= 24) { sk[k] = c.sk[k]; n++; } if (n) out.sk = sk; }
+    for (const f of ['sk', 'si']) if (c && c[f] && typeof c[f] === 'object') { const m = {}; let n = 0; for (const k of Object.keys(c[f])) if (n < 60 && k.length <= 40 && typeof c[f][k] === 'string' && c[f][k].length <= 24) { m[k] = c[f][k]; n++; } if (n) out[f] = m; }      // skins de efecto (sk) y de ilustración (si)
     return out; };
   const cleanRk = n => Math.max(0, Math.min(5000, Math.floor(Number(n)) || 0));
   const CHAT_GAP = 900;   // ms mínimos entre mensajes de una misma persona

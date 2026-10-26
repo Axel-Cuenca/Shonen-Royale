@@ -45,7 +45,7 @@ module.exports = function (T) {
   const o1 = S.offers(), o2 = S.offers();
   eq(o1, o2, 'las ofertas del día son siempre las mismas ese día'); eq(o1.length, 3, '3 ofertas'); ok(o1.every(id => S.get(id).rar !== 'l' && !S.get(id).free), 'sin legendarios ni gratis en oferta');
   ok(S.priceOf(o1[0]) < S.get(o1[0]).price, 'la oferta es más barata');
-  for (const it of S.ITEMS.filter(i => !i.free)) {
+  for (const it of S.ITEMS.filter(i => !i.free && i.cat !== 'si')) {      // las skins de ilustración van en el Cofre de skins (test_cofre.js)
     const b = S.BOXES.find(x => x.id === S.boxOf[it.id]);
     ok(b && b.w[it.rar], it.id + ' sale en una sola caja que puede darlo');
     ok(it.price > b.price, it.id + ': comprarlo directo cuesta más que la caja donde sale');
