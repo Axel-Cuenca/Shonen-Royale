@@ -1359,15 +1359,44 @@ html.rm .frov { backdrop-filter: none; transition: none; }
 .lbtns .lside { min-width: 200px; }
 .lbtns .lmain { min-width: 280px; }
 @media (max-width: 860px) {
-  .lrow { gap: 6px; }
-  .lb { height: min(280px, 40vh); }
-  .lb.host { height: min(330px, 47vh); }
-  .lbname { font-size: 11px; padding: 3px 2px; }
-  .lbrole { font-size: 9px; top: calc(76% + 24px); }
-  .lbstat { font-size: 8px; }
-  .lbemb { width: 34px; height: 38px; bottom: 8px; }
-  .lbemb .emb { width: 22px; height: 22px; }
+  .lobby { padding-bottom: 12px; }
+  .ltop { gap: 8px; padding-right: 66px; }
+  .ltitle { display: none; }
+  .linv { white-space: nowrap; padding: 8px 12px; font-size: 14px; }
+  .ltabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .ltab { padding: 9px 4px; font-size: 11px; letter-spacing: .06em; }
+  .lrow { gap: 6px; margin: 14px 0 4px; }
+  .lb { --w: calc((100vw - 28px - (var(--n, 4) - 1) * 6px) / (var(--n, 4) + .25)); height: auto; aspect-ratio: .4; width: min(var(--w), calc(36vh * .4)); }
+  .lb.host { height: auto; aspect-ratio: .4; width: min(calc(var(--w) * 1.25), calc(44vh * .4)); }
+  .lb:not(.host) .lbrole { display: none; }
+  .lbname { font-size: clamp(9px, min(2.9vw, 3.2vh), 15px); padding: 3px 2px; }
+  .lbrole { font-size: clamp(8px, 2.2vw, 11px); top: calc(71% + 22px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; left: 4px; right: 4px; }
+  .lbstat { font-size: clamp(7px, 2vw, 11px); letter-spacing: .04em; }
+  .lbemb { width: 28px; height: 32px; bottom: 5px; }
+  .lbemb .emb { width: 18px; height: 18px; }
   .lbplus { font-size: 34px; }
-  .ltab { padding: 8px 8px; font-size: 10px; }
-  .lbtns .lside, .lbtns .lmain { min-width: 0; flex: 1 1 100%; }
+  .lbx select { font-size: 10px; padding: 2px; }
+  .lbtns { gap: 8px; }
+  .lbtns .lmain { order: -1; flex: 1 1 100%; min-width: 0; }
+  .lbtns .lside { flex: 1 1 40%; min-width: 0; padding: 9px 8px; font-size: 13px; }
+  .lmsg { font-size: 13px; padding: 8px 10px; }
+}
+@media (max-height: 460px) and (max-width: 940px) {
+  .lbtns { margin: 4px 0; } .lbtns .lmain { order: 0; flex: 1 1 auto; } .lbtns .lside { flex: 0 1 auto; }
+  .ltabs { display: flex; } .ltab { padding: 6px 10px; } .lrow { margin: 6px 0 2px; }
+  .lb { aspect-ratio: .5; width: min(var(--w), calc(40vh * .5)); }
+  .lb.host { aspect-ratio: .5; width: min(calc(var(--w) * 1.25), calc(47vh * .5)); }
+  .lbemb { display: none; } .lbrole, .lb:not(.host) .lbrole { display: none; }
+  .lbname { top: 76%; } .lbstat { top: 66%; } .lbimg { height: 76%; }
+  .lmsg { margin: 2px auto; padding: 4px 10px; }
+}
+}
+
+/* mensajes de acciones de la partida: botón 💬 sólo en móvil para ocultarlos o mostrarlos */
+.feedb { display: none; position: relative; }
+.feedb.off { opacity: .6; }
+.feedb.off::after { content: ''; position: absolute; left: 22%; right: 22%; top: 50%; height: 2.5px; background: #ff6b6b; transform: rotate(-45deg); border-radius: 2px; box-shadow: 0 0 0 1px #000a; }
+@media (max-width: 900px) {
+  .feedb { display: grid; place-items: center; }
+  html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !important; }
 }

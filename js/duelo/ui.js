@@ -348,6 +348,11 @@
   const subsGet = () => lsGet(SUB_KEY) !== '0';
   const subsSet = on => lsSet(SUB_KEY, on ? '1' : '0');
   document.documentElement.dataset.fs = fsGet();
+  // mensajes de acciones de la partida (lista de arriba a la izquierda y avisos de ataque): en móvil se pueden ocultar
+  const FEED_KEY = 'duelo.feed';
+  const feedOn = () => lsGet(FEED_KEY) !== '0';
+  const feedSet = on => { lsSet(FEED_KEY, on ? '1' : '0'); document.documentElement.dataset.feed = on ? '1' : '0'; };
+  document.documentElement.dataset.feed = feedOn() ? '1' : '0';
   let capEl = null, capT = 0;
   S.onVoice = card => {
     if (!subsGet() || !card) return;
@@ -636,7 +641,7 @@
         }
         cards.push(lobbySlot({ cls: g.ready ? 'ok' : c.failed ? 'bad' : '', img: lobbyArt(g.name), name: g.name, role: 'Amigo', stat: stt, extra }));
       }
-      slotsEl.replaceChildren(...lobbyOrder(cards));
+      slotsEl.style.setProperty('--n', cards.length); slotsEl.replaceChildren(...lobbyOrder(cards));
       const over = gs.length > fm().n - 1, wait = gs.some(g => !g.ready), failed = gs.some(g => (conn.get(g.idx) || {}).failed && !g.ready);
       lvlBtn.style.visibility = gs.length ? 'hidden' : '';
       lvlBtn.textContent = 'Dificultad: ' + (level === 'easy' ? 'Fácil' : 'Normal');
@@ -723,7 +728,7 @@
       h('p', { class: 'sub', style: 'text-align:center' }, 'Cuando el anfitrión empiece el duelo entrarás solo.')));
     box = info;
     put('msg ok', 'Dentro de la sala. Conectando con el anfitrión…');
-    slotsEl.replaceChildren(lobbySlot({ img: lobbyMine(), name: room.name, role: 'Tú', stat: 'CONECTANDO' }));
+    slotsEl.style.setProperty('--n', 1); slotsEl.replaceChildren(lobbySlot({ img: lobbyMine(), name: room.name, role: 'Tú', stat: 'CONECTANDO' }));
     failTimer = setTimeout(() => put('msg err', LOSTMSG), 20000);
     match = D.Match.guest({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
     match.onStatus(s => {
@@ -734,7 +739,7 @@
         const cards = [lobbySlot({ cls: 'ok', host: true, img: lobbyArt(s.host), name: s.host, role: 'Anfitrión', stat: 'LISTO' })];
         s.players.forEach(p => cards.push(lobbySlot({ cls: p.ready ? 'ok' : '', img: p.name === room.name ? lobbyMine() : lobbyArt(p.name), name: p.name + (p.name === room.name ? ' (tú)' : ''), role: p.name === room.name ? 'Tú' : 'Amigo', stat: p.ready ? 'LISTO' : 'CONECTANDO' })));
         for (let i = s.players.length + 1; i < s.n; i++) cards.push(lobbySlot({ empty: true, name: 'Libre', role: 'Juega la computadora', stat: 'LIBRE' }));
-        slotsEl.replaceChildren(...lobbyOrder(cards));
+        slotsEl.style.setProperty('--n', cards.length); slotsEl.replaceChildren(...lobbyOrder(cards));
         put('msg ok', 'Esperando a que el anfitrión empiece…');
       }
     });
@@ -1973,7 +1978,7 @@
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
         multi() ? null : pcard(v.opp.seat),
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
-        h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
+        h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), (() => { const b = h('button', { class: 'ib feedb', title: 'Mostrar u ocultar los mensajes de acciones', 'aria-label': 'Mensajes de acciones' }, '💬'); const sync = () => { b.classList.toggle('off', !feedOn()); b.setAttribute('aria-pressed', feedOn() ? 'true' : 'false'); }; b.onclick = () => { feedSet(!feedOn()); sync(); }; sync(); return b; })(), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
           h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
