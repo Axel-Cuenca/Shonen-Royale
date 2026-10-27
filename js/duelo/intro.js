@@ -232,7 +232,7 @@ void main(){
     tiles.sort((a, b) => a.key - b.key);
     const N = tiles.length, gap = Math.min(88, 1250 / Math.max(1, N - 1));
     tiles.forEach((t, i) => {
-      t.t0 = 300 + i * gap;                    // ms desde el inicio
+      t.t0 = 650 + i * gap;                    // ms desde el inicio
       t.z = 250 + R() * 70; t.vz = 0;
       t.e = 0.27 + R() * 0.07;                 // restitución
       t.rx = (R() - .5) * 15; t.ry = (R() - .5) * 15; t.vrx = 0; t.vry = 0;
@@ -453,6 +453,7 @@ void main(){
     }
     function skip() {
       if (finishing || ended) return;
+      if (D.Floor && D.Floor.revealNow) D.Floor.revealNow();
       // todas las losas a su sitio ya, sin esperar
       for (const t of tiles) { t.started = true; t.z = 0; t.vz = 0; t.rx = t.ry = 0; t.s = 1; t.rest = true; t.flash = 0; t.gl = 0; t.t0 = Math.min(t.t0, (performance.now() - t00) - 600); }
       startFinish(true);
@@ -470,6 +471,7 @@ void main(){
       if (ended) return; ended = true;
       cancelAnimationFrame(raf); layer.remove(); catcher.remove(); btn.remove();
       if (o._title) o._title.remove();
+      if (D.Floor && D.Floor.revealNow) D.Floor.revealNow();
       if (stage) stage.style.transform = '';
       host.classList.remove('intro', 'introout');
       document.removeEventListener('keydown', onKey, true);

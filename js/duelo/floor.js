@@ -277,6 +277,7 @@ uniform sampler2D uA, uN, uL;
 uniform vec4 uR;
 uniform float uT;
 uniform vec4 uTorch[4];        // x, y, z, intensidad
+uniform float uRev;            // aparición de la cinemática de entrada (≥ 1.25: ya visible)
 out vec4 oC;
 
 vec3 aces(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
@@ -321,6 +322,16 @@ void main(){
   col = pow(col, vec3(1. / 2.2));
   // calidez general y viñeta suave
   col = mix(col, col * vec3(1.05, 1.0, .93), .5);
+  // ---- aparición: el terreno se forma desde el centro en espiral, con ruido y un frente incandescente ----
+  if (uRev < 1.25) {
+    vec2 q = (p - vec2(287., 215.)) * vec2(1., 1.18);
+    float dn = length(q) / 980. + (atan(q.y, q.x) / 6.2832 + .5) * .07;
+    float nz = vn(p * .011) * .55 + vn(p * .035 + 7.) * .3 + vn(p * .11) * .15;
+    float m = uRev * 1.3 - (dn + (nz - .5) * .3), bw = .05;
+    if (m < 0.) { float hh = -m / .05; float ha = hh < 1.4 ? (1. - hh / 1.4) * .22 : 0.; oC = vec4(vec3(1., .62, .22) * ha, ha); return; }
+    if (m < bw) { float k = m / bw; vec3 em = k < .4 ? mix(vec3(1., .95, .7), vec3(1., .7, .25), k / .4) : mix(vec3(1., .7, .25), vec3(1., .38, .08), (k - .4) / .6); oC = vec4(em, 1.); return; }
+    col += vec3(1., .5, .16) * (1. - smoothstep(bw, bw + .09, m)) * .55;
+  }
   vec2 e = min(p - uR.xy, uR.xy + uR.zw - p);
   float a = smoothstep(0., 150., min(e.x, e.y));
   oC = vec4(col * a, a);
@@ -444,6 +455,7 @@ void main(){
       st.draw = function (t) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, TW, TH);
         gl.useProgram(pF.p); gl.uniform1f(pF.u.uT, t);
+        gl.uniform1f(pF.u.uRev, revValue());
         const tt = new Float32Array(16);
         TORCHES.forEach((o, i) => tt.set([o[0], o[1], TORCH_Z, (st.still ? 1 : flicker(i, t)) * st.torchK], i * 4));
         gl.uniform4fv(pF.u.uTorch, tt);
@@ -459,6 +471,17 @@ void main(){
       st.ok = false; st.canvas = null; return false;
     }
   }
+
+  // ---------------- aparición del terreno (cinemática de entrada) ----------------
+  function revValue() {
+    const r = st.rev; if (!r) return 9;
+    if (!r.t0) return 0;
+    const q = (performance.now() - r.t0) / r.dur;
+    if (q >= 1) { st.rev = null; return 9; }
+    const e = Math.max(0, q); return e * e * (3 - 2 * e) * 1.25;
+  }
+  /** El suelo se forma de nuevo durante `ms` milisegundos (0 = visible ya). Sin WebGL2 no hace nada. */
+  function reveal(ms) { if (st.tried && !st.ok) return; st.rev = ms > 0 ? { t0: st.ok ? performance.now() : 0, dur: ms } : null; if (st.ok && st.draw) st.draw((performance.now() - st.t0) / 1000); }
 
   // ---------------- bucle ----------------
   const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
@@ -480,6 +503,7 @@ void main(){
   function attach(host) {
     if (!st.ok || !st.canvas) return false;
     if (st.canvas.parentNode !== host) host.prepend(st.canvas);
+    if (st.rev && !st.rev.t0) st.rev.t0 = performance.now();
     document.documentElement.classList.add('gl');
     st.draw((performance.now() - st.t0) / 1000);
     start();
@@ -487,7 +511,7 @@ void main(){
   }
 
   D.Floor = {
-    _st: st, init, attach, flicker, tried: () => st.tried, TORCHES, TORCH_Z, R,
+    _st: st, init, attach, reveal, revealNow() { reveal(0); }, flicker, tried: () => st.tried, TORCHES, TORCH_Z, R,
     get ok() { return st.ok; },
     setQuality(q) { try { localStorage.setItem('duelo.gfx', q); } catch (e) { } },
     quality: pref,
