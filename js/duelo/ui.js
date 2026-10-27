@@ -134,9 +134,7 @@
       .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
   }
   /** «Invitar» sin sala: se crea el lobby (el formato crece solo según cuántos entren, y se puede cambiar) y, ya creado, se manda la invitación (FriendsUI.roomOpened). */
-  function hostNow() {
-    D.Online.init().then(me => { if (me) hostRoom('duel', { auto: true }); else onlineMenu(); }).catch(() => onlineMenu());
-  }
+  function hostNow() { if (lobbyApi && curScreen === 'lobby') lobbyApi.invite(); else lobby({ invite: true }); }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
   // ---------------- mazos guardados ----------------
@@ -414,8 +412,7 @@
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
     const off = !!bad || few;
     const items = [
-      { t: 'Contra la computadora', d: '1 contra 1, todos contra todos (3 o 4) o 2 contra 2', f: setupAI, off },
-      { t: 'Duelo online con amigos', d: 'De 2 a 4 personas: crea una sala y comparte el código', f: onlineMenu, off: off || C.test },
+      { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
       { t: 'Ranking', d: 'Tu rango, los mejores de la temporada y cómo se sube', f: () => rankScreen() },
@@ -424,7 +421,7 @@
     ];
     const desc = h('div', { class: 'hdesc' });
     let on = 0;
-    const btns = items.map((it, i) => h('button', { class: 'menu-btn', style: '--i:' + i, disabled: !!it.off, onclick: it.f, onpointerenter: () => setOn(i), onfocus: () => setOn(i) }, it.t, (() => { const bd = badges()[{ 'Contra la computadora': 'jugar', 'Tienda': 'tienda', 'Ranking': 'ranking', 'Novedades': 'novedades' }[it.t]]; return bd ? h('i', { class: 'bdg', 'aria-label': bd, title: bd }) : null; })(), h('small', null, it.d)));
+    const btns = items.map((it, i) => h('button', { class: 'menu-btn', style: '--i:' + i, disabled: !!it.off, onclick: it.f, onpointerenter: () => setOn(i), onfocus: () => setOn(i) }, it.t, (() => { const bd = badges()[{ 'Sala de espera': 'jugar', 'Tienda': 'tienda', 'Ranking': 'ranking', 'Novedades': 'novedades' }[it.t]]; return bd ? h('i', { class: 'bdg', 'aria-label': bd, title: bd }) : null; })(), h('small', null, it.d)));
     function setOn(i) {
       on = i; btns.forEach((b, j) => b.classList.toggle('on', j === i));
       const dl = h('div', { class: 'dl', style: 'min-height:24px' }, items[i].d + '.');
@@ -567,70 +564,49 @@
   }
 
   // ---------------- online ----------------
-  function onlineMenu() {
-    S.setTrack('prep');
-    const box = h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'), h('p', { class: 'sub' }, 'Conectando con tu cuenta…'));
-    mount(box);
-    D.Online.init().then(me => {
-      if (!me) {
-        box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'),
-          h('div', { class: 'msg err' }, D.Account.cloud ? 'Para jugar online necesitas una cuenta: entra o créala (es gratis). Como invitado sólo puedes jugar contra la computadora.' : 'Jugar online necesita la versión publicada del juego (no funciona abriendo el archivo ni en copias de otra web).'),
-          D.Account.cloud ? btn('Entrar o crear cuenta', async () => { await D.Account.logout(); D.Online.reset(); loginScreen(); }, 'gold') : null);
-        return;
-      }
-      const inp = h('input', { type: 'text', maxlength: 5, placeholder: 'CÓDIGO', style: 'text-transform:uppercase;width:8em;font-size:20px;text-align:center', autocomplete: 'off' });
-      const err = h('div');
-      const f = fmtSelect(null, k => k === 'duel' ? '' : ' Si falta gente, los asientos libres los juega la computadora.');
-      box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'),
-        h('p', { class: 'sub' }, `Hola, ${me.name}. Mazo: ${activeDeck().name}.`),
-        h('div', { class: 'panel' }, h('h2', null, 'Crear sala'), h('label', null, 'Formato ', f.sel), f.note,
-          h('p', { class: 'sub' }, 'Te da un código de 5 letras para pasarles a tus amigos.'), btn('Crear sala', () => hostRoom(f.sel.value), 'gold')),
-        h('div', { class: 'panel' }, h('h2', null, 'Unirme a una sala'), h('div', { class: 'row' }, inp, btn('Entrar', () => joinRoom(inp.value, err)))), err);
-    }).catch(e => box.replaceChildren(h('button', { class: 'back', onclick: menu }, '← Menú'), h('div', { class: 'msg err' }, 'No se pudo conectar: ' + e.message)));
-  }
-
   const LOSTMSG = 'Vuestras conexiones no logran verse directamente (pasa con algunos Wi‑Fi). Probad con datos móviles en uno de los dos.';
 
   /** Casilla de un jugador en la sala de espera (estilo lobby): avatar, nombre y estado. */
   const lobbySlot = (o) => h('div', { class: 'lcard ' + (o.cls || '') },
     h('div', { class: 'lav' }, o.av || '＋'), h('b', null, o.name || ''), o.sub ? h('small', null, o.sub) : null, o.tag ? h('span', { class: 'ltag' }, o.tag) : null, o.extra || null);
 
-  /** Sala del anfitrión (lobby): tú eliges el formato, invitas a tus amigos (hasta 3) y decides cuándo empezar.
-   *  Los asientos que queden libres los juega la computadora. opts.auto: el formato se ajusta solo según cuántos entran. */
-  async function hostRoom(fmtId, opts) {
-    S.setTrack('prep'); scr('online');
-    let key = FORMATS[fmtId] ? fmtId : 'duel', picked = !(opts && opts.auto);
+  let lobbyApi = null;
+  /** SALA DE ESPERA (única entrada para jugar: contra la computadora o con amigos, sin códigos).
+   *  Sola, «Empezar» juega contra la computadora con el formato elegido. Al invitar amigos se crea la sala online
+   *  (sólo entonces) y el formato se ajusta solo (1 amigo → 1 contra 1, 2 → 3 jugadores, 3 → 4), salvo que lo elijas tú.
+   *  Los asientos que queden libres los juega la computadora. */
+  async function lobby(opts) {
+    opts = opts || {};
+    S.setTrack('prep'); scr('lobby');
+    let key = 'duel', picked = false, room = null, match = null, creating = null, onlineErr = '';
     const fm = () => FORMATS[key];
-    const status = h('div', { class: 'msg' }, 'Creando sala…');
-    const codeEl = h('div', { class: 'lcode' }, '·····');
-    const fmtEl = h('div', { class: 'lfmt' }), noteEl = h('p', { class: 'sub', style: 'text-align:center;margin:4px 0' });
-    const slotsEl = h('div', { class: 'lslots' });
-    const startBtn = btn('Empezar', () => { if (match && canStart()) match.begin(); }, 'gold big');
-    startBtn.disabled = true;
-    let room = null, match = null;
-    const conn = new Map();      // idx de invitado -> { state, timer, failed }
-    const byUid = new Map();     // uid -> idx
-    const queued = [];
+    const status = h('div', { class: 'msg' }), fmtEl = h('div', { class: 'lfmt' }), noteEl = h('p', { class: 'sub', style: 'text-align:center;margin:4px 0' });
+    const slotsEl = h('div', { class: 'lslots' }), lvl = h('select', null, h('option', { value: 'normal' }, 'Normal'), h('option', { value: 'easy' }, 'Fácil'));
+    const lvlRow = h('label', { class: 'lvl' }, 'Dificultad de la computadora ', lvl);
+    const startBtn = btn('Empezar', () => start(), 'gold big');
+    const conn = new Map(), byUid = new Map(), queued = [];
     const guestsNow = () => (match ? match.lobby().filter(x => !x.left) : []);
-    const cancel = () => { conn.forEach(c => clearTimeout(c.timer)); if (room) room.close(); if (match) match.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); menu(); };
-    const canStart = () => { const gs = guestsNow(); return !!match && gs.length >= 1 && gs.length <= fm().n - 1 && gs.every(g => g.ready); };
-    mount(h('div', { class: 'scr lobby' }, h('button', { class: 'back', onclick: cancel }, '← Salir de la sala'), h('h1', null, 'Sala de espera'),
-      h('div', { class: 'lhead' }, h('div', { class: 'lcw' }, h('small', null, 'Código de la sala'), codeEl),
-        btn('👥 Invitar amigos', () => { if (D.FriendsUI) D.FriendsUI.toggle(); }, 'gold')),
-      fmtEl, noteEl, slotsEl, status, h('div', { class: 'row lact' }, startBtn),
-      h('p', { class: 'sub', style: 'text-align:center' }, 'Tú decides cuándo empezar. Los asientos que queden libres los juega la computadora. Tus amigos también pueden entrar con el código desde «Duelo online».')));
+    const canStart = () => { const gs = guestsNow(); return gs.length === 0 || (gs.length <= fm().n - 1 && gs.every(g => g.ready)); };
+    function start() {
+      const gs = guestsNow();
+      if (!gs.length) { startAI({ level: lvl.value, rival: '', fmt: key }); return; }
+      if (canStart()) match.begin();
+    }
+    mount(h('div', { class: 'scr lobby' }, h('button', { class: 'back', onclick: menu }, '← Salir de la sala'), h('h1', null, 'Sala de espera'),
+      h('div', { class: 'lhead' }, btn('👥 Invitar amigos', () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }), 'gold')),
+      fmtEl, noteEl, slotsEl, lvlRow, status, h('div', { class: 'row lact' }, startBtn),
+      h('p', { class: 'sub', style: 'text-align:center' }, 'Juega solo contra la computadora o invita a tus amigos (hasta 3): el formato se ajusta solo según cuántos entren. Tú decides cuándo empezar; los asientos libres los juega la computadora.')));
 
     function render() {
-      if (!match) return;
       const gs = guestsNow();
-      if (!picked) key = gs.length >= 3 ? 'ffa4' : gs.length === 2 ? 'ffa3' : 'duel';      // invitación rápida: el formato crece con la gente
-      if (match.n !== fm().n || match.mode !== fm().mode) match.setFormat(fm().n, fm().mode);
+      if (!picked) key = gs.length >= 3 ? 'ffa4' : gs.length === 2 ? 'ffa3' : gs.length === 1 ? 'duel' : key;
+      if (match && (match.n !== fm().n || match.mode !== fm().mode)) match.setFormat(fm().n, fm().mode);
       fmtEl.replaceChildren(...Object.keys(FORMATS).map(k => h('button', { class: 'lf' + (k === key ? ' on' : ''), onclick: () => { picked = true; key = k; render(); } }, FORMATS[k].t)));
       noteEl.textContent = fm().d;
       const cards = [lobbySlot({ cls: 'me', av: '🧑', name: 'Tú', sub: activeDeck().name, tag: 'Anfitrión' })];
       for (let i = 0; i < fm().n - 1; i++) {
         const g = gs[i];
-        if (!g) { cards.push(h('button', { class: 'lcard empty', onclick: () => { if (D.FriendsUI) D.FriendsUI.toggle(); } }, h('div', { class: 'lav' }, '＋'), h('b', null, 'Libre'), h('small', null, 'Invita a un amigo o juega la computadora'))); continue; }
+        if (!g) { cards.push(h('button', { class: 'lcard empty', onclick: () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }) }, h('div', { class: 'lav' }, '＋'), h('b', null, 'Computadora'), h('small', null, 'Toca para invitar a un amigo'))); continue; }
         const c = conn.get(g.idx) || {};
         const st = !g.ready ? (c.failed ? 'Sin conexión directa' : c.state === 'direct' ? 'Recibiendo mazo…' : 'Conectando…') : 'Listo';
         let extra = null;
@@ -642,11 +618,14 @@
       }
       slotsEl.replaceChildren(...cards);
       const over = gs.length > fm().n - 1, wait = gs.some(g => !g.ready), failed = gs.some(g => (conn.get(g.idx) || {}).failed && !g.ready);
-      startBtn.disabled = !canStart();
-      startBtn.textContent = gs.length + 1 >= fm().n ? 'Empezar el duelo' : 'Empezar (la computadora llena los libres)';
+      lvlRow.style.display = gs.length ? 'none' : '';
+      startBtn.disabled = !canStart() || over;
+      startBtn.textContent = !gs.length ? 'Jugar contra la computadora' : gs.length + 1 >= fm().n ? 'Empezar el duelo' : 'Empezar (la computadora llena los libres)';
       if (over) { status.className = 'msg err'; status.textContent = `Hay ${gs.length + 1} jugadores y este formato es de ${fm().n}: elige uno más grande.`; }
       else if (failed) { status.className = 'msg err'; status.textContent = LOSTMSG; }
-      else if (!gs.length) { status.className = 'msg'; status.textContent = 'Esperando a tus amigos… Pulsa «Invitar amigos» o pásales el código.'; }
+      else if (onlineErr && !gs.length) { status.className = 'msg err'; status.textContent = onlineErr; }
+      else if (creating && !match) { status.className = 'msg'; status.textContent = 'Preparando la sala para tus amigos…'; }
+      else if (!gs.length) { status.className = 'msg'; status.textContent = match ? 'Esperando a tus amigos… o pulsa para jugar ya contra la computadora.' : 'Elige el formato y pulsa para jugar contra la computadora, o invita a tus amigos.'; }
       else if (wait) { status.className = 'msg'; status.textContent = 'Conectando con los que acaban de entrar…'; }
       else { status.className = 'msg ok'; status.textContent = `${gs.length + 1} de ${fm().n} en la sala. Pulsa «Empezar» cuando quieras.`; }
     }
@@ -659,32 +638,48 @@
       conn.set(idx, c);
       render();
     }
-    try {
-      room = await D.Online.createRoom({
-        seats: 4,       // la sala es siempre de hasta 4: el formato se elige después, sin cambiar de código
-        onJoin,
-        onLeave: uid => { const idx = byUid.get(uid); if (idx != null) { const c = conn.get(idx); if (c) clearTimeout(c.timer); } render(); },
-        onState: (uid, st) => {
-          const idx = byUid.get(uid), c = conn.get(idx);
-          if (!c) return;
-          c.state = st;
-          if (st === 'direct') { clearTimeout(c.timer); c.failed = false; }
-          else if (st === 'failed') c.failed = true;
-          render();
-        }
-      });
-    } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
-    if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
-    codeEl.textContent = room.code;
-    match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm().n, mode: fm().mode, autoStart: false });
-    match.onStatus(s => {
-      if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
-      else if (s.k === 'started') room.lock();
-      else render();
-    });
-    game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); room.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
-    queued.splice(0).forEach(q => onJoin(...q));
+    /** Crea la sala online (una sola vez) cuando haces falta para invitar. */
+    function ensureRoom() {
+      if (match) return Promise.resolve(true);
+      if (creating) return creating;
+      creating = (async () => {
+        try {
+          const me = await D.Online.init();
+          if (!me) throw new Error(D.Account.cloud ? 'Para invitar amigos necesitas una cuenta (entra o créala, es gratis). Como invitado sólo puedes jugar contra la computadora.' : 'Invitar amigos necesita la versión publicada del juego.');
+          room = await D.Online.createRoom({
+            seats: 4,
+            onJoin,
+            onLeave: uid => { const idx = byUid.get(uid); if (idx != null) { const c = conn.get(idx); if (c) clearTimeout(c.timer); } render(); },
+            onState: (uid, st) => {
+              const idx = byUid.get(uid), c = conn.get(idx);
+              if (!c) return;
+              c.state = st;
+              if (st === 'direct') { clearTimeout(c.timer); c.failed = false; } else if (st === 'failed') c.failed = true;
+              render();
+            }
+          });
+        } catch (e) { onlineErr = e.message; creating = null; render(); return false; }
+        if (curScreen !== 'lobby') { room.close(); creating = null; return false; }        // saliste mientras se creaba
+        onlineErr = '';
+        if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
+        match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm().n, mode: fm().mode, autoStart: false });
+        match.onStatus(s => {
+          if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
+          else if (s.k === 'started') room.lock();
+          else render();
+        });
+        const myRoom = room;
+        game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); myRoom.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
+        queued.splice(0).forEach(q => onJoin(...q));
+        render();
+        return true;
+      })();
+      render();
+      return creating;
+    }
+    const api = lobbyApi = { invite: ensureRoom };
     render();
+    if (opts.invite) ensureRoom();
   }
 
   async function joinRoom(code, errBox) {
