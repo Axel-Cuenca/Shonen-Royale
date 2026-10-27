@@ -230,7 +230,7 @@ void main(){
     const cx = SW / 2, cy = SH / 2, pitch = Math.max(20, Math.min(...tiles.map(t => Math.min(t.w, t.h)))) * 1.25;
     tiles.forEach(t => { const dx = t.x + t.w / 2 - cx, dy = t.y + t.h / 2 - cy; t.cx = dx + cx; t.cy = dy + cy; t.key = Math.hypot(dx, dy) / pitch + (Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI) * 0.95; });
     tiles.sort((a, b) => a.key - b.key);
-    const N = tiles.length, gap = Math.min(88, 1250 / Math.max(1, N - 1));
+    const N = tiles.length, gap = Math.min(150, 2100 / Math.max(1, N - 1));
     tiles.forEach((t, i) => {
       t.t0 = 650 + i * gap;                    // ms desde el inicio
       t.z = 250 + R() * 70; t.vz = 0;
@@ -284,7 +284,7 @@ void main(){
 
     function paint(t, now) {
       if (GL && !t.img) {
-        const age = now - t.t0, p = clamp(age / 520, 0, 1), fade = finishing ? clamp(fadeT, 0, 1) : 0;
+        const age = now - t.t0, p = clamp(age / 950, 0, 1), fade = finishing ? clamp(fadeT, 0, 1) : 0;
         try { glPaint(t, { thr: ease(p) * 1.11, p, body: 1 - ease(fade), flash: t.flash, rx: t.rx * Math.PI / 180, ry: t.ry * Math.PI / 180, n: nLights, R: lightR }); return; }
         catch (e) { GL = null; t.img = t.ctx.createImageData(t.cw, t.ch); }
       }
@@ -292,7 +292,7 @@ void main(){
     }
     function paint2d(t, now) {
       const { cw, ch, img } = t, d = img.data, age = now - t.t0;
-      const p = clamp(age / 520, 0, 1), pe = ease(p), bw = 0.11;
+      const p = clamp(age / 950, 0, 1), pe = ease(p), bw = 0.11;
       const thr = pe * (1 + bw);
       const fade = finishing ? clamp(fadeT, 0, 1) : 0;               // 0 → 1 mientras se entrega a la casilla real
       const body = 1 - ease(fade);
@@ -351,12 +351,12 @@ void main(){
         if (!t.rest) {
           const n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n;
           for (let i = 0; i < n; i++) {
-            t.vz -= 2900 * h; t.z += t.vz * h;
+            t.vz -= 1500 * h; t.z += t.vz * h;
             if (t.z <= 0) {
               const vi = -t.vz;
               t.z = 0;
               if (vi > 60) {
-                const k = clamp(vi / 1150, 0, 1);
+                const k = clamp(vi / 830, 0, 1);
                 t.vz = vi * t.e;
                 t.vs += 1.6 * k; t.vrx += (R() - .5) * 260 * k; t.vry += (R() - .5) * 260 * k;
                 t.flash = Math.max(t.flash, .9 * k + .1);
@@ -389,7 +389,7 @@ void main(){
         if (!(t.rest && settled && age > 560 && t.flash <= 0 && t.gl <= 0)) landedAll = false;
         active = true;
         // luz de la disolución (pico a mitad) + destello del impacto
-        const p = clamp(age / 520, 0, 1), dissolveGlow = p < 1 ? Math.sin(Math.PI * p) : 0;
+        const p = clamp(age / 950, 0, 1), dissolveGlow = p < 1 ? Math.sin(Math.PI * p) : 0;
         t.glI = Math.max(dissolveGlow * .9, t.gl * .85);
         maxGlowT = Math.max(maxGlowT, t.glI);
       }
@@ -434,9 +434,9 @@ void main(){
       }
 
       // --- final: todas las losas encajadas → entrega a las casillas reales ---
-      if (!finishing && (landedAll || (el > 4200))) startFinish(false);
+      if (!finishing && (landedAll || (el > 7800))) startFinish(false);
       if (finishing) {
-        fadeT += dt / (o._quick ? .25 : .55);
+        fadeT += dt / (o._quick ? .25 : .85);
         if (fadeT >= 1 && !parts.length && !rings.length) end();
       }
     }

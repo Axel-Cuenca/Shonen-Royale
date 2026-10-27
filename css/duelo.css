@@ -1411,3 +1411,8 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 @keyframes skipIn { to { opacity: .9; } }
 .introtitle { position: fixed; left: 50%; top: 24%; z-index: 72; transform: translate(-50%, -50%); pointer-events: none; font: 400 clamp(36px, 7vw, 84px) 'GFS Didot', serif; letter-spacing: .12em; color: #ffe9a6; text-shadow: 0 0 .3em #ffb020, 0 4px 18px #000; animation: introTitle 1.4s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes introTitle { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); letter-spacing: .5em; } 22% { opacity: 1; transform: translate(-50%, -50%) scale(1); letter-spacing: .12em; } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -58%) scale(1.04); } }
+
+/* botones de arriba a la derecha de la partida: no quedan tapados por el pantalla completa ni por el burger de amigos */
+.hud-top { padding-right: 114px; }
+.fr-on .hud-top { padding-right: 170px; }
+@media (max-width: 860px) { .hud-top { padding-right: 14px; } .fr-on .hud-top { padding-right: 170px; } }

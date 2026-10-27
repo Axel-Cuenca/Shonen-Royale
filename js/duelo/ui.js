@@ -1043,7 +1043,7 @@
       let ctl = null;
       try { ctl = D.Intro.run({ slab, host: gameEl, stage: gameEl.querySelector('.stage'), seed: (match.seed | 0) || 7 }); } catch (e) { console.warn('[Intro]', e); gameEl.classList.remove('intro', 'introout'); }
       if (ctl) {
-        if (D.Floor && D.Floor.reveal) D.Floor.reveal(1500);
+        if (D.Floor && D.Floor.reveal) D.Floor.reveal(2800);
         cur.introStop = ctl.cancel; introRun = true;
         ctl.done.then(() => { introRun = false; if (current === cur && introQ) { const q = introQ; introQ = null; handleView(q); } });
       }
