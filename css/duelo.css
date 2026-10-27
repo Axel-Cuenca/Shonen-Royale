@@ -1400,3 +1400,22 @@ html.rm .frov { backdrop-filter: none; transition: none; }
   .feedb { display: grid; place-items: center; }
   html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !important; }
 }
+
+/* Cinemática de entrada (js/duelo/intro.js) */
+.intro .board3d .zone { opacity: 0 !important; }
+.introout .board3d .zone { transition: opacity .5s ease-out; }
+.intro .hud { opacity: 0; }
+.introout .hud { animation: introHud .7s .1s both ease-out; }
+@keyframes introHud { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.ilayer { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.itile { position: absolute; transform-origin: 50% 50%; will-change: transform; transform-style: preserve-3d; }
+.iside { position: absolute; backface-visibility: hidden; }
+.itile canvas { width: 100%; height: 100%; display: block; }
+.ishadow { position: absolute; border-radius: 40%; background: radial-gradient(ellipse at center, #000d 0, #0008 42%, #0000 72%); }
+.ifx { position: absolute; left: 0; top: 0; pointer-events: none; }
+.introcatch { position: fixed; inset: 0; z-index: 70; background: transparent; cursor: pointer; }
+.introskip { position: fixed; z-index: 71; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); padding: 9px 16px; border-radius: 999px; border: 1.5px solid #ffffff44; background: #0009; color: #fff; font: 700 14px var(--ui); letter-spacing: .06em; cursor: pointer; opacity: 0; animation: skipIn .5s 1s forwards; }
+.introskip:hover { background: #000c; border-color: #ffd84a; }
+@keyframes skipIn { to { opacity: .9; } }
+.introtitle { position: fixed; left: 50%; top: 24%; z-index: 72; transform: translate(-50%, -50%); pointer-events: none; font: 400 clamp(36px, 7vw, 84px) 'GFS Didot', serif; letter-spacing: .12em; color: #ffe9a6; text-shadow: 0 0 .3em #ffb020, 0 4px 18px #000; animation: introTitle 1.4s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes introTitle { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); letter-spacing: .5em; } 22% { opacity: 1; transform: translate(-50%, -50%) scale(1); letter-spacing: .12em; } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -58%) scale(1.04); } }

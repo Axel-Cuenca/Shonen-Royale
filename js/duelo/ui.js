@@ -380,12 +380,13 @@
     modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Ajustes'), ...rows,
       h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
-      h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
+      h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } try { current.introStop && current.introStop(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
@@ -1033,6 +1034,18 @@
       el.textContent = left > 0 ? '⏱ ' + left + ' s' : '⏱ ¡Tiempo!';
       el.classList.toggle('low', left <= 10 && left > 0); el.classList.toggle('out', left === 0);
       if (left === 0 && !tt.beeped) { tt.beeped = true; if (v && v.current === v.seat) S.play('error'); }
+    }
+    // cinemática de entrada: las casillas se materializan en espiral (js/duelo/intro.js); sólo al empezar la partida
+    let introTried = false;
+    function startIntro() {
+      if (!D.Intro || !D.Intro.enabled() || !v || v.winner !== null || (v.round || 1) > 1) return;
+      const slab = gameEl && gameEl.querySelector('.slab'); if (!slab) return;
+      let ctl = null;
+      try { ctl = D.Intro.run({ slab, host: gameEl, stage: gameEl.querySelector('.stage'), seed: (match.seed | 0) || 7 }); } catch (e) { console.warn('[Intro]', e); gameEl.classList.remove('intro', 'introout'); }
+      if (ctl) {
+        cur.introStop = ctl.cancel; introRun = true;
+        ctl.done.then(() => { introRun = false; if (current === cur && introQ) { const q = introQ; introQ = null; handleView(q); } });
+      }
     }
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
     const zoneMem = new Map(), enterMem = new Map();
@@ -2013,18 +2026,22 @@
       // en móvil la barra de arriba ocupa varias filas: el registro de acciones va justo debajo (no tapa tarjetas ni turno)
       lcol.style.top = window.innerWidth <= 900 ? Math.round(hudTop.getBoundingClientRect().bottom + 4) + 'px' : '';
       fitBoard();
+      if (!introTried) { introTried = true; startIntro(); }
       pendingUI();
       if (fresh) { runFx(); firstView = false; }
       if (v.winner !== null) showEnd();
     }
 
-    match.onView(nv => {
+    function handleView(nv) {
       prevLps = v ? v.players.map(q => q.lp) : null;
       v = nv; newView = true;
       if (sel && !myTurn()) sel = null;
       prepare();
       render();
-    });
+    }
+    // mientras suena la cinemática de entrada las jugadas se guardan (sólo la última vista) y se muestran al terminar
+    let introQ = null, introRun = false;
+    match.onView(nv => { if (introRun) { introQ = nv; return; } handleView(nv); });
     match.onStatus(s => {
       if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
       if (s.k === 'rejected' && !v && !opts.wait) { alert('No se pudo empezar: ' + s.why); menu(); }
