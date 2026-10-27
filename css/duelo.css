@@ -626,7 +626,7 @@ html.rm .fe.new { animation: none; }
   linear-gradient(115deg, #0000 0 18%, color-mix(in srgb, var(--tc) 70%, #000) 18% 62%, #0000 62%);
   transform: skewX(calc(var(--d) * 8deg)); animation: cutcBand var(--ms) ease-out forwards; }
 .cutc .cfig { position: absolute; left: 50%; bottom: 17%; width: min(86vw, 52vh); height: min(68vh, 100vw); transform: translateX(-50%); display: grid; place-items: center; pointer-events: none; border: .25em solid #fff; border-radius: .5em; overflow: hidden; box-shadow: 0 0 1.2em var(--tc), 0 .6em 1.4em #000c; background: radial-gradient(circle at 50% 40%, #fff 0, color-mix(in srgb, var(--tc) 45%, #fff) 70%, var(--tc) 100%); font-size: 12px; isolation: isolate; animation: cutcIn var(--ms) cubic-bezier(.2,.9,.3,1) forwards; }
-.cutc .cfig > * { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; font-size: min(60vh, 90vw); }
+.cutc .cfig > * { width: 100%; height: 100%; object-fit: contain; font-size: min(60vh, 90vw); }
 .cutc .ctx { position: absolute; left: 0; right: 0; bottom: 3%; display: flex; flex-direction: column; align-items: center; gap: .1em; text-align: center; padding: 0 4%; animation: cutcTx var(--ms) ease-out forwards; }
 .cutc .ctx b { font-family: 'Cinzel', serif; font-size: clamp(18px, 4.6vh, 34px); color: #fff; text-shadow: 0 .1em .2em #000, 0 0 .5em var(--tc); }
 .cutc .ctx span { font-size: clamp(22px, 6.2vh, 52px); font-weight: 900; color: #ffe27a; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; letter-spacing: .03em; transform: rotate(calc(var(--d) * 3deg)); background: #0008; padding: .05em .5em; border-radius: .3em; }
@@ -1319,22 +1319,55 @@ html.rm .frov { backdrop-filter: none; transition: none; }
 .fr-on .fsbtn { right: 118px; top: 10px; }
 @media (max-width: 860px) { .fr-on .fsbtn { right: 118px; top: 10px; } }
 
-/* Sala de espera (lobby) */
-.lobby { max-width: 900px; margin: 0 auto; }
-.lhead { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 10px; }
-.lcw { text-align: center; }
-.lcw small { display: block; color: #9fb0e8; font-size: 12px; }
-.lcode { font: 800 34px/1.1 var(--ui); letter-spacing: .25em; color: #ffd84a; }
-.lfmt { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
-.lfb { border: 2px solid #3a4a86; background: #0e1840; color: #cfd8ff; border-radius: 8px; padding: 7px 14px; font: 700 14px var(--ui); cursor: pointer; }
-.lfb.on { border-color: #ffd84a; background: #26337a; color: #fff; }
-.lslots { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
-.lcard { position: relative; width: 168px; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 10px; border: 2px solid #3a4a86; border-radius: 10px; background: linear-gradient(#142058, #0a1230); color: #fff; text-align: center; font-family: var(--ui); }
-.lcard small { color: #9fb0e8; font-size: 12px; }
-.lcard.me { border-color: #ffd84a; }
-.lcard.ok { border-color: #3fd08a; }
-.lcard.bad { border-color: #ff5a5a; }
-.lcard.empty { border-style: dashed; opacity: .75; cursor: pointer; }
-.lav { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 800; background: #26337a; border: 2px solid #5a6cc0; }
-.ltag { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 800; background: #ffd84a; color: #241a00; border-radius: 999px; padding: 2px 8px; }
-.lact { justify-content: center; margin-top: 8px; }
+/* Sala de espera (lobby): tarjetas verticales con punta, como la party de Valorant */
+.lobby { max-width: 1100px; margin: 0 auto; }
+.ltop { display: flex; align-items: center; gap: 16px; }
+.ltitle { font: 800 13px var(--ui); letter-spacing: .3em; color: #ffd84a; opacity: .85; }
+.linv { margin-left: auto; }
+.ltabs { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin: 6px 0 0; border-bottom: 1px solid #ffffff22; }
+.ltab { background: none; border: 0; border-bottom: 3px solid transparent; color: #aeb8de; padding: 10px 20px; font: 700 13px var(--ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.ltab:hover { color: #fff; }
+.ltab.on { color: #fff; border-bottom-color: #ffd84a; background: linear-gradient(#0000, #ffd84a1f); }
+.lrow { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 12px 0 2px; filter: drop-shadow(0 14px 22px #000b); }
+.lb { --clip: polygon(0 0, 100% 0, 100% 79%, 50% 100%, 0 79%); position: relative; flex: 0 0 auto; height: min(370px, 46vh); aspect-ratio: .48; clip-path: var(--clip); background: linear-gradient(#8e9cc8, #46527f 70%, #2a335a); }
+.lb.host { height: min(440px, 55vh); background: linear-gradient(#ffe38a, #d9a62a 55%, #7a5a14); }
+.lbin { position: absolute; inset: 3px; clip-path: var(--clip); background: linear-gradient(#2a3f9e, #5a2a78 60%, #0a1030 72%); overflow: hidden; }
+.lb.host .lbin { background: linear-gradient(#c8902a, #7a3a1a 62%, #0a1030 72%); }
+.lbin::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: #e8eeff; z-index: 3; }
+.lb.ok .lbin::before { background: #3fd08a; }
+.lb.bad .lbin::before { background: #ff5a5a; }
+.lb.host .lbin::before { background: #ffd84a; }
+.lbimg { position: absolute; left: 0; top: 0; width: 100%; height: 71%; object-fit: cover; object-position: top center; }
+.lbimg + .lbstat, .lbstat { position: absolute; left: 0; right: 0; top: 61%; text-align: center; font: 800 11px var(--ui); letter-spacing: .12em; color: #fff; text-shadow: 0 1px 4px #000, 0 0 8px #000; z-index: 2; }
+.lbin::after { content: ''; position: absolute; left: 0; right: 0; top: 34%; height: 37%; background: linear-gradient(#0000, #0a1030cc); pointer-events: none; }
+.lbname { position: absolute; left: 0; right: 0; top: 71%; padding: 4px 6px; text-align: center; font: 700 15px var(--ui); background: #c9d2ee; color: #121a3c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; }
+.lb.host .lbname { background: #ffd84a; color: #241a00; }
+.lbrole { position: absolute; left: 0; right: 0; top: calc(71% + 29px); text-align: center; font: 600 11px var(--ui); color: #b7c3ee; z-index: 2; }
+.lbx { position: absolute; left: 10px; right: 10px; top: calc(71% + 46px); z-index: 4; }
+.lbx select { width: 100%; font-size: 12px; }
+.lbemb { position: absolute; left: 50%; bottom: 6px; width: 36px; height: 40px; transform: translateX(-50%); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: #ffd84a55; display: grid; place-items: center; z-index: 2; }
+.lbemb::before { content: ''; position: absolute; inset: 2px; clip-path: inherit; background: #0b1232; }
+.lbemb .emb { position: relative; width: 23px; height: 23px; }
+.lb.empty .lbin { background: linear-gradient(#10183b, #080d24); }
+.lb.empty { opacity: .8; cursor: pointer; background: linear-gradient(#5c6ba0, #2a335a); }
+.lb.empty:hover { opacity: 1; }
+.lbplus { position: absolute; left: 0; right: 0; top: 24%; text-align: center; font-size: 56px; color: #ffffff55; }
+.lb.empty .lbname { background: #55608f; color: #e8eeff; }
+.lnote { text-align: center; color: #aeb8de; font-size: 13px; margin: 2px 0 4px; }
+.lmsg { max-width: 640px; margin: 6px auto; text-align: center; }
+.lbtns { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 8px 0 14px; flex-wrap: wrap; }
+.lbtns .lside { min-width: 200px; }
+.lbtns .lmain { min-width: 280px; }
+@media (max-width: 860px) {
+  .lrow { gap: 6px; }
+  .lb { height: min(280px, 40vh); }
+  .lb.host { height: min(330px, 47vh); }
+  .lbname { font-size: 11px; padding: 3px 2px; }
+  .lbrole { font-size: 9px; top: calc(76% + 24px); }
+  .lbstat { font-size: 8px; }
+  .lbemb { width: 34px; height: 38px; bottom: 8px; }
+  .lbemb .emb { width: 22px; height: 22px; }
+  .lbplus { font-size: 34px; }
+  .ltab { padding: 8px 8px; font-size: 10px; }
+  .lbtns .lside, .lbtns .lmain { min-width: 0; flex: 1 1 100%; }
+}
