@@ -771,7 +771,7 @@
 
     /** Skins de ilustración de ESTE personaje (Cofre de skins) y efectos de las cajas que tengo, para ponérselos. */
     function skinPicker(card, again) {
-      const SH = D.Shop, mine = SH.mySkins();
+      const SH = D.Shop, mine = SH.skinsFor(card.id);      // los efectos son de un personaje concreto
       if (card.kind !== 'monster' || !card.img) return null;
       const redo = () => { S.play('select'); again(); renderPool(); renderDeck(); };
       const box = h('div', null);
@@ -784,7 +784,7 @@
         box.append(row);
       }
       const cur = SH.skinOf(card.id), row = h('div', { class: 'skpick' }, h('b', null, 'Efecto'));
-      if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Aún no tienes efectos. Salen en las cajas (Tienda → Cajas) y valen para cualquier personaje.')); box.append(row); return box; }
+      if (!mine.length) { row.append(h('small', { class: 'sub' }, 'Este personaje aún no tiene efectos. Salen en las cajas (Tienda → Cajas) y cada uno es para un personaje concreto.')); box.append(row); return box; }
       const opt = (label, it) => h('button', { class: (it ? 'r-' + it.rar : '') + ((it ? cur && cur.id === it.id : !cur) ? ' on' : ''), onclick: () => { SH.setSkin(card.id, it ? it.id : null); redo(); } }, label);
       row.append(opt('Normal', null), ...mine.map(it => opt(it.name, it)));
       box.append(row);
@@ -2164,10 +2164,10 @@
   }
   // ---------------- cajas (estilo apertura de contenedores de CS2) ----------------
   const skSample = () => C.all().find(c => c.kind === 'monster' && c.img);
-  const itemPrev = it => it.cat === 'si' ? h('span', { class: 'siprev' }, h('img', { class: 'cimg', src: it.img, alt: it.name, draggable: 'false' })) : it.cat === 'sk' ? h('span', { class: 'skprev', 'data-sk': D.Shop.slug(it.id) }, skSample() ? h('img', { class: 'cimg', src: skSample().img, alt: '', draggable: 'false' }) : '🃏') : it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
+  const itemPrev = (it, cid) => it.cat === 'si' ? h('span', { class: 'siprev' }, h('img', { class: 'cimg', src: it.img, alt: it.name, draggable: 'false' })) : it.cat === 'sk' ? h('span', { class: 'skprev', 'data-sk': D.Shop.slug(it.id) }, (cid && C.get(cid) && C.get(cid).img ? C.get(cid) : skSample()) ? h('img', { class: 'cimg', src: (cid && C.get(cid) && C.get(cid).img ? C.get(cid) : skSample()).img, alt: '', draggable: 'false' }) : '🃏') : it.emoji ? h('span', { class: 'big' }, it.emoji) : it.text ? h('span', { class: 'ttlprev' }, it.text) : it.sw ? h('span', { class: 'sw', style: 'background:' + it.sw }) : h('span', { class: 'sw none' }, '✦');
   const RAR_ORDER = ['c', 'r', 'e', 'l'];
   const bxTile = (it, own) => h('div', { class: 'bxt r-' + it.rar + (own ? ' got' : '') }, h('div', { class: 'bxp' }, itemPrev(it)), h('b', null, it.name),
-    h('small', null, (it.cat === 'si' ? cardName(it.card) + ' · ' + fmtPct(D.Shop.skinChance()) + ' %' : D.Shop.catName(it.cat)) + (own ? ' ✓' : '')));
+    h('small', null, (it.cat === 'si' ? cardName(it.card) + ' · ' + fmtPct(D.Shop.skinChance()) + ' %' : it.cat === 'sk' ? 'Efecto · personaje al azar' : D.Shop.catName(it.cat)) + (own ? ' ✓' : '')));
   const pctOf = b => b.kind === 'skins' ? 'Cada skin: ' + fmtPct(D.Shop.skinChance()) + ' % (todas igual, sin rarezas)' : Object.keys(b.w).map(r => `${D.Shop.RARITY[r]} ${b.w[r]}%`).join(' · ');
   const cardName = id => (C.get(id) || {}).name || id;
   /** Porcentaje legible: 20 → «20», 33,333… → «33,33». */
@@ -2249,12 +2249,13 @@
     const ov = h('div', { class: 'boxov r-' + rar, style: skins ? `--bc:${b.color}` : null },
       h('div', { class: 'bx-rays' }),
       h('div', { class: 'bx-spin' }, h('h2', null, 'Abrir contenedor'), h('div', { class: 'bxsub' }, 'Abrir ', h('b', null, b.name)), reel, skip),
-      h('div', { class: 'bx-prize' }, itemPrev(it), h('div', { class: 'bx-rar' }, it.cat === 'si' ? 'SKIN · ' + cardName(it.card).toUpperCase() : SH.RARITY[rar].toUpperCase()), h('h2', null, it.name),
-        h('small', null, it.cat === 'si' ? 'Skin de ' + cardName(it.card) + ' · ' + fmtPct(SH.skinChance()) + ' % de probabilidad' : SH.catName(it.cat)),
+      h('div', { class: 'bx-prize' }, itemPrev(it, r.card), h('div', { class: 'bx-rar' }, it.cat === 'si' ? 'SKIN · ' + cardName(it.card).toUpperCase() : it.cat === 'sk' ? SH.RARITY[rar].toUpperCase() + ' · ' + cardName(r.card).toUpperCase() : SH.RARITY[rar].toUpperCase()), h('h2', null, it.name),
+        h('small', null, it.cat === 'si' ? 'Skin de ' + cardName(it.card) + ' · ' + fmtPct(SH.skinChance()) + ' % de probabilidad' : it.cat === 'sk' ? 'Efecto para ' + cardName(r.card) + ' (sólo él puede usarlo)' : SH.catName(it.cat)),
         h('div', { class: 'bx-note' }, r.dup ? `Repetido: te devolvemos ✦ ${r.refund} puntos.` : '¡Nuevo! Ya está en tu colección.'),
-        it.cat === 'sk' ? h('small', { class: 'sub' }, 'Pónsela a un personaje en el constructor de mazos (ℹ de la carta).') : null,
+        it.cat === 'sk' ? h('small', { class: 'sub' }, 'Pónselo en el constructor de mazos (ℹ de la carta).') : null,
         h('div', { class: 'row' },
-          it.cat === 'si' && !(SH.artOf(it.card) && SH.artOf(it.card).id === it.id) ? btn('Equipar en ' + cardName(it.card), () => { SH.setArt(it.card, it.id); back(); }, 'gold')
+          it.cat === 'sk' && !r.dup && !(SH.skinOf(r.card) && SH.skinOf(r.card).id === it.id) ? btn('Equipar en ' + cardName(r.card), () => { SH.setSkin(r.card, it.id); back(); }, 'gold')
+            : it.cat === 'si' && !(SH.artOf(it.card) && SH.artOf(it.card).id === it.id) ? btn('Equipar en ' + cardName(it.card), () => { SH.setArt(it.card, it.id); back(); }, 'gold')
             : !r.dup && it.cat !== 'sk' && it.cat !== 'si' ? btn('Equipar', () => { SH.equip(it.id); back(); }, 'gold') : null,
           btn('Seguir', back, 'ghost'))));
     document.body.append(ov);

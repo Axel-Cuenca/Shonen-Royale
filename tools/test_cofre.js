@@ -111,7 +111,7 @@ module.exports = function (T) {
   if (m) { ok(Object.keys(m.cos[0].si).length === 60, 'el anfitrión limita a 60 skins de ilustración por jugador'); ok(m.cos[0].sk && m.cos[0].sk.c_x === 'sk_neon', 'y no estropea los efectos de caja'); m.close && m.close(); }
 
   // ---- no se rompen los efectos de caja de antes ----
-  store.pts = { owned: ['sk_neon'] };
+  store.pts = { skOwn: { c_popeye: ['sk_neon'] } };
   ok(SH.setSkin('c_popeye', 'sk_neon') && SH.skinOf('c_popeye').id === 'sk_neon', 'los efectos de caja (sk) siguen funcionando');
   ok(SH.mySkins().every(i => i.cat === 'sk'), 'mySkins() sólo lista efectos');
 };

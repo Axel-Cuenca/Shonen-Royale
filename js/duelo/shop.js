@@ -2,7 +2,7 @@
  * Todo lo que se guarda va dentro del mismo `store` que los mazos (campo `pts`), así viaja
  * a la nube con ellos (saves/{uid}.save.duelo) sin tocar reglas ni servidores.
  *
- *   store.pts = { coins, day, streak, aiDay, aiGot, owned: [ids], eq: { cat: id }, sk: { carta: efecto }, si: { carta: skin } }
+ *   store.pts = { coins, day, streak, aiDay, aiGot, owned: [ids], eq: { cat: id }, sk: { carta: efecto }, skOwn: { carta: [efectos que tiene ESA carta] }, si: { carta: skin } }
  *
  * Los cosméticos NO dan ventaja en las partidas. Cada jugador ve los suyos en su pantalla.
  * Los premios se calculan en el navegador (sin servidor): entre amigos es suficiente.
@@ -170,13 +170,37 @@
     p.aiDay = typeof p.aiDay === 'string' ? p.aiDay : '';
     p.aiGot = Math.max(0, Math.floor(Number(p.aiGot) || 0));
     p.owned = Array.isArray(p.owned) ? p.owned.filter(id => !!byId(id)) : [];
+    p.skOwn = p.skOwn && typeof p.skOwn === 'object' && !Array.isArray(p.skOwn) ? p.skOwn : {};
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
     p.sk = p.sk && typeof p.sk === 'object' && !Array.isArray(p.sk) ? p.sk : {};
     p.si = p.si && typeof p.si === 'object' && !Array.isArray(p.si) ? p.si : {};
     for (const cid of Object.keys(p.si)) { const it = BY.get(p.si[cid]); if (!it || it.cat !== 'si' || it.card !== cid) delete p.si[cid]; }      // skin de otra carta o que ya no existe
+    // Efectos (sk): se tienen POR PERSONAJE: skOwn = { idCarta: ['sk_…'] }. Lo que antes valía para todos se reparte:
+    // cada efecto que ya tenías queda en los personajes donde lo llevabas puesto (o en uno solo si no lo llevabas).
+    const viejos = p.owned.filter(id => { const it = BY.get(id); return !!it && it.cat === 'sk'; });
+    if (viejos.length) {
+      p.owned = p.owned.filter(id => !viejos.includes(id));
+      for (const id of viejos) {
+        let cs = Object.keys(p.sk).filter(c => p.sk[c] === id);
+        if (!cs.length) { const all = skCards(); if (all.length) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; cs = [all[h % all.length]]; } }
+        for (const c of cs) giveSk(p, c, id);
+      }
+    }
+    for (const cid of Object.keys(p.skOwn)) {
+      const l = Array.isArray(p.skOwn[cid]) ? Array.from(new Set(p.skOwn[cid])).filter(id => { const it = BY.get(id); return !!it && it.cat === 'sk'; }) : [];
+      if (l.length && /^[\w-]{1,40}$/.test(cid)) p.skOwn[cid] = l; else delete p.skOwn[cid];
+    }
+    for (const cid of Object.keys(p.sk)) if (!(p.skOwn[cid] || []).includes(p.sk[cid])) delete p.sk[cid];      // un efecto puesto que ese personaje no tiene
     return p;
   }
+  /** Personajes con ilustración (los que pueden llevar un efecto). */
+  const skCards = () => { const C = D.Cards; return C && C.all ? C.all().filter(c => c.kind === 'monster' && c.img).map(c => c.id) : []; };
+  const giveSk = (p, cid, id) => { const l = p.skOwn[cid] || (p.skOwn[cid] = []); if (!l.includes(id)) l.push(id); };
+  /** ¿Ese personaje tiene ese efecto? (los efectos son de un personaje concreto, no de todos) */
+  const ownsSk = (cid, id) => { const p = pts(); return !!p && (p.skOwn[cid] || []).includes(id); };
+  /** Efectos que tiene ese personaje (items). */
+  const skinsFor = cid => { const p = pts(); return p ? (p.skOwn[cid] || []).map(byId).filter(i => i && i.cat === 'sk') : []; };
   const owns = id => { const it = byId(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
   const coins = () => { const p = pts(); return p ? p.coins : 0; };
 
@@ -260,6 +284,15 @@
     const pool = poolOf(b, R), it = pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
     p.coins -= b.price;
     p.pity[b.id] = b.pity && RANK[R] >= RANK[b.pity.to] ? 0 : n + 1;
+    if (it.cat === 'sk') {        // un efecto es de UN personaje: se sortea entre los que aún no lo tienen
+      const all = skCards(), libres = all.filter(c => !(p.skOwn[c] || []).includes(it.id));
+      if (!all.length) { p.coins += b.price; return { ok: false, error: 'Aún no hay personajes con ilustración.' }; }
+      const card = libres.length ? libres[randInt(libres.length)] : all[randInt(all.length)];
+      const dup = !libres.length, refund = dup ? dupRefund(it) : 0;
+      if (dup) p.coins += refund; else giveSk(p, card, it.id);
+      saveStore();
+      return { ok: true, item: it, card, dup, refund, pity: p.pity[b.id] };
+    }
     const dup = owns(it.id), refund = dup ? dupRefund(it) : 0;
     if (dup) p.coins += refund; else p.owned.push(it.id);
     saveStore();
@@ -293,15 +326,16 @@
     return true;
   }
   /** Skin que tengo puesta a un personaje (item) o null. */
-  function skinOf(cardId) { const p = pts(), id = p && p.sk[cardId]; const it = id && byId(id); return it && it.cat === 'sk' && owns(id) ? it : null; }
+  function skinOf(cardId) { const p = pts(), id = p && p.sk[cardId]; const it = id && byId(id); return it && it.cat === 'sk' && ownsSk(cardId, id) ? it : null; }
   /** Pone (o quita, con null) una skin a un personaje. Hay que tenerla. */
   function setSkin(cardId, skinId) {
     const p = pts(); if (!p || typeof cardId !== 'string' || !/^[\w-]{1,40}$/.test(cardId)) return false;
     if (skinId == null) { delete p.sk[cardId]; saveStore(); return true; }
-    const it = byId(skinId); if (!it || it.cat !== 'sk' || !owns(skinId)) return false;
+    const it = byId(skinId); if (!it || it.cat !== 'sk' || !ownsSk(cardId, skinId)) return false;      // sólo si ESE personaje lo tiene
     p.sk[cardId] = skinId; saveStore(); return true;
   }
-  const mySkins = () => { const p = pts(); return p ? p.owned.map(byId).filter(i => i && i.cat === 'sk') : []; };
+  /** Todos los efectos que tengo, en cualquier personaje (sin repetir). */
+  const mySkins = () => { const p = pts(), s = new Set(); if (p) for (const c of Object.keys(p.skOwn)) for (const id of p.skOwn[c]) s.add(id); return Array.from(s).map(byId).filter(Boolean); };
   /** Skin de ilustración que tengo puesta a un personaje (item) o null: entonces se ve la imagen original. */
   function artOf(cardId) { const p = pts(), id = p && p.si[cardId], it = id && BY.get(id); return it && it.cat === 'si' && it.card === cardId && owns(id) ? it : null; }
   /** Pone (o quita, con null) una skin de ilustración. Sólo si la tengo y es de ESA carta. */
@@ -352,5 +386,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();
