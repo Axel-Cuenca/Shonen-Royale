@@ -107,6 +107,7 @@
     const show = document.body.classList.contains('goldbg') && curScreen !== 'boot' && curScreen !== 'login';
     topEl.style.display = show ? '' : 'none';
     document.body.classList.toggle('gtop-on', show);
+    if (D.FriendsUI) { initFriends(); D.FriendsUI.show(show && D.Account.cloud); }   // burger de amigos (arriba a la derecha)
     if (!show) return;
     const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
     topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'SHONEN ROYALE'),
@@ -117,6 +118,24 @@
       if (sp && !sp.classList.contains('out')) { topEl.classList.add('pre'); setTimeout(() => topEl.classList.remove('pre'), 4000); }
     }
     document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px');
+  }
+  // ---------------- amigos (js/duelo/social.js + friends-ui.js) ----------------
+  let friendsReady = false;
+  function initFriends() {
+    if (friendsReady || !D.Social) return; friendsReady = true;
+    D.FriendsUI.init({ h, joinCode: joinByCode, host: hostNow, login: () => { D.Account.logout().then(() => { D.Online.reset(); loginScreen(); }); } });
+  }
+  /** «Unirse» desde una invitación o desde un amigo: el mismo flujo que escribir el código en «Duelo online». */
+  function joinByCode(code) {
+    S.setTrack('prep');
+    const err = h('div', { class: 'msg' }, 'Conectando con tu cuenta…');
+    scr('online'); mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'), err));
+    D.Online.init().then(me => { if (!me) { err.className = 'msg err'; err.textContent = 'Para jugar online necesitas una cuenta.'; return; } joinRoom(code, err); })
+      .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
+  }
+  /** «Invitar» sin sala: se crea una de duelo 1 contra 1 y, ya creada, se manda la invitación (FriendsUI.roomOpened). */
+  function hostNow() {
+    D.Online.init().then(me => { if (me) hostRoom('duel'); else onlineMenu(); }).catch(() => onlineMenu());
   }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
@@ -363,7 +382,7 @@
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
@@ -585,7 +604,7 @@
     const conn = new Map();      // idx de invitado -> { state, timer, failed }
     const byUid = new Map();     // uid -> idx
     const queued = [];
-    const cancel = () => { conn.forEach(c => clearTimeout(c.timer)); if (room) room.close(); if (match) match.close(); menu(); };
+    const cancel = () => { conn.forEach(c => clearTimeout(c.timer)); if (room) room.close(); if (match) match.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); menu(); };
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: cancel }, '← Cancelar'), h('h1', null, 'Tu sala'), codeEl,
       h('p', { class: 'sub', style: 'text-align:center' }, `${fm.t}. Pásales este código a tus amigos: que abran esta misma página, entren en «Duelo online» y pulsen «Entrar».`),
       single ? null : seatsEl, status, single ? null : h('div', { class: 'row', style: 'justify-content:center' }, startBtn),
@@ -640,6 +659,7 @@
         }
       });
     } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
+    if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
     codeEl.textContent = room.code; status.textContent = single ? 'Esperando a tu amigo…' : 'Esperando a tus amigos…';
     match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
     match.onStatus(s => {
@@ -647,7 +667,7 @@
       else if (s.k === 'started') room.lock();
       renderSeats();
     });
-    game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); room.close(); }, online: true, wait: true });
+    game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); room.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
     queued.splice(0).forEach(q => onJoin(...q));
     renderSeats();
   }
@@ -946,7 +966,7 @@
     cur.leave = () => { if (v && v.winner === null && v.me.alive) rankFinish(true); };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
-    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
+    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
     if (match.kind === 'ia') tutorial(cur);
     // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
@@ -1976,6 +1996,7 @@
     D.Online.reset();
     await openStore(D.Account.user);
     menu();
+    if (D.FriendsUI) D.FriendsUI.login().catch(e => console.warn('[Amigos]', e));
     if (!D.Account.user.guest && D.Account.isNameAccount() && !D.Account.hasGoogle()) offerRecovery();
   }
 

@@ -155,6 +155,7 @@
   async function logout() {
     if (pending) { try { await flush(); } catch (e) { /* queda en este navegador */ } }
     clearTimeout(pushT); pending = null;
+    if (D.Social) { try { await D.Social.stop(); } catch (e) { /* nada */ } }       // «desconectado» para tus amigos, mientras aún hay sesión
     if (mode === 'cloud' && user && !user.guest) { try { await auth.signOut(); } catch (e) { /* nada */ } }
     user = null;
   }
@@ -184,6 +185,7 @@
         await cu.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(cu.email, pass));
       } else await cu.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
       clearTimeout(pushT); pending = null;
+      if (D.Social) { try { await D.Social.stop('delete'); } catch (e) { /* nada */ } }   // apodo, amistades y presencia
       await docRef().delete();
       await auth.currentUser.delete();
       user = null;
