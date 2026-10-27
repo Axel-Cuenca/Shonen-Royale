@@ -22,6 +22,8 @@
 
   const st = { ok: false, tried: false, canvas: null, gl: null, trees: [], q: 'auto', S: 1.4, raf: 0, t0: performance.now(), lastDraw: 0, fps: 30, slow: 0, still: false, torchK: 2.2 };
 
+  // 27-10-2026: el modo automático ya no deja guardado «off» (dejaba el suelo sin dibujar para siempre); se limpia lo que dejó antes
+  try { if (!localStorage.getItem('duelo.gfxfix')) { localStorage.setItem('duelo.gfxfix', '1'); if (localStorage.getItem('duelo.gfx') === 'off') localStorage.removeItem('duelo.gfx'); } } catch (e) { /* nada */ }
   function pref() { try { return localStorage.getItem('duelo.gfx') || 'auto'; } catch (e) { return 'auto'; } }
 
   // ---------------- GLSL ----------------
@@ -394,7 +396,6 @@ void main(){
     if (ms > 1500 && st.q !== 'high' && st.q !== 'mid') {            // ni a un cuarto de resolución va bien: sin suelo 3D (queda el suelo sencillo)
       try { const x = st.gl.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { /* nada */ }
       st.ok = false; st.canvas = null; st.gl = null;
-      if (st.q === 'auto') { try { localStorage.setItem('duelo.gfx', 'off'); } catch (e) { /* nada */ } }
       return false;
     }
     // elegido a mano (bajos/medios/altos): se respeta tal cual; en automático, a ~0,5 s de preparación como mucho
