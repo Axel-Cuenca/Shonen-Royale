@@ -133,9 +133,9 @@
     D.Online.init().then(me => { if (!me) { err.className = 'msg err'; err.textContent = 'Para jugar online necesitas una cuenta.'; return; } joinRoom(code, err); })
       .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
   }
-  /** «Invitar» sin sala: se crea una de duelo 1 contra 1 y, ya creada, se manda la invitación (FriendsUI.roomOpened). */
+  /** «Invitar» sin sala: se crea el lobby (el formato crece solo según cuántos entren, y se puede cambiar) y, ya creado, se manda la invitación (FriendsUI.roomOpened). */
   function hostNow() {
-    D.Online.init().then(me => { if (me) hostRoom('duel'); else onlineMenu(); }).catch(() => onlineMenu());
+    D.Online.init().then(me => { if (me) hostRoom('duel', { auto: true }); else onlineMenu(); }).catch(() => onlineMenu());
   }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
@@ -591,103 +591,136 @@
 
   const LOSTMSG = 'Vuestras conexiones no logran verse directamente (pasa con algunos Wi‑Fi). Probad con datos móviles en uno de los dos.';
 
-  /** Sala del anfitrión: código, asientos, quién entró, y «Empezar» (los asientos libres los juega la computadora). */
-  async function hostRoom(fmtId) {
-    S.setTrack('prep');
-    const fm = FORMATS[fmtId || 'duel'], single = fm.n === 2;
+  /** Casilla de un jugador en la sala de espera (estilo lobby): avatar, nombre y estado. */
+  const lobbySlot = (o) => h('div', { class: 'lcard ' + (o.cls || '') },
+    h('div', { class: 'lav' }, o.av || '＋'), h('b', null, o.name || ''), o.sub ? h('small', null, o.sub) : null, o.tag ? h('span', { class: 'ltag' }, o.tag) : null, o.extra || null);
+
+  /** Sala del anfitrión (lobby): tú eliges el formato, invitas a tus amigos (hasta 3) y decides cuándo empezar.
+   *  Los asientos que queden libres los juega la computadora. opts.auto: el formato se ajusta solo según cuántos entran. */
+  async function hostRoom(fmtId, opts) {
+    S.setTrack('prep'); scr('online');
+    let key = FORMATS[fmtId] ? fmtId : 'duel', picked = !(opts && opts.auto);
+    const fm = () => FORMATS[key];
     const status = h('div', { class: 'msg' }, 'Creando sala…');
-    const codeEl = h('div', { class: 'code' }, '·····');
-    const seatsEl = h('div', { class: 'seats' });
-    const startBtn = btn('Empezar ahora', () => { if (match) match.begin(); }, 'gold big');
-    startBtn.style.display = 'none';
+    const codeEl = h('div', { class: 'lcode' }, '·····');
+    const fmtEl = h('div', { class: 'lfmt' }), noteEl = h('p', { class: 'sub', style: 'text-align:center;margin:4px 0' });
+    const slotsEl = h('div', { class: 'lslots' });
+    const startBtn = btn('Empezar', () => { if (match && canStart()) match.begin(); }, 'gold big');
+    startBtn.disabled = true;
     let room = null, match = null;
     const conn = new Map();      // idx de invitado -> { state, timer, failed }
     const byUid = new Map();     // uid -> idx
     const queued = [];
+    const guestsNow = () => (match ? match.lobby().filter(x => !x.left) : []);
     const cancel = () => { conn.forEach(c => clearTimeout(c.timer)); if (room) room.close(); if (match) match.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); menu(); };
-    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: cancel }, '← Cancelar'), h('h1', null, 'Tu sala'), codeEl,
-      h('p', { class: 'sub', style: 'text-align:center' }, `${fm.t}. Pásales este código a tus amigos: que abran esta misma página, entren en «Duelo online» y pulsen «Entrar».`),
-      single ? null : seatsEl, status, single ? null : h('div', { class: 'row', style: 'justify-content:center' }, startBtn),
-      single ? null : h('p', { class: 'sub', style: 'text-align:center' }, 'Tú decides cuándo empezar. Los asientos que queden libres los juega la computadora.')));
+    const canStart = () => { const gs = guestsNow(); return !!match && gs.length >= 1 && gs.length <= fm().n - 1 && gs.every(g => g.ready); };
+    mount(h('div', { class: 'scr lobby' }, h('button', { class: 'back', onclick: cancel }, '← Salir de la sala'), h('h1', null, 'Sala de espera'),
+      h('div', { class: 'lhead' }, h('div', { class: 'lcw' }, h('small', null, 'Código de la sala'), codeEl),
+        btn('👥 Invitar amigos', () => { if (D.FriendsUI) D.FriendsUI.toggle(); }, 'gold')),
+      fmtEl, noteEl, slotsEl, status, h('div', { class: 'row lact' }, startBtn),
+      h('p', { class: 'sub', style: 'text-align:center' }, 'Tú decides cuándo empezar. Los asientos que queden libres los juega la computadora. Tus amigos también pueden entrar con el código desde «Duelo online».')));
 
-    function renderSeats() {
-      if (single || !match) return;
-      const guests = match.lobby().filter(x => !x.left);
-      const rows = [];
-      rows.push(h('div', { class: 'seat me' }, h('b', null, 'Tú'), h('span', null, activeDeck().name)));
-      for (let i = 0; i < fm.n - 1; i++) {
-        const g = guests[i];
-        if (!g) { rows.push(h('div', { class: 'seat empty' }, h('b', null, 'Esperando…'), h('span', null, 'o la computadora'))); continue; }
+    function render() {
+      if (!match) return;
+      const gs = guestsNow();
+      if (!picked) key = gs.length >= 3 ? 'ffa4' : gs.length === 2 ? 'ffa3' : 'duel';      // invitación rápida: el formato crece con la gente
+      if (match.n !== fm().n || match.mode !== fm().mode) match.setFormat(fm().n, fm().mode);
+      fmtEl.replaceChildren(...Object.keys(FORMATS).map(k => h('button', { class: 'lf' + (k === key ? ' on' : ''), onclick: () => { picked = true; key = k; render(); } }, FORMATS[k].t)));
+      noteEl.textContent = fm().d;
+      const cards = [lobbySlot({ cls: 'me', av: '🧑', name: 'Tú', sub: activeDeck().name, tag: 'Anfitrión' })];
+      for (let i = 0; i < fm().n - 1; i++) {
+        const g = gs[i];
+        if (!g) { cards.push(h('button', { class: 'lcard empty', onclick: () => { if (D.FriendsUI) D.FriendsUI.toggle(); } }, h('div', { class: 'lav' }, '＋'), h('b', null, 'Libre'), h('small', null, 'Invita a un amigo o juega la computadora'))); continue; }
         const c = conn.get(g.idx) || {};
-        const st = !g.ready ? (c.state === 'direct' ? 'Conectado, recibiendo mazo…' : 'Conectando…') : c.failed ? 'Sin conexión directa' : 'Listo';
-        const row = h('div', { class: 'seat ' + (g.ready ? 'ok' : c.failed ? 'bad' : '') }, h('b', null, g.name), h('span', null, st));
-        if (fm.mode === 'teams') {
-          const sel = h('select', { onchange: () => { match.setPref(g.idx, sel.value); renderSeats(); } }, h('option', { value: 'ally' }, 'Mi compañero'), h('option', { value: 'foe' }, 'Rival'));
-          sel.value = g.pref; row.append(sel);
+        const st = !g.ready ? (c.failed ? 'Sin conexión directa' : c.state === 'direct' ? 'Recibiendo mazo…' : 'Conectando…') : 'Listo';
+        let extra = null;
+        if (fm().mode === 'teams') {
+          const sel = h('select', { onchange: () => { match.setPref(g.idx, sel.value); render(); } }, h('option', { value: 'ally' }, 'Mi compañero'), h('option', { value: 'foe' }, 'Rival'));
+          sel.value = g.pref; extra = sel;
         }
-        rows.push(row);
+        cards.push(lobbySlot({ cls: g.ready ? 'ok' : c.failed ? 'bad' : '', av: (g.name || '?').slice(0, 1).toUpperCase(), name: g.name, sub: st, extra }));
       }
-      seatsEl.replaceChildren(...rows);
-      const nReady = guests.filter(g => g.ready).length;
-      startBtn.style.display = nReady >= 1 ? '' : 'none';
-      startBtn.textContent = nReady >= fm.n - 1 ? 'Empezar el duelo' : 'Empezar ahora (la computadora llena los asientos libres)';
-      if (nReady) { status.className = 'msg ok'; status.textContent = nReady >= fm.n - 1 ? 'Sala completa. Cuando todos estén listos, pulsa «Empezar el duelo».' : `${nReady + 1} de ${fm.n} en la sala.`; }
-      else { status.className = 'msg'; status.textContent = 'Esperando a tus amigos…'; }
+      slotsEl.replaceChildren(...cards);
+      const over = gs.length > fm().n - 1, wait = gs.some(g => !g.ready), failed = gs.some(g => (conn.get(g.idx) || {}).failed && !g.ready);
+      startBtn.disabled = !canStart();
+      startBtn.textContent = gs.length + 1 >= fm().n ? 'Empezar el duelo' : 'Empezar (la computadora llena los libres)';
+      if (over) { status.className = 'msg err'; status.textContent = `Hay ${gs.length + 1} jugadores y este formato es de ${fm().n}: elige uno más grande.`; }
+      else if (failed) { status.className = 'msg err'; status.textContent = LOSTMSG; }
+      else if (!gs.length) { status.className = 'msg'; status.textContent = 'Esperando a tus amigos… Pulsa «Invitar amigos» o pásales el código.'; }
+      else if (wait) { status.className = 'msg'; status.textContent = 'Conectando con los que acaban de entrar…'; }
+      else { status.className = 'msg ok'; status.textContent = `${gs.length + 1} de ${fm().n} en la sala. Pulsa «Empezar» cuando quieras.`; }
     }
     function onJoin(uid, name, tr) {
       if (!match) { queued.push([uid, name, tr]); return; }
       const idx = match.addGuest(tr);
       byUid.set(uid, idx);
       const c = { state: 'connecting', failed: false, timer: 0 };
-      c.timer = setTimeout(() => { if (c.state !== 'direct') { c.failed = true; status.className = 'msg err'; status.textContent = LOSTMSG; renderSeats(); } }, 20000);
+      c.timer = setTimeout(() => { if (c.state !== 'direct') { c.failed = true; render(); } }, 20000);
       conn.set(idx, c);
-      if (single) { status.className = 'msg ok'; status.textContent = `${name} entró. Conectando…`; }
-      renderSeats();
+      render();
     }
     try {
       room = await D.Online.createRoom({
-        seats: fm.n,
+        seats: 4,       // la sala es siempre de hasta 4: el formato se elige después, sin cambiar de código
         onJoin,
-        onLeave: uid => { const idx = byUid.get(uid); if (idx != null) { const c = conn.get(idx); if (c) clearTimeout(c.timer); } if (single && !current) { status.className = 'msg err'; status.textContent = 'Tu amigo salió de la sala.'; } renderSeats(); },
+        onLeave: uid => { const idx = byUid.get(uid); if (idx != null) { const c = conn.get(idx); if (c) clearTimeout(c.timer); } render(); },
         onState: (uid, st) => {
           const idx = byUid.get(uid), c = conn.get(idx);
           if (!c) return;
           c.state = st;
-          if (st === 'direct') { clearTimeout(c.timer); c.failed = false; if (single) { status.className = 'msg ok'; status.textContent = 'Conectados. Preparando el duelo…'; } }
-          else if (st === 'failed') { c.failed = true; status.className = 'msg err'; status.textContent = LOSTMSG; }
-          renderSeats();
+          if (st === 'direct') { clearTimeout(c.timer); c.failed = false; }
+          else if (st === 'failed') c.failed = true;
+          render();
         }
       });
     } catch (e) { status.className = 'msg err'; status.textContent = 'No se pudo crear la sala: ' + e.message; return; }
     if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
-    codeEl.textContent = room.code; status.textContent = single ? 'Esperando a tu amigo…' : 'Esperando a tus amigos…';
-    match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm.n, mode: fm.mode, autoStart: single });
+    codeEl.textContent = room.code;
+    match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm().n, mode: fm().mode, autoStart: false });
     match.onStatus(s => {
       if (s.k === 'rejected') { status.className = 'msg err'; status.textContent = 'El mazo de tu amigo no es válido: ' + s.why; }
       else if (s.k === 'started') room.lock();
-      renderSeats();
+      else render();
     });
     game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); room.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
     queued.splice(0).forEach(q => onJoin(...q));
-    renderSeats();
+    render();
   }
 
   async function joinRoom(code, errBox) {
     S.setTrack('prep');
     errBox.replaceChildren(h('div', { class: 'msg' }, 'Entrando…'));
-    let room = null, failTimer = 0;
+    let room = null, failTimer = 0, box = errBox, match = null;
+    const put = (cls, text) => box.replaceChildren(h('div', { class: cls }, text));
     try {
       room = await D.Online.joinRoom(code, {
-        onState: st => { if (st === 'direct') clearTimeout(failTimer); else if (st === 'failed') errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)); },
-        onClosed: () => { if (!current || !current.started) errBox.replaceChildren(h('div', { class: 'msg err' }, 'El anfitrión cerró la sala.')); },
-        onKicked: () => { if (!current || !current.started) { errBox.replaceChildren(h('div', { class: 'msg err' }, 'La sala se llenó antes de que entraras.')); menu(); } }
+        onState: st => { if (st === 'direct') clearTimeout(failTimer); else if (st === 'failed') put('msg err', LOSTMSG); },
+        onClosed: () => { if (!current || !current.started) put('msg err', 'El anfitrión cerró la sala.'); },
+        onKicked: () => { if (!current || !current.started) { put('msg err', 'La sala se llenó antes de que entraras.'); menu(); } }
       });
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
-    errBox.replaceChildren(h('div', { class: 'msg ok' }, 'Dentro de la sala. Conectando con el anfitrión… Cuando empiece el duelo entrarás solo.'));
-    failTimer = setTimeout(() => errBox.replaceChildren(h('div', { class: 'msg err' }, LOSTMSG)), 20000);
-    const match = D.Match.guest({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
+    // sala de espera del invitado: ve quién hay y el formato; el anfitrión decide cuándo empezar
+    const slotsEl = h('div', { class: 'lslots' }), info = h('div'), titleEl = h('p', { class: 'sub', style: 'text-align:center' }, 'Conectando con el anfitrión…');
+    const leave = () => { clearTimeout(failTimer); if (match) match.close(); room.close(); menu(); };
+    scr('online');
+    mount(h('div', { class: 'scr lobby' }, h('button', { class: 'back', onclick: leave }, '← Salir de la sala'), h('h1', null, 'Sala de espera'), titleEl, slotsEl, info,
+      h('p', { class: 'sub', style: 'text-align:center' }, 'Cuando el anfitrión empiece el duelo entrarás solo.')));
+    box = info;
+    put('msg ok', 'Dentro de la sala. Conectando con el anfitrión…');
+    slotsEl.replaceChildren(lobbySlot({ cls: 'me', av: (room.name || '?').slice(0, 1).toUpperCase(), name: room.name, sub: 'Tú' }));
+    failTimer = setTimeout(() => put('msg err', LOSTMSG), 20000);
+    match = D.Match.guest({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, transport: room.transport });
     match.onStatus(s => {
-      if (s.k === 'rejected') errBox.replaceChildren(h('div', { class: 'msg err' }, s.why && /empez/.test(s.why) ? s.why : 'Tu mazo no es válido: ' + s.why));
+      if (s.k === 'rejected') put('msg err', s.why && /empez/.test(s.why) ? s.why : 'Tu mazo no es válido: ' + s.why);
+      else if (s.k === 'lobby') {
+        const f = Object.keys(FORMATS).map(k => FORMATS[k]).find(x => x.n === s.n && x.mode === s.mode);
+        titleEl.textContent = (f ? f.t : 'Duelo') + ' · ' + (s.players.length + 1) + ' de ' + s.n + ' en la sala';
+        const cards = [lobbySlot({ cls: 'ok', av: (s.host || '?').slice(0, 1).toUpperCase(), name: s.host, sub: 'Listo', tag: 'Anfitrión' })];
+        s.players.forEach(p => cards.push(lobbySlot({ cls: (p.name === room.name ? 'me ' : '') + (p.ready ? 'ok' : ''), av: p.name.slice(0, 1).toUpperCase(), name: p.name + (p.name === room.name ? ' (tú)' : ''), sub: p.ready ? 'Listo' : 'Conectando…' })));
+        for (let i = s.players.length + 1; i < s.n; i++) cards.push(h('div', { class: 'lcard empty' }, h('div', { class: 'lav' }, '＋'), h('b', null, 'Libre'), h('small', null, 'La computadora si nadie entra')));
+        slotsEl.replaceChildren(...cards);
+        put('msg ok', 'Esperando a que el anfitrión empiece…');
+      }
     });
     game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
   }

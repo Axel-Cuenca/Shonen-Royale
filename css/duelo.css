@@ -1313,3 +1313,28 @@ html[data-fs="xl"] :is(.scr, .hnews, .hlist, .modal .box, .tutbox, .gtop) { zoom
 html.rm .frburger i, html.rm .frburger.pop, html.rm .fsit, html.rm .frhead h2, html.rm .fstoast { transition: none; animation: none; }
 html.rm .frov { backdrop-filter: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .frburger i, .fsit, .frhead h2 { transition-duration: .01s; transition-delay: 0s; } .frburger.pop, .fstoast { animation: none; } }
+
+/* pantalla completa: glifo centrado y sin pisar el engranaje cuando está el menú de amigos */
+.fsbtn { display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; font-size: 20px; }
+.fr-on .fsbtn { right: 118px; top: 10px; }
+@media (max-width: 860px) { .fr-on .fsbtn { right: 118px; top: 10px; } }
+
+/* Sala de espera (lobby) */
+.lobby { max-width: 900px; margin: 0 auto; }
+.lhead { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 10px; }
+.lcw { text-align: center; }
+.lcw small { display: block; color: #9fb0e8; font-size: 12px; }
+.lcode { font: 800 34px/1.1 var(--ui); letter-spacing: .25em; color: #ffd84a; }
+.lfmt { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
+.lf { border: 2px solid #3a4a86; background: #0e1840; color: #cfd8ff; border-radius: 8px; padding: 7px 14px; font: 700 14px var(--ui); cursor: pointer; }
+.lf.on { border-color: #ffd84a; background: #26337a; color: #fff; }
+.lslots { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+.lcard { position: relative; width: 168px; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 10px; border: 2px solid #3a4a86; border-radius: 10px; background: linear-gradient(#142058, #0a1230); color: #fff; text-align: center; font-family: var(--ui); }
+.lcard small { color: #9fb0e8; font-size: 12px; }
+.lcard.me { border-color: #ffd84a; }
+.lcard.ok { border-color: #3fd08a; }
+.lcard.bad { border-color: #ff5a5a; }
+.lcard.empty { border-style: dashed; opacity: .75; cursor: pointer; }
+.lav { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 800; background: #26337a; border: 2px solid #5a6cc0; }
+.ltag { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 800; background: #ffd84a; color: #241a00; border-radius: 999px; padding: 2px 8px; }
+.lact { justify-content: center; margin-top: 8px; }

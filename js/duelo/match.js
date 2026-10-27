@@ -122,7 +122,8 @@
 
   function host(o) {
     const views = emitter(), status = emitter(), chats = emitter();
-    const n = o.n || 2, mode = o.mode || 'ffa', delay = o.delay != null ? o.delay : 750;
+    let n = o.n || 2, mode = o.mode || 'ffa';
+    const delay = o.delay != null ? o.delay : 750;
     let st = null, closed = false, timer = 0, ais = [];
     const slots = [];      // un invitado por canal: { tr, name, deck, pref, seat, left }
     const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', cos: [cleanCos(o.cos)], rk: [cleanRk(o.rk)], hum: [], onView: views.on, onStatus: status.on, onChat: chats.on };
@@ -148,7 +149,7 @@
     /** Empieza con los invitados que hay; los asientos libres los juega la computadora. */
     function begin() {
       if (st || closed) return false;
-      const gs = ready();
+      const gs = ready().slice(0, n - 1);      // los que no caben en el formato elegido se quedan fuera
       if (!gs.length) return false;
       const seed = o.seed != null ? o.seed : randSeed();
       const seats = assignSeats(mode, n, gs);
@@ -168,6 +169,12 @@
     function tryStart() {
       if (st || o.autoStart === false) return;
       if (ready().length >= n - 1) begin();
+    }
+    /** Sala de espera: todos los que ya están dentro ven quién hay y qué formato se va a jugar. */
+    function sendLobby() {
+      if (st || closed) return;
+      const msg = { k: 'lobby', n, mode, host: m.names[0], players: slots.filter(g => !g.left).map(g => ({ name: g.name, ready: !!g.deck, pref: g.pref })) };
+      for (const g of slots) if (!g.left) g.tr.send(msg);
     }
     function lobbyInfo() { return slots.map((g, i) => ({ idx: i, name: g.name, ready: !!g.deck, left: !!g.left, pref: g.pref })); }
 
@@ -190,6 +197,7 @@
           g.name = String(msg.name || 'Rival').slice(0, 24); g.cos = cleanCos(msg.cos); g.rk = cleanRk(msg.rk);
           if (n === 2) m.names[1] = g.name;
           if (first) status.emit({ k: 'guest', name: g.name, idx });
+          sendLobby();
           tryStart();
         } else if (msg.k === 'act') {
           if (!st || g.seat == null) return;
@@ -213,7 +221,7 @@
         if (st && g.seat != null) {
           if (st.winner === null) { E().resign(st, g.seat, g.name + ' se desconectó.'); broadcast(); pump(); }
           status.emit({ k: 'closed', idx, name: g.name });
-        } else status.emit({ k: 'left', idx, name: g.name });
+        } else { status.emit({ k: 'left', idx, name: g.name }); sendLobby(); }
       });
       return idx;
     }
@@ -222,7 +230,16 @@
 
     m.addGuest = addGuest;
     m.lobby = lobbyInfo;
-    m.setPref = (idx, pref) => { if (slots[idx] && !st) slots[idx].pref = pref === 'foe' ? 'foe' : 'ally'; };
+    m.setPref = (idx, pref) => { if (slots[idx] && !st) { slots[idx].pref = pref === 'foe' ? 'foe' : 'ally'; sendLobby(); } };
+    /** Cambia el formato (2-4 asientos y modo) mientras la sala sigue en espera. */
+    m.setFormat = (nn, mm) => {
+      nn = Math.max(2, Math.min(4, nn | 0));
+      if (st || closed || !['duel', 'ffa', 'teams'].includes(mm)) return false;
+      n = nn; mode = mm; m.n = n; m.mode = mode;
+      m.names = [m.names[0]].concat(Array.from({ length: n - 1 }, () => 'Rival'));
+      sendLobby();
+      return true;
+    };
     m.begin = begin;
     m.mode = mode; m.n = n;
     m.start = () => { if (st) views.emit(E().view(st, 0)); else tryStart(); };
@@ -262,6 +279,9 @@
         last = unwireView(msg.v);
         m.seat = last.seat;
         views.emit(last);
+      } else if (msg.k === 'lobby') {           // sala de espera: quién hay y qué formato
+        const pl = Array.isArray(msg.players) ? msg.players.slice(0, 3).map(x => ({ name: String((x && x.name) || 'Rival').slice(0, 24), ready: !!(x && x.ready), pref: x && x.pref === 'foe' ? 'foe' : 'ally' })) : [];
+        status.emit({ k: 'lobby', n: Math.max(2, Math.min(4, msg.n | 0 || 2)), mode: ['duel', 'ffa', 'teams'].includes(msg.mode) ? msg.mode : 'ffa', host: String(msg.host || 'Anfitrión').slice(0, 24), players: pl });
       } else if (msg.k === 'reject') { clearInterval(timer); status.emit({ k: 'rejected', why: msg.why }); }
       else if (msg.k === 'err') status.emit({ k: 'err', why: msg.why });
       else if (msg.k === 'chat') { const text = cleanChat(msg.text); if (text) chats.emit({ k: 'chat', seat: msg.seat, name: String(msg.name || '').slice(0, 24), text }); }

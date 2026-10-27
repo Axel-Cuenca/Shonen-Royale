@@ -1054,7 +1054,8 @@ require('./test_temporada.js')({ ok, eq, section });
 require('./test_skins.js')({ ok, eq, section });
 require('./test_cofre.js')({ ok, eq, section, Cards });
 const amigosTests = require('./test_amigos.js')({ ok, eq, section });
-matchTests().then(multiTests).then(amigosTests).then(() => {
+const lobbyTests = require('./test_lobby.js')({ ok, eq, section, Match, Cards, until });
+matchTests().then(multiTests).then(lobbyTests).then(amigosTests).then(() => {
   console.log(fails ? `\n✗ ${fails} fallo(s) de ${checks} comprobaciones` : `\n✓ ${checks} comprobaciones correctas`);
   process.exit(fails ? 1 : 0);
 });
