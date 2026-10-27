@@ -1326,8 +1326,8 @@ html.rm .frov { backdrop-filter: none; transition: none; }
 .lcw small { display: block; color: #9fb0e8; font-size: 12px; }
 .lcode { font: 800 34px/1.1 var(--ui); letter-spacing: .25em; color: #ffd84a; }
 .lfmt { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
-.lf { border: 2px solid #3a4a86; background: #0e1840; color: #cfd8ff; border-radius: 8px; padding: 7px 14px; font: 700 14px var(--ui); cursor: pointer; }
-.lf.on { border-color: #ffd84a; background: #26337a; color: #fff; }
+.lfb { border: 2px solid #3a4a86; background: #0e1840; color: #cfd8ff; border-radius: 8px; padding: 7px 14px; font: 700 14px var(--ui); cursor: pointer; }
+.lfb.on { border-color: #ffd84a; background: #26337a; color: #fff; }
 .lslots { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
 .lcard { position: relative; width: 168px; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 10px; border: 2px solid #3a4a86; border-radius: 10px; background: linear-gradient(#142058, #0a1230); color: #fff; text-align: center; font-family: var(--ui); }
 .lcard small { color: #9fb0e8; font-size: 12px; }

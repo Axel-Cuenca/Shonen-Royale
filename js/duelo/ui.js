@@ -601,7 +601,7 @@
       const gs = guestsNow();
       if (!picked) key = gs.length >= 3 ? 'ffa4' : gs.length === 2 ? 'ffa3' : gs.length === 1 ? 'duel' : key;
       if (match && (match.n !== fm().n || match.mode !== fm().mode)) match.setFormat(fm().n, fm().mode);
-      fmtEl.replaceChildren(...Object.keys(FORMATS).map(k => h('button', { class: 'lf' + (k === key ? ' on' : ''), onclick: () => { picked = true; key = k; render(); } }, FORMATS[k].t)));
+      fmtEl.replaceChildren(...Object.keys(FORMATS).map(k => h('button', { class: 'lfb' + (k === key ? ' on' : ''), onclick: () => { picked = true; key = k; render(); } }, FORMATS[k].t)));
       noteEl.textContent = fm().d;
       const cards = [lobbySlot({ cls: 'me', av: '🧑', name: 'Tú', sub: activeDeck().name, tag: 'Anfitrión' })];
       for (let i = 0; i < fm().n - 1; i++) {
