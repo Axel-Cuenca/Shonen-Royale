@@ -52,7 +52,7 @@ module.exports = function (T) {
   }
   for (const b of S.BOXES) ok(Object.keys(b.w).reduce((n, r) => n + b.w[r], 0) === 100, b.name + ': las probabilidades suman 100 %');
   store.pts = {}; const q = S.pts(); q.owned = []; q.coins = 100000; q.pity = {};
-  const r1 = S.openBox('plata'); ok(r1.ok && r1.item && S.owns(r1.item.id), 'abre una caja y el premio es tuyo'); eq(S.coins(), 100000 - 60 + r1.refund, 'cobra la caja');
+  const r1 = S.openBox('plata'); ok(r1.ok && r1.item && (r1.item.cat === 'sk' ? (r1.dup || ((S.pts().skOwn[r1.card] || []).includes(r1.item.id))) : S.owns(r1.item.id)), 'abre una caja y el premio es tuyo');   // un efecto de caja es de UN personaje (r1.card), no va en owned eq(S.coins(), 100000 - 60 + r1.refund, 'cobra la caja');
   let seenDup = false; for (let i = 0; i < 200 && !seenDup; i++) { const c0 = S.coins(), r = S.openBox('plata'); if (r.dup) { seenDup = true; eq(S.coins(), c0 - 60 + r.refund, 'repetido: devuelve puntos'); ok(r.refund > 0, 'devolución positiva'); } }
   ok(seenDup, 'salen repetidos');
   q.coins = 5; const c5 = S.openBox('legendaria'); ok(!c5.ok && S.coins() === 5, 'sin puntos no abre y no cobra');
