@@ -248,6 +248,16 @@ service cloud.firestore {
       allow read: if signedIn();
     }
 
+    // Ranking mensual del Duelo (js/duelo/rank.js): cada jugador escribe sólo lo suyo y sube o baja como mucho 60 puntos por vez.
+    match /ranks/{season}/p/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['name', 'pts', 'w', 'l', 'u'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 24
+        && request.resource.data.pts is int && request.resource.data.pts >= 0 && request.resource.data.pts <= 5000
+        && (resource == null || (request.resource.data.pts - resource.data.pts <= 60 && resource.data.pts - request.resource.data.pts <= 60));
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
