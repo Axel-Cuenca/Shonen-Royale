@@ -115,4 +115,20 @@ module.exports = function (T) {
       eq(stat(st, 0, 0), [want, want], 'Rhaast tras ' + n + ' asesinato(s): +300/+300 por cada uno');
     }
   }
+
+  section('correcciones 27-10: Guerrero del Infinito protege contra el destierro');
+  {
+    // sin los Seis Ojos, la explosión del Creeper destierra a ambos
+    let st = fresh(0); const a0 = put(st, 0, 0, 'c_lara'); put(st, 1, 0, 'c_creeper', { pos: 'def' }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
+    ok(!st.players[0].mz[0] && st.players[0].banish.length === 1 && st.players[1].banish.length === 1, 'sin Seis Ojos: el atacante y el Creeper son desterrados');
+    // con los Seis Ojos: el portador sigue en el campo y sólo el Creeper se destierra
+    st = fresh(0); const b = put(st, 0, 0, 'c_lara'); b.six = { t0: st.turn }; put(st, 1, 0, 'c_creeper', { pos: 'def' }); st.phase = 'battle';
+    const at = L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0);
+    ok(!!at, 'el portador puede atacar al Creeper');
+    act(st, 0, at);
+    ok(st.players[0].mz[0] === b && !st.players[0].banish.length, 'el portador NO es desterrado y sigue en el campo');
+    ok(!st.players[1].mz[0] && st.players[1].banish.length === 1, 'el otro personaje sí se destierra');
+    ok(st.log.some(l => /no puede ser desterrado: los Seis Ojos/.test(l.t || l.m || JSON.stringify(l))), 'el registro explica la protección');
+  }
 };

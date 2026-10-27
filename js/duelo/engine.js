@@ -334,6 +334,8 @@
    *  Si va al cementerio cuenta como una muerte (o si o.death: Mahoraga destierra a lo que mata). */
   function removeMonster(st, p, z, how, o) {
     const P = st.players[p];
+    // Guerrero del Infinito: quien tiene los Seis Ojos no puede ser desterrado por nada (cartas, habilidades, explosiones).
+    if (how === 'banish' && P.mz[z] && P.mz[z].six) { log(st, p, `${mdef(P.mz[z]).name} no puede ser desterrado: los Seis Ojos lo protegen`); return null; }
     const m = takeOff(st, p, z, how || 'grave');
     if (!m) return null;
     const O = st.players[m.owner != null ? m.owner : p];                 // un personaje corrompido vuelve a la zona de su dueño original
@@ -1465,9 +1467,10 @@
     }
     if (boom) {
       const names = [];
-      if (me.mz[a.z] === at) { at.c.spent = at.c.spent || has(st, at, 'boom'); names.push(ad.name); banishMonster(st, a.p, a.z); }
-      if (op.mz[a.target] === dm) { dm.c.spent = dm.c.spent || has(st, dm, 'boom'); names.push(dd.name); banishMonster(st, vs, a.target); }
-      log(st, -1, `¡${boomName} explota! ${names.join(' y ')} ${names.length > 1 ? 'son desterrados' : 'es desterrado'}`);
+      if (me.mz[a.z] === at) { at.c.spent = at.c.spent || has(st, at, 'boom'); if (banishMonster(st, a.p, a.z)) names.push(ad.name); }
+      if (op.mz[a.target] === dm) { dm.c.spent = dm.c.spent || has(st, dm, 'boom'); if (banishMonster(st, vs, a.target)) names.push(dd.name); }
+      if (names.length) log(st, -1, `¡${boomName} explota! ${names.join(' y ')} ${names.length > 1 ? 'son desterrados' : 'es desterrado'}`);
+      else log(st, -1, `¡${boomName} explota! Nadie es desterrado`);
     }
   }
 
@@ -2126,9 +2129,12 @@
         const tq = a.target.vs, T = st.players[tq];
         if (a.target.area === 'mz') {
           const tm = T.mz[a.target.z];
-          log(st, p, `${nm} lanza Púrpura: ${mdef(tm).name} es desterrado`);
-          if (multi(st)) st.log[st.log.length - 1].q = tq;
-          removeMonster(st, tq, a.target.z, 'banish');
+          if (tm.six) log(st, p, `${nm} lanza Púrpura, pero ${mdef(tm).name} no puede ser desterrado: los Seis Ojos lo protegen`);
+          else {
+            log(st, p, `${nm} lanza Púrpura: ${mdef(tm).name} es desterrado`);
+            if (multi(st)) st.log[st.log.length - 1].q = tq;
+            removeMonster(st, tq, a.target.z, 'banish');
+          }
         } else {
           const s2 = T.st[a.target.z];
           log(st, p, `${nm} lanza Púrpura: una carta de magia/trampa es desterrada`);

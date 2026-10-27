@@ -369,7 +369,7 @@
     }),
     spell({
       id: 'c_guerrero', name: 'Guerrero del Infinito', icon: '👁️', img: I('guerrero_infinito'), fx: 'guerrero', sub: 'cont', cost: 2000,
-      text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable, y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
+      text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable (tampoco puede ser desterrado), y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
     }),
     {
       kind: 'trap', id: 'c_rayo_solar', name: 'Rayo de Luz Solar', icon: '☀️', img: I('rayo_solar'), trigger: 'attack', fx: 'destroyAttacker',
