@@ -1416,3 +1416,49 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 .hud-top { padding-right: 114px; }
 .fr-on .hud-top { padding-right: 170px; }
 @media (max-width: 860px) { .hud-top { padding-right: 14px; } .fr-on .hud-top { padding-right: 170px; } }
+
+/* ============ v2 visual: capas de carta, inclinación 3D, brillo de jugable y estados (js/duelo/cardfx.js) ============ */
+@property --cfxang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes cfxSpin { to { --cfxang: 360deg; } }
+/* capas: fondo de energía (cbg) · ilustración (art) · personaje que sale del marco (cch) · marco y estadísticas */
+.card.layered > :not(.cbg):not(.cch) { position: relative; z-index: 1; }
+.card .cbg { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; opacity: .9; will-change: transform;
+  background: radial-gradient(120% 80% at 50% 42%, color-mix(in srgb, var(--tc, #888) 55%, #fff) 0, color-mix(in srgb, var(--tc, #888) 55%, #000) 62%, #0b1030 100%); }
+.card .cch { position: absolute; left: 2%; width: 96%; top: -18%; height: 96%; z-index: 3; pointer-events: none; opacity: 0; object-fit: contain; object-position: 50% 100%;
+  transition: opacity .22s, transform .3s cubic-bezier(.2, 1.4, .4, 1); transform: translateY(6%) scale(.96); filter: drop-shadow(0 .25em .3em #000a); will-change: transform; }
+.card .cch.px, .holo .hin > img.px { image-rendering: pixelated; }
+.card.layered.tilting { overflow: visible; }
+.card.layered.tilting .cch { opacity: 1; transform: translate(calc(var(--mx, 0) * 5%), calc(var(--my, 0) * 3%)) scale(1.1); transition: opacity .15s, transform .08s linear; }
+.card.layered.tilting .cbg { transform: translate(calc(var(--mx, 0) * -5%), calc(var(--my, 0) * -4%)) scale(1.14); transition: transform .08s linear; }
+.card.layered.tilting .art { transform: translate(calc(var(--mx, 0) * -1.6%), calc(var(--my, 0) * -1.2%)); transition: transform .08s linear; }
+.card.layered.tilting .art img { opacity: .35; }
+/* inclinación 3D siguiendo el cursor (en la mano, la ficha y la vista previa) */
+.hand .card.m.layered, .card.big.m.layered { transition: transform .5s cubic-bezier(.2, 1.5, .4, 1), box-shadow .2s; }
+.hand .card.m.layered.tilting { transform: perspective(800px) translateY(-1.4em) scale(1.1) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .07s linear, box-shadow .2s; z-index: 8; }
+.card.big.m.layered.tilting { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .07s linear; }
+/* compresión y estiramiento al pulsar (propiedad `scale`, se suma al transform) */
+.fxpress { animation: cfxPress .42s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes cfxPress { 0% { scale: 1; } 22% { scale: 1.07 .9; } 58% { scale: .96 1.06; } 100% { scale: 1; } }
+/* jugable: haz de luz animado en el contorno; no jugable (en tu turno): apagada y en gris */
+.hand .card.can::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: .16em; z-index: 4; pointer-events: none;
+  background: conic-gradient(from var(--cfxang), #ffd25a, #ff7a1f, #ff3d6e, #5ee7ff, #ffd25a); animation: cfxSpin 3.2s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.hand.myturn .card:not(.can) { opacity: .55; filter: grayscale(.85); transition: opacity .2s, filter .2s; }
+.hand.myturn .card:not(.can):hover { opacity: .9; }
+/* estados de la figura en el tablero: golpeada (sacudida decreciente + destello + partículas), cansada (pocos PV) y ataque elástico */
+.zone.struck .holo:not(.enter) .hin { animation: cfxHit .6s linear; }
+.zone.struck .holo .hin::after { content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0; animation: cfxFlash .6s ease-out;
+  background: radial-gradient(closest-side, #ff3050bb, #ff305000 72%); }
+@keyframes cfxHit { 0% { transform: none; } 8% { transform: translateX(-.9em) rotate(-3deg); } 17% { transform: translateX(.8em) rotate(2.4deg); } 27% { transform: translateX(-.6em) rotate(-1.6deg); }
+  38% { transform: translateX(.45em) rotate(1deg); } 52% { transform: translateX(-.28em); } 70% { transform: translateX(.14em); } 100% { transform: none; } }
+@keyframes cfxFlash { 0% { opacity: 1; } 100% { opacity: 0; } }
+.zone.tired .holo:not(.def):not(.enter) .hin { transform: translateY(.35em) skewX(3deg) scaleY(.955); filter: saturate(.6) brightness(.88); }
+.zone.atkr.me .holo, .zone.atkr.opp .holo, .zone.atkr.opp.lowrow .holo, .board3d .zone.atkr.me .card, .board3d .zone.atkr.opp .card, .board3d .zone.atkr.opp.lowrow .card { animation-timing-function: cubic-bezier(.3, 1.55, .5, 1); }
+.shards { position: absolute; left: 50%; top: 40%; width: 0; height: 0; pointer-events: none; z-index: 7; }
+.shards i { position: absolute; left: 0; top: 0; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); background: var(--c); opacity: 0; box-shadow: 0 0 .5em var(--c);
+  animation: cfxShard .85s cubic-bezier(.1, .7, .3, 1) forwards; will-change: transform, opacity; }
+.shards i:nth-child(3n+1) { clip-path: polygon(50% 0, 100% 100%, 0 100%); } .shards i:nth-child(3n+2) { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+@keyframes cfxShard { 0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(.2); opacity: 0; } }
+html.rm .shards, html.rm .zone.struck .holo .hin::after { display: none; }
+html.rm .hand .card.can::before, html.rm .zone.struck .holo .hin, html.rm .fxpress { animation: none; }
+html.rm .hand .card.m.layered.tilting, html.rm .card.big.m.layered.tilting { transform: none; }

@@ -56,6 +56,7 @@
     const d = C.get(el.dataset.cid); if (!d) return;
     hidePreview();
     const big = cardEl(d); big.classList.add('big');
+    if (d.kind === 'monster') layerCard(big, d);
     prevEl = h('div', { class: 'preview' }, big, h('div', { class: 'pv-t' }, h('b', null, d.name), d.kind === 'monster' ? h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`) : h('div', null, d.text)));
     document.body.append(prevEl);
   });
@@ -255,6 +256,14 @@
     box.append(s);
     return box;
   }
+  /** Capas de carta (fondo de energía + personaje que sale del marco): animación externa si hay, si no el recorte de la ilustración. */
+  function layerCard(el, d) {
+    if (!D.CardFX) return;
+    const ext = D.CardFX.animFor(d.id);
+    D.CardFX.layers(el, ext ? ext.u : Holo.src(d.id, myArt(d.id)), ext && ext.px);
+    const im = el.querySelector('.cch');
+    if (im && ext) im.onerror = () => { D.CardFX.fail(d.id); const st = Holo.src(d.id, myArt(d.id)); if (st) { im.onerror = null; im.src = st; im.classList.remove('px'); } else im.remove(); };
+  }
   /** o: { down, pos, atk, def } (atk/def efectivos del tablero), art: imagen de la skin (sin dar: la mía; null: la original) */
   function cardEl(card, o) {
     o = o || {};
@@ -276,6 +285,7 @@
   function detailBox(card, extra) {
     const d = typeof card === 'string' ? C.get(card) : card;
     const big = cardEl(d); big.classList.add('big');
+    if (d.kind === 'monster') layerCard(big, d);
     const txt = h('div', { class: 'txt' });
     if (d.kind === 'monster') {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
@@ -381,7 +391,8 @@
       h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
-      h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))),
+      h('div', { class: 'row' }, tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v))), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
@@ -1049,7 +1060,7 @@
       }
     }
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
-    const zoneMem = new Map(), enterMem = new Map();
+    const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set();
     let gameEl = null, zrowsEl = null, lcol = null;
     let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], atkTg = [], pops = [];
     const seatNames = () => match.names;
@@ -1520,8 +1531,11 @@
         (sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.allowed.includes(z));
       const chosen = sel && sel.kind === 'tribute' && seat === v.seat && area === 'mz' && sel.chosen.includes(z);
       const attacking = v.atk && area === 'mz' && v.atk.z === z && v.atk.p === seat;
+      const struck = v.atk && area === 'mz' && v.atk.vs === seat && v.atk.target === z && v.atk.p !== seat;     // le están atacando
+      const lpHit = area === 'mz' && lpDelta[seat] < 0;                                                         // su dueño acaba de perder PV
+      const weary = area === 'mz' && D.CardFX && D.CardFX.tired(v.players[seat].lp, 8000);                      // pocos PV: postura de cansancio
       const cs = cosOf(seat);
-      const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
+      const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : '') + (struck || lpHit ? ' struck' : '') + (weary ? ' tired' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
       let cur = null, landing = false, art = null;
       if (s) {
@@ -1551,6 +1565,10 @@
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id, art)) el.append(...holoEls(s, key, cur, landing, chosen, art));
+      if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas una sola vez por golpe
+        const hk = (v.seq || v.turn) + ':' + key + (struck ? 's' : 'l');
+        if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); }
+      }
       return el;
     }
     /** Figura de pie + anillo de luz (y, al aparecer, haz de luz y onda). */
@@ -1564,7 +1582,10 @@
       const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
       const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
       const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
-      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, h('img', { src: Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob }), stat);
+      const ext = !art && D.CardFX ? D.CardFX.animFor(d.id) : null;                // animación externa verificada (si no, la figura recortada de siempre)
+      const himg = h('img', { src: ext ? ext.u : Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob, class: ext && ext.px ? 'px' : '' });
+      if (ext) himg.onerror = () => { D.CardFX.fail(d.id); const st = Holo.src(d.id, art); himg.onerror = null; if (st) { himg.src = st; himg.classList.remove('px'); } };
+      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, himg, stat);
       const out = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` }), h('div', { class: cls, style: `--ms:${ms}ms` }, fig)];
       if (entering) out.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
       return out;
@@ -1962,12 +1983,13 @@
       }
       const my = myTurn();
       const dis = v.pending && v.pending.player === v.seat;
-      const hand = h('div', { class: 'hand' + (v.me.hand.length <= 5 ? ' few' : '') });
+      const hand = h('div', { class: 'hand' + (v.me.hand.length <= 5 ? ' few' : '') + (my && !v.pending ? ' myturn' : '') });
       const discarding = dis && v.pending.k === 'discard';
       v.me.hand.forEach((c, i) => {
         const d = C.get(c.id);
         const can = my && !v.pending && L().some(a => a.hand === i);
         const el = cardEl(d); if (can) el.classList.add('can');
+        if (d.kind === 'monster') layerCard(el, d);
         el.onclick = () => { if (discarding) return act({ t: 'discard', hand: i }); if (sel) { sel = null; render(); } handClick(i); };
         hand.append(el);
       });

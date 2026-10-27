@@ -1,0 +1,3 @@
+{
+  "_ayuda": "idCarta -> URL (o lista de URL, o {\"u\": url, \"px\": true} para pixel-art) de un GIF/WebP animado transparente. Sólo https de: raw.githubusercontent.com, media.githubusercontent.com, user-images.githubusercontent.com, cdn.jsdelivr.net, o rutas del propio sitio. Si falla, se usa la ilustración de assets/cards/. Ejemplo: \"c_goku\": \"https://raw.githubusercontent.com/USUARIO/REPO/main/goku_idle.gif\""
+}
