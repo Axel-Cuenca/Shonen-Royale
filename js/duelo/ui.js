@@ -1144,7 +1144,7 @@
       kaioken: 'Kaio-ken', kaioken6: 'Kaio-ken', genki: 'Genkidama', teach: 'Maestro de las Artes', dominio: 'Ataúd de la Montaña de Hierro', llama: 'Llama Infernal',
       kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
       eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
-      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
@@ -1272,6 +1272,7 @@
       if (s.gem) b.push(['🔮', 'Mente controlada']);
       if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);
       if (s.sym) b.push(['🕷️', 'Venom equipado (Simbiosis)']);
+      if (s.odin) b.push(['✨' + s.odin.c, 'Odin: ' + s.odin.c + ' carga(s) de vida (3 para revivir a un personaje del cementerio) · bendiciones ' + s.odin.b + '/' + s.odin.max]);
       if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
       if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
       if (s.price) b.push(['💎', 'Precio del poder: perdió la mitad de su poder y sus habilidades']);
@@ -1529,6 +1530,13 @@
               modal(h('div', { class: 'box' }, h('h2', null, '🗝️ ¿Qué habilidad copias?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
             }, 'Elige al personaje rival') });
           }
+          else if (k === 'odinvida') {
+            const gs = [...new Set(g.map(a => a.u))];
+            acts.push({ label: 'Cargas de vida: revivir (3 cargas)…', desc: 'Gasta 3 cargas de vida para revivir a un personaje de tu cementerio.', run: () => modal(h('div', { class: 'box' }, h('h2', null, '✨ ¿A quién revives?'),
+              h('div', { class: 'acts' }, gs.map(uid => { const gc = (v.me.grave || []).find(c => c.uid === uid); return btn(gc ? C.get(gc.id).name : 'Personaje', () => { closeModal(); act(g.find(a => a.u === uid)); }, 'gold'); })), btn('Cancelar', closeModal, 'ghost'))) });
+          }
+          else if (k === 'odinrev') acts.push({ label: 'Revelación divina…', desc: 'Destruye una carta boca abajo rival (personaje o magia/trampa). Una vez por turno.', run: () => choose(g, null, 'Elige la carta boca abajo rival') });
+          else if (k === 'odinbend') acts.push({ label: 'Bendición de poder (+600 ATK y DEF)…', desc: 'Permanente hasta que el personaje sea destruido. Una vez por turno, hasta 3 veces por invocación.', run: () => choose(g, 'mz', 'Elige al aliado que bendices') });
           else if (k === 'semilla') acts.push({ label: 'Semilla del Hermitaño…', desc: 'Quita los efectos negativos de un aliado y le devuelve su poder.', run: () => choose(g, 'mz', 'Elige al aliado que curas') });
           else
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }

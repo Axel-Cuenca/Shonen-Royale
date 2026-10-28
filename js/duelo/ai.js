@@ -190,6 +190,9 @@
             case 'semilla': return 47;
             case 'armadura': return 57;
             case 'kurama': return info.count ? 54 : 30;
+            case 'odinvida': return 58;
+            case 'odinrev': return 50;
+            case 'odinbend': return tm && v.team[a.target.vs] === v.team[v.seat] ? 49 + (tm.atk || 0) / 500 : -1;
             case 'robo': return 53;
             case 'simb': return -1;
             case 'jkmove': return -1;

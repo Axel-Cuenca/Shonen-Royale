@@ -71,6 +71,9 @@
     gyomei2: ['Respiración de Concentración Total', 'Una vez por invocación: +400 ATK durante 2 turnos.'],
     gyomei3: ['Marca de Cazador', 'Una vez por invocación: +500 ATK y DEF durante 3 turnos; al terminar, Gyomei muere.'],
     yoriichi: ['El Cazador Más Fuerte de la Historia', '13 posturas solares: cada vez que ataca o es atacado por otro personaje consume una y gana +300 ATK y +300 DEF. En sus propios ataques es inmune a las magias, trampas y habilidades enemigas.'],
+    odincarga: ['Cargas de vida', 'Cada vez que muere un personaje del campo, Odin obtiene 1 carga de vida. Al acumular 3 cargas, puede gastarlas para revivir a un personaje de tu cementerio.'],
+    odinrev: ['Revelación divina', 'Una vez por turno, puede destruir una carta boca abajo rival que todavía no haya sido revelada, ya sea un personaje o una magia/trampa.'],
+    odinbend: ['Bendición de poder', 'Una vez por turno, hasta 3 veces por invocación, bendice a otro personaje aliado: +600 ATK y +600 DEF de forma permanente hasta que ese personaje sea destruido.'],
     patriarca: ['Despertar del Poder Oculto', 'Otro personaje aliado del campo (nunca él mismo) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
     kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
     maestro: ['Maestro de las Artes', 'Enseña a un aliado el Kaio-ken o la Genkidama (una enseñanza por turno, cada habilidad una vez por invocación). Quien la aprende la usa una sola vez por invocación.'],
@@ -403,6 +406,12 @@
       id: 'c_titan_ataque', name: 'Titán de Ataque', type: 'aot', level: 7, atk: 2100, def: 2100, img: I('titan_ataque'), wide: true, ab: ['punos', 'resis'],
       text: 'Ocupa 2 zonas contiguas. Se invoca con 2 tributos o, especialmente, con Eren Jaeger. Endurecimiento de los puños: su próximo ataque gana +700 ATK (una vez por turno propio, 2 veces por invocación). ' +
         'Resistencia titánica: 2 vidas contra la muerte; si lo atacan con más ATK sobrevive y su dueño pierde la diferencia.'
+    }),
+    mon({
+      id: 'c_odin', name: 'Odin', type: 'marvel', level: 10, atk: 2500, def: 2600, img: I('odin'), ab: ['odincarga', 'odinrev', 'odinbend'],
+      text: 'Cargas de vida: cada vez que muere un personaje del campo, Odin obtiene 1 carga de vida. Al acumular 3 cargas, puede gastarlas para revivir a un personaje del cementerio. ' +
+        'Revelación divina: una vez por turno, puede destruir una carta boca abajo que todavía no haya sido revelada, ya sea un personaje o una magia/trampa. ' +
+        'Bendición de poder: una vez por turno, durante un máximo de 3 turnos, puede bendecir a un personaje aliado, otorgándole +600 ATK y +600 DEF de forma permanente. El bono se mantiene hasta que el personaje sea destruido.'
     }),
     mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],

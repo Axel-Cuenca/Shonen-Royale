@@ -353,7 +353,7 @@
     const O = st.players[m.owner != null ? m.owner : p];                 // un personaje corrompido vuelve a la zona de su dueño original
     const dest = how === 'banish' ? O.banish : O.grave;
     dest.push(m.c);
-    for (const l of (m.link || [])) dest.push(l);
+    for (const l of (m.link || [])) { const LO = l.by != null ? st.players[l.by] : O; (how === 'banish' ? LO.banish : LO.grave).push(l); }      // lo equipado vuelve a quien lo puso
     if (m.abs) releaseAbsorbed(st, m);
     if ((how === 'grave' || (o && o.death)) && P.alive) onDeath(st, p, m, how || 'grave');
     return m;
@@ -366,6 +366,10 @@
       if (!Q.alive) continue;
       for (let z = 0; z < ZONES; z++) {
         const lm = Q.mz[z];
+        if (lm && !lm.down && lm.c.uid !== m.c.uid && has(st, lm, 'odincarga')) {      // Odin: una carga de vida por cada muerte en el campo
+          const uo = uOf(lm); uo.odc = (uo.odc || 0) + gx(Q, z);
+          log(st, q, `${mdef(lm).name} obtiene una carga de vida por la muerte de ${nm} (${uo.odc})`);
+        }
         if (lm && !lm.down && lm.c.uid !== m.c.uid && has(st, lm, 'muerte')) {
           addMod(st, lm, 'muerte', 300 * gx(Q, z), 0, 0);
           log(st, q, `${mdef(lm).name} gana ${300 * gx(Q, z)} ATK por la muerte de ${nm}`);
@@ -1585,9 +1589,9 @@
     if (PW_RED.includes(a.pw)) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
     return false;
   }
-  const PWL = { tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+  const PWL = { odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -1618,7 +1622,7 @@
   /** Anti-Venom se acopla al anfitrión: +1000/+1000 y sus habilidades; la carta queda vinculada a él. */
   function coupleAV(st, p, hi, hz, tributes) {
     const P = st.players[p], inst = P.hand.splice(hi, 1)[0];
-    inst.spent = false;
+    inst.spent = false; inst.by = p;
     for (const z of tributes) removeMonster(st, p, z, 'grave');
     const h = P.mz[hz], g = gx(P, hz);
     h.link = (h.link || []).concat([inst]);
@@ -1632,7 +1636,7 @@
   /** Jake (espada o escudo) o Venom (Simbiosis) se equipan desde la mano a un aliado: no ocupan zona y siguen su destino. */
   function attachCard(st, p, hi, hz, mode) {
     const P = st.players[p], inst = P.hand.splice(hi, 1)[0], h = P.mz[hz], g = gx(P, hz), hn = mdef(h).name;
-    inst.spent = false;
+    inst.spent = false; inst.by = p;      // quién puso la carta (para contar las cartas de cada jugador si el anfitrión está corrompido)
     h.link = (h.link || []).concat([inst]);
     if (mode === 'venom') {
       h.sym = { uid: inst.uid }; P.symT = st.turn;
@@ -2155,6 +2159,14 @@
       if (ab.includes('gyomei2') && canOnce(P, z, u, 'conc2')) push({ pw: 'conc2' });
       if (ab.includes('gyomei3') && canOnce(P, z, u, 'marca')) push({ pw: 'marca' });
       if (ab.includes('patriarca') && (u.pat || 0) < 3 * g && (u.patT !== st.turn || (u.patTn || 0) < g)) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z)) push({ pw: 'desp', target: t });      // nunca sobre sí mismo
+      // ----- Odin -----
+      if (ab.includes('odincarga') && (u.odc || 0) >= 3) P.grave.forEach(i => { const cd = def(i); if (cd.kind === 'monster' && spot(P, cd) >= 0) push({ pw: 'odinvida', u: i.uid }); });
+      if (ab.includes('odinrev') && (u.orevT !== st.turn || (u.orevN || 0) < g)) for (const e of fl) {
+        const Q = st.players[e];
+        for (const tz of zonesWith(Q.mz)) if (Q.mz[tz].down && canTarget(st, p, e, tz)) push({ pw: 'odinrev', target: { vs: e, z: tz, area: 'mz' } });
+        for (const tz of zonesWith(Q.st)) if (Q.st[tz].down && !Q.st[tz].prison) push({ pw: 'odinrev', target: { vs: e, z: tz, area: 'st' } });
+      }
+      if (ab.includes('odinbend') && (u.odb || 0) < 3 * g && (u.odbT !== st.turn || (u.odbTn || 0) < g)) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z)) push({ pw: 'odinbend', target: t });
       if (ab.includes('kaioken') && canOnce(P, z, u, 'kk')) push({ pw: 'kaioken' });
       if (m.learn && m.learn.kaioken && !u.kk6) push({ pw: 'kaioken6' });
       if (m.learn && m.learn.genki && !u.gen && fl.some(e => zonesWith(st.players[e].mz).length)) push({ pw: 'genki' });
@@ -2480,6 +2492,32 @@
         u.pat = (u.pat || 0) + 1; u.patTn = u.patT === st.turn ? (u.patTn || 0) + 1 : 1; u.patT = st.turn;
         addMod(st, tm, 'desp', 700 * g, 700 * g, 0);
         log(st, p, `${nm} despierta el poder oculto de ${mdef(tm).name}: +${700 * g} ATK y DEF (${u.pat}/${3 * g})`);
+        break;
+      }
+      case 'odinvida': {
+        const inst = P.grave.find(c => c.uid === a.u);
+        if (!inst || (u.odc || 0) < 3) break;
+        u.odc -= 3;
+        log(st, p, `${nm} gasta 3 cargas de vida para revivir a ${def(inst).name}`);
+        if (reviveInst(st, p, inst) < 0) log(st, p, 'no hay espacio en el campo');
+        break;
+      }
+      case 'odinrev': {
+        u.orevN = u.orevT === st.turn ? (u.orevN || 0) + 1 : 1; u.orevT = st.turn;      // una vez por turno propio
+        const e = a.target.vs, tz = a.target.z;
+        log(st, p, `${nm} usa Revelación divina`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (a.target.area === 'st') { if (st.players[e].st[tz] && st.players[e].st[tz].down) { log(st, e, 'una carta de magia/trampa boca abajo es revelada y destruida'); removeST(st, e, tz); } }
+        else { const tm = st.players[e].mz[tz]; if (tm && tm.down) { log(st, e, `${mdef(tm).name} es revelado y destruido`); destroyMonster(st, e, tz, ctx); } }
+        break;
+      }
+      case 'odinbend': {
+        if (a.target.vs === p && a.target.z === a.zone) break;      // no se bendice a sí mismo
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm) break;
+        u.odb = (u.odb || 0) + 1; u.odbTn = u.odbT === st.turn ? (u.odbTn || 0) + 1 : 1; u.odbT = st.turn;
+        addMod(st, tm, 'bend', 600 * g, 600 * g, 0);
+        log(st, p, `${nm} bendice a ${mdef(tm).name}: +${600 * g} ATK y DEF permanentes (${u.odb}/${3 * g})`);
         break;
       }
       case 'kaioken': {
@@ -3121,6 +3159,7 @@
       if (s.tony) v.tony = { mat: s.tony.mat, arm: s.tony.arm, can: s.tony.t !== st.turn };
       if (s.hira > 0) v.hira = s.hira;
       if (s.price) v.price = true;
+      if (a3.includes('odincarga')) v.odin = { c: u.odc || 0, b: u.odb || 0, max: 3 * g3 };
       if (a3.includes('toge')) v.toge = { tq: !!u.tq, td: !!u.td, tm: !!u.tm, round: u.tgR === curRound(st) };
       if (a3.includes('punos')) v.pn = { n: u.pn || 0, max: 2 * g3, turn: u.pnT === st.turn };
       if (a3.includes('semilla')) v.seed = { turn: u.sdT === st.turn, n: u.sdT === st.turn ? (u.sdN || 0) : 0, max: g3, last: u.seedLast || null };
@@ -3228,12 +3267,16 @@
   function countCards(st, p) {
     const P = st.players[p];
     let n = P.deck.length + P.hand.length + P.grave.length + P.banish.length + (P.loan || 0);
-    for (const s of P.mz) if (s && (s.owner == null || s.owner === p)) n += 1 + (s.link ? s.link.length : 0);
+    // cada personaje cuenta para su dueño original (corrompido: `owner`); lo que se le equipó (Jake, Venom, Anti-Venom) cuenta para quien lo puso (`by`)
+    st.players.forEach((Q, qi) => {
+      for (const s of Q.mz) {
+        if (!s) continue;
+        const own = s.owner == null ? qi : s.owner;
+        if (own === p) n++;
+        for (const l of (s.link || [])) if ((l.by != null ? l.by : own) === p) n++;
+      }
+    });
     for (const s of P.st) if (s) n++;
-    for (const Q of st.players) {                                          // lo corrompido o sellado cuenta para su dueño original
-      if (Q === P) continue;
-      for (const s of Q.mz) if (s && s.owner === p) n += 1 + (s.link ? s.link.length : 0);
-    }
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.owner === p) n += 1 + (s.prison.m.link ? s.prison.m.link.length : 0);
     if (st.chain && st.chain.p === p) n++;
     else if (st.pending && st.pending.ab === 'glove' && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete
