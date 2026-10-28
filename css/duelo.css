@@ -1563,3 +1563,6 @@ html.fxbg .board3d .zone.hl::before { opacity: 1; animation-duration: 9s; }
 @keyframes zsheen { 0%, 12% { background-position: 130% 0, 0 0, 0 0, 0 0, 0 0; } 52%, 100% { background-position: -60% 0, 0 0, 0 0, 0 0, 0 0; } }
 @keyframes zspin { to { rotate: 360deg; } }
 html.rm .board3d .zone::before { animation: none; } html.rm .board3d .zone { animation: none; }
+/* el tablero sigue al ratón en 3D (bgfx.js pone --brx/--bry) */
+html.fxbg .board3d { transform: translate(-50%, -50%) rotateX(calc(40deg + var(--bry, 0deg))) rotateY(var(--brx, 0deg)) scale(var(--k, 1)) !important; }
+html.rm .board3d { transform: translate(-50%, -50%) rotateX(40deg) scale(var(--k, 1)) !important; }

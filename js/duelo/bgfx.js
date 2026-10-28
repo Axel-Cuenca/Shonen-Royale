@@ -241,9 +241,21 @@ void main(){
       dx[k2] += vx[k2] * f; dy[k2] += vy[k2] * f;
     }
     dtGl = dtms / 1000;
+    tilt(f, mA);
     if (mixV > 0) { mixV += dtGl / FADE; if (mixV >= 1) { mixV = 0; shA = themeIx; } }
     else if (autoMode && gl && !rival) { since += dtGl; if (since > PERIOD) { since = 0; shA = themeIx; themeIx = (themeIx + 1) % THEMES.length; mixV = .001; retarget(); } }
     glDraw(now); draw(mA);
+  }
+
+  // el tablero se inclina en 3D siguiendo al ratón (inclinación suave y amortiguada; vuelve al centro si el ratón se queda quieto)
+  let tx = 0, ty = 0, board = null;
+  function tilt(f, mA) {
+    if (!board || !board.isConnected) board = cv && cv.parentNode && cv.parentNode.querySelector('.board3d');
+    if (!board) return;
+    const nx = mA ? Math.max(-1, Math.min(1, (mouse.x / W - .5) * 2)) : 0, ny = mA ? Math.max(-1, Math.min(1, (mouse.y / H - .5) * 2)) : 0;
+    const k = 1 - Math.pow(.92, f);
+    tx += (nx * 7 - tx) * k; ty += (ny * 4 - ty) * k;
+    board.style.setProperty('--brx', tx.toFixed(2) + 'deg'); board.style.setProperty('--bry', (-ty).toFixed(2) + 'deg');
   }
 
   const NB = 6;                                                          // niveles de opacidad para agrupar los trazos
