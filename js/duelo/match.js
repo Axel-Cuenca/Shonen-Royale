@@ -106,6 +106,32 @@
     return m;
   }
 
+  // ---------------- campo de práctica ----------------
+  /** Una persona juega los dos lados: la vista sigue siempre al que tiene que actuar, se ve todo (manos y cartas boca abajo)
+   *  y hay herramientas para agregar cartas, moverlas, cambiar PV, deshacer y reiniciar. Nada de esto toca el ranking ni da puntos. */
+  function practice(o) {
+    const seed = o.seed != null ? o.seed : randSeed();
+    const decks = [o.deck.slice(), (o.deck2 || o.deck).slice()], names = ['Lado A', 'Lado B'];
+    const st = E().newGame(decks, { seed, first: 0 });
+    const views = emitter(), status = emitter(), hist = [];
+    let closed = false;
+    const m = { seat: 0, names, kind: 'practice', onView: views.on, onStatus: status.on };
+    const seatNow = () => { const a = E().actor(st); return a >= 0 ? a : st.current; };
+    const emit = () => { m.seat = seatNow(); views.emit(E().view(st, m.seat, { all: true })); };
+    const snap = () => { hist.push(JSON.stringify(st)); if (hist.length > 200) hist.shift(); };
+    m.start = () => emit();
+    m.refresh = () => emit();
+    m.act = a => { if (closed) return { ok: false }; snap(); const r = E().apply(st, seatNow(), a); if (r.ok) emit(); else hist.pop(); return r; };
+    m.sandbox = op => { if (closed) return { ok: false }; snap(); const r = E().sandbox(st, op); if (r.ok) emit(); else hist.pop(); return r; };
+    m.undo = () => { if (closed || !hist.length) return false; const s = JSON.parse(hist.pop()); for (const k of Object.keys(st)) delete st[k]; Object.assign(st, s); emit(); return true; };
+    m.canUndo = () => hist.length > 0;
+    m.reset = () => { if (closed) return; const s = E().newGame(decks, { seed: randSeed(), first: 0 }); for (const k of Object.keys(st)) delete st[k]; Object.assign(st, s); hist.length = 0; emit(); };
+    m.resign = () => { /* en la práctica no se rinde: se sale */ };
+    m.close = () => { closed = true; };
+    m.state = () => st;
+    return m;
+  }
+
   // ---------------- online: anfitrión ----------------
   /** Lo que viaja por la red: la vista sin duplicar `me` y `opp` (el invitado los reconstruye). */
   function wireView(v) { const w = Object.assign({}, v); delete w.me; delete w.opp; w.oppSeat = v.opp ? v.opp.seat : 0; return w; }
@@ -334,6 +360,6 @@
     return [side(a, b), side(b, a)];
   }
 
-  D.Match = { local, host, guest, memoryPair, assignSeats };
+  D.Match = { local, practice, host, guest, memoryPair, assignSeats };
   if (!isBrowser) module.exports = D.Match;
 })();

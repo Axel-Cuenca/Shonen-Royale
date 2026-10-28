@@ -1,0 +1,34 @@
+/* Campo de práctica (28-10-2026): sandbox del motor y Match.practice (deshacer, reinicio, la vista sigue a quien actúa). */
+'use strict';
+module.exports = function (T) {
+  const { E, Cards, ok, eq, section, Match } = T;
+  section('Campo de práctica');
+  const deck = Cards.presetDeck('fire');
+  const m = Match.practice({ deck });
+  let last = null; m.onView(v => { last = v; }); m.start();
+  const st = m.state();
+  ok(last && last.seat === 0, 'empieza viendo el lado A');
+  ok(last.players[1].hand.length > 0 && last.players[1].hand[0].id, 'se ve la mano del otro lado');
+  const mon = Cards.monsters[0].id, mon2 = Cards.monsters[1].id;
+  const total = P => P.deck.length + P.hand.length + P.grave.length + P.banish.length + P.mz.filter(Boolean).length + P.st.filter(Boolean).length;
+  const n0 = total(st.players[1]);
+  let r = m.sandbox({ k: 'give', p: 1, id: mon, to: 'hand' }); ok(r.ok, 'dar carta a la mano');
+  ok(m.canUndo(), 'se puede deshacer');
+  r = m.sandbox({ k: 'place', p: 1, id: mon2, z: 0, pos: 'atk', down: false }); ok(r.ok, 'colocar monstruo en el campo del lado B');
+  ok(st.players[1].mz[0] && st.players[1].mz[0].c.id === mon2, 'el monstruo quedó en la zona 0');
+  r = m.sandbox({ k: 'place', p: 1, id: mon2, z: 0, pos: 'atk', down: false }); ok(!r.ok, 'zona ocupada se rechaza');
+  r = m.sandbox({ k: 'lp', p: 0, lp: 1234 }); ok(r.ok && st.players[0].lp === 1234, 'cambiar PV');
+  r = m.sandbox({ k: 'lp', p: 0, lp: 99999999 }); ok(r.ok && st.players[0].lp <= 99999, 'PV acotados');
+  r = m.sandbox({ k: 'move', p: 1, area: 'mz', z: 0, to: 'grave' }); ok(r.ok && !st.players[1].mz[0], 'monstruo al cementerio');
+  r = m.sandbox({ k: 'move', p: 1, area: 'hand', z: 0, to: 'banish' }); ok(r.ok && st.players[1].banish.length === 1, 'carta de la mano desterrada');
+  r = m.sandbox({ k: 'draw', p: 1 }); ok(r.ok, 'robar');
+  r = m.sandbox({ k: 'refresh', p: 0 }); ok(r.ok, 'renovar turno');
+  r = m.sandbox({ k: 'turn', p: 1 }); ok(r.ok && st.current === 1 && last.seat === 1, 'dar el turno al lado B y la vista lo sigue');
+  while (m.canUndo()) m.undo();
+  ok(total(st.players[1]) === n0 && st.current === 0, 'deshacer todo vuelve al inicio');
+  const lg = last.legal || []; ok(lg.some(a => a.t === 'summon' || a.t === 'set' || a.t === 'endTurn'), 'hay jugadas legales para quien actúa');
+  r = m.act(lg.find(a => a.t === 'endTurn')); ok(r.ok && last.seat === 1, 'terminar turno: la vista pasa al lado B');
+  m.reset(); ok(!m.canUndo() && st.current === 0 && st.turn <= 1, 'reiniciar el campo');
+  m.close();
+  ok(m.sandbox({ k: 'draw', p: 0 }).ok === false, 'cerrado: no admite operaciones');
+};

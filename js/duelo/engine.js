@@ -3172,7 +3172,7 @@
     };
   }
   /** Lo que ve el jugador `seat`: su mano y sus cartas boca abajo, y nada del rival que esté oculto. */
-  function view(st, seat) {
+  function view(st, seat, opts) {
     const pd = st.pending;
     let pending = null;
     if (pd) {
@@ -3205,7 +3205,7 @@
       else if (pd.k === 'ability') pending.ab = pd.ab;
     }
     // Un jugador eliminado mira la partida como espectador: ve las manos y las cartas boca abajo de los que siguen
-    const spec = !st.players[seat].alive && st.winner === null;
+    const spec = (!st.players[seat].alive && st.winner === null) || !!(opts && opts.all);      // opts.all: campo de práctica, se ve todo
     const players = st.players.map((_, i) => playerView(st, i, i === seat || spec));
     const fl = foes(st, seat);
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
@@ -3264,6 +3264,88 @@
     settle(st);
   }
 
-  D.Engine = { newGame, actor, legal, apply, view, resign, timeoutTurn, countCards, foes, START_LP, HAND_MAX, ZONES, GIVE, SHIELD_MAX };
+  /** CAMPO DE PRÁCTICA: herramientas que se saltan las reglas (sólo las usa match.practice; nunca en partidas de verdad).
+   *  op = { k: 'give'|'place'|'lp'|'draw'|'move'|'refresh'|'turn', p, ... } → { ok, error? } */
+  function sandbox(st, op) {
+    if (!op || typeof op !== 'object' || st.winner !== null) return { ok: false, error: 'No se puede ahora.' };
+    const p = op.p | 0, P = st.players[p];
+    if (!P) return { ok: false, error: 'Lado no válido.' };
+    const d = op.id ? C().get(op.id) : null;
+    const ZN = ['hand', 'deck', 'grave', 'banish'];
+    switch (op.k) {
+      case 'give': {
+        if (!d || !ZN.includes(op.to)) return { ok: false, error: 'Carta o destino no válidos.' };
+        P[op.to][op.to === 'deck' ? 'unshift' : 'push']({ uid: st.nextUid++, id: d.id });
+        log(st, p, `[Práctica] agrega ${d.name} a ${({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio', banish: 'los desterrados' })[op.to]}`);
+        return { ok: true };
+      }
+      case 'place': {
+        if (!d) return { ok: false, error: 'Carta no válida.' };
+        const z = op.z | 0;
+        if (z < 0 || z >= ZONES) return { ok: false, error: 'Zona no válida.' };
+        if (d.kind === 'monster') {
+          const o = occ(P);
+          if (o[z] || (d.wide && (z + 1 >= ZONES || o[z + 1]))) return { ok: false, error: 'No cabe en esa zona.' };
+          const down = !!op.down, inst = { uid: st.nextUid++, id: d.id };
+          P.mz[z] = mkSlot(st, inst, { pos: down ? 'def' : (op.pos === 'def' ? 'def' : 'atk'), down, wide: !!d.wide, summonedTurn: st.turn - 2 });
+          log(st, p, `[Práctica] coloca ${down ? 'una carta boca abajo' : d.name} en el campo`);
+          if (!down) entered(st, p, z);
+        } else {
+          if (P.st[z]) return { ok: false, error: 'Esa zona está ocupada.' };
+          P.st[z] = { c: { uid: st.nextUid++, id: d.id }, down: true, setTurn: st.turn - 2, equipTo: null };
+          log(st, p, '[Práctica] coloca una carta boca abajo');
+        }
+        sweep(st);
+        return { ok: true };
+      }
+      case 'lp': {
+        const n = Math.max(1, Math.min(99999, Math.floor(Number(op.lp)) || 0));
+        P.lp = n; if (!P.alive) return { ok: false, error: 'Ese lado ya cayó.' };
+        log(st, p, `[Práctica] sus PV pasan a ${n}`);
+        return { ok: true };
+      }
+      case 'draw': drawCards(st, p, 1); log(st, p, '[Práctica] roba 1 carta'); return { ok: true };
+      case 'move': {
+        const z = op.z | 0, to = op.to;
+        if (!['hand', 'deck', 'grave', 'banish'].includes(to)) return { ok: false, error: 'Destino no válido.' };
+        if (op.area === 'hand') {
+          const inst = P.hand[z]; if (!inst) return { ok: false, error: 'No hay nada ahí.' };
+          if (to === 'hand') return { ok: false, error: 'Ya está en la mano.' };
+          P.hand.splice(z, 1); P[to][to === 'deck' ? 'unshift' : 'push'](inst);
+          log(st, p, `[Práctica] ${def(inst).name} se envía a ${({ deck: 'el mazo', grave: 'el cementerio', banish: 'los desterrados' })[to]}`);
+          return { ok: true };
+        }
+        if (op.area === 'mz') {
+          const m = P.mz[z]; if (!m) return { ok: false, error: 'No hay nada ahí.' };
+          const nm = mdef(m).name;
+          if (to === 'grave' || to === 'banish') removeMonster(st, p, z, to);
+          else { const inst = m.c, links = m.link || []; P.mz[z] = null; for (const c of links) P.grave.push(c); P[to][to === 'deck' ? 'unshift' : 'push'](inst); }
+          log(st, p, `[Práctica] ${nm} se envía a ${({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio', banish: 'los desterrados' })[to]}`);
+        } else {
+          const s = P.st[z]; if (!s) return { ok: false, error: 'No hay nada ahí.' };
+          if (s.prison) return { ok: false, error: 'Esa carta guarda a un personaje sellado.' };
+          P.st[z] = null; P[to][to === 'deck' ? 'unshift' : 'push'](s.c);
+          log(st, p, `[Práctica] ${def(s.c).name} se envía a ${({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio', banish: 'los desterrados' })[to]}`);
+        }
+        sweep(st);
+        return { ok: true };
+      }
+      case 'refresh': {          // el lado recupera su turno: invocación normal y ataques disponibles de nuevo
+        P.normalUsed = false;
+        for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; s.hira = 0; }
+        st.phase = 'main'; st.pending = null;
+        log(st, p, '[Práctica] recupera su invocación normal y sus ataques');
+        return { ok: true };
+      }
+      case 'turn': {             // le da el turno a este lado sin avanzar el contador
+        st.current = p; st.phase = 'main'; st.pending = null; P.normalUsed = false;
+        for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; s.hira = 0; }
+        log(st, p, '[Práctica] toma el control del turno');
+        return { ok: true };
+      }
+    }
+    return { ok: false, error: 'Acción desconocida.' };
+  }
+  D.Engine = { newGame, actor, legal, apply, view, resign, sandbox, timeoutTurn, countCards, foes, START_LP, HAND_MAX, ZONES, GIVE, SHIELD_MAX };
   if (!isBrowser) module.exports = D.Engine;
 })();

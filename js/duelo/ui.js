@@ -441,6 +441,7 @@
     const items = [
       lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
       : { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
+      { t: 'Campo de práctica', d: 'Prueba cartas y combinaciones: tú juegas los dos lados, con cualquier carta y acción', f: practiceStart, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
       { t: 'Ranking', d: 'Tu rango, los mejores de la temporada y cómo se sube', f: () => rankScreen() },
@@ -580,6 +581,12 @@
       h('div', { class: 'panel' }, h('label', null, 'Formato ', f.sel), f.note, h('label', null, 'Dificultad ', lvl), rtLabel,
         h('div', { class: 'sub' }, 'Tu mazo: ' + activeDeck().name),
         btn('¡A duelear!', () => startAI({ level: lvl.value, rival: rt.value, fmt: f.sel.value }), 'gold'))));
+  }
+  /** Campo de práctica: un solo jugador mueve los dos lados (sin ranking, premios ni reloj). */
+  function practiceStart() {
+    if (lobbyAlive() && !confirm('Tu sala de espera se cerrará. ¿Entrar al campo de práctica?')) return;
+    const ids = activeDeck().ids.slice();
+    game(D.Match.practice({ deck: ids, deck2: ids.slice() }), { rematch: practiceStart });
   }
   function startAI(o) {
     const fm = FORMATS[o.fmt || 'duel'];
@@ -1055,7 +1062,7 @@
     const cur = current = { match, cleanup: opts.cleanup, started: false };
     // ---- ranking: sólo partidas online con al menos 2 personas y cuenta con nombre ----
     let rankDone = false, rankRes = null;
-    const rankable = () => match.kind !== 'ia' && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
+    const rankable = () => (match.kind === 'host' || match.kind === 'guest') && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
     let armed = false;
     /** Marca la partida como «en curso» para el ranking: si este jugador la abandona sin avisar, se le cuenta como derrota al volver. */
     function rankArm() {
@@ -1088,7 +1095,7 @@
     cur.leave = () => { if (v && v.winner === null) { if (v.me.alive) rankFinish(true); else rankOut(); } };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
-    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; lobbyBack = null; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
+    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; lobbyBack = null; if (D.Social && match.kind !== 'ia' && match.kind !== 'practice') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
     if (match.kind === 'ia') tutorial(cur);
     // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
@@ -1278,8 +1285,79 @@
     }
     const L = () => (v ? v.legal : []);
     const myTurn = () => v && v.actor === v.seat && v.winner === null;
+    // ----- campo de práctica: ambos lados, cualquier carta y acción -----
+    const PR = () => match.kind === 'practice';
+    let prCtx = null;
+    const SIDE = q => (q === 0 ? 'Lado A' : 'Lado B');
+    function prRun(op, reopen) {
+      const r = match.sandbox(op);
+      if (r && r.ok === false) { S.play('error'); alert(r.error || 'No se pudo.'); }
+      if (reopen) setTimeout(prPanel, 0);
+      return r;
+    }
+    /** Acciones de práctica sobre una carta ya puesta (mano, monstruo o magia/trampa) de cualquier lado. */
+    function prActs(c) {
+      const { seat, area, z } = c, out = [];
+      const mv = (label, to) => out.push({ label: '🧪 ' + label, cls: 'ghost', run: () => prRun({ k: 'move', p: seat, area, z, to }) });
+      mv('Al cementerio', 'grave'); mv('Desterrar', 'banish'); mv('Al mazo', 'deck');
+      if (area !== 'hand') mv('A la mano', 'hand');
+      return out;
+    }
+    function prHand(p) {
+      const hs = v.players[p].hand || [];
+      modal(h('div', { class: 'box' }, h('h2', null, 'Mano de ' + SIDE(p) + ' (' + hs.length + ')'),
+        hs.length ? h('div', { class: 'acts' }, hs.map((c, i) => btn(C.get(c.id).name, () => { closeModal(); sheet(C.get(c.id), prActs({ seat: p, area: 'hand', z: i }), null); }, 'ghost'))) : h('p', null, 'Sin cartas.'),
+        btn('Volver', () => { closeModal(); prPanel(); }, 'ghost')));
+    }
+    /** Elegir una carta cualquiera del catálogo y dónde ponerla. */
+    function prPicker(p) {
+      let q = '';
+      const list = h('div', { class: 'acts', style: 'max-height:46vh;overflow:auto' });
+      const draw = () => {
+        list.innerHTML = '';
+        const all = C.all().filter(c => !q || c.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 60);
+        for (const c of all) list.appendChild(btn(c.name + ' · ' + ({ monster: 'monstruo', spell: 'magia', trap: 'trampa' }[c.kind] || c.kind), () => { closeModal(); prDest(p, c); }, 'ghost'));
+        if (!all.length) list.appendChild(h('p', null, 'Nada con ese nombre.'));
+      };
+      const inp = h('input', { type: 'text', placeholder: 'Buscar carta…', style: 'width:100%;padding:8px;margin:6px 0', oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } });
+      draw();
+      modal(h('div', { class: 'box' }, h('h2', null, 'Añadir carta a ' + SIDE(p)), inp, list, btn('Volver', () => { closeModal(); prPanel(); }, 'ghost')));
+      setTimeout(() => inp.focus(), 30);
+    }
+    function prDest(p, card) {
+      const P = v.players[p], run = op => { closeModal(); prRun(Object.assign({ p, id: card.id }, op), true); };
+      const dests = ['hand', 'deck', 'grave', 'banish'], lb = { hand: 'A la mano', deck: 'Al mazo', grave: 'Al cementerio', banish: 'Desterrada' };
+      const rows = dests.map(to => btn(lb[to], () => run({ k: 'give', to }), 'gold'));
+      const zones = [];
+      if (card.kind === 'monster') {
+        for (let z = 0; z < P.mz.length; z++) if (!P.mz[z]) { zones.push(btn(`Zona ${z + 1}: ataque`, () => run({ k: 'place', z, pos: 'atk', down: false }), 'ghost')); zones.push(btn(`Zona ${z + 1}: defensa boca abajo`, () => run({ k: 'place', z, pos: 'def', down: true }), 'ghost')); }
+      } else for (let z = 0; z < P.st.length; z++) if (!P.st[z]) zones.push(btn(`Zona ${z + 1} de magia/trampa (boca abajo)`, () => run({ k: 'place', z, pos: 'atk', down: true }), 'ghost'));
+      modal(h('div', { class: 'box' }, h('h2', null, card.name), h('p', { class: 'sub' }, SIDE(p)), h('div', { class: 'acts' }, rows), h('h3', null, 'Al campo'), h('div', { class: 'acts', style: 'max-height:30vh;overflow:auto' }, zones.length ? zones : h('p', null, 'No hay zonas libres.')), btn('Volver', () => { closeModal(); prPicker(p); }, 'ghost')));
+    }
+    function prPanel() {
+      closeModal(true);
+      const side = p => {
+        const P = v.players[p];
+        return h('div', { class: 'prside' }, h('b', null, SIDE(p) + (v.current === p ? ' · su turno' : '')), h('div', { class: 'sub' }, `PV ${P.lp} · mano ${P.handCount != null ? P.handCount : (P.hand || []).length} · mazo ${P.deckCount != null ? P.deckCount : ''}`),
+          h('div', { class: 'acts' },
+            btn('−1000', () => prRun({ k: 'lp', p, lp: P.lp - 1000 }, true), 'ghost'), btn('+1000', () => prRun({ k: 'lp', p, lp: P.lp + 1000 }, true), 'ghost'),
+            btn('PV…', () => { const n = parseInt(prompt('Puntos de vida de ' + SIDE(p), P.lp), 10); if (n > 0) prRun({ k: 'lp', p, lp: n }, true); else prPanel(); }, 'ghost'),
+            btn('Robar', () => prRun({ k: 'draw', p }, true), 'ghost'), btn('Ver mano', () => prHand(p), 'ghost'), btn('Añadir carta…', () => prPicker(p), 'gold')));
+      };
+      modal(h('div', { class: 'box prbox' }, h('h2', null, '🧪 Campo de práctica'),
+        h('p', { class: 'sub' }, 'Juegas los dos lados. Toca cualquier carta del tablero o de la mano para moverla. La vista cambia al lado que le toca actuar.'),
+        side(0), side(1),
+        h('div', { class: 'acts' },
+          btn('Renovar invocación y ataques del turno', () => prRun({ k: 'refresh', p: v.current }, true), 'ghost'),
+          btn('Pasar el turno a ' + SIDE(1 - v.current), () => prRun({ k: 'turn', p: 1 - v.current }, true), 'ghost'),
+          btn('↶ Deshacer', () => { match.undo(); setTimeout(prPanel, 0); }, match.canUndo() ? 'gold' : 'ghost'),
+          btn('Reiniciar el campo', () => { if (confirm('¿Empezar de cero?')) { match.reset(); closeModal(); } }, 'ghost'),
+          btn('Salir', () => { if (confirm('¿Salir del campo de práctica?')) menu(); }, 'ghost')),
+        btn('Cerrar', closeModal, 'ghost')));
+    }
     // ----- acciones al tocar -----
     function sheet(card, acts, hint) {
+      if (PR() && prCtx) { acts = acts.concat(prActs(prCtx)); } prCtx = null;
       const box = h('div', { class: 'box' }, detailBox(card, hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null),
         acts.length ? h('div', { class: 'acts' }, acts.map(a => { const b = btn(a.label, () => { if (a.off) return; closeModal(); a.run(); }, a.cls || 'gold'); if (a.off) b.disabled = true; return b; })) : null,
         btn('Cerrar', closeModal, 'ghost'));
@@ -1374,6 +1452,7 @@
     }
     function handClick(i) {
       const c = v.me.hand[i], d = C.get(c.id);
+      if (PR()) prCtx = { seat: v.seat, area: 'hand', z: i };
       S.play('select');
       if (!myTurn() || v.pending) { sheet(d, [], null); return; }
       const mine = L().filter(a => a.hand === i), acts = [];
@@ -1549,8 +1628,9 @@
     function oppClick(seat, area, z) {
       const s = v.players[seat][area][z];
       if (!s) return;
-      if (s.down) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
+      if (s.down && !(PR() && s.c)) { modal(h('div', { class: 'box' }, h('div', { class: 'detail' }, h('div', { class: 'card back big' }), h('div', { class: 'txt' }, h('h3', null, 'Carta boca abajo'), h('div', null, area === 'mz' ? 'Un monstruo en defensa. No sabes cuál es.' : 'Una magia o trampa colocada.'))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const d = C.get(s.c.id);
+      if (PR()) { const pos = d.kind === 'monster' ? `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}` : (stText(s) || (s.down ? 'Boca abajo' : null)); sheet(d, [], pos); return; }
       if (area === 'st' && stText(s)) { modal(h('div', { class: 'box' }, detailBox(d, h('div', { class: 'sub', style: 'margin-top:6px' }, stText(s))), btn('Cerrar', closeModal, 'ghost'))); return; }
       const hint = d.kind === 'monster' ? [`${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`].concat(statusText(s).filter(x => !/^Habilidades robadas/.test(x))).join(' · ') : null;
       const sb = d.kind === 'monster' ? stolenBox(s) : null;
@@ -1569,6 +1649,7 @@
       }
       if (sel && sel.kind === 'target') { const t = sel.targets.find(x => x.seat === seat && x.area === area && x.z === z); if (t) return sel.done(t); }
       if (area === 'mz' && !v.players[seat].mz[z] && v.players[seat].shadow && v.players[seat].shadow[z] >= 0) z = v.players[seat].shadow[z];
+      if (PR()) prCtx = { seat, area, z };
       if (seat === v.seat) return area === 'mz' ? myMzClick(z) : myStClick(z);
       return oppClick(seat, area, z);
     }
@@ -1946,7 +2027,7 @@
       }
       let earned = 0;
       const vsAI = !!(current && current.match && current.match.kind === 'ia');
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test && match.kind !== 'practice') earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
       else earned = endEarned;
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
@@ -2241,14 +2322,15 @@
       const logTxt = lastLog ? fmtLog(lastLog) : '';
       const tkey = v.turn + ':' + v.current + ':' + (v.seq || 0);   // cada acción reinicia la cuenta
       if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false, tk: -1 };
-      const timer = v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
+      const timer = match.kind !== 'practice' && v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
       if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
         multi() ? null : pcard(v.opp.seat),
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), (() => { const b = h('button', { class: 'ib feedb', title: 'Mostrar u ocultar los mensajes de acciones', 'aria-label': 'Mensajes de acciones' }, '💬'); const sync = () => { b.classList.toggle('off', !feedOn()); b.setAttribute('aria-pressed', feedOn() ? 'true' : 'false'); }; b.onclick = () => { feedSet(!feedOn()); sync(); }; sync(); return b; })(), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
-          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo y cuenta como derrota.' : '¿Rendirte? Cuenta como derrota.')) { if (v && v.winner === null && v.me.alive) rankFinish(true); match.resign(); } }, title: 'Rendirse' }, '🏳')));
+          PR() ? h('button', { class: 'ib', onclick: prPanel, title: 'Herramientas del campo de práctica' }, '🧪') : null,
+          PR() ? h('button', { class: 'ib', onclick: () => { if (confirm('¿Salir del campo de práctica?')) menu(); }, title: 'Salir' }, '🚪') : h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo y cuenta como derrota.' : '¿Rendirte? Cuenta como derrota.')) { if (v && v.winner === null && v.me.alive) rankFinish(true); match.resign(); } }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
