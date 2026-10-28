@@ -264,7 +264,7 @@
     const a = art !== undefined ? art : myArt(d.id);                    // skin de ilustración: la mía, o la del dueño de la carta en el tablero (null = original)
     const ext = a ? null : D.CardFX.animFor(d.id), cut = Holo.src(d.id, a), o = { saga: d.types && d.types[0] };
     if (ext) { o.src = ext.u; o.px = ext.px; }
-    else { const cv = D.Rig && key ? D.Rig.make(key, d.id, cut, d.level) : null; if (cv) o.canvas = cv; else if (cut) o.src = cut; }
+    else { const cv = D.Rig && key && !D.CardFX.isFull(cut) ? D.Rig.make(key, d.id, cut, d.level) : null; if (cv) o.canvas = cv; else if (cut) o.src = cut; }
     D.CardFX.layers(el, o);
     const im = el.querySelector('img.cch');
     if (im && ext) im.onerror = () => { D.CardFX.fail(d.id); if (cut) { im.onerror = null; im.src = cut; im.classList.remove('px'); } else im.remove(); };
@@ -1850,8 +1850,9 @@
       const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
       const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
       const ext = !art && D.CardFX ? D.CardFX.animFor(d.id) : null;                // animación externa verificada (si no, la figura recortada de siempre)
-      const rig = !ext && D.Rig ? D.Rig.make(key, d.id, Holo.src(d.id, art), d.level) : null;      // personaje con malla animada (si hay WebGL2)
-      const himg = rig || h('img', { src: ext ? ext.u : Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob, class: ext && ext.px ? 'px' : '' });
+      const full = !ext && D.CardFX && D.CardFX.isFull(Holo.src(d.id, art));
+      const rig = !ext && !full && D.Rig ? D.Rig.make(key, d.id, Holo.src(d.id, art), d.level) : null;      // personaje con malla animada (si hay WebGL2)
+      const himg = rig || h('img', { src: ext ? ext.u : Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob, class: (ext && ext.px ? 'px' : '') + (full ? ' full' : '') });
       if (ext) himg.onerror = () => { D.CardFX.fail(d.id); const st = Holo.src(d.id, art); himg.onerror = null; if (st) { himg.src = st; himg.classList.remove('px'); } };
       const fig = h('div', { class: 'hin' + (rig ? ' rigged' : ''), style: `--ms:${ms}ms;${dl}` }, himg, stat);
       const out = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` }), h('div', { class: cls, style: `--ms:${ms}ms` }, fig)];

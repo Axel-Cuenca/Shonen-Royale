@@ -98,7 +98,10 @@
     if (cn || cs) { const pn = document.createElement('div'); pn.className = 'cpanel'; if (cn) pn.append(cn); if (cs) pn.append(cs); el.append(pn); }
     if (o.saga) { const sg = document.createElement('span'); sg.className = 'csaga'; sg.textContent = o.saga; el.append(sg); }
     if (o.canvas) { o.canvas.classList.add('cch', 'rg'); el.append(o.canvas); }
-    else if (o.src) { const im = document.createElement('img'); im.className = 'cch' + (o.px ? ' px' : ''); im.alt = ''; im.draggable = false; im.src = o.src; el.append(im); }
+    else if (o.src) {
+      const im = document.createElement('img'); im.className = 'cch' + (o.px ? ' px' : '') + (FULL.get(o.src) ? ' full' : ''); im.alt = ''; im.draggable = false; im.src = o.src; el.append(im);
+      if (!FULL.has(o.src)) checkFull(o.src).then(v => { if (v) im.classList.add('full'); });
+    }
     el.classList.add('layered');
     return el;
   }
@@ -235,11 +238,40 @@
     return el;
   }
 
+  // ---------------- ilustraciones con fondo propio ----------------
+  // Si la imagen no es un recorte (su borde es opaco), la carta la muestra RECORTADA DENTRO del recuadro (clase `full`):
+  // sin salirse del marco, sin «pop-out» y sin la malla animada. Las demás (borde transparente) siguen como antes.
+  const FULL = new Map();
+  /** true / false si ya se sabe; undefined si todavía no se ha mirado. */
+  const isFull = src => (src ? FULL.get(src) : false);
+  function checkFull(src) {
+    if (!src) return Promise.resolve(false);
+    if (FULL.has(src)) return Promise.resolve(FULL.get(src));
+    return new Promise(ok => {
+      const done = v => { FULL.set(src, v); ok(v); };
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const N = 24, cv = document.createElement('canvas'); cv.width = cv.height = N;
+          const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, N, N);
+          const px = cx.getImageData(0, 0, N, N).data; let edge = 0, solid = 0;
+          for (let i = 0; i < N; i++) for (const [x, y] of [[i, 0], [i, N - 1], [0, i], [N - 1, i]]) { edge++; if (px[(y * N + x) * 4 + 3] > 235) solid++; }
+          done(solid / edge > .9);
+        } catch (e) { done(false); }     // imagen de otro origen o sin permiso: se trata como recorte
+      };
+      im.onerror = () => done(false);
+      im.src = src;
+    });
+  }
+  const scanFull = srcs => Promise.all((srcs || []).filter(Boolean).map(checkFull));
+
   const api = {
+    isFull, checkFull, scanFull,
     on3d, onExt, set3d: v => { lsSet(K3D, v ? '1' : '0'); mark(); }, setExt: v => lsSet(KEXT, v ? '1' : '0'),
     allowed, norm, setManifest, loadManifest, animFor, fail, layers, shards, summon, tired, HOSTS, ambient: Ambient, dangerOf, banner,
     _state: state, _manifest: () => MANIFEST
   };
   D.CardFX = api;
   mark(); initTilt(); loadManifest();
+  setTimeout(() => { try { scanFull((D.Cards.all() || []).map(c => c.img)); } catch (e) { /* nada */ } }, 300);
 })();
