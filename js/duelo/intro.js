@@ -484,5 +484,37 @@ void main(){
     return { skip, cancel, done: doneP };
   }
 
-  D.Intro = { run, enabled, on, set };
+
+  /** Cinemática de cristal (con el fondo cinético): el tablero baja inclinado hasta su sitio y las casillas aparecen en espiral
+   *  desde el centro (zoom + destello), cada una con una onda que recorre el fondo. Se salta igual que la de losas. */
+  function runGlass(o) {
+    const host = o.host, slab = o.slab, B = D.BgFX;
+    const zones = Array.from(slab.querySelectorAll('.zone'));
+    if (!zones.length) return null;
+    const sr = slab.getBoundingClientRect(), cx = sr.left + sr.width / 2, cy = sr.top + sr.height / 2;
+    const info = zones.map(z => { const r = z.getBoundingClientRect(); return { z, x: r.left + r.width / 2, y: r.top + r.height / 2, d: Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) + (Math.atan2(r.top - cy, r.left - cx) + Math.PI) * 14 }; });
+    info.sort((a, b) => a.d - b.d);
+    const STEP = 120, T0 = 500, DUR = 800;
+    host.classList.add('iglass');
+    info.forEach((t, i) => t.z.style.setProperty('--zd', (T0 + i * STEP) + 'ms'));
+    const timers = []; let finished = false, resolve; const doneP = new Promise(r => { resolve = r; });
+    const sfx = () => { try { if (D.Sound && D.Sound.play && sfxOk()) D.Sound.play('place'); } catch (e) { /* nada */ } };
+    if (B) { B.pulse(cx, cy, 1.4); B.flash(.35); }
+    info.forEach((t, i) => timers.push(setTimeout(() => { if (B) { B.pulse(t.x, t.y, .9); B.flash(.12); } sfx(); }, T0 + i * STEP + 220)));
+    const end = T0 + info.length * STEP + DUR;
+    function finish() {
+      if (finished) return; finished = true; timers.forEach(clearTimeout);
+      window.removeEventListener('keydown', onKey, true); host.removeEventListener('pointerdown', skip);
+      host.classList.remove('iglass'); zones.forEach(z => z.style.removeProperty('--zd'));
+      if (B) { B.pulse(cx, cy, 1.8); B.flash(.5); }
+      resolve();
+    }
+    function skip() { finish(); }
+    function onKey(e) { if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); skip(); } }
+    window.addEventListener('keydown', onKey, true); host.addEventListener('pointerdown', skip);
+    timers.push(setTimeout(finish, end));
+    return { skip, cancel: skip, done: doneP };
+  }
+
+  D.Intro = { run, runGlass, enabled, on, set };
 })();

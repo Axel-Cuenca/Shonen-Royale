@@ -142,7 +142,7 @@
     raf = requestAnimationFrame(loop);
     if (document.hidden || !app) return;
     const now = performance.now(), n = rigs.size;
-    if (n > 8 && (++tick & 1)) return;                                // con muchos personajes, a media velocidad
+    if ((n > 8 || (D.BgFX && D.BgFX.busy && D.BgFX.busy())) && (++tick & 1)) return;                                // con muchos personajes, a media velocidad
     for (const r of rigs.values()) {
       if (!r.canvas.isConnected) { if (++r.gone > 90) destroy(r.key); continue; }
       r.gone = 0;

@@ -44,7 +44,7 @@
     const e = h('div', { class: 'hbg' }, h('div', { class: 'hb-sky' }), h('div', { class: 'hb-floorwrap' }, h('div', { class: 'hb-floor' }), h('div', { class: 'hb-floorfade' })), h('div', { class: 'hb-tint' }), h('div', { class: 'hb-rays' }), h('div', { class: 'hb-fog' }), h('div', { class: 'hb-halo' }), h('div', { class: 'hb-shadow' }), parts, h('div', { class: 'hb-dim' }), h('div', { class: 'hb-vig' }));
     e.style.display = 'none'; document.body.prepend(e); return e;
   })();
-  const showBg = on => { bgEl.style.display = on ? '' : 'none'; goldBg.style.display = on ? '' : 'none'; document.body.classList.toggle('goldbg', !!on); if (on) D.Scene.toBackdrop(); else { topEl.style.display = 'none'; document.body.classList.remove('gtop-on'); } };
+  const showBg = on => { bgEl.style.display = on ? '' : 'none'; goldBg.style.display = on ? '' : 'none'; document.body.classList.toggle('goldbg', !!on); if (D.BgFX) { if (on) D.BgFX.attach(goldBg, { menu: true }); else D.BgFX.detach(); } if (on) D.Scene.toBackdrop(); else { topEl.style.display = 'none'; document.body.classList.remove('gtop-on'); } };
 
   // ---------------- vista previa al pasar el mouse ----------------
   let prevEl = null;
@@ -1056,15 +1056,16 @@
       if (!D.Intro || !D.Intro.enabled() || !v || v.winner !== null || (v.round || 1) > 1) return;
       const slab = gameEl && gameEl.querySelector('.slab'); if (!slab) return;
       let ctl = null;
-      try { ctl = D.Intro.run({ slab, host: gameEl, stage: gameEl.querySelector('.stage'), seed: (match.seed | 0) || 7 }); } catch (e) { console.warn('[Intro]', e); gameEl.classList.remove('intro', 'introout'); }
+      const glass = document.documentElement.classList.contains('fxbg') && D.Intro.runGlass;
+      try { ctl = (glass ? D.Intro.runGlass : D.Intro.run)({ slab, host: gameEl, stage: gameEl.querySelector('.stage'), seed: (match.seed | 0) || 7 }); } catch (e) { console.warn('[Intro]', e); gameEl.classList.remove('intro', 'introout'); }
       if (ctl) {
-        if (D.Floor && D.Floor.reveal) D.Floor.reveal(2800);
+        if (!glass && D.Floor && D.Floor.reveal) D.Floor.reveal(2800);
         cur.introStop = ctl.cancel; introRun = true;
         ctl.done.then(() => { introRun = false; if (current === cur && introQ) { const q = introQ; introQ = null; handleView(q); } else if (current === cur) turnBanner(); });
       }
     }
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
-    const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set(), moveQ = [];
+    const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set(), moveQ = [], summonQ = [];
     let lastCur = null;
     let gameEl = null, zrowsEl = null, lcol = null;
     let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], atkTg = [], pops = [];
@@ -1563,6 +1564,7 @@
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');
           const d = cur.id ? C.get(cur.id) : null;
+          if (d && d.kind === 'monster' && !cur.down && area === 'mz') summonQ.push({ key, lv: d.level || 3 });
           fx.push({ k: key, type: cur.down && !cur.id ? 'small' : cur.down ? 'small' : (d && d.kind === 'monster' && d.level >= 7 ? 'epic' : d && d.kind !== 'monster' ? 'spell' : 'normal') });
         }
       } else if (area === 'mz' && v.players[seat].sealed && v.players[seat].sealed.includes(z)) {
@@ -1626,6 +1628,25 @@
         if (dlt <= -1000) needShake = true;
       });
     }
+    /** Estela de vida perdida: la parte que se acaba de perder queda en blanco un instante y se encoge sola. */
+    const ghost = (seat, pct) => {
+      const d = lpDelta[seat]; if (!d || d > 0) return null;
+      const prev = Math.min(100, pct - d / 80);
+      return h('b', { class: 'ghost', style: `--g0:${prev.toFixed(1)}%;--g1:${pct.toFixed(1)}%;width:${pct.toFixed(1)}%` });
+    };
+    /** Número de daño/curación grande sobre la ficha del jugador (una vez por cambio). */
+    function bigNum(seat, d) {
+      const el = document.querySelector(`.pcard[data-seat="${seat}"], .plate[data-seat="${seat}"]`); if (!el || !d) return;
+      const r = el.getBoundingClientRect(), big = Math.abs(d) >= 2000, n = h('div', { class: 'dmgnum ' + (d < 0 ? 'neg' : 'pos') + (big ? ' big' : '') }, (d > 0 ? '+' : '−') + Math.abs(d));
+      n.style.left = (r.left + r.width / 2) + 'px'; n.style.top = (r.top + r.height * .2) + 'px';
+      document.body.append(n);
+      try {
+        n.animate([{ transform: 'translate(-50%, 0) scale(.4)', opacity: 0 }, { transform: 'translate(-50%, -.4em) scale(' + (big ? 1.5 : 1.15) + ')', opacity: 1, offset: .18 },
+          { transform: 'translate(-50%, -1.1em) scale(1)', opacity: 1, offset: .55 }, { transform: 'translate(-50%, -2.6em) scale(.9)', opacity: 0 }], { duration: big ? 1700 : 1300, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }).onfinish = () => n.remove();
+      } catch (e) { setTimeout(() => n.remove(), 1400); }
+      setTimeout(() => n.remove(), 2200);
+      if (D.BgFX && d < 0) D.BgFX.flash(Math.min(.8, Math.abs(d) / 3500));
+    }
     const lpFloat = seat => (lpDelta[seat] ? h('span', { class: 'fl ' + (lpDelta[seat] < 0 ? 'neg' : 'pos') }, (lpDelta[seat] > 0 ? '+' : '') + lpDelta[seat]) : null);
     /** Ficha grande de un jugador (1 contra 1, y la mía abajo). */
     /** Avatar, marco y título que lleva un jugador (los suyos propios o los que mandó por la red). */
@@ -1641,7 +1662,7 @@
         h('div', { class: 'av' + (lk.fr ? ' fr-' + lk.fr : '') }, lk.emoji || ini),
         h('div', { class: 'pi' },
           h('div', { class: 'pn', title: nm }, nm), lk.ti ? h('small', { class: 'ttl' }, lk.ti) : null,
-          h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })), lp),
+          h('div', { class: 'lpw' }, h('div', { class: 'lpbar' }, ghost(seat, pct), h('i', { style: `width:${pct}%` })), lp),
           h('div', { class: 'pm' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null)));
     }
     /** Placa de nombre sobre cada campo del tablero (3-4 jugadores). */
@@ -1652,7 +1673,7 @@
       return h('div', { class: 'plate', 'data-seat': seat, title: nm },
         h('div', { class: 'pl1' }, h('b', { class: 'pnm' }, (lookOf(seat).emoji ? lookOf(seat).emoji + ' ' : '') + (seat === v.seat ? 'Tú' : nm)), tag,
           h('span', { class: 'plp' }, p.alive ? String(p.lp) : '☠ fuera', lpFloat(seat))),
-        h('div', { class: 'lpbar' }, h('i', { style: `width:${pct}%` })),
+        h('div', { class: 'lpbar' }, ghost(seat, pct), h('i', { style: `width:${pct}%` })),
         h('div', { class: 'pl2' }, h('span', null, `🂠 ${p.deckCount}`), h('span', { class: 'hn', title: 'Cartas en la mano' }, `✋ Mano: ${p.handCount}`), h('button', { onclick: e => { e.stopPropagation(); showGrave(seat); }, title: 'Cementerio' }, `☠ ${p.grave.length}`), p.banish && p.banish.length ? h('span', { title: 'Zona de destierro' }, `🌀 ${p.banish.length}`) : null));
     }
     /** Un campo completo: placa + fila de monstruos + fila de magias/trampas. top = fila de arriba (la placa va por fuera). */
@@ -1752,9 +1773,15 @@
       return winners.concat(v.rank.slice().reverse().filter(q => !winners.includes(q)));
     }
     let endEarned = 0;
+    let finaleAt = 0;
     function showEnd() {
       if (modalEl && modalEl.dataset.end) return;
       const myTeam = v.team[v.seat], won = v.winner === myTeam, draw = v.winner === 'draw' || v.winner === -1;
+      if (!endSounded && D.BgFX && D.CardFX && !draw && !document.documentElement.classList.contains('rm')) {        // final de la partida: el fondo estalla y un banner cruza la pantalla antes del resumen
+        const now = performance.now();
+        if (!finaleAt) { finaleAt = now; D.BgFX.power(won ? 'Victoria' : 'Derrota'); D.CardFX.banner(won ? '¡VICTORIA!' : 'DERROTA', won ? 'win' : 'lose'); }
+        if (now - finaleAt < 2300) { setTimeout(showEnd, 2350 - (now - finaleAt)); return; }
+      }
       let earned = 0;
       const vsAI = !!(current && current.match && current.match.kind === 'ia');
       if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test) earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
@@ -1847,6 +1874,7 @@
       for (const l of fresh2) {
         const t = l.t; let snd = null;
         const cin = (d, text, o) => { if (d && d.kind === 'monster') cutAdd(Object.assign({ k: 'char', d, text, mine: l.p === v.seat }, o || {})); };
+        if (D.BgFX) { const pwr = / lanza (Rojo|Azul|Púrpura):/.exec(t) || (/ lanza la Genkidama/.test(t) ? [0, 'Genkidama'] : null); if (pwr) D.BgFX.power(pwr[1]); }
         if (/^Turno/.test(t)) snd = (!multi() || l.p === v.seat) ? 'turn' : null;
         else if (/^queda fuera/.test(t)) { snd = 'destroy'; needShake = true; pops.push({ t: l.p === v.seat ? 'Quedaste fuera' : nameOf(l.p) + ' queda fuera', cls: 'weak' }); }
         else if (/^invoca a|(?<!se )invoca especialmente a /.test(t)) { const m = /invoca (?:especialmente )?a (.+?)(?: \(ATK.*)?$/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; if (d) fileSfx(d.sfx && d.sfx.summon); if (d && !multi()) cin(d, '', { short: true }); }
@@ -1955,6 +1983,7 @@
     }
     function runFx() {
       for (const m of moveQ.splice(0)) attackMove(m);
+      for (const sm of summonQ.splice(0)) { const ze = gameEl && gameEl.querySelector('.zone[data-k="' + sm.key + '"]'); if (ze && D.CardFX) D.CardFX.summon(ze, sm.lv); }
       for (const a of atkTg) atkMark(a);
       atkTg = [];
       // preparación del atacante (efecto del elemento)
@@ -2079,6 +2108,7 @@
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
       if (D.BgFX && D.BgFX.attach(gameEl)) D.BgFX.setState({ danger: D.CardFX && D.CardFX.dangerOf(v.me.lp, 8000) > .3, rival: v.current !== v.seat });
+      for (const k of Object.keys(lpDelta)) { const d = lpDelta[k], tk = (v.seq || v.turn) + ':n' + k; if (d && !hitMem.has(tk)) { hitMem.add(tk); bigNum(+k, d); } }
       if (D.CardFX) { D.CardFX.ambient.attach(gameEl); D.CardFX.ambient.setDanger(D.CardFX.dangerOf(v.me.lp, 8000)); }
       gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);

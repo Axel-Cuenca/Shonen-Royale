@@ -1569,3 +1569,38 @@ html.rm .board3d { transform: translate(-50%, -50%) rotateX(40deg) scale(var(--k
 /* la carta puesta en el tablero también se inclina hacia el ratón (misma física que en la mano) */
 html.fxbg .board3d .zone .card.m.layered.onboard.tilting:not(.def) { transform: translateZ(1em) rotateX(calc(-34deg + var(--rx, 0deg) * .8)) rotateY(calc(var(--ry, 0deg) * 1.1)) scale(1.07); transition: transform .07s linear; z-index: 8; }
 html.rm .board3d .zone .card.m.layered.onboard.tilting { transform: translateZ(.4em) rotateX(-34deg); }
+/* cinemática de cristal: el tablero baja inclinado y las casillas aparecen en espiral */
+@property --bin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+html.fxbg .board3d { transform: translate(-50%, -50%) rotateX(calc(40deg + var(--bry, 0deg) + var(--bin))) rotateY(var(--brx, 0deg)) scale(var(--k, 1)) !important; }
+html.fxbg .game.iglass .board3d { animation: binIn 2.8s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes binIn { from { --bin: 34deg; opacity: .2; } 30% { opacity: 1; } to { --bin: 0deg; opacity: 1; } }
+html.fxbg .game.iglass .board3d .zone { animation: zIn .85s cubic-bezier(.2, .9, .3, 1.25) var(--zd, 0ms) both, zsheen 6.5s ease-in-out infinite; }
+@keyframes zIn { 0% { opacity: 0; scale: .35; translate: 0 -1.4em; filter: brightness(3); } 55% { opacity: 1; filter: brightness(1.8); } 100% { opacity: 1; scale: 1; translate: 0 0; filter: none; } }
+html.rm .game.iglass .board3d, html.rm .game.iglass .board3d .zone { animation: none; }
+/* menús con el fondo cinético: nebulosa detrás de todo en lugar del suelo de piedra */
+.hbg > canvas.kbg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+html.fxmenu .hbg .hb-sky, html.fxmenu .hbg .hb-floorwrap, html.fxmenu .hbg .hb-floorfade { display: none; }
+html.fxmenu #bg { display: none !important; }
+/* estela de vida y números de daño grandes */
+.lpbar { position: relative; }
+.lpbar b.ghost { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#fff, #ffd6c8); opacity: .9; animation: ghostLp 1.2s cubic-bezier(.5, 0, .75, 0) .55s forwards; }
+@keyframes ghostLp { from { width: var(--g0); opacity: .95; } to { width: var(--g1); opacity: .2; } }
+.lpbar i { position: relative; z-index: 1; }
+.dmgnum { position: fixed; z-index: 90; pointer-events: none; font: 900 2.4em/1 var(--ui, system-ui); letter-spacing: .02em; text-shadow: 0 .06em 0 #000a, 0 0 .5em currentColor; white-space: nowrap; }
+.dmgnum.neg { color: #ff5a4a; } .dmgnum.pos { color: #6bffa8; }
+.dmgnum.big { font-size: 3.6em; color: #ff3b2e; text-shadow: 0 .06em 0 #000, 0 0 .6em #ff3b2e, 0 0 1.4em #ff7a3a; }
+html.rm .lpbar b.ghost { animation: none; display: none; }
+/* invocación: columna de luz + anillos + chispas según el nivel */
+.sumfx { position: absolute; inset: 0; pointer-events: none; transform-style: preserve-3d; z-index: 6; }
+.sumfx i { position: absolute; display: block; }
+.sumfx .sbeam { left: 50%; bottom: 40%; width: 62%; height: var(--h); translate: -50% 0; transform-origin: 50% 100%; background: linear-gradient(to top, rgba(var(--c), .95), rgba(var(--c), .5) 45%, transparent);
+  clip-path: polygon(8% 100%, 92% 100%, 70% 0, 30% 0); animation: sBeam 1.3s cubic-bezier(.2, .8, .2, 1) forwards; }
+.sumfx.t2 .sbeam { width: 78%; }
+.sumfx .sring { left: 50%; bottom: 36%; width: 80%; aspect-ratio: 1; translate: -50% 50%; border-radius: 50%; border: .18em solid rgba(var(--c), .9); box-shadow: 0 0 .8em rgba(var(--c), .8); scale: .2; opacity: 0; transform: rotateX(72deg); animation: sRing 1s ease-out forwards; }
+.sumfx .sspk { left: calc(50% + var(--x)); bottom: 38%; width: var(--s); height: var(--s); border-radius: 50%; background: rgb(var(--c)); box-shadow: 0 0 .6em rgb(var(--c)); opacity: 0; animation: sSpk 1.2s ease-out var(--d) forwards; }
+@keyframes sBeam { 0% { scale: .2 0; opacity: 0; } 20% { scale: 1 1; opacity: 1; } 100% { scale: .6 1.15; opacity: 0; } }
+@keyframes sRing { 0% { scale: .2; opacity: 0; } 20% { opacity: 1; } 100% { scale: 1.7; opacity: 0; } }
+@keyframes sSpk { 0% { opacity: 0; translate: 0 0; } 15% { opacity: 1; } 100% { opacity: 0; translate: 0 calc(var(--u) * -1); } }
+html.rm .sumfx { display: none; }
+.tbanner.win .tb-tx { color: #ffe08a; text-shadow: 0 0 .3em #ffb13c, 0 .05em .1em #000a; }
+.tbanner.lose .tb-tx { color: #ff6a6a; text-shadow: 0 0 .3em #c0121f, 0 .05em .1em #000a; }

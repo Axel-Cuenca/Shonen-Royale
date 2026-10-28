@@ -489,6 +489,7 @@ void main(){
   function loop(now) {
     st.raf = requestAnimationFrame(loop);
     if (!st.ok || !st.canvas || !st.canvas.isConnected || document.hidden) return;
+    if (document.documentElement.classList.contains('fxbg') && st.canvas.closest && st.canvas.closest('.game')) return;      // fondo nuevo: el suelo está oculto, no se calcula
     const iv = 1000 / st.fps;
     if (now - st.lastDraw < iv - 2) return;
     const gap = now - st.lastDraw; st.lastDraw = now;

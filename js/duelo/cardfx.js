@@ -146,6 +146,17 @@
     el.append(box); setTimeout(() => box.remove(), 900);
   }
 
+  /** Invocación: columna de luz, anillos y chispas; más grande y vistosa cuanto mayor es el nivel (color: blanco → dorado → magenta). */
+  function summon(zone, lv) {
+    if (!zone || reduced() || !on3d()) return;
+    const tier = lv >= 7 ? 2 : lv >= 5 ? 1 : 0, col = ['140,230,255', '255,214,90', '255,90,210'][tier];
+    const box = document.createElement('div'); box.className = 'sumfx t' + tier; box.style.cssText = `--c:${col};--h:${(6 + lv * .9).toFixed(1)}em`;
+    const beam = document.createElement('i'); beam.className = 'sbeam'; box.append(beam);
+    for (let i = 0; i <= tier + 1; i++) { const r = document.createElement('i'); r.className = 'sring'; r.style.animationDelay = (i * .18) + 's'; box.append(r); }
+    for (let i = 0; i < 10 + tier * 8; i++) { const sp = document.createElement('i'); sp.className = 'sspk'; sp.style.cssText = `--x:${(Math.random() * 100 - 50).toFixed(0)}%;--d:${(Math.random() * .5).toFixed(2)}s;--s:${(.2 + Math.random() * .3).toFixed(2)}em;--u:${(3 + Math.random() * (4 + lv * .6)).toFixed(1)}em`; box.append(sp); }
+    zone.append(box); setTimeout(() => box.remove(), 1700);
+    try { const r = zone.getBoundingClientRect(); if (D.BgFX && r.width) { D.BgFX.pulse(r.left + r.width / 2, r.top + r.height / 2, .7 + tier * .4); D.BgFX.flash(.12 + tier * .14); } } catch (e) { /* nada */ }
+  }
   const mark = () => document.documentElement.classList.toggle('fx3d', on3d());
 
   // ---------------- tablero reactivo: partículas y líneas que siguen al ratón y se ponen rojas con poca vida ----------------
@@ -226,7 +237,7 @@
 
   const api = {
     on3d, onExt, set3d: v => { lsSet(K3D, v ? '1' : '0'); mark(); }, setExt: v => lsSet(KEXT, v ? '1' : '0'),
-    allowed, norm, setManifest, loadManifest, animFor, fail, layers, shards, tired, HOSTS, ambient: Ambient, dangerOf, banner,
+    allowed, norm, setManifest, loadManifest, animFor, fail, layers, shards, summon, tired, HOSTS, ambient: Ambient, dangerOf, banner,
     _state: state, _manifest: () => MANIFEST
   };
   D.CardFX = api;

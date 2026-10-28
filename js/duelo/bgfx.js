@@ -56,7 +56,7 @@
   const VS = '#version 300 es\nin vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }';
   const FS = (oct) => `#version 300 es
 precision highp float; out vec4 o;
-uniform vec2 uRes, uM, uMv; uniform float uT, uGlow, uPulse, uRip, uRx, uRy, uFlash; uniform int uTh, uTh2; uniform float uMix;
+uniform vec2 uRes, uM, uMv; uniform float uT, uGlow, uPulse, uRip, uRx, uRy, uFlash; uniform int uTh, uTh2; uniform float uMix, uLensK, uTintK, uGen; uniform vec3 uTint;
 uniform vec3 uA, uB, uC;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
@@ -130,10 +130,13 @@ vec3 scene(int th, vec2 uv, vec2 asp, vec2 p, vec2 m, vec2 d, float dm, vec2 pus
 }
 void main(){
   vec2 uv = gl_FragCoord.xy / uRes, asp = vec2(uRes.x / uRes.y, 1.), p = (uv - .5) * asp;
+  { vec2 lp = p; float lr = length(lp); vec2 sh = lp / (lr + .06) * uLensK * exp(-lr * lr * 2.6); p += sh; uv += sh / asp; }   // lente de los poderes (empuja o atrae)
   vec2 m = (uM - .5) * asp; vec2 d = p - m; float dm = length(d); float t = uT;
   vec2 push = d / (dm + .02) * exp(-dm * dm * 9.) * .11 + uMv * exp(-dm * dm * 7.) * .6;
   vec3 c = scene(uTh, uv, asp, p, m, d, dm, push, t);
   if (uMix > 0.) c = mix(c, scene(uTh2, uv, asp, p, m, d, dm, push, t), uMix * uMix * (3. - 2. * uMix));
+  c = mix(c, uTint * (dot(c, vec3(.33)) + .5), uTintK * .55) + uTint * uTintK * .12;      // tinte del poder
+  c += vec3(.75, .9, 1.) * smoothstep(.62, 0., length((uv - vec2(.5, .86)) * asp)) * uGen * 1.5 + vec3(.9, .95, 1.) * uGen * .12;   // Genkidama: el cielo se llena de luz
   c += uC * exp(-dm * dm * 14.) * .38 * uGlow;                               // luz bajo el cursor
   if (uRip > 0.){ vec2 rc = (vec2(uRx, uRy) - .5) * asp; float k = abs(length(p - rc) - uRip * 1.2); c += uC * exp(-k * k * 600.) * (1. - uRip) * .8; }
   c += mix(uC, vec3(1.), .5) * uFlash * (.25 + .3 * (1. - uv.y));              // destello de golpe
@@ -163,17 +166,34 @@ void main(){
       gl.useProgram(gp);
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       const a = gl.getAttribLocation(gp, 'p'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-      gu = {}; for (const n of ['uTh', 'uTh2', 'uMix', 'uFlash', 'uRes', 'uM', 'uMv', 'uT', 'uGlow', 'uPulse', 'uRip', 'uRx', 'uRy', 'uA', 'uB', 'uC']) gu[n] = gl.getUniformLocation(gp, n);
+      gu = {}; for (const n of ['uLensK', 'uTintK', 'uGen', 'uTint', 'uTh', 'uTh2', 'uMix', 'uFlash', 'uRes', 'uM', 'uMv', 'uT', 'uGlow', 'uPulse', 'uRip', 'uRx', 'uRy', 'uA', 'uB', 'uC']) gu[n] = gl.getUniformLocation(gp, n);
       gc.addEventListener('webglcontextlost', e => { e.preventDefault(); gl = null; });
       return true;
     } catch (e) { gc = null; gl = null; return false; }
   }
   const hsl = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; };
+  // ---- rendimiento: calidad adaptativa por fps medidos y pausa parcial con ventanas abiertas ----
+  let ql = 0, fpsAcc = 0, fpsN = 0, frameNo = 0, modalAt = 0, modalOn = false;
+  const QS = [1, .72, .52];                     // factor de resolución del shader por nivel de calidad
+  function busy() { const n = performance.now(); if (n - modalAt > 400) { modalAt = n; modalOn = !!document.querySelector('.modal'); } return modalOn; }
+  function adapt(dtms) {
+    fpsAcc += dtms; fpsN++;
+    if (fpsN >= 90) { const avg = fpsAcc / fpsN; fpsAcc = 0; fpsN = 0; if (avg > 30 && ql < 2) { ql++; build(); } }   // < 33 fps de media: baja un nivel (no sube solo)
+  }
+  // ---- poderes: deforman el fondo como una lente (Rojo empuja, Azul atrae, Púrpura las dos, Genkidama llena el cielo de luz) ----
+  const POW = { Rojo: { c: [1, .16, .1], lens: .2, dur: 1800 }, Azul: { c: [.2, .42, 1], lens: -.2, dur: 1800 }, Púrpura: { c: [.72, .2, 1], lens: .26, dur: 2600, swing: true }, Genkidama: { c: [.6, .85, 1], lens: 0, dur: 4200, gen: true }, Victoria: { c: [1, .8, .3], lens: 0, dur: 5200, gen: true }, Derrota: { c: [.6, .05, .1], lens: .14, dur: 5200 } };
+  let pw = null;
+  function powerNow(now) {
+    if (!pw) return { lens: 0, tint: 0, gen: 0, c: [0, 0, 0] };
+    const k = (now - pw.t0) / pw.def.dur; if (k >= 1) { pw = null; return { lens: 0, tint: 0, gen: 0, c: [0, 0, 0] }; }
+    const env = k < .18 ? k / .18 : Math.pow(1 - (k - .18) / .82, 1.6), d = pw.def;
+    return { lens: d.lens * (d.swing ? Math.sin(k * Math.PI * 3) : 1) * env, tint: env * (d.gen ? .4 : 1), gen: d.gen ? (k < .6 ? Math.min(1, k / .45) : 1 - (k - .6) / .4) : 0, c: d.c };
+  }
   let flashV = 0, dtGl = .016, shA = 0, mixV = 0, autoMode = false, since = 0;
   const PERIOD = 75, FADE = 7;      // segundos: cada cuánto cambia el fondo y cuánto dura el fundido
   function glDraw(now) {
     if (!gl) return;
-    const sc = ls('duelo.gfx') === 'low' ? .38 : .55, w = Math.max(2, Math.round(W * sc)), hh = Math.max(2, Math.round(H * sc));
+    const sc = (ls('duelo.gfx') === 'low' ? .38 : .55) * QS[ql], w = Math.max(2, Math.round(W * sc)), hh = Math.max(2, Math.round(H * sc));
     if (gc.width !== w || gc.height !== hh) { gc.width = w; gc.height = hh; gl.viewport(0, 0, w, hh); }
     const A = cur.c1.map((v, i) => v / 255 * 2 + cur.c0[i] / 255 * .35), c0 = cur.c0.map(v => v / 255), C = hsl(cur.h, cur.s, Math.min(78, cur.l + 8)), Bc = hsl(cur.h, cur.s * .9, cur.l * .42);
     gl.uniform2f(gu.uRes, w, hh); gl.uniform2f(gu.uM, mouse.seen ? mouse.x / W : .5, mouse.seen ? 1 - mouse.y / H : .5);
@@ -182,14 +202,15 @@ void main(){
     const rp = ripples.length ? ripples[ripples.length - 1] : null, age = rp ? (now - rp.t0) / 2600 : 2;
     gl.uniform1f(gu.uRip, rp && age < 1 ? age : 0); gl.uniform1f(gu.uRx, rp ? rp.x / W : .5); gl.uniform1f(gu.uRy, rp ? 1 - rp.y / H : .5);
     gl.uniform3f(gu.uA, A[0], A[1], A[2]); gl.uniform3f(gu.uB, Bc[0] * 1.15 + c0[0] * .9, Bc[1] * 1.15 + c0[1] * .9, Bc[2] * 1.15 + c0[2] * .9); gl.uniform3f(gu.uC, C[0], C[1], C[2]);
-    flashV *= Math.pow(.02, dtGl); gl.uniform1f(gu.uFlash, flashV); gl.uniform1i(gu.uTh, shA); gl.uniform1i(gu.uTh2, themeIx); gl.uniform1f(gu.uMix, mixV);
+    flashV *= Math.pow(.02, dtGl); gl.uniform1f(gu.uFlash, flashV); const pwk = powerNow(now); gl.uniform1f(gu.uLensK, pwk.lens); gl.uniform1f(gu.uTintK, pwk.tint); gl.uniform1f(gu.uGen, pwk.gen); gl.uniform3f(gu.uTint, pwk.c[0], pwk.c[1], pwk.c[2]);
+    gl.uniform1i(gu.uTh, shA); gl.uniform1i(gu.uTh2, themeIx); gl.uniform1f(gu.uMix, mixV);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
   function build() {
     if (!cv) return;
     const low = ls('duelo.gfx') === 'low', narrow = innerWidth < 700;
-    sp = low ? 74 : narrow ? 58 : 50;
+    sp = (low ? 74 : narrow ? 58 : 50) + ql * 14;
     DPR = Math.min(devicePixelRatio || 1, low ? 1 : 1.5);
     W = cv.clientWidth || innerWidth; H = cv.clientHeight || innerHeight;
     cv.width = Math.max(1, Math.round(W * DPR)); cv.height = Math.max(1, Math.round(H * DPR));
@@ -204,7 +225,8 @@ void main(){
     if (!cv || !cv.isConnected) { stop(); return; }
     raf = requestAnimationFrame(step);
     if (document.hidden) { last = 0; return; }
-    const dtms = Math.min(50, last ? ts - last : 16.7); last = ts;
+    if (busy() && (++frameNo & 1)) return;                                     // con una ventana abierta se dibuja a media velocidad
+    const dtms = Math.min(50, last ? ts - last : 16.7); last = ts; if (!busy()) adapt(dtms);
     const f = dtms / 16.67, k = Math.min(1, dtms / 650);                // f: factor respecto a 60 fps · k: suavizado de las transiciones
     // transición suave del estado de ánimo
     cur.h = lerp(cur.h, tgt.h, k * .8); cur.s = lerp(cur.s, tgt.s, k); cur.l = lerp(cur.l, tgt.l, k);
@@ -248,8 +270,9 @@ void main(){
   }
 
   // el tablero se inclina en 3D siguiendo al ratón (inclinación suave y amortiguada; vuelve al centro si el ratón se queda quieto)
-  let tx = 0, ty = 0, board = null;
+  let tx = 0, ty = 0, board = null, menuMode = false;
   function tilt(f, mA) {
+    if (menuMode) return;
     if (!board || !board.isConnected) board = cv && cv.parentNode && cv.parentNode.querySelector('.board3d');
     if (!board) return;
     const nx = mA ? Math.max(-1, Math.min(1, (mouse.x / W - .5) * 2)) : 0, ny = mA ? Math.max(-1, Math.min(1, (mouse.y / H - .5) * 2)) : 0;
@@ -275,7 +298,7 @@ void main(){
       const bi = Math.min(NB - 1, (al * (NB / .75)) | 0);
       buckets[bi].push(ax, ay, bx, by);
     };
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    if (ql < 2) for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
       const k = j * cols + i; if (i < cols - 1) seg(k, k + 1); if (j < rows - 1) seg(k, k + cols);
     }
     cx.lineWidth = 1; cx.lineCap = 'round';
@@ -309,8 +332,9 @@ void main(){
   function stop() {
     cancelAnimationFrame(raf); raf = 0;
     window.removeEventListener('pointermove', onMove); window.removeEventListener('resize', onResize);
-    document.documentElement.classList.remove('fxbg');
+    document.documentElement.classList.remove('fxbg', 'fxmenu');
     if (gc) { gc.remove(); gc = null; gl = null; }
+    if (cv) cv.remove();
     cv = null;
   }
   function retarget() { Object.assign(tgt, moodFor(danger, rival)); }
@@ -321,22 +345,26 @@ void main(){
   const pick = () => { const v = pref(); if (v !== 'auto') return v; let n; do n = Math.floor(Math.random() * THEMES.length); while (n === lastAuto && THEMES.length > 1); return (lastAuto = n); };
 
   D.BgFX = {
-    THEMES, pref, _fade: () => { since = PERIOD + 1; }, setTheme: v => { lsSet('duelo.kbgtheme', String(v)); if (cv) { themeIx = pick(); shA = themeIx; mixV = 0; since = 0; autoMode = pref() === 'auto'; retarget(); Object.assign(cur, moodFor(danger, rival)); } },
+    /** Un poder se lanza: 'Rojo' | 'Azul' | 'Púrpura' | 'Genkidama'. */
+    power(kind) { const def = POW[kind]; if (!def || !cv) return; pw = { def, t0: performance.now() }; flashV = Math.min(1, flashV + .5); ripples.push({ x: W / 2, y: H / 2, s: 1.8, t0: performance.now() }); if (ripples.length > 6) ripples.shift(); },
+    detach() { if (cv) stop(); }, busy, quality: () => ql, THEMES, pref, _fade: () => { since = PERIOD + 1; }, setTheme: v => { lsSet('duelo.kbgtheme', String(v)); if (cv) { themeIx = pick(); shA = themeIx; mixV = 0; since = 0; autoMode = pref() === 'auto'; retarget(); Object.assign(cur, moodFor(danger, rival)); } },
     /** Destello de golpe (0..1) que se apaga solo. */
     flash(s) { flashV = Math.min(1, flashV + (s == null ? .6 : s)); },
     on,
     set: v => lsSet(KEY, v ? '1' : '0'),
     /** Monta el fondo dentro de `host` (la pantalla de partida) si no estaba ya. */
-    attach(host) {
+    attach(host, opts) {
+      const menu = !!(opts && opts.menu);
       if (!host || !on()) { if (cv) stop(); return false; }
-      if (cv && cv.isConnected && cv.parentNode === host) return true;
+      if (cv && cv.isConnected && cv.parentNode === host && menuMode === menu) return true;
       if (cv) stop();
       cv = document.createElement('canvas'); cv.className = 'kbg'; glInit(host, ls('duelo.gfx') === 'low'); cx = cv.getContext('2d', { alpha: !!gl });
       if (!cx) { cv = null; return false; }
-      themeIx = pick(); shA = themeIx; mixV = 0; since = 0; autoMode = pref() === 'auto';
+      menuMode = menu; if (menu) { danger = false; rival = false; }
+      themeIx = menu ? (pref() === 'auto' ? 1 : pref()) : pick(); shA = themeIx; mixV = 0; since = 0; autoMode = !menu && pref() === 'auto';
       host.insertBefore(cv, host.firstChild); if (gc) host.insertBefore(gc, cv); build();
       window.addEventListener('pointermove', onMove, { passive: true }); window.addEventListener('resize', onResize);
-      document.documentElement.classList.add('fxbg');
+      document.documentElement.classList.add(menu ? 'fxmenu' : 'fxbg');
       Object.assign(cur, moodFor(danger, rival)); retarget();
       last = 0; raf = requestAnimationFrame(step);
       return true;
