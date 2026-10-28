@@ -396,7 +396,7 @@
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
       h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))),
-      h('div', { class: 'row' }, tog('Fondo cinético', () => D.BgFX.on(), v => D.BgFX.set(v)), tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Fondo cinético', () => D.BgFX.on(), v => D.BgFX.set(v)), (() => { const sel = h('select', { onchange: () => D.BgFX.setTheme(sel.value) }, h('option', { value: 'auto' }, 'Fondo: sorpresa'), ...D.BgFX.THEMES.map((t, i) => h('option', { value: String(i) }, t.n))); sel.value = String(D.BgFX.pref()); return sel; })(), tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
@@ -1574,7 +1574,7 @@
       if (cur && s && area === 'mz' && s.c && !s.down && (asCard || Holo.src(s.c.id, art))) el.append(...holoEls(s, key, cur, landing, chosen, art, asCard));
       if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas y sacudida una sola vez por golpe
         const hk = (v.seq || v.turn) + ':' + key + (struck ? 's' : 'l');
-        if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); if (D.Rig) D.Rig.hit(key); }
+        if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); if (D.Rig) D.Rig.hit(key); if (D.BgFX) setTimeout(() => { const r = el.getBoundingClientRect(); if (r.width) { D.BgFX.pulse(r.x + r.width / 2, r.y + r.height / 2, struck ? 1 : 1.3); D.BgFX.flash(struck ? .45 : .75); } }, 90); }
       }
       if (area === 'mz' && s && s.c && !s.down && D.Rig) {
         D.Rig.tired(key, weary);                                                      // bajo el 30 % de PV de su dueño: postura cansada (permanente mientras dure)

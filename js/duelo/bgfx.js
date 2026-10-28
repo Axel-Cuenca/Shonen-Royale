@@ -25,8 +25,15 @@
     alert: { h: 356, s: 90, l: 60, c0: [58, 10, 20], c1: [12, 2, 5], speed: 1.9, amp: 1.7, glow: .95 }
   };
   /** Mood destino según la partida: `danger` (poca vida) y `rival` (turno de otro). Puro: se prueba aparte. */
+  const THEMES = [   // 0 energía · 1 agujero negro · 2 dominio maldito · 3 mar nocturno  (tono base del estado normal)
+    { n: 'Cielo de energía', h: 222, s: 64, l: 62, c0: [13, 22, 56], c1: [3, 5, 14] },
+    { n: 'Agujero negro', h: 28, s: 90, l: 60, c0: [30, 14, 52], c1: [3, 2, 10] },
+    { n: 'Dominio maldito', h: 350, s: 78, l: 56, c0: [60, 8, 22], c1: [10, 1, 6] },
+    { n: 'Mar nocturno', h: 196, s: 70, l: 60, c0: [8, 38, 62], c1: [2, 8, 18] }];
+  let themeIx = 0;
   function moodFor(danger, rival) {
-    const b = danger ? MOODS.alert : MOODS.normal, m = Object.assign({}, b, { c0: b.c0.slice(), c1: b.c1.slice() });
+    const T = THEMES[themeIx] || THEMES[0], nb = Object.assign({}, MOODS.normal, { h: T.h, s: T.s, l: T.l, c0: T.c0, c1: T.c1 });
+    const b = danger ? MOODS.alert : nb, m = Object.assign({}, b, { c0: b.c0.slice(), c1: b.c1.slice() });
     if (rival) {                                   // turno rival: más lento, más frío y apagado
       m.speed *= .4; m.amp *= .6; m.glow *= .5; m.s *= .4; m.l -= 6;
       m.c0 = m.c0.map((v, i) => v * .7 + [20, 24, 30][i] * .3 * (i === 0 ? .5 : 1)); m.c1 = m.c1.map(v => v * .8);
@@ -49,40 +56,90 @@
   const VS = '#version 300 es\nin vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }';
   const FS = (oct) => `#version 300 es
 precision highp float; out vec4 o;
-uniform vec2 uRes, uM, uMv; uniform float uT, uGlow, uPulse, uRip, uRx, uRy;
+uniform vec2 uRes, uM, uMv; uniform float uT, uGlow, uPulse, uRip, uRx, uRy, uFlash; uniform int uTh;
 uniform vec3 uA, uB, uC;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
   return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p){ float a = .5, s = 0.; mat2 r = mat2(.8, -.6, .6, .8); for (int i = 0; i < ${oct}; i++){ s += a * vn(p); p = r * p * 2.03 + 7.1; a *= .5; } return s; }
+float st(vec2 g, float dens){ vec2 id = floor(g), f = fract(g) - .5; float r = h21(id); vec2 off = vec2(h21(id + 3.1), h21(id + 9.7)) - .5;
+  return step(dens, r) * smoothstep(.09, .0, length(f - off * .7)) * (.4 + .6 * h21(id + 1.7)); }
 void main(){
   vec2 uv = gl_FragCoord.xy / uRes, asp = vec2(uRes.x / uRes.y, 1.), p = (uv - .5) * asp;
-  vec2 m = (uM - .5) * asp; vec2 d = p - m; float dm = length(d);
-  // el cursor empuja el fluido y lo arrastra en la dirección en que se mueve
+  vec2 m = (uM - .5) * asp; vec2 d = p - m; float dm = length(d); float t = uT;
   vec2 push = d / (dm + .02) * exp(-dm * dm * 9.) * .11 + uMv * exp(-dm * dm * 7.) * .6;
-  vec2 q = p * 1.35 + push; float t = uT;
-  vec2 w = vec2(fbm(q + vec2(0., t * .25)), fbm(q + vec2(5.2, 1.3) - t * .2));
-  float n = fbm(q + 3.2 * w + vec2(t * .12, -t * .08));
-  float n2 = fbm(q * 2.3 - 2. * w + t * .16);
-  // nubes: oscuro en el fondo, luz en las crestas
-  vec3 c = mix(uA, uB, smoothstep(.2, .75, n)) * 1.35;
-  c += uC * pow(smoothstep(.5, .95, n2 * .7 + n * .45), 2.2) * .9 * uGlow;
-  // haz de luz desde arriba (rayos volumétricos)
-  vec2 sp = vec2(.12 + .05 * sin(t * .35), .78); vec2 r = uv - sp; float ang = atan(r.x, -r.y);
-  float ray = pow(max(0., sin(ang * 9. + t * .4 + n * 2.) * .5 + .5), 3.) * smoothstep(1.3, 0., length(r * asp)) * (.5 + .5 * vn(vec2(ang * 5., t * .2)));
-  c += uC * ray * .34 * uGlow;
-  // luz suave bajo el cursor
-  c += uC * exp(-dm * dm * 14.) * .38 * uGlow;
-  // onda de choque
-  if (uRip > 0.){ float rd = length(p - vec2(uRx, uRy) * asp * .0 - (vec2(uRx, uRy) - .5) * asp); float k = abs(rd - uRip * 1.2) ; c += uC * exp(-k * k * 600.) * (1. - uRip) * .8; }
-  // polvo / brasas con profundidad y desenfoque (bokeh), parallax con el ratón
+  vec3 c = vec3(0.);
+  if (uTh == 1) {
+    // ===== AGUJERO NEGRO con lente gravitacional (el cursor es una segunda masa) =====
+    vec2 bc = vec2(0., .02); vec2 r = p - bc; float rl = length(r);
+    vec2 q = p; q += r / (rl * rl + .02) * .045; q += d / (dm * dm + .03) * .012;
+    c = uA * .5;
+    c += uB * .7 * fbm(q * 1.1 + t * .02) * fbm(q * .7 - t * .015 + 3.);
+    c += vec3(.8, .85, 1.) * (st(q * 26. + 3., .86) + st(q * 14., .93) * 1.4) * (.6 + .4 * sin(t * 2. + q.x * 40.)) * uGlow;
+    float R0 = .5, ring = exp(-pow((rl - R0) / .045, 2.)) + .45 * exp(-pow((rl - R0) / .13, 2.));
+    float ang = atan(r.y, r.x), swirl = fbm(vec2(ang * 3. - t * .9, rl * 9.)) ;
+    float dop = .55 + .45 * cos(ang + .6);
+    c += mix(uC, vec3(1., .9, .7), .4) * ring * (.45 + .9 * swirl) * dop * (1.2 * uGlow);
+    // arco superior de luz curvada por detrás del agujero
+    c += uC * exp(-pow((length(r * vec2(1., .55) + vec2(0., .06)) - R0 * .98) / .05, 2.)) * .5 * dop * uGlow;
+    c *= smoothstep(.2, .33, rl);                                          // horizonte de sucesos
+  } else if (uTh == 2) {
+    // ===== DOMINIO MALDITO: niebla roja, luna enorme, ceniza y ruinas =====
+    vec2 q = p * 1.2 + push; vec2 w = vec2(fbm(q + t * .12), fbm(q + 4. - t * .1));
+    float n = fbm(q + 2.6 * w + vec2(t * .06, 0.));
+    c = mix(uA, uB, smoothstep(.2, .8, n)) * .75;
+    vec2 mc = vec2(.3, .24); float md = length(p - mc);
+    float moon = smoothstep(.13, .122, md) * (.8 + .25 * fbm((p - mc) * 9.));
+    c += uC * exp(-md * md * 9.) * .4 * uGlow + mix(uC, vec3(1.), .35) * moon * .95;
+    c *= 1. - .55 * smoothstep(.5, .1, uv.y) * 0.;
+    float ridge = -.33 + .05 * sin(p.x * 7. + 1.) + .035 * sin(p.x * 17.) + .02 * sin(p.x * 41.) + .16 * step(.8, fract(floor(p.x * 5. + 3.) * .618)) * smoothstep(.0, .07, fract(p.x * 5. + 3.) * (1. - fract(p.x * 5. + 3.)));
+    c = mix(c, vec3(.01, 0., .01), smoothstep(ridge + .01, ridge - .01, p.y));
+    c += uC * .2 * fbm(vec2(p.x * 2. + t * .2, p.y * 6.)) * smoothstep(-.1, -.4, p.y) * uGlow;
+  } else if (uTh == 3) {
+    // ===== NOCHE SOBRE EL MAR: luna, reflejo ondulado y relámpagos =====
+    float hz = -.06; vec2 q = p * 1.3 + push * .5;
+    if (p.y > hz) {
+      float k = (p.y - hz);
+      c = mix(uB * .45, uA * .4, smoothstep(0., .6, k));
+      c += uB * .4 * fbm(vec2(q.x * 2.2 + t * .08, q.y * 4.)) * smoothstep(.0, .5, k) * .8;
+      vec2 mc = vec2(-.32, .3); float md = length(p - mc);
+      c += mix(uC, vec3(1.), .6) * smoothstep(.1, .09, md) * 1.1 + uC * exp(-md * md * 9.) * .5 * uGlow;
+      c += vec3(.9) * st(p * 30. + 5., .93) * smoothstep(.2, .6, k) * .6;
+    } else {
+      float k = hz - p.y; vec2 wv = vec2(fbm(vec2(p.x * 6., k * 30. - t * .8)) - .5, 0.);
+      float rx = p.x + wv.x * (.02 + k * .1) - push.x * .6;
+      float col = exp(-pow((rx + .32) * (6. - k * 3.), 2.)) * smoothstep(0., .1, k) * (.5 + .5 * fbm(vec2(rx * 12., k * 40. - t * 1.2)));
+      c = mix(uA * .6, uB * .7, smoothstep(0., .5, k)) * (.4 + .6 * fbm(vec2(p.x * 3. + t * .1, k * 14.)));
+      c += mix(uC, vec3(1.), .5) * col * 1.4 * uGlow;
+    }
+    c += uC * exp(-pow((p.y - hz) / .006, 2.)) * .35;
+  } else {
+    // ===== CIELO DE ENERGÍA (ki): nubes con corrientes, rayos de luz y polvo =====
+    vec2 q = p * 1.35 + push;
+    vec2 w = vec2(fbm(q + vec2(0., t * .25)), fbm(q + vec2(5.2, 1.3) - t * .2));
+    float n = fbm(q + 3.2 * w + vec2(t * .12, -t * .08)), n2 = fbm(q * 2.3 - 2. * w + t * .16);
+    c = mix(uA, uB, smoothstep(.2, .75, n)) * 1.35;
+    c += uC * pow(smoothstep(.5, .95, n2 * .7 + n * .45), 2.2) * .9 * uGlow;
+    vec2 sp = vec2(.12 + .05 * sin(t * .35), .78); vec2 r = uv - sp; float ang = atan(r.x, -r.y);
+    float ray = pow(max(0., sin(ang * 9. + t * .4 + n * 2.) * .5 + .5), 3.) * smoothstep(1.3, 0., length(r * asp)) * (.5 + .5 * vn(vec2(ang * 5., t * .2)));
+    c += uC * ray * .34 * uGlow;
+    // rayos de energía: relámpago ramificado entre un lado y otro
+    float tb = floor(t * .35), ph = fract(t * .35);
+    float bx = (h21(vec2(tb, 3.)) - .5) * 1.4, by = (h21(vec2(tb, 7.)) - .5) * .8;
+    float bolt = exp(-pow((p.x - bx + (fbm(vec2(p.y * 7., tb)) - .5) * .25) / .012, 2.)) * smoothstep(-.5, .5, p.y);
+    c += vec3(.8, .9, 1.) * bolt * smoothstep(.14, 0., ph) * (.9 + uGlow) * step(.45, h21(vec2(tb, 1.)));
+  }
+  c += uC * exp(-dm * dm * 14.) * .38 * uGlow;                               // luz bajo el cursor
+  if (uRip > 0.){ vec2 rc = (vec2(uRx, uRy) - .5) * asp; float k = abs(length(p - rc) - uRip * 1.2); c += uC * exp(-k * k * 600.) * (1. - uRip) * .8; }
+  c += mix(uC, vec3(1.), .5) * uFlash * (.25 + .3 * (1. - uv.y));              // destello de golpe
+  // polvo / brasas con profundidad y bokeh (parallax con el ratón)
   for (int L = 0; L < 3; L++){
     float fl = float(L), sc = 7. + fl * 6., par = .03 + .05 * fl;
     vec2 g = (uv * asp - m * par) * sc + vec2(t * (.35 + fl * .25) * .3, -t * (.5 + fl * .3) * .3 - fl * 3.1);
     vec2 id = floor(g), f = fract(g) - .5; float rnd = h21(id + fl * 17.);
     vec2 off = vec2(h21(id + 3.1), h21(id + 9.7)) - .5; float rr = length(f - off * .6);
     float sz = .06 + .1 * fl * rnd, a = smoothstep(sz, sz * .2, rr) * step(.55, rnd) * (.5 + .5 * sin(t * 2. + rnd * 40.));
-    c += mix(uC, vec3(1.), .5) * a * (.5 - fl * .12) * uGlow;
+    c += mix(uC, vec3(1.), .5) * a * (.5 - fl * .12) * uGlow * (uTh == 1 ? .4 : 1.);
   }
   c *= 1. + uPulse * .35 * (1. - dot(uv - .5, uv - .5) * 2.);
   float vg = smoothstep(1.05, .25, length((uv - .5) * vec2(1., 1.1)));
@@ -101,12 +158,13 @@ void main(){
       gl.useProgram(gp);
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       const a = gl.getAttribLocation(gp, 'p'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-      gu = {}; for (const n of ['uRes', 'uM', 'uMv', 'uT', 'uGlow', 'uPulse', 'uRip', 'uRx', 'uRy', 'uA', 'uB', 'uC']) gu[n] = gl.getUniformLocation(gp, n);
+      gu = {}; for (const n of ['uTh', 'uFlash', 'uRes', 'uM', 'uMv', 'uT', 'uGlow', 'uPulse', 'uRip', 'uRx', 'uRy', 'uA', 'uB', 'uC']) gu[n] = gl.getUniformLocation(gp, n);
       gc.addEventListener('webglcontextlost', e => { e.preventDefault(); gl = null; });
       return true;
     } catch (e) { gc = null; gl = null; return false; }
   }
   const hsl = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; };
+  let flashV = 0, dtGl = .016;
   function glDraw(now) {
     if (!gl) return;
     const sc = ls('duelo.gfx') === 'low' ? .38 : .55, w = Math.max(2, Math.round(W * sc)), hh = Math.max(2, Math.round(H * sc));
@@ -118,6 +176,7 @@ void main(){
     const rp = ripples.length ? ripples[ripples.length - 1] : null, age = rp ? (now - rp.t0) / 2600 : 2;
     gl.uniform1f(gu.uRip, rp && age < 1 ? age : 0); gl.uniform1f(gu.uRx, rp ? rp.x / W : .5); gl.uniform1f(gu.uRy, rp ? 1 - rp.y / H : .5);
     gl.uniform3f(gu.uA, A[0], A[1], A[2]); gl.uniform3f(gu.uB, Bc[0] * 1.15 + c0[0] * .9, Bc[1] * 1.15 + c0[1] * .9, Bc[2] * 1.15 + c0[2] * .9); gl.uniform3f(gu.uC, C[0], C[1], C[2]);
+    flashV *= Math.pow(.02, dtGl); gl.uniform1f(gu.uFlash, flashV); gl.uniform1i(gu.uTh, themeIx);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
@@ -175,7 +234,7 @@ void main(){
       vx[k2] = (vx[k2] + ax) * Dm; vy[k2] = (vy[k2] + ay) * Dm;
       dx[k2] += vx[k2] * f; dy[k2] += vy[k2] * f;
     }
-    glDraw(now); draw(mA);
+    dtGl = dtms / 1000; glDraw(now); draw(mA);
   }
 
   const NB = 6;                                                          // niveles de opacidad para agrupar los trazos
@@ -235,7 +294,15 @@ void main(){
   }
   function retarget() { Object.assign(tgt, moodFor(danger, rival)); }
 
+  /** Tema elegido en Ajustes: 'auto' (sorpresa: uno distinto cada partida) o 0..3. */
+  const pref = () => { const v = ls('duelo.kbgtheme'); return v == null || v === 'auto' ? 'auto' : Math.max(0, Math.min(THEMES.length - 1, +v | 0)); };
+  let lastAuto = -1;
+  const pick = () => { const v = pref(); if (v !== 'auto') return v; let n; do n = Math.floor(Math.random() * THEMES.length); while (n === lastAuto && THEMES.length > 1); return (lastAuto = n); };
+
   D.BgFX = {
+    THEMES, pref, setTheme: v => { lsSet('duelo.kbgtheme', String(v)); if (cv) { themeIx = pick(); retarget(); Object.assign(cur, moodFor(danger, rival)); } },
+    /** Destello de golpe (0..1) que se apaga solo. */
+    flash(s) { flashV = Math.min(1, flashV + (s == null ? .6 : s)); },
     on,
     set: v => lsSet(KEY, v ? '1' : '0'),
     /** Monta el fondo dentro de `host` (la pantalla de partida) si no estaba ya. */
@@ -245,6 +312,7 @@ void main(){
       if (cv) stop();
       cv = document.createElement('canvas'); cv.className = 'kbg'; glInit(host, ls('duelo.gfx') === 'low'); cx = cv.getContext('2d', { alpha: !!gl });
       if (!cx) { cv = null; return false; }
+      themeIx = pick();
       host.insertBefore(cv, host.firstChild); if (gc) host.insertBefore(gc, cv); build();
       window.addEventListener('pointermove', onMove, { passive: true }); window.addEventListener('resize', onResize);
       document.documentElement.classList.add('fxbg');
@@ -256,6 +324,6 @@ void main(){
     setState(o) { if (o.danger != null) danger = !!o.danger; if (o.rival != null) rival = !!o.rival; retarget(); },
     /** Onda de choque desde (x, y) en píxeles de pantalla (por defecto, el centro). */
     pulse(x, y, s) { ripples.push({ x: x == null ? W / 2 : x, y: y == null ? H / 2 : y, s: s || 1, t0: performance.now() }); if (ripples.length > 6) ripples.shift(); },
-    moodFor, _state: () => ({ on: !!cv, danger, rival, cur: Object.assign({}, cur), n: N, ripples: ripples.length })
+    moodFor, _state: () => ({ theme: themeIx, on: !!cv, danger, rival, cur: Object.assign({}, cur), n: N, ripples: ripples.length })
   };
 })();
