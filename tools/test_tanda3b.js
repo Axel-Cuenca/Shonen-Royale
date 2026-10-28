@@ -258,9 +258,22 @@ module.exports = function (T) {
         ok(st.players[q].grave.some(c => c.id === 'c_gema_tiempo') || st.players[p].grave.some(c => c.id === 'c_gema_tiempo'), bearer + ': la gema va al cementerio');
       }
     }
-    // Gema de la Realidad es una trampa: no se roba
-    const sr = fresh(0); put(sr, 1, 0, 'c_titan'); putST(sr, 1, 0, 'c_guantelete', { glove: {}, equipTo: 0 }); put(sr, 0, 0, 'c_goku'); putST(sr, 1, 1, 'c_gema_realidad', { down: true, setTurn: 1 });
-    ok(!E.view(sr, 0).pending, 'la Gema de la Realidad (trampa) no activa el robo');
+    // Gema de la Realidad (trampa): el portador rival puede robarla cuando se activa
+    for (const take of [true, false]) {
+      const sr = fresh(0); put(sr, 0, 0, 'c_titan'); putST(sr, 0, 0, 'c_guantelete', { glove: {}, equipTo: 0 }); put(sr, 1, 0, 'c_goku'); put(sr, 0, 1, 'c_zenitsu'); put(sr, 1, 1, 'c_deadpool'); putST(sr, 1, 1, 'c_gema_realidad', { down: true, setTurn: 1 });
+      const n0 = [E.countCards(sr, 0), E.countCards(sr, 1)];
+      toBattle(sr, 0); act(sr, 0, atkA(sr, 0, 0, 0));
+      ok(sr.pending && sr.pending.k === 'respond' && sr.pending.player === 1, 'Realidad: el rival puede activarla');
+      act(sr, 1, find(sr, 1, x => x.t === 'respond' && x.activate));
+      ok(sr.pending && sr.pending.ab === 'glove' && sr.pending.player === 0 && sr.pending.trap, 'Realidad: el portador del Guantelete puede robarla');
+      if (sr.pending && sr.pending.ab === 'glove') {
+        answer(sr, 0, { use: take });
+        const stolen = sr.players[0].st.some(s => s && s.c.id === 'c_gema_realidad' && s.stolen && s.down);
+        ok(stolen === take, 'Realidad: ' + (take ? 'queda boca abajo en el campo del ladrón' : 'si no la roba, sigue su curso'));
+        ok(E.countCards(sr, 0) === n0[0] && E.countCards(sr, 1) === n0[1], 'Realidad: no se pierde ni se duplica ninguna carta (' + take + ')');
+        if (take) ok(!grave(sr, 1, 'c_gema_realidad') && !sr.pending, 'Realidad robada: sale del cementerio y la activación se cancela');
+      }
+    }
   }
 
   section('Ola de Fuego');

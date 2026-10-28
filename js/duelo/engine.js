@@ -1333,7 +1333,7 @@
     continueSpell(st);
   }
   // ---------------- Guantelete del Infinito ----------------
-  const isGem = d => d.kind === 'spell' && /^Gema/.test(d.name) && (d.fx === 'equip' || d.fx === 'gem' || d.fx === 'tiempo');      // la Gema de la Realidad es trampa: no se roba
+  const isGem = d => /^Gema/.test(d.name) && ((d.kind === 'spell' && (d.fx === 'equip' || d.fx === 'gem' || d.fx === 'tiempo')) || (d.kind === 'trap' && d.fx === 'realidad'));      // la Gema de la Realidad es trampa: se roba al activarla
   /** Un portador del Guantelete (de un rival de p) que puede robar la gema que p acaba de activar, o null. */
   function gloveFor(st, p, d) {
     if (!isGem(d) || stOff(st) || st.domain) return null;
@@ -1351,6 +1351,15 @@
       }
     }
     return null;
+  }
+  /** Gema de la Realidad (trampa) recién activada: el portador rival puede robarla en vez de dejar que haga efecto. */
+  function gloveTrapOffer(st, p, d, s, pd) {
+    const g = gloveFor(st, p, d);
+    if (!g) return false;
+    const bm = st.players[g.q].mz[g.bz], stars = lvl(bm);
+    st.pending = { k: 'ability', ab: 'glove', player: g.q, stage: 'ask', ch: null, trap: { c: s.c, rp: pd, d, by: p }, by: p, bz: g.bz, uid: s.c.uid, nm: d.name,
+      info: { bearer: mdef(bm).name, stars, trap: true, pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
+    return true;
   }
   /** Ofrece el robo antes de que la gema se resuelva. true = hay que esperar la respuesta. */
   function gloveOffer(st, p) {
@@ -2886,6 +2895,7 @@
           log(st, p, `activa la trampa ${d.name}`);
           P.st[a.zone] = null; P.grave.push(s.c);
           pd.opt = a.opt;
+          if (d.fx === 'realidad' && gloveTrapOffer(st, p, d, s, pd)) break;
           if (nextWindow(st, 'trap', { k: 'trapAct', by: p, rp: pd, tid: d.id }, foes(st, p))) break;      // X puede cancelar la trampa
           trapResolve(st, p, d, pd, []);
         } else respondRest(st, pd);
@@ -2947,6 +2957,23 @@
         return;
       }
       attackWindows(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'glove' && pd.trap) {                        // Gema de la Realidad (trampa)
+      const T = pd.trap, from = T.by, F = st.players[from], bm = P.mz[pd.bz], z = firstFree(P.st);
+      const gi = F.grave.findIndex(x => x.uid === T.c.uid);
+      if (a.use && bm && !bm.down && z >= 0 && gi >= 0) {
+        F.grave.splice(gi, 1);
+        P.st[z] = { c: T.c, down: true, setTurn: st.turn, equipTo: pd.bz, stolen: true };
+        F.loan = (F.loan || 0) + 1; P.loan = (P.loan || 0) - 1;
+        log(st, p, `El Guantelete del Infinito roba ${T.d.name} y la guarda boca abajo`);
+        if (multi(st)) st.log[st.log.length - 1].q = from;
+        if (lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
+        respondRest(st, T.rp);                                 // la activación se cancela
+        return;
+      }
+      if (nextWindow(st, 'trap', { k: 'trapAct', by: from, rp: T.rp, tid: T.d.id }, foes(st, from))) return;
+      trapResolve(st, from, T.d, T.rp, []);
       return;
     }
     if (pd.ab === 'glove') {                                   // Guantelete del Infinito: robar la gema que un rival acaba de activar

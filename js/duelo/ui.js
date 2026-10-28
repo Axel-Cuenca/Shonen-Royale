@@ -1694,7 +1694,7 @@
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'glove' && pd.stage === 'ask') {
         const i = pd.info || {};
-        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`),
+        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, (i.trap ? `El rival activa la trampa ${pd.nm || 'Gema de la Realidad'}. Puedes robarla: su efecto se cancela y queda boca abajo en tu campo, protegida por ${i.bearer || 'tu portador'} (${i.stars || '?'}★).` : `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`)),
           h('p', { class: 'sub' }, i.pen || ''),
           h('div', { class: 'acts' }, btn('Robar la gema', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
