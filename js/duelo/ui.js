@@ -110,6 +110,7 @@
     if (D.FriendsUI) { initFriends(); D.FriendsUI.show(show && D.Account.cloud); }   // burger de amigos (arriba a la derecha)
     if (!show) return;
     const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
+    if (lobbyAlive()) nav.splice(1, 0, ['lobby', '🟢 Sala de espera', () => lobbyBack()]);      // la sala sigue viva: acceso directo desde cualquier pantalla
     topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'SHONEN ROYALE'),
       h('nav', { class: 'hnav' }, nav.map(n => { const bd = badges()[n[0]]; return h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2], title: bd || null }, n[1], bd ? h('i', { class: 'bdg', 'aria-label': bd }) : null); })),
       h('div', { class: 'hright' }, pointsBar(true), acctBar()));
@@ -134,7 +135,7 @@
       .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
   }
   /** «Invitar» sin sala: se crea el lobby (el formato crece solo según cuántos entren, y se puede cambiar) y, ya creado, se manda la invitación (FriendsUI.roomOpened). */
-  function hostNow() { if (lobbyApi && curScreen === 'lobby') lobbyApi.invite(); else lobby({ invite: true }); }
+  function hostNow() { if (lobbyApi && (curScreen === 'lobby' || lobbyAlive())) { if (curScreen !== 'lobby') lobbyBack(); lobbyApi.invite(); } else lobby({ invite: true }); }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
   // ---------------- mazos guardados ----------------
@@ -386,7 +387,12 @@
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } try { current.introStop && current.introStop(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  /** Sala de espera viva (con amigos): se puede navegar a cualquier pantalla sin salir de ella; `lobbyBack` la vuelve a mostrar. */
+  let lobbyBack = null;
+  const lobbyAlive = () => !!(lobbyBack && current && !current.started);
+  /** Al cambiar de pantalla: cierra la partida en curso, salvo que sea una sala de espera (esa sigue viva hasta que el jugador salga de ella). */
+  function leaveScreen() { if (!lobbyAlive()) endCurrent(); }
+  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } try { current.introStop && current.introStop(); } catch (e) { /* nada */ } current = null; lobbyBack = null; lobbyApi = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
@@ -413,12 +419,13 @@
 
   function menu() {
     scr('jugar');
-    endCurrent(); showBg(true);
+    leaveScreen(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
     const off = !!bad || few;
     const items = [
-      { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
+      lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
+      : { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
       { t: 'Ranking', d: 'Tu rango, los mejores de la temporada y cómo se sube', f: () => rankScreen() },
@@ -599,6 +606,7 @@
    *  Los asientos que queden libres los juega la computadora. */
   async function lobby(opts) {
     opts = opts || {};
+    if (lobbyAlive()) { lobbyBack(); if (opts.invite && lobbyApi) lobbyApi.invite(); return; }      // ya hay una sala abierta: se vuelve a ella
     S.setTrack('prep'); scr('lobby');
     let key = 'duel', picked = false, room = null, match = null, creating = null, onlineErr = '';
     const fm = () => FORMATS[key];
@@ -615,11 +623,14 @@
       if (!gs.length) { startAI({ level, rival: '', fmt: key }); return; }
       if (canStart()) match.begin();
     }
-    const leaveBtn = btn('Salir de la sala', menu, 'ghost lside');
-    mount(h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA'), btn('👥 Invitar amigos', () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }), 'ghost linv')),
+    let left = false;
+    const leaveBtn = btn('Salir de la sala', () => { left = true; endCurrent(); menu(); }, 'ghost lside');
+    const root = (h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA'), btn('👥 Invitar amigos', () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }), 'ghost linv')),
       fmtEl,
       slotsEl, status,
       h('div', { class: 'lbtns' }, lvlBtn, startBtn, leaveBtn)));
+    mount(root);
+    const showLobby = () => { scr('lobby'); S.setTrack('prep'); mount(root); render(); };
 
     function render() {
       const gs = guestsNow();
@@ -686,7 +697,7 @@
             }
           });
         } catch (e) { onlineErr = e.message; creating = null; render(); return false; }
-        if (curScreen !== 'lobby') { room.close(); creating = null; return false; }        // saliste mientras se creaba
+        if (left) { room.close(); creating = null; return false; }        // saliste de la sala mientras se creaba
         onlineErr = '';
         if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
         match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm().n, mode: fm().mode, autoStart: false });
@@ -697,6 +708,7 @@
         });
         const myRoom = room;
         game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); myRoom.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
+        lobbyBack = showLobby; lobbyApi = api; refreshHeader();
         queued.splice(0).forEach(q => onJoin(...q));
         render();
         return true;
@@ -718,15 +730,16 @@
       room = await D.Online.joinRoom(code, {
         onState: st => { if (st === 'direct') clearTimeout(failTimer); else if (st === 'failed') put('msg err', LOSTMSG); },
         onClosed: () => { if (!current || !current.started) put('msg err', 'El anfitrión cerró la sala.'); },
-        onKicked: () => { if (!current || !current.started) { put('msg err', 'La sala se llenó antes de que entraras.'); menu(); } }
+        onKicked: () => { if (!current || !current.started) { put('msg err', 'La sala se llenó antes de que entraras.'); endCurrent(); menu(); } }
       });
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
     // sala de espera del invitado: ve quién hay y el formato; el anfitrión decide cuándo empezar
     const slotsEl = h('div', { class: 'lrow' }), info = h('div'), titleEl = h('p', { class: 'lnote' }, 'Conectando con el anfitrión…');
-    const leave = () => { clearTimeout(failTimer); if (match) match.close(); room.close(); menu(); };
-    scr('online');
-    mount(h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: leave }, '← Salir de la sala'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA')), titleEl, slotsEl, info,
+    const leave = () => { clearTimeout(failTimer); if (match) match.close(); room.close(); endCurrent(); menu(); };
+    scr('lobby');
+    const root = (h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: leave }, '← Salir de la sala'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA')), titleEl, slotsEl, info,
       h('p', { class: 'sub', style: 'text-align:center' }, 'Cuando el anfitrión empiece el duelo entrarás solo.')));
+    mount(root);
     box = info;
     put('msg ok', 'Dentro de la sala. Conectando con el anfitrión…');
     slotsEl.style.setProperty('--n', 1); slotsEl.replaceChildren(lobbySlot({ img: lobbyMine(), name: room.name, role: 'Tú', stat: 'CONECTANDO' }));
@@ -745,6 +758,7 @@
       }
     });
     game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
+    lobbyBack = () => { scr('lobby'); S.setTrack('prep'); mount(root); }; refreshHeader();
   }
 
   // ---------------- mazos: primero la lista de mazos y luego el editor (arrastrar y soltar en escritorio) ----------------
@@ -768,7 +782,7 @@
   /** Lista de mazos (entrada): una tarjeta por mazo; Editar abre el editor. */
   function deckBuilder() {
     scr('mazos');
-    endCurrent(); S.setTrack('prep');
+    leaveScreen(); S.setTrack('prep');
     const decks = myDecks();
     const again = () => deckBuilder();
     const rename = i => { const d = decks[i], nm = prompt('Nombre del mazo', d.name); if (nm) { d.name = nm.trim().slice(0, 20) || d.name; save(); again(); } };
@@ -813,7 +827,7 @@
   /** Editor de un mazo: colección al centro, detalle de la carta a la derecha, tu mazo abajo. Escritorio: arrastrar y soltar. Móvil: botones − / +. */
   function deckEditor(idx) {
     scr('mazos');
-    endCurrent(); S.setTrack('prep');
+    leaveScreen(); S.setTrack('prep');
     const ro = !!C.test, decks = myDecks();
     idx = Math.max(0, Math.min(idx | 0, decks.length - 1));
     const dk = decks[idx];
@@ -1021,18 +1035,19 @@
     cur.leave = () => { if (v && v.winner === null && v.me.alive) rankFinish(true); };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
-    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
+    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; lobbyBack = null; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
     if (match.kind === 'ia') tutorial(cur);
     // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
     const TURN_SECS = 45;
-    let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
+    let tt = { key: '', t0: 0, beeped: false, tk: -1 }, ttInt = null;
     function ttTick() {
       const el = document.querySelector('.turntimer');
       if (!el) { clearInterval(ttInt); ttInt = null; return; }
       const left = Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000));
       el.textContent = left > 0 ? '⏱ ' + left + ' s' : '⏱ ¡Tiempo!';
       el.classList.toggle('low', left <= 10 && left > 0); el.classList.toggle('out', left === 0);
+      if (left > 0 && left <= 10 && left !== tt.tk) { tt.tk = left; if (v && v.winner === null && v.current === v.seat) S.tick(left <= 3); }      // cuenta atrás: un pitido por segundo en los últimos 10 s (a quien le toca)
       if (left === 0 && !tt.beeped) { tt.beeped = true; if (v && v.current === v.seat) S.play('error'); }
     }
     // cinemática de entrada: las casillas se materializan en espiral (js/duelo/intro.js); sólo al empezar la partida
@@ -2096,7 +2111,7 @@
       const turnTxt = `Turno ${v.round != null ? v.round : v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
       const tkey = v.turn + ':' + v.current + ':' + (v.seq || 0);   // cada acción reinicia la cuenta
-      if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false };
+      if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false, tk: -1 };
       const timer = v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
       if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
