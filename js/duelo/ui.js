@@ -1156,32 +1156,32 @@
         items.length ? items : h('div', { class: 'sub' }, venom ? 'Aún no ha aprendido ninguna.' : steal ? 'Aún no ha robado ninguna.' : 'Ninguna.'));
     }
     function badgesEl(s) {
-      const b = [];
-      if (s.sh) b.push((s.sh.kind === 'shen' ? '🛡️' : s.sh.kind === 'susano' ? '👹' : '🛡️') + s.sh.cur);
-      else if (s.shield != null) b.push('🛡️' + s.shield);
-      if (s.six) b.push('👁️' + s.six);
-      if (s.fused) b.push('☯️' + s.fused.left);
-      if (s.av) b.push('🧬');
-      if (s.sealedAb && s.sealedAb.length) b.push('🕸️');
-      if (s.promesa) b.push('⛓️');
-      if (s.owner != null) b.push('🎭');
-      if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0))) b.push('⬆️');
-      if (s.link && s.link.length) b.push('🔗');
-      if ((s.ext && s.ext.length) || s.absorbed) b.push('🌀');
-      if (s.fury) b.push('🔥');
-      if (s.domain) b.push('👹');
-      if (s.yuta && s.yuta.dom) b.push('💞');
-      if (s.rika) b.push(s.rika.happy ? '😊' : '😡');
-      if (s.muted) b.push('🔇');
-      if (s.kills) b.push('☠️' + s.kills);
-      if (s.karma) b.push('☯️' + s.karma.left);
-      if (s.gem) b.push('🔮');
-      if (s.jk) b.push(s.jk.mode === 'sword' ? '🗡️' : '🛡️');
-      if (s.sym) b.push('🕷️');
-      if (s.tony) b.push('🤖' + s.tony.arm);
-      if (s.hira) b.push('⚡' + s.hira);
-      if (s.price) b.push('💎');
-      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', null, x))) : null;
+      const b = [];      // [icono, explicación al pasar el ratón]
+      if (s.sh) b.push([(s.sh.kind === 'shen' ? '🛡️' : s.sh.kind === 'susano' ? '👹' : '🛡️') + s.sh.cur, 'Escudo: ' + s.sh.cur + '/' + s.sh.max]);
+      else if (s.shield != null) b.push(['🛡️' + s.shield, 'Escudo: ' + s.shield]);
+      if (s.six) b.push(['👁️' + s.six, 'Seis Ojos: intocable ' + s.six + ' turno(s)']);
+      if (s.fused) b.push(['☯️' + s.fused.left, 'Fusionado (' + s.fused.left + ' turno(s))']);
+      if (s.av) b.push(['🧬', 'Anti-Venom acoplado']);
+      if (s.sealedAb && s.sealedAb.length) b.push(['🕸️', 'Habilidades selladas: ' + s.sealedAb.map(abn).join(', ')]);
+      if (s.promesa) b.push(['⛓️', 'Promesa de Poder: no puede atacar y cambiará de bando']);
+      if (s.owner != null) b.push(['🎭', 'Corrompido']);
+      if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0))) b.push(['⬆️', 'Bonificaciones: ' + s.mods.filter(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0)).map(m => MODN[m.k] || m.k).join(', ')]);
+      if (s.link && s.link.length) b.push(['🔗', 'Vinculado: ' + s.link.map(nameId).join(', ')]);
+      if ((s.ext && s.ext.length) || s.absorbed) b.push(['🌀', 'Habilidades extra: ' + (s.ext || []).map(abn).join(', ')]);
+      if (s.fury) b.push(['🔥', 'Furia de Esparta activa']);
+      if (s.domain) b.push(['👹', 'Su dominio cubre el campo']);
+      if (s.yuta && s.yuta.dom) b.push(['💞', 'Dominio de Yuta activo']);
+      if (s.rika) b.push([s.rika.happy ? '😊' : '😡', s.rika.happy ? 'Rika contenta' : 'Maldición Incontrolable']);
+      if (s.muted) b.push(['🔇', 'Habilidades silenciadas por el dominio']);
+      if (s.kills) b.push(['☠️' + s.kills, 'Bajas: ' + s.kills]);
+      if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
+      if (s.gem) b.push(['🔮', 'Mente controlada']);
+      if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);
+      if (s.sym) b.push(['🕷️', 'Venom equipado (Simbiosis)']);
+      if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
+      if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
+      if (s.price) b.push(['💎', 'Precio del poder: perdió la mitad de su poder y sus habilidades']);
+      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', { title: x[1] }, x[0]))) : null;
     }
     function act(a) {
       if (!v || v.actor !== v.seat) { S.play('error'); return; }

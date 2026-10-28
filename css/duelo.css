@@ -1422,3 +1422,8 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 @keyframes hmk{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
 .optbox{display:flex;flex-direction:column;gap:4px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:10px;text-align:left}
 .optbox .btn{font-size:13px}
+
+/* Iconos de estado de los personajes: más grandes, en una fila sobre la ficha, y se agrandan al pasar el ratón */
+.zone.mz .badges { top: -.35em; right: 0; left: 0; bottom: auto; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: .15em; z-index: 9; pointer-events: auto; }
+.zone.mz .badges i { font-size: 1.45em; padding: .02em .3em; border: 1px solid #fff4; background: #000c; box-shadow: 0 1px 4px #0009; cursor: help; transition: transform .12s; }
+.zone.mz .badges i:hover { transform: scale(1.6) translateY(-.15em); position: relative; z-index: 10; }

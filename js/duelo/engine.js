@@ -1040,7 +1040,7 @@
   /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
   const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1, infarto: 1 };
   /** Habilidades hostiles que Total Counter puede devolver. */
-  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'purpura', 'avpred', 'genki'];
+  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
   const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
@@ -2967,7 +2967,7 @@
     }
     if (pd.ab === 'meliodas') {
       if (pd.stage === 'ask') {
-        if (!a.use) { meliDecline(st, pd); return; }
+        if (!a.use || (pd.kind === 'power' && pd.pa && pd.pa.pw === 'purpura')) { meliDecline(st, pd); return; }      // validado aquí: Púrpura nunca se refleja
         const cands = meliCands(st, p, pd);
         if (cands === null) { meliApply(st, p, pd, null); return; }
         if (!cands.length) { log(st, p, 'Total Counter no puede reflejar el efecto'); meliDecline(st, pd); return; }

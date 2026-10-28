@@ -311,5 +311,18 @@ module.exports = function (T) {
     const s2 = fresh(0); hand(s2, 0, ['c_gema_tiempo']); s2.players[0].snaps = [JSON.stringify({ mz: [null, null, null], st: [null, null, null] })];
     ok(!find(s2, 0, x => x.t === 'activate'), 'sin historial suficiente no se ofrece');
   }
+
+  section('Meliodas: Total Counter no devuelve Púrpura');
+  {
+    const mk = () => { const st = fresh(0); put(st, 0, 0, 'c_goku', { six: { t0: st.turn } }); put(st, 1, 0, 'c_meliodas'); return st; };
+    const st = mk();
+    const pp = pw(st, 0, 'purpura', a => a.target.area === 'mz');
+    ok(!!pp, 'Púrpura está disponible');
+    act(st, 0, pp);
+    ok(!(st.pending && st.pending.ab === 'meliodas'), 'Meliodas no puede devolver Púrpura');
+    ok(!st.players[1].mz[0] && st.players[1].banish.some(c => c.id === 'c_meliodas'), 'Púrpura se resuelve normalmente (lo destierra)');
+    const s2 = mk(); act(s2, 0, pw(s2, 0, 'rojo'));
+    ok(s2.pending && s2.pending.ab === 'meliodas', 'Rojo sigue pudiendo devolverse');
+  }
   return;
 };
