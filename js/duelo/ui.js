@@ -1155,6 +1155,23 @@
       return h('div', { class: 'stbox' }, h('b', null, title),
         items.length ? items : h('div', { class: 'sub' }, venom ? 'Aún no ha aprendido ninguna.' : steal ? 'Aún no ha robado ninguna.' : 'Ninguna.'));
     }
+    /** Tooltip inmediato de los iconos de estado: sigue al icono y no tapa nada de la ficha. */
+    if (!window.__duelo_badgeTip) {
+      window.__duelo_badgeTip = true;
+      let tip = null;
+      const hide = () => { if (tip) { tip.remove(); tip = null; } };
+      document.addEventListener('mouseover', e => {
+        const i = e.target.closest && e.target.closest('.badges i[data-tip]');
+        if (!i) { hide(); return; }
+        hide();
+        tip = h('div', { class: 'badgetip' }, i.dataset.tip);
+        document.body.append(tip);
+        const r = i.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+        tip.style.left = Math.max(6, Math.min(innerWidth - tr.width - 6, r.left + r.width / 2 - tr.width / 2)) + 'px';
+        tip.style.top = (r.top - tr.height - 8 < 6 ? r.bottom + 8 : r.top - tr.height - 8) + 'px';
+      });
+      document.addEventListener('scroll', hide, true);
+    }
     function badgesEl(s) {
       const b = [];      // [icono, explicación al pasar el ratón]
       if (s.sh) b.push([(s.sh.kind === 'shen' ? '🛡️' : s.sh.kind === 'susano' ? '👹' : '🛡️') + s.sh.cur, 'Escudo: ' + s.sh.cur + '/' + s.sh.max]);
@@ -1181,7 +1198,7 @@
       if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
       if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
       if (s.price) b.push(['💎', 'Precio del poder: perdió la mitad de su poder y sus habilidades']);
-      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', { title: x[1] }, x[0]))) : null;
+      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', { 'data-tip': x[1] }, x[0]))) : null;
     }
     function act(a) {
       if (!v || v.actor !== v.seat) { S.play('error'); return; }
