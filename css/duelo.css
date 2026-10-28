@@ -1515,3 +1515,5 @@ html.fx3d .zone.atkr .card.layered, html.fx3d .zone.atkr.opp.lowrow .card.layere
 html.fx3d .zone.tired .card.layered.onboard { filter: saturate(.55) brightness(.85); }
 .zone.struck .card.layered.onboard { animation: cfxHitCard .6s linear; }
 @keyframes cfxHitCard { 0% { translate: 0 0; } 8% { translate: -.9em 0; } 17% { translate: .8em 0; } 27% { translate: -.6em 0; } 38% { translate: .45em 0; } 52% { translate: -.28em 0; } 70% { translate: .14em 0; } 100% { translate: 0 0; } }
+/* en el tablero el personaje es más pequeño que en la mano: cabe casi entero dentro del marco (los pies quedan en la misma línea) */
+.board3d .zone .card.m.layered.onboard > .cch { left: 4.6%; width: 90.8%; top: 2%; height: 88%; }
