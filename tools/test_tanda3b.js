@@ -231,6 +231,38 @@ module.exports = function (T) {
     }
   }
 
+  section('Guantelete del Infinito: todas las gemas del juego');
+  {
+    // Gema del Poder (equipo): se roba y se equipa al portador
+    const sp = fresh(0); put(sp, 1, 0, 'c_titan'); putST(sp, 1, 0, 'c_guantelete', { glove: {}, equipTo: 0 }); put(sp, 0, 0, 'c_goku');
+    hand(sp, 0, ['c_gema_poder']); const np = [E.countCards(sp, 0), E.countCards(sp, 1)], bp = stat(sp, 1, 0);
+    act(sp, 0, find(sp, 0, x => x.t === 'activate' && x.hand === 0));
+    ok(sp.pending && sp.pending.ab === 'glove', 'Gema del Poder: el portador del Guantelete puede robarla');
+    answer(sp, 1, { use: true });
+    ok(sp.players[1].st.some(s => s && s.c.id === 'c_gema_poder' && s.stolen), 'Gema del Poder: queda equipada al portador');
+    eq(stat(sp, 1, 0), [bp[0] + 800, bp[1] + 800], 'Gema del Poder robada: +800/+800 al portador');
+    ok(E.countCards(sp, 0) === np[0] && E.countCards(sp, 1) === np[1], 'Gema del Poder: no se pierde ni se duplica ninguna carta');
+    // Gema del Tiempo: se roba y retrocede el campo del ladrón
+    for (const bearer of ['c_deadpool', 'c_titan']) {
+      const st = game({ seed: 11 }); pass(st, 4);
+      const p = st.current, q = 1 - p;
+      put(st, q, 0, bearer); putST(st, q, 0, 'c_guantelete', { glove: {}, equipTo: 0 }); put(st, p, 2, 'c_goku'); hand(st, p, ['c_gema_tiempo']);
+      const n0 = [E.countCards(st, 0), E.countCards(st, 1)];
+      act(st, p, find(st, p, x => x.t === 'activate' && x.hand === 0));
+      ok(st.pending && st.pending.ab === 'glove' && st.pending.player === q, bearer + ': la Gema del Tiempo también se puede robar');
+      if (st.pending && st.pending.ab === 'glove') {
+        answer(st, q, { use: true });
+        ok(!st.pending, bearer + ': la gema robada se resuelve');
+        ok(st.log.some(l => /Gema del Tiempo retrocede/.test(l.t)), bearer + ': retrocede el campo de quien la roba');
+        ok(E.countCards(st, 0) === n0[0] && E.countCards(st, 1) === n0[1], bearer + ': no se pierde ni se duplica ninguna carta');
+        ok(st.players[q].grave.some(c => c.id === 'c_gema_tiempo') || st.players[p].grave.some(c => c.id === 'c_gema_tiempo'), bearer + ': la gema va al cementerio');
+      }
+    }
+    // Gema de la Realidad es una trampa: no se roba
+    const sr = fresh(0); put(sr, 1, 0, 'c_titan'); putST(sr, 1, 0, 'c_guantelete', { glove: {}, equipTo: 0 }); put(sr, 0, 0, 'c_goku'); putST(sr, 1, 1, 'c_gema_realidad', { down: true, setTurn: 1 });
+    ok(!E.view(sr, 0).pending, 'la Gema de la Realidad (trampa) no activa el robo');
+  }
+
   section('Ola de Fuego');
   {
     const st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_zenitsu'); put(st, 1, 0, 'c_titan', { pos: 'def' }); putST(st, 1, 0, 'c_ola_fuego', { down: true, setTurn: 1 });

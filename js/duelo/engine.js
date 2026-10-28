@@ -1333,13 +1333,14 @@
     continueSpell(st);
   }
   // ---------------- Guantelete del Infinito ----------------
-  const isGem = d => d.kind === 'spell' && /^Gema/.test(d.name) && (d.fx === 'equip' || d.fx === 'gem');
+  const isGem = d => d.kind === 'spell' && /^Gema/.test(d.name) && (d.fx === 'equip' || d.fx === 'gem' || d.fx === 'tiempo');      // la Gema de la Realidad es trampa: no se roba
   /** Un portador del Guantelete (de un rival de p) que puede robar la gema que p acaba de activar, o null. */
   function gloveFor(st, p, d) {
     if (!isGem(d) || stOff(st) || st.domain) return null;
     for (const q of foes(st, p)) {
       const Q = st.players[q];
-      if (firstFree(Q.st) < 0) continue;
+      if (d.fx !== 'tiempo' && firstFree(Q.st) < 0) continue;
+      if (d.fx === 'tiempo' && !(Q.snaps && Q.snaps.length >= 2)) continue;      // la Gema del Tiempo robada retrocede el campo del ladrón: necesita su instantánea
       for (let i = 0; i < ZONES; i++) {
         const s = Q.st[i];
         if (!s || s.down || !s.glove || s.equipTo == null) continue;
@@ -1429,6 +1430,10 @@
     const gd = spellGuard(st, ch);
     if (gd) { st.pending = gd; return; }
     P.grave.push(ch.inst);
+    if (ch.stolen) {                                   // gema robada que no se queda en el campo (Gema del Tiempo): también cobra el precio del poder
+      const bm = P.mz[ch.stolen.bz];
+      if (bm && lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, ch.p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
+    }
     FX[d.fx].resolve(st, ch.p, d, ch.target);
   }
 
@@ -2954,7 +2959,7 @@
         return;
       }
       const bm = P.mz[pd.bz];
-      if (a.use && bm && !bm.down && firstFree(P.st) >= 0) {
+      if (a.use && bm && !bm.down && (d.fx === 'tiempo' || firstFree(P.st) >= 0)) {
         const from = pd.by;
         log(st, p, `El Guantelete del Infinito roba ${d.name} y la equipa a ${mdef(bm).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = from;
