@@ -1,0 +1,2 @@
+pixi.min.js: PixiJS 8 (licencia MIT, https://pixijs.com). Se carga sólo si «Efectos 3D de cartas» está activo y el navegador tiene WebGL2.
+pixi-unsafe-eval.min.js: módulo oficial de PixiJS 8 para sitios sin eval (MIT).

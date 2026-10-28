@@ -7,7 +7,7 @@ module.exports = function (T) {
     const store = {};
     global.window = global; global.location = { href: 'https://axel-cuenca.github.io/Shonen-Royale/' };
     global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
-    global.document = { documentElement: { classList: { contains: () => false } }, addEventListener() { } };
+    global.document = { documentElement: { classList: { contains: () => false, toggle() { } } }, addEventListener() { } };
     global.fetch = () => Promise.reject(new Error('sin red'));
     global.Image = function () { const o = this; Object.defineProperty(o, 'src', { set() { setTimeout(() => o.onerror && o.onerror(), 0); } }); };
     global.matchMedia = () => ({ matches: false });
@@ -32,6 +32,8 @@ module.exports = function (T) {
     eq(F.animFor('c_goku'), null, 'tras un fallo: estática');
     F.setExt(false); eq(F.animFor('c_vegeta'), null, 'con «Animaciones externas» apagado: estática'); F.setExt(true);
     ok(F.tired(2000, 8000) && !F.tired(2500, 8000) && !F.tired(0, 8000), 'cansancio por debajo del 30 % de PV (y no si ya murió)');
+    ok(F.dangerOf(2000, 8000) === 1 && F.dangerOf(3500, 8000) === .4 && F.dangerOf(6000, 8000) === 0 && F.dangerOf(0, 8000) === 0, 'peligro: ≤30 % alerta, ≤50 % media, muerto/sano 0');
+    const ca = F.ambient; ca.setDanger(5); eq(ca._state().target, 1, 'el peligro se limita a 1'); ca.setDanger(-2); eq(ca._state().target, 0, 'y a 0');
     delete global.Duelo; delete global.window; delete global.document; delete global.localStorage; delete global.location; delete global.fetch; delete global.matchMedia; delete global.Image;
   };
 };

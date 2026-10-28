@@ -56,7 +56,7 @@
     const d = C.get(el.dataset.cid); if (!d) return;
     hidePreview();
     const big = cardEl(d); big.classList.add('big');
-    if (d.kind === 'monster') layerCard(big, d);
+    if (d.kind === 'monster') layerCard(big, d, 'pv');
     prevEl = h('div', { class: 'preview' }, big, h('div', { class: 'pv-t' }, h('b', null, d.name), d.kind === 'monster' ? h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`) : h('div', null, d.text)));
     document.body.append(prevEl);
   });
@@ -256,13 +256,16 @@
     box.append(s);
     return box;
   }
-  /** Capas de carta (fondo de energía + personaje que sale del marco): animación externa si hay, si no el recorte de la ilustración. */
-  function layerCard(el, d) {
+  /** Cara de carta en capas (fondo · personaje que sale del marco · panel ATK/DEF). El personaje es, por orden: animación externa
+   *  verificada → malla animada (Rig, `key` = lugar fijo para que no se reinicie) → recorte estático de la ilustración. */
+  function layerCard(el, d, key) {
     if (!D.CardFX) return;
-    const ext = D.CardFX.animFor(d.id);
-    D.CardFX.layers(el, ext ? ext.u : Holo.src(d.id, myArt(d.id)), ext && ext.px);
-    const im = el.querySelector('.cch');
-    if (im && ext) im.onerror = () => { D.CardFX.fail(d.id); const st = Holo.src(d.id, myArt(d.id)); if (st) { im.onerror = null; im.src = st; im.classList.remove('px'); } else im.remove(); };
+    const ext = D.CardFX.animFor(d.id), cut = Holo.src(d.id, myArt(d.id)), o = { saga: d.types && d.types[0] };
+    if (ext) { o.src = ext.u; o.px = ext.px; }
+    else { const cv = D.Rig && key ? D.Rig.make(key, d.id, cut, d.level) : null; if (cv) o.canvas = cv; else if (cut) o.src = cut; }
+    D.CardFX.layers(el, o);
+    const im = el.querySelector('img.cch');
+    if (im && ext) im.onerror = () => { D.CardFX.fail(d.id); if (cut) { im.onerror = null; im.src = cut; im.classList.remove('px'); } else im.remove(); };
   }
   /** o: { down, pos, atk, def } (atk/def efectivos del tablero), art: imagen de la skin (sin dar: la mía; null: la original) */
   function cardEl(card, o) {
@@ -285,7 +288,7 @@
   function detailBox(card, extra) {
     const d = typeof card === 'string' ? C.get(card) : card;
     const big = cardEl(d); big.classList.add('big');
-    if (d.kind === 'monster') layerCard(big, d);
+    if (d.kind === 'monster') layerCard(big, d, 'dt');
     const txt = h('div', { class: 'txt' });
     if (d.kind === 'monster') {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
@@ -392,7 +395,7 @@
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
       h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))),
-      h('div', { class: 'row' }, tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v))), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
@@ -1056,11 +1059,12 @@
       if (ctl) {
         if (D.Floor && D.Floor.reveal) D.Floor.reveal(2800);
         cur.introStop = ctl.cancel; introRun = true;
-        ctl.done.then(() => { introRun = false; if (current === cur && introQ) { const q = introQ; introQ = null; handleView(q); } });
+        ctl.done.then(() => { introRun = false; if (current === cur && introQ) { const q = introQ; introQ = null; handleView(q); } else if (current === cur) turnBanner(); });
       }
     }
     let v = null, prevLps = null, sel = null, prevHandN = null, newView = false, firstView = true, lastLogN = 0, endSounded = false, lpDelta = {};
-    const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set();
+    const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set(), moveQ = [];
+    let lastCur = null;
     let gameEl = null, zrowsEl = null, lcol = null;
     let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], atkTg = [], pops = [];
     const seatNames = () => match.names;
@@ -1565,9 +1569,19 @@
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id, art)) el.append(...holoEls(s, key, cur, landing, chosen, art));
-      if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas una sola vez por golpe
+      if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas y sacudida una sola vez por golpe
         const hk = (v.seq || v.turn) + ':' + key + (struck ? 's' : 'l');
-        if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); }
+        if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); if (D.Rig) D.Rig.hit(key); }
+      }
+      if (area === 'mz' && s && s.c && !s.down && D.Rig) {
+        D.Rig.tired(key, weary);                                                      // bajo el 30 % de PV de su dueño: postura cansada (permanente mientras dure)
+        if (fresh && attacking) {
+          const ak = (v.seq || v.turn) + ':' + key + 'a';
+          if (!hitMem.has(ak)) { hitMem.add(ak); D.Rig.atk(key); moveQ.push({ key, a: Object.assign({}, v.atk) }); }
+        }
+      } else if (fresh && attacking && s && s.c) {
+        const ak = (v.seq || v.turn) + ':' + key + 'a';
+        if (!hitMem.has(ak)) { hitMem.add(ak); moveQ.push({ key, a: Object.assign({}, v.atk) }); }
       }
       return el;
     }
@@ -1583,9 +1597,10 @@
       const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
       const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
       const ext = !art && D.CardFX ? D.CardFX.animFor(d.id) : null;                // animación externa verificada (si no, la figura recortada de siempre)
-      const himg = h('img', { src: ext ? ext.u : Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob, class: ext && ext.px ? 'px' : '' });
+      const rig = !ext && D.Rig ? D.Rig.make(key, d.id, Holo.src(d.id, art), d.level) : null;      // personaje con malla animada (si hay WebGL2)
+      const himg = rig || h('img', { src: ext ? ext.u : Holo.src(d.id, art), alt: d.name, draggable: 'false', style: bob, class: ext && ext.px ? 'px' : '' });
       if (ext) himg.onerror = () => { D.CardFX.fail(d.id); const st = Holo.src(d.id, art); himg.onerror = null; if (st) { himg.src = st; himg.classList.remove('px'); } };
-      const fig = h('div', { class: 'hin', style: `--ms:${ms}ms;${dl}` }, himg, stat);
+      const fig = h('div', { class: 'hin' + (rig ? ' rigged' : ''), style: `--ms:${ms}ms;${dl}` }, himg, stat);
       const out = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` }), h('div', { class: cls, style: `--ms:${ms}ms` }, fig)];
       if (entering) out.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
       return out;
@@ -1914,7 +1929,24 @@
       b.right.classList.add('flip');
     }
     window.__duelo_atkMark = a => atkMark(a);
+    /** El atacante se lanza hacia su objetivo (casilla enemiga o el jugador) con curva elástica y vuelve. */
+    function attackMove(m) {
+      if (!D.CardFX || !D.CardFX.on3d()) return;
+      const zel = document.querySelector('.zone[data-k="' + m.key + '"]'); if (!zel) return;
+      const who = zel.querySelector('.holo') || zel.querySelector('.card'); if (!who || !who.animate) return;
+      const a = m.a, r = zel.getBoundingClientRect();
+      const tr = a.target != null && a.target >= 0 ? rectOf('s' + a.vs + '-mz-' + a.target)
+        : (() => { const pc = document.querySelector('.plate[data-seat="' + a.vs + '"], .pcard[data-seat="' + a.vs + '"]'); return pc ? pc.getBoundingClientRect() : null; })();
+      if (!tr || !zel.offsetWidth) return;
+      const rx = r.width / zel.offsetWidth, ry = r.height / zel.offsetHeight || rx;
+      const dx = (tr.left + tr.width / 2) - (r.left + r.width / 2), dy = (tr.top + tr.height / 2) - (r.top + r.height / 2);
+      const lx = dx / rx * .8, ly = dy / ry * .8;
+      zel.classList.add('lunging'); setTimeout(() => zel.classList.remove('lunging'), 1000);
+      who.animate([{ translate: '0 0', scale: '1' }, { translate: lx + 'px ' + ly + 'px', scale: '1.12', offset: .34, easing: 'cubic-bezier(.5, 0, .3, 1)' }, { translate: '0 0', scale: '1' }],
+        { duration: 1000, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+    }
     function runFx() {
+      for (const m of moveQ.splice(0)) attackMove(m);
       for (const a of atkTg) atkMark(a);
       atkTg = [];
       // preparación del atacante (efecto del elemento)
@@ -1989,7 +2021,7 @@
         const d = C.get(c.id);
         const can = my && !v.pending && L().some(a => a.hand === i);
         const el = cardEl(d); if (can) el.classList.add('can');
-        if (d.kind === 'monster') layerCard(el, d);
+        if (d.kind === 'monster') layerCard(el, d, 'hand-' + i);
         el.onclick = () => { if (discarding) return act({ t: 'discard', hand: i }); if (sel) { sel = null; render(); } handClick(i); };
         hand.append(el);
       });
@@ -2038,6 +2070,7 @@
         gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))), lcol);
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
+      if (D.CardFX) { D.CardFX.ambient.attach(gameEl); D.CardFX.ambient.setDanger(D.CardFX.dangerOf(v.me.lp, 8000)); }
       gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);
       const hud = h('div', { class: 'hud' }, hudTop, hudBot);
@@ -2052,9 +2085,16 @@
       if (!introTried) { introTried = true; startIntro(); }
       pendingUI();
       if (fresh) { runFx(); firstView = false; }
+      turnBanner();
       if (v.winner !== null) showEnd();
     }
 
+    /** «TU TURNO»: aparece cuando el turno pasa a ser mío (no durante la cinemática de entrada). */
+    function turnBanner() {
+      if (!v || introRun || !D.CardFX) return;
+      if (v.winner === null && v.current === v.seat && lastCur !== v.seat) D.CardFX.banner('TU TURNO');
+      lastCur = v.current;
+    }
     function handleView(nv) {
       prevLps = v ? v.players.map(q => q.lp) : null;
       v = nv; newView = true;
@@ -2064,6 +2104,8 @@
     }
     // mientras suena la cinemática de entrada las jugadas se guardan (sólo la última vista) y se muestran al terminar
     let introQ = null, introRun = false;
+    // cuando los personajes con malla (PixiJS) terminan de cargar, se vuelve a dibujar el tablero y la mano con ellos
+    if (D.Rig) { D.Rig.load(); D.Rig.onReady(() => { if (current === cur && v && !introRun) { newView = true; render(); } }); }
     match.onView(nv => { if (introRun) { introQ = nv; return; } handleView(nv); });
     match.onStatus(s => {
       if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
@@ -2071,7 +2113,7 @@
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
     match.start();
-    window.__duelo = { match, view: () => v, elemFx };
+    window.__duelo = { match, view: () => v, elemFx, attackMove };
   }
 
   // ---------------- cuenta ----------------

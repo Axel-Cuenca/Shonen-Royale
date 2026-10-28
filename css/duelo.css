@@ -1420,18 +1420,38 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 /* ============ v2 visual: capas de carta, inclinación 3D, brillo de jugable y estados (js/duelo/cardfx.js) ============ */
 @property --cfxang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @keyframes cfxSpin { to { --cfxang: 360deg; } }
-/* capas: fondo de energía (cbg) · ilustración (art) · personaje que sale del marco (cch) · marco y estadísticas */
-.card.layered > :not(.cbg):not(.cch) { position: relative; z-index: 1; }
-.card .cbg { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; opacity: .9; will-change: transform;
-  background: radial-gradient(120% 80% at 50% 42%, color-mix(in srgb, var(--tc, #888) 55%, #fff) 0, color-mix(in srgb, var(--tc, #888) 55%, #000) 62%, #0b1030 100%); }
-.card .cch { position: absolute; left: 2%; width: 96%; top: -18%; height: 96%; z-index: 3; pointer-events: none; opacity: 0; object-fit: contain; object-position: 50% 100%;
-  transition: opacity .22s, transform .3s cubic-bezier(.2, 1.4, .4, 1); transform: translateY(6%) scale(.96); filter: drop-shadow(0 .25em .3em #000a); will-change: transform; }
+/* cara de carta en capas (estilo «tres cartas pixi»): fondo (cbg) · personaje que sobresale del marco (cch) · marco brillante · panel de nombre y ATK/DEF (cpanel) */
+.card.m.layered { overflow: visible; padding: 0; display: block; border: .14em solid var(--tc, #888); border-radius: .55em;
+  background: radial-gradient(120% 70% at 50% 40%, color-mix(in srgb, var(--tc, #888) 42%, #1a0c22) 0, #12112e 62%, #070a1c 100%);
+  box-shadow: 0 0 .9em color-mix(in srgb, var(--tc, #888) 55%, transparent), inset 0 0 1.2em #0009, 0 .4em 1em #000b; }
+.card.m.layered > .cn, .card.m.layered > .cs { position: relative; z-index: 5; }
+.card.m.layered:has(> .cch) > .art { visibility: hidden; }
+.card .cbg { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: .4em; overflow: hidden; will-change: transform; }
+.card .cbg::before { content: ''; position: absolute; left: 50%; top: 44%; width: 150%; aspect-ratio: 1; margin: -75% 0 0 -75%; border-radius: 50%; opacity: .55;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--tc, #888) 70%, #fff) 0 3.5deg, transparent 3.5deg 11deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 12%, transparent 88%); mask-image: radial-gradient(closest-side, #000 12%, transparent 88%); animation: cfxRot 40s linear infinite; }
+.card .cbg::after { content: ''; position: absolute; left: 50%; top: 46%; width: 70%; height: 60%; margin: -30% 0 0 -35%; border-radius: 50%; animation: cfxGlow 3.4s ease-in-out infinite;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tc, #888) 80%, #fff), color-mix(in srgb, var(--tc, #888) 40%, transparent) 55%, transparent); filter: blur(.25em); }
+@keyframes cfxRot { to { transform: rotate(360deg); } }
+@keyframes cfxGlow { 0%, 100% { opacity: .7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+/* personaje: 118 % de ancho y 115 % de alto (el lienzo del Rig es 420×570), sobresale por arriba y por los lados */
+.card.m.layered > .cch { position: absolute; left: -9.3%; width: 118.6%; top: -24.4%; height: 115%; z-index: 3; pointer-events: none; object-fit: contain; object-position: 50% 100%;
+  filter: drop-shadow(0 .3em .4em #000a); transform: translate(calc(var(--mx, 0) * -4.5%), calc(var(--my, 0) * -3%)); transition: transform .09s linear; will-change: transform; }
 .card .cch.px, .holo .hin > img.px { image-rendering: pixelated; }
-.card.layered.tilting { overflow: visible; }
-.card.layered.tilting .cch { opacity: 1; transform: translate(calc(var(--mx, 0) * 5%), calc(var(--my, 0) * 3%)) scale(1.1); transition: opacity .15s, transform .08s linear; }
-.card.layered.tilting .cbg { transform: translate(calc(var(--mx, 0) * -5%), calc(var(--my, 0) * -4%)) scale(1.14); transition: transform .08s linear; }
-.card.layered.tilting .art { transform: translate(calc(var(--mx, 0) * -1.6%), calc(var(--my, 0) * -1.2%)); transition: transform .08s linear; }
-.card.layered.tilting .art img { opacity: .35; }
+.card .csaga { position: absolute; left: .5em; top: .5em; z-index: 5; font-size: .5em; letter-spacing: .2em; text-transform: uppercase; color: #ffd9a0; padding: .3em .8em;
+  border: 1px solid #ffd9a044; border-radius: 99px; background: #1a1030b3; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.m.layered > .cl { position: absolute; right: .55em; top: .45em; z-index: 5; font-size: .6em; color: #ffc94a; text-shadow: 0 0 .5em #ffb53c; height: auto; letter-spacing: -.5px; }
+.card .cpanel { position: absolute; left: .4em; right: .4em; bottom: .4em; z-index: 5; padding: .35em .4em .4em; border-radius: .5em; text-align: left;
+  background: linear-gradient(180deg, #0b1230dd, #070a1ce6); border: 1px solid #ffffff1f; box-shadow: 0 .3em .8em #0009, inset 0 1px 0 #ffffff14; }
+.card .cpanel .cn { font-size: .8em; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; background: linear-gradient(180deg, #fff, #ffd98a 60%, #ff9a3c);
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; padding: 0; border-radius: 0; margin-bottom: .2em; }
+.card .cpanel .cs, .hand .card .cpanel .cs { background: none; margin: 0; padding: 0; gap: .3em; font-size: .85em; }
+.card .cpanel .cs b { flex: 1; display: flex; flex-direction: column; align-items: center; line-height: 1.05; background: #ffffff0f; border: 1px solid #ffffff14; border-radius: .4em; padding: .1em 0 .14em; color: #ffb58a; }
+.card .cpanel .cs b + b { border-left: 1px solid #ffffff14; color: #9fe7ff; }
+.card .cpanel .cs b::before { content: 'ATK'; font-size: .5em; letter-spacing: .1em; opacity: .65; } .card .cpanel .cs b + b::before { content: 'DEF'; }
+.card .cpanel .cs b.up { color: #7dffa0; } .card .cpanel .cs b.dn { color: #ff8d8d; }
+.card.layered.tilting .cbg { transform: translate(calc(var(--mx, 0) * 5%), calc(var(--my, 0) * 4%)) scale(1.14); transition: transform .09s linear; }
+.card.layered.tilting .csaga, .card.layered.tilting .cpanel, .card.layered.tilting > .cl { transform: translate(calc(var(--mx, 0) * -1.2%), calc(var(--my, 0) * -1%)); transition: transform .09s linear; }
 /* inclinación 3D siguiendo el cursor (en la mano, la ficha y la vista previa) */
 .hand .card.m.layered, .card.big.m.layered { transition: transform .5s cubic-bezier(.2, 1.5, .4, 1), box-shadow .2s; }
 .hand .card.m.layered.tilting { transform: perspective(800px) translateY(-1.4em) scale(1.1) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .07s linear, box-shadow .2s; z-index: 8; }
@@ -1462,3 +1482,26 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 html.rm .shards, html.rm .zone.struck .holo .hin::after { display: none; }
 html.rm .hand .card.can::before, html.rm .zone.struck .holo .hin, html.rm .fxpress { animation: none; }
 html.rm .hand .card.m.layered.tilting, html.rm .card.big.m.layered.tilting { transform: none; }
+
+/* personajes con malla (Rig): el lienzo ocupa el sitio de la imagen y hereda el resplandor del holograma */
+.holo .hin > canvas.hrig { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain;
+  filter: var(--skf) drop-shadow(0 0 .35em #4ff) drop-shadow(0 0 1.1em #2bd) brightness(1.06); }
+.zone.opp .holo .hin > canvas.hrig { filter: var(--skf) drop-shadow(0 0 .35em #f96) drop-shadow(0 0 1.1em #f63) brightness(1.06); }
+.zone.ally .holo .hin > canvas.hrig { filter: var(--skf) drop-shadow(0 0 .35em #6f9) drop-shadow(0 0 1.1em #3d8) brightness(1.06); }
+.holo.def .hin > canvas.hrig { filter: var(--skf) grayscale(.25) drop-shadow(0 0 .35em #fc4) drop-shadow(0 0 1.1em #c90) brightness(1); }
+.holo.compact .hin > canvas.hrig { filter: var(--skf) drop-shadow(0 0 .4em #4ff); }
+.zone[data-hc]:not([data-hc="cian"]) .holo:not(.def) .hin > canvas.hrig { filter: var(--skf) drop-shadow(0 0 .35em var(--hc-a)) drop-shadow(0 0 1.1em var(--hc-b)) brightness(1.06); }
+/* con los efectos 3D, el ataque lo mueve JS (hacia el objetivo, curva elástica): se quita el salto fijo de siempre */
+html.fx3d .zone.atkr .holo, html.fx3d .zone.atkr.opp.lowrow .holo { animation: none !important; }
+html.fx3d .zone.lunging { z-index: 9; }
+html.fx3d .zone.tired .holo .hin.rigged { transform: none; filter: none; }
+/* fondo reactivo */
+.game > canvas.ambient { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; mix-blend-mode: screen; opacity: .85; }
+/* banner cinético «TU TURNO» */
+.tbanner { position: fixed; inset: 0; z-index: 9000; pointer-events: none; display: grid; place-items: center; overflow: hidden; }
+.tbanner .tb-bar { position: absolute; left: 0; right: 0; top: 50%; height: 30vmin; margin-top: -15vmin; opacity: 0; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  background: linear-gradient(90deg, #0000, #0a0d24cc 18%, #0a0d24cc 82%, #0000); border-block: 1px solid #ffd98a55; }
+.tbanner .tb-tx { position: relative; display: flex; font: 800 clamp(48px, 15vmin, 200px)/1 'GFS Didot', Georgia, serif; letter-spacing: .06em; white-space: nowrap; will-change: transform, filter, opacity;
+  background: linear-gradient(180deg, #fff 8%, #ffe9a8 38%, #ffb13c 72%, #ff6a1f 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 .05em .12em #000c) drop-shadow(0 0 .25em #ff9a3c88); }
+.game > canvas.ambient.alert { mix-blend-mode: normal; opacity: 1; }
+html.rm .tbanner, html.rm .game > canvas.ambient { display: none; }
