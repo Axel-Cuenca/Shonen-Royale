@@ -43,6 +43,84 @@
   const cur = moodFor(false, false), tgt = moodFor(false, false);
   let danger = false, rival = false, beat = 0;
 
+
+  // ---------------- capa de fondo realista (WebGL2): nebulosa volumétrica, rayos de luz y polvo con profundidad ----------------
+  let gc = null, gl = null, gp = null, gu = null;
+  const VS = '#version 300 es\nin vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }';
+  const FS = (oct) => `#version 300 es
+precision highp float; out vec4 o;
+uniform vec2 uRes, uM, uMv; uniform float uT, uGlow, uPulse, uRip, uRx, uRy;
+uniform vec3 uA, uB, uC;
+float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p){ float a = .5, s = 0.; mat2 r = mat2(.8, -.6, .6, .8); for (int i = 0; i < ${oct}; i++){ s += a * vn(p); p = r * p * 2.03 + 7.1; a *= .5; } return s; }
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes, asp = vec2(uRes.x / uRes.y, 1.), p = (uv - .5) * asp;
+  vec2 m = (uM - .5) * asp; vec2 d = p - m; float dm = length(d);
+  // el cursor empuja el fluido y lo arrastra en la dirección en que se mueve
+  vec2 push = d / (dm + .02) * exp(-dm * dm * 9.) * .11 + uMv * exp(-dm * dm * 7.) * .6;
+  vec2 q = p * 1.35 + push; float t = uT;
+  vec2 w = vec2(fbm(q + vec2(0., t * .25)), fbm(q + vec2(5.2, 1.3) - t * .2));
+  float n = fbm(q + 3.2 * w + vec2(t * .12, -t * .08));
+  float n2 = fbm(q * 2.3 - 2. * w + t * .16);
+  // nubes: oscuro en el fondo, luz en las crestas
+  vec3 c = mix(uA, uB, smoothstep(.2, .75, n)) * 1.35;
+  c += uC * pow(smoothstep(.5, .95, n2 * .7 + n * .45), 2.2) * .9 * uGlow;
+  // haz de luz desde arriba (rayos volumétricos)
+  vec2 sp = vec2(.12 + .05 * sin(t * .35), .78); vec2 r = uv - sp; float ang = atan(r.x, -r.y);
+  float ray = pow(max(0., sin(ang * 9. + t * .4 + n * 2.) * .5 + .5), 3.) * smoothstep(1.3, 0., length(r * asp)) * (.5 + .5 * vn(vec2(ang * 5., t * .2)));
+  c += uC * ray * .34 * uGlow;
+  // luz suave bajo el cursor
+  c += uC * exp(-dm * dm * 14.) * .38 * uGlow;
+  // onda de choque
+  if (uRip > 0.){ float rd = length(p - vec2(uRx, uRy) * asp * .0 - (vec2(uRx, uRy) - .5) * asp); float k = abs(rd - uRip * 1.2) ; c += uC * exp(-k * k * 600.) * (1. - uRip) * .8; }
+  // polvo / brasas con profundidad y desenfoque (bokeh), parallax con el ratón
+  for (int L = 0; L < 3; L++){
+    float fl = float(L), sc = 7. + fl * 6., par = .03 + .05 * fl;
+    vec2 g = (uv * asp - m * par) * sc + vec2(t * (.35 + fl * .25) * .3, -t * (.5 + fl * .3) * .3 - fl * 3.1);
+    vec2 id = floor(g), f = fract(g) - .5; float rnd = h21(id + fl * 17.);
+    vec2 off = vec2(h21(id + 3.1), h21(id + 9.7)) - .5; float rr = length(f - off * .6);
+    float sz = .06 + .1 * fl * rnd, a = smoothstep(sz, sz * .2, rr) * step(.55, rnd) * (.5 + .5 * sin(t * 2. + rnd * 40.));
+    c += mix(uC, vec3(1.), .5) * a * (.5 - fl * .12) * uGlow;
+  }
+  c *= 1. + uPulse * .35 * (1. - dot(uv - .5, uv - .5) * 2.);
+  float vg = smoothstep(1.05, .25, length((uv - .5) * vec2(1., 1.1)));
+  c *= mix(.45, 1., vg);
+  c += (h21(gl_FragCoord.xy + fract(t) * 91.) - .5) * .035;                 // grano de película
+  o = vec4(max(c, 0.), 1.);
+}`;
+  function glInit(host, low) {
+    try {
+      gc = document.createElement('canvas'); gc.className = 'kbg kbg0';
+      gl = gc.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
+      if (!gl) throw new Error('sin webgl2');
+      const sh = (ty, src) => { const o = gl.createShader(ty); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      gp = gl.createProgram(); gl.attachShader(gp, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(gp, sh(gl.FRAGMENT_SHADER, FS(low ? 3 : 5)));
+      gl.linkProgram(gp); if (!gl.getProgramParameter(gp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(gp));
+      gl.useProgram(gp);
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const a = gl.getAttribLocation(gp, 'p'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+      gu = {}; for (const n of ['uRes', 'uM', 'uMv', 'uT', 'uGlow', 'uPulse', 'uRip', 'uRx', 'uRy', 'uA', 'uB', 'uC']) gu[n] = gl.getUniformLocation(gp, n);
+      gc.addEventListener('webglcontextlost', e => { e.preventDefault(); gl = null; });
+      return true;
+    } catch (e) { gc = null; gl = null; return false; }
+  }
+  const hsl = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; };
+  function glDraw(now) {
+    if (!gl) return;
+    const sc = ls('duelo.gfx') === 'low' ? .38 : .55, w = Math.max(2, Math.round(W * sc)), hh = Math.max(2, Math.round(H * sc));
+    if (gc.width !== w || gc.height !== hh) { gc.width = w; gc.height = hh; gl.viewport(0, 0, w, hh); }
+    const A = cur.c1.map((v, i) => v / 255 * 2 + cur.c0[i] / 255 * .35), c0 = cur.c0.map(v => v / 255), C = hsl(cur.h, cur.s, Math.min(78, cur.l + 8)), Bc = hsl(cur.h, cur.s * .9, cur.l * .42);
+    gl.uniform2f(gu.uRes, w, hh); gl.uniform2f(gu.uM, mouse.seen ? mouse.x / W : .5, mouse.seen ? 1 - mouse.y / H : .5);
+    gl.uniform2f(gu.uMv, mouse.vx / W * 1.6, -mouse.vy / H * 1.6); gl.uniform1f(gu.uT, t * 1.4 + 20); gl.uniform1f(gu.uGlow, cur.glow * 1.2);
+    gl.uniform1f(gu.uPulse, danger ? .5 + .5 * Math.sin(beat) : 0);
+    const rp = ripples.length ? ripples[ripples.length - 1] : null, age = rp ? (now - rp.t0) / 2600 : 2;
+    gl.uniform1f(gu.uRip, rp && age < 1 ? age : 0); gl.uniform1f(gu.uRx, rp ? rp.x / W : .5); gl.uniform1f(gu.uRy, rp ? 1 - rp.y / H : .5);
+    gl.uniform3f(gu.uA, A[0], A[1], A[2]); gl.uniform3f(gu.uB, Bc[0] * 1.15 + c0[0] * .9, Bc[1] * 1.15 + c0[1] * .9, Bc[2] * 1.15 + c0[2] * .9); gl.uniform3f(gu.uC, C[0], C[1], C[2]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
   function build() {
     if (!cv) return;
     const low = ls('duelo.gfx') === 'low', narrow = innerWidth < 700;
@@ -97,7 +175,7 @@
       vx[k2] = (vx[k2] + ax) * Dm; vy[k2] = (vy[k2] + ay) * Dm;
       dx[k2] += vx[k2] * f; dy[k2] += vy[k2] * f;
     }
-    draw(mA);
+    glDraw(now); draw(mA);
   }
 
   const NB = 6;                                                          // niveles de opacidad para agrupar los trazos
@@ -105,8 +183,8 @@
     const hue = cur.h.toFixed(0), sat = cur.s.toFixed(0) + '%', lig = cur.l.toFixed(0) + '%';
     const g = cx.createRadialGradient(W / 2, H * .46, Math.min(W, H) * .08, W / 2, H * .5, Math.max(W, H) * .78);
     g.addColorStop(0, `rgb(${cur.c0[0] | 0},${cur.c0[1] | 0},${cur.c0[2] | 0})`); g.addColorStop(1, `rgb(${cur.c1[0] | 0},${cur.c1[1] | 0},${cur.c1[2] | 0})`);
-    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
-    const pulse = danger ? .5 + .5 * Math.sin(beat) : 0, base = .1 + .1 * cur.glow, mR = Math.max(150, Math.min(W, H) * .24);
+    if (gl) cx.clearRect(0, 0, W, H); else { cx.fillStyle = g; cx.fillRect(0, 0, W, H); }
+    const pulse = danger ? .5 + .5 * Math.sin(beat) : 0, base = .05 + .06 * cur.glow, mR = Math.max(150, Math.min(W, H) * .24);
     const buckets = Array.from({ length: NB }, () => []);
     const seg = (a, b) => {
       const ax = rx[a] + dx[a], ay = ry[a] + dy[a], bx = rx[b] + dx[b], by = ry[b] + dy[b];
@@ -152,6 +230,7 @@
     cancelAnimationFrame(raf); raf = 0;
     window.removeEventListener('pointermove', onMove); window.removeEventListener('resize', onResize);
     document.documentElement.classList.remove('fxbg');
+    if (gc) { gc.remove(); gc = null; gl = null; }
     cv = null;
   }
   function retarget() { Object.assign(tgt, moodFor(danger, rival)); }
@@ -164,9 +243,9 @@
       if (!host || !on()) { if (cv) stop(); return false; }
       if (cv && cv.isConnected && cv.parentNode === host) return true;
       if (cv) stop();
-      cv = document.createElement('canvas'); cv.className = 'kbg'; cx = cv.getContext('2d', { alpha: false });
+      cv = document.createElement('canvas'); cv.className = 'kbg'; glInit(host, ls('duelo.gfx') === 'low'); cx = cv.getContext('2d', { alpha: !!gl });
       if (!cx) { cv = null; return false; }
-      host.insertBefore(cv, host.firstChild); build();
+      host.insertBefore(cv, host.firstChild); if (gc) host.insertBefore(gc, cv); build();
       window.addEventListener('pointermove', onMove, { passive: true }); window.addEventListener('resize', onResize);
       document.documentElement.classList.add('fxbg');
       Object.assign(cur, moodFor(danger, rival)); retarget();
