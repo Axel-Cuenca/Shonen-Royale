@@ -1525,5 +1525,6 @@ html.fxbg .stage { background: transparent; }
 html.fxbg .ground, html.fxbg .river, html.fxbg .bb { display: none; }
 html.fxbg .game > canvas.ambient { display: none; }
 html.rm .game > canvas.kbg { display: none; }
-/* el suelo de piedra se recorta al tablero (con sus muros): fuera de él se ve el fondo nuevo */
-html.fxbg .floorgl { -webkit-mask: linear-gradient(#000, #000) 300px 290px / 855px 720px no-repeat; mask: linear-gradient(#000, #000) 300px 290px / 855px 720px no-repeat; }
+/* sin suelo, muros ni torres: sólo las casillas flotan sobre el fondo nuevo */
+html.fxbg .floorgl, html.fxbg .pr { display: none !important; }
+html.fxbg .slab { background: none; }
