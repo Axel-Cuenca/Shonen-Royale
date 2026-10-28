@@ -151,7 +151,10 @@
         deform(r, now);
         app.stage.removeChildren(); app.stage.addChild(r.cont);
         app.render();
-        r.ctx.clearRect(0, 0, CW, CH); r.ctx.drawImage(app.canvas, 0, 0);
+        const dpr = Math.min(devicePixelRatio || 1, 2), cw = r.canvas.clientWidth;
+        const tw = cw ? Math.max(120, Math.min(CW, Math.round(cw * dpr * 1.6))) : CW, th = Math.round(tw * CH / CW);        // tamaño de pantalla (con margen): evita que un recorte grande se vea 'pixelado' al reducirlo
+        if (r.canvas.width !== tw) { r.canvas.width = tw; r.canvas.height = th; r.ctx.imageSmoothingEnabled = true; r.ctx.imageSmoothingQuality = 'high'; }
+        r.ctx.clearRect(0, 0, tw, th); r.ctx.drawImage(app.canvas, 0, 0, CW, CH, 0, 0, tw, th);
       } catch (e) { r.ok = false; r.err = String(e && e.message || e); }
     }
   }

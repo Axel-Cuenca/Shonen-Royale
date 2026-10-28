@@ -345,7 +345,7 @@ html, body { font-family: var(--ui); font-weight: 600; letter-spacing: .3px; bac
 .menu-btn:hover:not(:disabled)::after { opacity: 1; transform: translate(4px, -52%); }
 .code { font-family: var(--serif); }
 select, input[type=text], input[type=search] { font-family: var(--ui); background: rgba(5, 9, 22, .85); border: 1.5px solid var(--line); border-radius: 10px; font-weight: 700; }
-.modal { background: #000c; backdrop-filter: blur(3px); }
+.modal { background: #000c; }
 .modal .box { background: linear-gradient(180deg, rgba(22, 30, 58, .97), rgba(8, 12, 26, .97)); border: 1.5px solid var(--gold); border-radius: 16px; box-shadow: 0 0 40px #f2c86233, 0 20px 50px #000c; font-family: var(--ui); }
 .modal h2 { font: 800 24px var(--serif); color: var(--gold); margin: 0; }
 .sndbtn { border-radius: 50%; width: 46px; height: 46px; padding: 0; display: grid; place-items: center; background: linear-gradient(#1d2848, #0a1022); border: 1.5px solid var(--line); z-index: 50; }
@@ -612,7 +612,7 @@ html.rm .fe.new { animation: none; }
 
 /* ---- apariciones a pantalla grande ---- */
 .cutin { cursor: pointer; }
-.cutin.cardcut { pointer-events: auto; backdrop-filter: blur(3px); }
+.cutin.cardcut { pointer-events: auto; }
 .cutin.cardcut .cc { font-size: clamp(24px, min(6.4vh, 11.5vw), 50px); }
 .cutin.cardcut .cc .tag { font-size: .5em; letter-spacing: .05em; }
 .cutc { position: fixed; inset: 0; z-index: 49; pointer-events: auto; display: block; overflow: hidden; animation: cutcBg var(--ms) forwards; --d: -1; }
@@ -1530,6 +1530,36 @@ html.fxbg .floorgl, html.fxbg .pr { display: none !important; }
 html.fxbg .slab { background: none; }
 /* casillas más anchas y con más aire (1 contra 1; 3-4 jugadores no cambian) */
 html.fxbg .slab:not(.multi) { width: 720px; height: 500px; padding: 22px 50px; }
-html.fxbg .slab:not(.multi) .zrow { grid-template-columns: repeat(3, 15em); gap: 5.2em; }
-html.fxbg .slab:not(.multi) .zone { width: 15em; height: 10.6em; }
-html.fxbg .slab:not(.multi) .zone.st { width: 10.5em; height: 7.8em; }
+html.fxbg .slab:not(.multi) .zrow { grid-template-columns: repeat(3, 12.6em); gap: 6.4em; }
+html.fxbg .slab:not(.multi) .zone { width: 12.6em; height: 11.6em; }
+html.fxbg .slab:not(.multi) .zone.st { width: 10.4em; height: 8em; }
+/* el personaje en el tablero encastra con su casilla: misma proporción (la carta llena la casilla) */
+html.fxbg .board3d .zone.mz .card.m.layered.onboard:not(.def) { width: 11.4em; height: 11.8em; aspect-ratio: auto; margin-left: -5.7em; bottom: 0; transform: translateZ(.4em) rotateX(-34deg) scale(1); }
+html.fxbg .board3d .zone.mz:hover .card.m.layered.onboard:not(.def):not(.landing) { transform: translateZ(.8em) rotateX(-34deg) scale(1.06); }
+
+/* fondo propio para cada casilla: panel de cristal con círculo mágico giratorio, esquinas, retícula y destello que recorre */
+html.fxbg .board3d .zone { --zc: 80, 230, 245; overflow: visible; background:
+    linear-gradient(105deg, transparent 38%, rgba(var(--zc), .16) 50%, transparent 62%) 0 0 / 260% 100% no-repeat,
+    radial-gradient(ellipse at 50% 108%, rgba(var(--zc), .34), transparent 66%),
+    linear-gradient(rgba(var(--zc), .07) 1px, transparent 1px) 0 0 / 100% 1.6em,
+    linear-gradient(90deg, rgba(var(--zc), .07) 1px, transparent 1px) 0 0 / 1.6em 100%,
+    linear-gradient(160deg, rgba(8, 24, 40, .55), rgba(3, 8, 18, .72));
+  animation: zsheen 6.5s ease-in-out infinite;
+  box-shadow: inset 0 0 1.6em rgba(var(--zc), .22), 0 0 1.1em rgba(var(--zc), .22); border-color: rgba(var(--zc), .8); }
+html.fxbg .board3d .zone.opp { --zc: 255, 140, 96; }
+html.fxbg .board3d .zone.opp.ally { --zc: 100, 235, 170; }
+html.fxbg .board3d .zone.st { --zc: 186, 140, 255; }
+html.fxbg .board3d .zone.st.opp { --zc: 255, 120, 170; }
+html.fxbg .board3d .zone:nth-child(2) { animation-delay: -2.1s; } html.fxbg .board3d .zone:nth-child(3) { animation-delay: -4.2s; }
+html.fxbg .board3d .zone::before { content: ''; position: absolute; left: 50%; top: 50%; width: 82%; aspect-ratio: 1; translate: -50% -52%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, transparent 0 57%, rgba(var(--zc), .55) 58% 59%, transparent 60% 70%, rgba(var(--zc), .35) 71% 72%, transparent 73%),
+    repeating-conic-gradient(from 0deg, rgba(var(--zc), .42) 0 1.2deg, transparent 1.2deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 26%, #000 27% 74%, transparent 75%); mask: radial-gradient(circle, transparent 0 26%, #000 27% 74%, transparent 75%);
+  animation: zspin 40s linear infinite; opacity: .85; }
+html.fxbg .board3d .zone.st::before { width: 74%; animation-duration: 55s; animation-direction: reverse; }
+html.fxbg .board3d .zone:not(.hl) { border-width: 2px; border-style: solid; }
+html.fxbg .board3d .zone.hl { --zc: 255, 216, 74; }
+html.fxbg .board3d .zone.hl::before { opacity: 1; animation-duration: 9s; }
+@keyframes zsheen { 0%, 12% { background-position: 130% 0, 0 0, 0 0, 0 0, 0 0; } 52%, 100% { background-position: -60% 0, 0 0, 0 0, 0 0, 0 0; } }
+@keyframes zspin { to { rotate: 360deg; } }
+html.rm .board3d .zone::before { animation: none; } html.rm .board3d .zone { animation: none; }
