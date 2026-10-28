@@ -211,8 +211,22 @@
   }
   const CATS = ['master', 'music', 'ui', 'combat', 'voice', 'amb', 'notify'];
   const SAMPLE = { master: 'confirm', music: null, ui: 'select', combat: 'hit', amb: null, notify: 'notify' };
+  /** Pitido de cuenta atrás (últimos segundos del turno): sintetizado, sin archivo. `final` = el último, más agudo y largo. */
+  function tick(final) {
+    if (!st.sfxOn || st.muted || !ctx || ctx.state !== 'running') return;
+    const now = performance.now();
+    if (now - (last.tick || 0) < 400) return;
+    last.tick = now;
+    try {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime, dur = final ? .32 : .12;
+      o.type = 'sine'; o.frequency.value = final ? 1320 : 880;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(final ? .6 : .45, t + .008); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+      o.connect(g); g.connect(buses.notify); o.start(t); o.stop(t + dur + .02);
+      o.onended = () => { o.disconnect(); g.disconnect(); };
+    } catch (e) { /* nada */ }
+  }
   D.Sound = {
-    init, play, setTrack, setAmbient, jingle, voice, CATS,
+    init, play, tick, setTrack, setAmbient, jingle, voice, CATS,
     get muted() { return st.muted; },
     get musicOn() { return st.musicOn; }, get sfxOn() { return st.sfxOn; },
     setMuted(m) { st.muted = !!m; save(); applyVolumes(); applyMusic(); applyAmb(); },

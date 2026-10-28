@@ -40,6 +40,9 @@
   const START_LP = 8000, START_HAND = 5, HAND_MAX = 7, ZONES = 3;
   /** Habilidades que se pueden robar (Kratos), absorber (Cell) o copiar. Las demás son propias de su carta. */
   const GIVE = ['spinach', 'boom', 'instinto', 'sangre', 'canon', 'absorb', 'regen5', 'regen60', 'relicario', 'desmantelar', 'saiyan', 'escudo', 'bigbang'];
+  /** Habilidades que Sylas puede robar y Venom aprender (las que funcionan en cualquier personaje que las tenga). */
+  const STEALABLE = GIVE.concat(['furia', 'zenitsu1', 'zenitsu2', 'gyomei1', 'gyomei2', 'gyomei3', 'patriarca', 'kaioken', 'jogodom', 'llama', 'sentido', 'telar', 'corrupt', 'asimila', 'espada', 'muerte',
+    'regenx', 'resis', 'punos', 'toge', 'semilla', 'kurama', 'hiraishin']);
   const SHIELD_MAX = 3000;
   const SUSANO_SH = 2300, SHEN_SH = 1000, SIX_TURNS = 3;
 
@@ -80,8 +83,10 @@
   function abil(st, m) {
     if (!m) return [];
     if (st.domain && lvl(m) < (st.domain.min || 10) && st.domain.uid !== m.c.uid) return [];
+    if (m.price) return [];                                                  // Guantelete del Infinito: el precio del poder
     let a = rawAbil(m);
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
+    if (m.spentAb && m.spentAb.length) a = a.filter(x => !m.spentAb.includes(x));      // X: habilidades consumidas para siempre
     return a;
   }
   const has = (st, m, id) => abil(st, m).includes(id);
@@ -92,6 +97,10 @@
   function mkSlot(st, inst, o) {
     const m = Object.assign({ c: inst, pos: 'atk', down: false, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 }, o || {});
     if (inst.id === 'c_kayn' && !m.kn) m.kn = { rh: false, sh: false };      // transformaciones de Kayn desbloqueadas
+    if (inst.keep && inst.keep.length) {                                      // Sylas y Venom conservan lo que aprendieron durante toda la partida
+      m.ext = (m.ext || []).slice(); m.extFrom = Object.assign({}, m.extFrom);
+      for (const k of inst.keep) if (!m.ext.includes(k.id) && !(C().get(inst.id).ab || []).includes(k.id)) { m.ext.push(k.id); m.extFrom[k.id] = k.from || null; }
+    }
     return m;
   }
   /** Ataques que lleva declarados este turno (los que entran ya «atacados» cuentan como agotados). */
@@ -167,7 +176,8 @@
     (st.rmap = st.rmap || [])[st.turn] = st.round;
     const P = st.players[st.current];
     P.normalUsed = false;
-    for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; }
+    P.snaps = (P.snaps || []).concat([JSON.stringify({ mz: P.mz, st: P.st })]).slice(-2);      // historial del campo propio al empezar cada turno propio (Gema del Tiempo)
+    for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; s.hira = 0; }
     st.phase = 'main';
     log(st, st.current, `Turno ${st.round}`);
     if (st.turn > 1) drawCards(st, st.current, 1);
@@ -294,12 +304,14 @@
   function atkOf(st, P, z) {
     const m = P.mz[z];
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
-    return Math.max(0, baseOf(m).atk + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
+    const b = baseOf(m);
+    return Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
   }
   function defOf(st, P, z) {
     const m = P.mz[z];
     if (m.fused) return Math.max(0, m.fused.def + modSum(m, 'def'));
-    return Math.max(0, baseOf(m).def + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
+    const b = baseOf(m);
+    return Math.max(0, (m.price ? Math.floor(b.def / 2) : b.def) + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
   }
   const shieldOf = m => { const u = uOf(m); if (u.sh == null) u.sh = SHIELD_MAX; return u.sh; };
   /** Escudo que recibe los ataques ahora mismo: el de Shen, el de Susano o el de Vegeta Blue (por ese orden). */
@@ -334,6 +346,8 @@
    *  Si va al cementerio cuenta como una muerte (o si o.death: Mahoraga destierra a lo que mata). */
   function removeMonster(st, p, z, how, o) {
     const P = st.players[p];
+    // Guerrero del Infinito: quien tiene los Seis Ojos no puede ser desterrado por nada (cartas, habilidades, explosiones).
+    if (how === 'banish' && P.mz[z] && P.mz[z].six) { log(st, p, `${mdef(P.mz[z]).name} no puede ser desterrado: los Seis Ojos lo protegen`); return null; }
     const m = takeOff(st, p, z, how || 'grave');
     if (!m) return null;
     const O = st.players[m.owner != null ? m.owner : p];                 // un personaje corrompido vuelve a la zona de su dueño original
@@ -429,6 +443,11 @@
       noteSaved(st, nm);
       return false;
     }
+    if ((ctx.src === 'combat' || ctx.src === 'power') && ab.includes('regenx')) {          // Deadpool: Regeneración extrema
+      log(st, p, `${nm} se regenera: ${ctx.src === 'power' ? 'las habilidades' : 'el combate'} no pueden destruirlo`);
+      noteSaved(st, nm);
+      return false;
+    }
     if (fromCard && ab.includes('escudo') && shieldOf(m) > 0) {
       uOf(m).sh = 0;
       log(st, p, `El escudo de ${nm} absorbe el efecto y se destruye`);
@@ -437,8 +456,15 @@
     }
     if (ctx.src === 'combat' && ctx.defn && m.av && m.av.on && m.av.uid != null) { avDies(st, p, z, m); return false; }     // Anti-Venom muere en su lugar
     if (ctx.src !== 'mark') {
+      if (m.jk && equipDies(st, p, m, 'jk')) return false;                                        // Jake se destruye en su lugar
+      if (m.sym && equipDies(st, p, m, 'sym')) return false;                                      // Venom se destruye en su lugar
       const gi = P.st.findIndex(q => q && !q.down && q.equipTo === z && def(q.c).pgem);          // Gema del Poder: se sacrifica en su lugar
       if (gi >= 0) { removeST(st, p, gi); log(st, p, `La Gema del Poder se sacrifica: ${nm} se salva`); noteSaved(st, nm); return false; }
+      if (ab.includes('resis')) {                                                                 // Titán de Ataque: Resistencia titánica (2 vidas)
+        const tu = uOf(m);
+        if (tu.vidas == null) tu.vidas = 2;
+        if (tu.vidas > 0) { tu.vidas--; log(st, p, `${nm} resiste la muerte (Resistencia titánica): le quedan ${tu.vidas} de 2 vidas`); noteSaved(st, nm); return false; }
+      }
       if (ab.includes('asimila')) {                                                               // Mahoraga: la primera muerte de cada turno la regenera
         const u = uOf(m);
         if (u.asTurn !== st.turn) { u.asTurn = st.turn; log(st, p, `${nm} se adapta a la muerte y se regenera (Asimilación)`); noteSaved(st, nm); return false; }
@@ -456,6 +482,12 @@
       const ku = uOf(killer.m);
       ku.kills = (ku.kills || 0) + 1;
       onKill(st, killer, { p, name: nm, pos: victimPos }, ctx);
+      const vinst = st.team[killer.p] !== st.team[p] ? venomOf(killer.m) : null;                 // Venom, o su portador, destruye a un enemigo
+      if (vinst) {
+        const known = (vinst.keep || []).map(k => k.id).concat(def(vinst).ab || []);
+        const vo = Array.from(new Set(victimAbs.filter(a => STEALABLE.includes(a) && !known.includes(a))));
+        if (vo.length) st.trig.push({ k: 'vlearn', p: killer.p, vuid: vinst.uid, from: nm, opts: vo });
+      }
       const kab = abil(st, killer.m);
       const cap = kab.includes('robar2') ? 2 : kab.includes('robar1') ? 1 : 0;
       const opts = victimAbs.filter(a => GIVE.includes(a) && !(killer.m.ext || []).includes(a) && !(mdef(killer.m).ab || []).includes(a));
@@ -476,6 +508,26 @@
     st.log[st.log.length - 1].avd = 1;
     noteSaved(st, nm);
     onDeath(st, p, { c: inst }, 'grave');
+  }
+  /** Jake o Venom equipados protegen a su portador: se destruyen en su lugar (una vez por destrucción) y su bonificación se quita al instante. */
+  function equipDies(st, p, m, key) {
+    const eq = m[key], i = (m.link || []).findIndex(c => c.uid === eq.uid);
+    if (i < 0) { m[key] = null; return false; }
+    const inst = m.link.splice(i, 1)[0];
+    if (!m.link.length) delete m.link;
+    dropMods(m, key === 'jk' ? 'jake' : 'venom'); m[key] = null;
+    const nm = mdef(m).name, O = st.players[m.owner != null ? m.owner : p];
+    O.grave.push(inst);
+    log(st, p, `${def(inst).name} se destruye en lugar de ${nm}: ${nm} se salva y pierde su bonificación`);
+    st.log[st.log.length - 1].avd = 1;
+    noteSaved(st, nm);
+    onDeath(st, p, { c: inst }, 'grave');
+    return true;
+  }
+  /** La carta de Venom que cuenta para este personaje: él mismo (si es Venom) o el Venom que lleva equipado. */
+  function venomOf(m) {
+    if (m.sym) return (m.link || []).find(c => c.uid === m.sym.uid) || null;
+    return m.c.id === 'c_venom' && !m.copy ? m.c : null;
   }
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
@@ -549,12 +601,29 @@
         const u = uOf(y.m);
         if (u.lrnT === st.turn || (u.learned || []).length >= 3 || (u.learned || []).includes(t.id) || rawAbil(y.m).includes(t.id)) continue;
         st.pending = { k: 'ability', ab: 'yutalearn', player: t.p, uid: t.uid, stage: 'ask', id: t.id, nm: (C().AB[t.id] || [t.id])[0], from: t.from };
+      } else if (t.k === 'vlearn') {                    // Absorción de habilidades de Venom
+        const vi = findVenom(st, t.p, t.vuid);
+        if (!vi) continue;
+        const known = (vi.keep || []).map(k => k.id).concat(def(vi).ab || []);
+        const opts = t.opts.filter(a => !known.includes(a));
+        if (!opts.length) continue;
+        st.pending = { k: 'ability', ab: 'vlearn', player: t.p, uid: t.vuid, stage: 'ask', from: t.from, opts };
       } else if (t.k === 'avchoice') {                  // Evolución Adaptativa: elige una sola vez
         const hv = slotByUid(st, t.p, t.uid);
         if (!hv || !hv.m.av || !hv.m.av.on || hv.m.av.choice) continue;
         st.pending = { k: 'ability', ab: 'avchoice', player: t.p, uid: t.uid, stage: 'choice' };
       }
     }
+  }
+  /** La carta de Venom (en el campo o equipada a un aliado) del jugador p. */
+  function findVenom(st, p, uid) {
+    for (const m of st.players[p].mz) {
+      if (!m) continue;
+      if (m.c.uid === uid) return m.c;
+      const l = (m.link || []).find(c => c.uid === uid);
+      if (l) return l;
+    }
+    return null;
   }
   /** Revive una carta del cementerio al campo (en ataque). Devuelve la zona o -1. */
   function reviveInst(st, p, inst, from) {
@@ -635,7 +704,57 @@
   const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot'));
   const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
   const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1 };
+  /** Gema del Tiempo: hay una instantánea del campo propio de hace un turno propio. */
+  const canRewind = (st, p) => st.current === p && !!(st.players[p].snaps && st.players[p].snaps.length >= 2);
+  /** Restaura SOLO el campo propio (monstruos y magias/trampas) al estado que tenía al empezar su turno anterior.
+   *  Las cartas se buscan por uid en su mano, mazo, cementerio, destierro o campo: nada se duplica ni se inventa.
+   *  Lo que no se puede reconstruir (cartas que ya no son suyas, cartas rivales en su campo, fusiones, absorbidos, sellados, Karma y
+   *  Gema de la Mente) se deja tal cual; las cartas que tenía en el campo y no estaban entonces vuelven a la mano. */
+  function rewindField(st, p) {
+    const P = st.players[p], snap = JSON.parse(P.snaps[0]);
+    const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused);
+    const lockedSt = s => s && (s.prison || s.gem || s.karma);
+    const pool = {};
+    const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
+    P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
+    P.st.forEach((s, z) => { if (s && !lockedSt(s)) { grab(s); P.st[z] = null; } });
+    const find = (uid) => {
+      if (pool[uid]) { const c = pool[uid]; delete pool[uid]; return c; }
+      for (const k of ['hand', 'grave', 'banish', 'deck']) { const i = P[k].findIndex(c => c.uid === uid); if (i >= 0) return P[k].splice(i, 1)[0]; }
+      return null;
+    };
+    const has = (uid) => !!pool[uid] || ['hand', 'grave', 'banish', 'deck'].some(k => P[k].some(c => c.uid === uid));
+    const claimed = new Set();
+    const restore = (s) => {
+      const uids = [s.c.uid].concat((s.link || []).map(c => c.uid));
+      if (uids.some(u => claimed.has(u) || !has(u))) return null;
+      uids.forEach(u => claimed.add(u));
+      s.c = find(s.c.uid);
+      if (s.link) s.link = s.link.map(c => find(c.uid));
+      return s;
+    };
+    let back = 0;
+    snap.mz.forEach((s, z) => {
+      if (!s || lockedMz(s) || P.mz[z] || s.c.id === undefined) return;
+      const o = occ(P);
+      if (o[z] || (s.wide && (z + 1 >= ZONES || o[z + 1]))) return;
+      const r = restore(s);
+      if (r) { P.mz[z] = r; back++; }
+    });
+    snap.st.forEach((s, z) => {
+      if (!s || lockedSt(s) || P.st[z]) return;
+      const r = restore(s);
+      if (r) { P.st[z] = r; back++; }
+    });
+    for (const uid of Object.keys(pool)) P.hand.push(pool[uid]);       // lo que estaba en el campo y entonces no: vuelve a la mano
+    log(st, p, `La Gema del Tiempo retrocede un turno: su campo vuelve a como estaba al empezar su turno anterior`);
+    return back;
+  }
   const FX = {
+    tiempo: {
+      targets: (st, p) => (canRewind(st, p) ? [null] : []),
+      resolve: (st, p) => { rewindField(st, p); }
+    },
     heal: {
       targets: () => [null],
       resolve: (st, p, d) => { heal(st, p, d.n); log(st, p, `recupera ${d.n} PV`); }
@@ -701,7 +820,7 @@
       }
     },
     equip: {
-      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
+      targets: (st, p, d) => rikaOwn(st, st.players[p]).filter(z => lvl(st.players[p].mz[z]) >= (d.minStars || 0)).map(z => ({ z })),
       resolve: () => { /* se coloca en continueSpell */ }
     },
     karma: {
@@ -919,9 +1038,9 @@
   }
   const HOSTILE = { destroyOne: 1, destroyST: 1, burn: 1 };
   /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
-  const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1 };
+  const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1, infarto: 1 };
   /** Habilidades hostiles que Total Counter puede devolver. */
-  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'purpura', 'avpred', 'genki'];
+  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
   const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
@@ -1048,7 +1167,7 @@
         if (mm) return { k: 'ability', ab: 'meliodas', kind: 'power', player: mm.q, mz: mm.z, stage: 'ask', pp: p, pa: a, nm: mdef(m).name };
       }
     }
-    if (a.pw === 'canon' && a.target && !done.includes('rika')) {
+    if ((a.pw === 'canon' || a.pw === 'tm') && a.target && !done.includes('rika')) {
       const v = a.target.vs, vm = st.players[v].mz[a.target.z];
       const r = vm && st.team[v] !== st.team[p] ? rikaGuard(st, v) : null;
       if (r) return { k: 'ability', ab: 'rika', kind: 'power', player: r.q, zy: r.z, stage: 'ask', pp: p, pa: a, victim: { p: v, z: a.target.z }, nm: mdef(vm).name };
@@ -1057,6 +1176,11 @@
   }
   /** Ejecuta un poder pasando por Total Counter y Rika. */
   function runPower(st, p, a, done) {
+    done = done || [];
+    if (st.players[p].mz[a.zone]) {
+      if (!a.xd && nextWindow(st, 'power', { k: 'power', by: p, pa: a }, foes(st, p))) return;      // X puede cancelar la habilidad
+      if (!a.gd && powerReality(st, p, a)) return;                                                   // Gema de la Realidad
+    }
     const gd = powerGuard(st, p, a, done);
     if (gd) { st.pending = gd; return; }
     const m = st.players[p].mz[a.zone], nmU = m ? mdef(m).name : '', yutaU = isYuta(m);
@@ -1070,25 +1194,34 @@
     }
   }
   /** Tras elegir una trampa: Total Counter y Rika pueden intervenir antes de que haga efecto. */
-  function trapResolve(st, resp, d, pd, done) {
-    const vict = (d.fx === 'destroyAttacker' || d.fx === 'mirror') && st.atk ? st.atk.p : (d.fx === 'destroySummoned' && st.summon ? st.summon.p : null);
+  function trapResolve(st, resp, d, pd, done, invTeam) {
+    const vict = (d.fx === 'destroyAttacker' || d.fx === 'mirror') && st.atk ? st.atk.p : ((d.fx === 'destroySummoned' || d.fx === 'infarto') && st.summon ? st.summon.p : null);
+    if (!done.includes('gema')) {                        // Gema de la Realidad: invierte la destrucción o la reducción de estadísticas
+      if (DEST_TRAP[d.fx] && vict != null && st.team[vict] !== st.team[resp]) {
+        const vz = d.fx === 'destroyAttacker' ? st.atk.z : st.summon.z, vm = st.players[vict].mz[vz];
+        if (vm && realityWindow(st, 'destroy', resp, vict, { k: 'gtrap', tp: resp, tid: d.id, rp: pd, done }, `${d.name} va a destruir a ${mdef(vm).name}`)) return;
+      }
+      if (d.fx === 'ola') for (const e of foes(st, resp)) {
+        if (zonesWith(st.players[e].mz).length && realityWindow(st, 'reduce', resp, e, { k: 'gtrap', tp: resp, tid: d.id, rp: pd, done }, 'Ola de Fuego: −500 ATK y −500 DEF a tus personajes')) return;
+      }
+    }
     if (vict != null && st.team[vict] !== st.team[resp]) {
       if (HOSTILE_TRAP[d.fx] && !done.includes('meli')) {
         const mm = meliFor(st, resp, vict);
         if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'trap', player: mm.q, mz: mm.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, nm: d.name }; return; }
       }
-      if ((d.fx === 'destroyAttacker' || d.fx === 'destroySummoned') && !done.includes('rika')) {
+      if ((d.fx === 'destroyAttacker' || d.fx === 'destroySummoned' || d.fx === 'infarto') && !done.includes('rika')) {
         const vz = d.fx === 'destroyAttacker' ? st.atk.z : st.summon.z, vm = st.players[vict].mz[vz];
         const r = vm && !has(st, vm, 'rikaprot') ? rikaGuard(st, vict) : null;        // la propia Rika ya es inmune a las trampas
         if (r) { st.pending = { k: 'ability', ab: 'rika', kind: 'trap', player: r.q, zy: r.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, victim: { p: vict, z: vz }, nm: mdef(vm).name }; return; }
       }
     }
-    applyTrap(st, resp, d);
+    applyTrap(st, resp, d, pd, invTeam);
     respondRest(st, pd);
   }
   function respondRest(st, pd) {
     if (st.winner !== null) return;
-    const more = !(pd.trigger === 'spell' && st.chain && st.chain.negated) && pd.rest && pd.rest.length && nextWindow(st, pd.trigger, pd.cont, pd.rest);
+    const more = !(pd.trigger === 'spell' && st.chain && st.chain.negated) && !(pd.cont && (pd.cont.cancel || pd.cont.invert)) && pd.rest && pd.rest.length && nextWindow(st, pd.trigger, pd.cont, pd.rest);
     if (!more) afterRespond(st, pd.cont);
   }
   /** Candidatos del Total Counter (null = se devuelve sin elegir objetivo). */
@@ -1155,6 +1288,7 @@
         log(st, q, `Total Counter: el ataque de ${nm} se devuelve (${dmg} de daño directo a su dueño)`);
         if (multi(st)) st.log[st.log.length - 1].q = a.p;
         lose(st, a.p, dmg);
+        atkDone(st, a);
         return;
       }
       const tm = st.players[tgt.vs].mz[tgt.z];
@@ -1186,8 +1320,41 @@
     st.chain = { p, inst, target, negated: false, unstop: !!def(inst).unstop };
     log(st, p, `activa ${def(inst).name}`);
     if (def(inst).cost) { lose(st, p, def(inst).cost); if (st.winner !== null) return; }      // Guerrero del Infinito: los PV no se recuperan aunque la anulen
+    if (gloveOffer(st, p)) return;
     if (openWindow(st, 'spell', { k: 'spell', by: p })) return;
     continueSpell(st);
+  }
+  // ---------------- Guantelete del Infinito ----------------
+  const isGem = d => d.kind === 'spell' && /^Gema/.test(d.name) && (d.fx === 'equip' || d.fx === 'gem');
+  /** Un portador del Guantelete (de un rival de p) que puede robar la gema que p acaba de activar, o null. */
+  function gloveFor(st, p, d) {
+    if (!isGem(d) || stOff(st) || st.domain) return null;
+    for (const q of foes(st, p)) {
+      const Q = st.players[q];
+      if (firstFree(Q.st) < 0) continue;
+      for (let i = 0; i < ZONES; i++) {
+        const s = Q.st[i];
+        if (!s || s.down || !s.glove || s.equipTo == null) continue;
+        const bm = Q.mz[s.equipTo];
+        if (!bm || bm.down || lvl(bm) < 4 || has(st, bm, 'rikaprot')) continue;
+        if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
+        return { q, bz: s.equipTo, stz: i };
+      }
+    }
+    return null;
+  }
+  /** Ofrece el robo antes de que la gema se resuelva. true = hay que esperar la respuesta. */
+  function gloveOffer(st, p) {
+    const ch = st.chain;
+    if (!ch || ch.glove) return false;
+    const d = def(ch.inst), g = gloveFor(st, p, d);
+    if (!g) return false;
+    ch.glove = true;                                      // una gema sólo activa el robo una vez
+    const bm = st.players[g.q].mz[g.bz], stars = lvl(bm);
+    st.chain = null;
+    st.pending = { k: 'ability', ab: 'glove', player: g.q, stage: 'ask', ch, by: p, bz: g.bz, uid: ch.inst.uid, nm: d.name,
+      info: { bearer: mdef(bm).name, stars, pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
+    return true;
   }
   function continueSpell(st) {
     const ch = st.chain; st.chain = null;
@@ -1199,7 +1366,9 @@
       const tz = (d.fx === 'equip' || d.fx === 'karma') ? (t && t.z) : null;
       const slot = { c: ch.inst, down: false, setTurn: st.turn, equipTo: tz };
       let okp = z >= 0;
-      if (d.fx === 'equip' || d.fx === 'karma') okp = okp && !!P.mz[tz] && !has(st, P.mz[tz], 'rikaprot');
+      if (d.fx === 'equip' || d.fx === 'karma') okp = okp && !!P.mz[tz] && !has(st, P.mz[tz], 'rikaprot') && lvl(P.mz[tz]) >= (d.minStars || 0);
+      if (d.fx === 'equip' && okp && d.glove) slot.glove = {};
+      if (ch.stolen) { slot.stolen = true; if (tz == null) slot.equipTo = ch.stolen.bz; }
       if (d.fx === 'karma' && okp) slot.karma = { phase: 'ally', owner: ch.p, allyUid: P.mz[tz].c.uid };
       if (d.fx === 'equip' && okp) {
         const bm = P.mz[tz];
@@ -1234,12 +1403,20 @@
         return;
       }
       P.st[z] = slot;
+      if (ch.stolen) {                                   // Precio del poder: 4-5★ pierden la mitad de su ATK/DEF base y sus habilidades
+        const bm = P.mz[ch.stolen.bz];
+        if (bm && lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, ch.p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
+      }
       if (d.fx === 'equip') log(st, ch.p, `equipa ${mdef(P.mz[tz]).name}`);
       else if (d.fx === 'karma') log(st, ch.p, `equipa Karma a ${mdef(P.mz[tz]).name}`);
       else if (d.fx === 'gem') log(st, ch.p, `controla la mente de ${mdef(st.players[slot.gem.vs].mz[t.z]).name}`);
       else if (d.fx === 'guerrero') log(st, ch.p, 'espera al próximo personaje que entre en su campo');
       if (d.sub === 'equip') sauronReturn(st);          // El Regreso del Señor Oscuro
       return;
+    }
+    if (d.fx === 'destroyOne' && ch.target && !(ch.done || []).includes('gema')) {      // Gema de la Realidad: invierte la destrucción
+      const vp = foeOf(st, ch.p, ch.target), vm = st.players[vp].mz[ch.target.z];
+      if (vm && st.team[vp] !== st.team[ch.p] && realityWindow(st, 'destroy', ch.p, vp, { k: 'gspell', ch }, `${d.name} va a destruir a ${mdef(vm).name}`)) return;
     }
     const gd = spellGuard(st, ch);
     if (gd) { st.pending = gd; return; }
@@ -1248,20 +1425,50 @@
   }
 
   // ---------------- trampas y ventanas de respuesta ----------------
-  function trapCands(st, resp, trigger) {
+  function trapCands(st, resp, trigger, cont) {
     const R = st.players[resp], r = [];
     if (st.domain) return r;                             // dentro del dominio nadie activa trampas
     R.st.forEach((s, z) => {
       if (!s || !s.down || s.setTurn >= st.turn) return;
       const d = def(s.c);
-      if (d.kind !== 'trap' || d.trigger !== trigger) return;
+      if (d.kind !== 'trap' || !(d.trigger === trigger || (d.triggers && d.triggers.includes(trigger)))) return;
       if (trigger === 'spell' && st.chain && st.chain.unstop) return;      // Gokumonkyo no se puede anular
       if (trigger === 'attack' && !st.atk) return;
       if (trigger === 'spell' && !st.chain) return;
       if (trigger === 'summon' && !(st.summon && st.players[st.summon.p].mz[st.summon.z])) return;
+      if (trigger === 'summon' && d.maxLevel && lvl(st.players[st.summon.p].mz[st.summon.z]) > d.maxLevel) return;      // Infarto Inesperado: sólo 4★ o menos
+      if (d.fx === 'realidad' && !realityOpts(st, resp, trigger, cont).length) return;                                  // no se activa si no puede resolverse
       r.push(z);
     });
     return r;
+  }
+  /** Gema de la Realidad: opciones de cada efecto ([null] = sin elección; [] = no se puede activar). */
+  function realityOpts(st, resp, trigger, cont) {
+    const out = [];
+    if (trigger === 'reduce') return cont && cont.info ? [null] : out;
+    if (trigger === 'attack') {            // un enemigo ataca a un aliado: se redirige a un personaje del campo del atacante
+      const a = st.atk;
+      if (!a || a.target === 'direct' || st.team[a.vs] === st.team[a.p] || !st.players[a.vs].mz[a.target]) return out;
+      for (let q = 0; q < st.n; q++) {
+        if (!st.players[q].alive || st.team[q] !== st.team[a.p]) continue;
+        for (const z of zonesWith(st.players[q].mz)) {
+          if ((q === a.p && z === a.z) || (q === a.vs && z === a.target) || st.players[q].mz[z].six || !canTarget(st, resp, q, z)) continue;
+          out.push({ vs: q, z });
+        }
+      }
+      return out;
+    }
+    if (trigger === 'destroy') {           // se destruye en su lugar a un personaje rival
+      for (const e of foes(st, resp)) for (const z of zonesWith(st.players[e].mz)) if (canTarget(st, resp, e, z)) out.push({ vs: e, z });
+    }
+    return out;
+  }
+  /** Ventana de la Gema de la Realidad para el equipo de `vp` (la víctima) ante un efecto de `srcP`. */
+  function realityWindow(st, trig, srcP, vp, cont, txt) {
+    cont.by = srcP; cont.info = { src: srcP, vp, txt: txt || '' };
+    const list = [];
+    for (let i = 0; i < st.n; i++) { const q = (vp + i) % st.n; if (st.players[q].alive && st.team[q] === st.team[vp]) list.push(q); }
+    return nextWindow(st, trig, cont, list);
   }
   /** Quién puede responder: en un ataque, el atacado; si no, los rivales del que actúa por orden de turno. */
   function responders(st, trigger, by) {
@@ -1272,7 +1479,7 @@
     for (let i = 0; i < list.length; i++) {
       const resp = list[i];
       if (!st.players[resp].alive) continue;
-      const cands = trapCands(st, resp, trigger);
+      const cands = trapCands(st, resp, trigger, cont);
       if (!cands.length) continue;
       st.pending = { k: 'respond', player: resp, trigger, by: cont.by, cands, cont, rest: list.slice(i + 1) };
       return true;
@@ -1283,8 +1490,42 @@
   function openWindow(st, trigger, cont) {
     return nextWindow(st, trigger, cont, responders(st, trigger, cont.by));
   }
-  function applyTrap(st, resp, d) {
+  function applyTrap(st, resp, d, pd, invTeam) {
     switch (d.fx) {
+      case 'ola': {                       // Ola de Fuego: todos los personajes rivales pierden 500 ATK y DEF (o los ganan, si la Gema de la Realidad lo invierte)
+        for (let q = 0; q < st.n; q++) {
+          if (!st.players[q].alive || st.team[q] === st.team[resp]) continue;
+          const inv = invTeam != null && st.team[q] === invTeam;
+          st.players[q].mz.forEach(m => { if (m && !m.six && !has(st, m, 'rikaprot')) addMod(st, m, 'ola', inv ? 500 : -500, inv ? 500 : -500, 0); });
+        }
+        log(st, resp, invTeam != null ? 'Ola de Fuego: la reducción se convierte en un aumento de +500 ATK y +500 DEF' : 'Ola de Fuego: todos los personajes rivales pierden 500 ATK y 500 DEF');
+        break;
+      }
+      case 'xcancel':                     // X: Cancelación absoluta
+        if (pd && pd.trigger === 'spell') { if (st.chain) { st.chain.negated = true; log(st, resp, 'X cancela la magia: queda destruida'); } }
+        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : 'X cancela la habilidad: queda consumida para siempre'); }
+        break;
+      case 'realidad': {                  // Gema de la Realidad
+        const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
+        if (pd.trigger === 'attack') {
+          if (!st.atk || !tm) break;
+          st.atk.vs = o.vs; st.atk.target = o.z;
+          log(st, resp, `Gema de la Realidad: el ataque se redirige contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
+        } else if (pd.trigger === 'destroy') {
+          pd.cont.cancel = true;
+          log(st, resp, `Gema de la Realidad: el aliado se salva y, en su lugar, es destruido ${tm ? mdef(tm).name : 'un enemigo'}`);
+          if (tm) destroyMonster(st, o.vs, o.z, { src: 'trap', bp: resp });
+        } else if (pd.trigger === 'reduce') {
+          pd.cont.invert = true;
+          log(st, resp, 'Gema de la Realidad: la reducción de estadísticas se convierte en un aumento igual');
+        }
+        break;
+      }
+      case 'infarto': {
+        const s = st.summon, m = s && st.players[s.p].mz[s.z];
+        if (m) { log(st, resp, `provoca un infarto a ${mdef(m).name}`); destroyMonster(st, s.p, s.z, { src: 'trap', bp: resp }); }
+        break;
+      }
       case 'negateAttack': if (st.atk) st.atk.negated = true; log(st, resp, 'el ataque es negado'); break;
       case 'destroyAttacker':
         if (st.atk) {
@@ -1309,6 +1550,68 @@
     if (cont.k === 'attack') continueAttack(st);
     else if (cont.k === 'spell') continueSpell(st);
     else if (cont.k === 'summon') st.summon = null;
+    else if (cont.k === 'trapAct') {                    // X pudo cancelar una trampa antes de que se resolviera
+      const d = C().get(cont.tid);
+      if (cont.cancel) { log(st, cont.by, `${d.name} es cancelada y destruida`); respondRest(st, cont.rp); }
+      else trapResolve(st, cont.by, d, cont.rp, []);
+    } else if (cont.k === 'power') {                    // X pudo cancelar una habilidad
+      if (cont.cancel) cancelPower(st, cont.by, cont.pa);
+      else runPower(st, cont.by, Object.assign({}, cont.pa, { xd: 1 }));
+    } else if (cont.k === 'gspell') {                   // Gema de la Realidad ante una magia que destruye
+      const ch = cont.ch, P = st.players[ch.p];
+      ch.done = (ch.done || []).concat('gema');
+      if (cont.cancel) { P.grave.push(ch.inst); log(st, ch.p, `${def(ch.inst).name} fue sustituida por la Gema de la Realidad`); return; }
+      st.chain = ch; continueSpell(st);
+    } else if (cont.k === 'gpower') {                   // ... ante una habilidad que destruye o reduce
+      const a2 = Object.assign({}, cont.pa, { gd: 1 });
+      if (cont.cancel) spendPower(st, cont.by, cont.pa);
+      else { if (cont.invert) a2.inv = 1; runPower(st, cont.by, a2); }
+    } else if (cont.k === 'gtrap') {                    // ... ante una trampa
+      const d = C().get(cont.tid);
+      if (cont.cancel) { if (d.fx === 'destroyAttacker' && st.atk) st.atk.negated = true; respondRest(st, cont.rp); }
+      else trapResolve(st, cont.tp, d, cont.rp, (cont.done || []).concat('gema'), cont.invert ? st.team[cont.info.vp] : null);
+    }
+  }
+  const DEST_TRAP = { destroyAttacker: 1, destroySummoned: 1, infarto: 1 };
+  const PW_DEST = ['canon', 'tm'], PW_RED = ['rojo', 'td'];
+  /** Gema de la Realidad ante un poder que destruye o reduce a un personaje rival de otro equipo. true = se abrió una ventana. */
+  function powerReality(st, p, a) {
+    const t = a.target;
+    if (!t || t.vs == null || st.team[t.vs] === st.team[p]) return false;
+    const vm = st.players[t.vs].mz[t.z], um = st.players[p].mz[a.zone];
+    if (!vm || !um) return false;
+    const txt = `${mdef(um).name} usa ${PWL[a.pw] || a.pw} sobre ${mdef(vm).name}`;
+    if (PW_DEST.includes(a.pw)) return realityWindow(st, 'destroy', p, t.vs, { k: 'gpower', pa: a }, txt);
+    if (PW_RED.includes(a.pw)) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
+    return false;
+  }
+  const PWL = { tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+  /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy' });
+  const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
+  /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
+  function consumePower(st, p, a, forever) {
+    const m = st.players[p].mz[a.zone];
+    if (!m) return;
+    const u = uOf(m);
+    if (PW_FLAG[a.pw]) { u[PW_FLAG[a.pw]] = true; if (a.pw === 'tq' || a.pw === 'td' || a.pw === 'tm') u.tgR = curRound(st); if (!forever) return; if (a.pw !== 'canon') return; }
+    const id = PW_ABID[a.pw];
+    if (forever && id && !(m.spentAb || []).includes(id)) m.spentAb = (m.spentAb || []).concat([id]);
+  }
+  function spendPower(st, p, a) {
+    const m = st.players[p].mz[a.zone];
+    if (!m) return;
+    consumePower(st, p, a, false);
+    log(st, p, `${mdef(m).name} usa ${PWL[a.pw] || a.pw}: el efecto fue sustituido`);
+  }
+  /** X cancela una habilidad: no se resuelve y esa habilidad de esa invocación queda consumida para siempre. */
+  function cancelPower(st, p, a) {
+    const m = st.players[p].mz[a.zone];
+    if (!m) return;
+    const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw;
+    consumePower(st, p, a, true);
+    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y queda consumida para siempre`);
+    st.log[st.log.length - 1].xc = 1;
   }
 
   // ---------------- invocar ----------------
@@ -1325,6 +1628,21 @@
     if (tributes.length) log(st, p, `ofrece ${tributes.length} tributo${tributes.length > 1 ? 's' : ''}`);
     log(st, p, `${def(inst).name} se acopla a ${mdef(h).name} (+${1000 * g} ATK y DEF)`);
     st.log[st.log.length - 1].cp = 1;
+  }
+  /** Jake (espada o escudo) o Venom (Simbiosis) se equipan desde la mano a un aliado: no ocupan zona y siguen su destino. */
+  function attachCard(st, p, hi, hz, mode) {
+    const P = st.players[p], inst = P.hand.splice(hi, 1)[0], h = P.mz[hz], g = gx(P, hz), hn = mdef(h).name;
+    inst.spent = false;
+    h.link = (h.link || []).concat([inst]);
+    if (mode === 'venom') {
+      h.sym = { uid: inst.uid }; P.symT = st.turn;
+      addMod(st, h, 'venom', 1400 * g, 1300 * g, 0);
+      log(st, p, `equipa a Venom en ${hn} (+${1400 * g} ATK y +${1300 * g} DEF)`);
+    } else {
+      h.jk = { uid: inst.uid, mode };
+      addMod(st, h, 'jake', mode === 'sword' ? 600 * g : 0, mode === 'shield' ? 500 * g : 0, 0);
+      log(st, p, `equipa a Jake el Perro en ${hn} como ${mode === 'sword' ? 'espada (+' + 600 * g + ' ATK)' : 'escudo (+' + 500 * g + ' DEF)'}`);
+    }
   }
   function placeMonster(st, p, handIdx, tributes, faceDown) {
     const P = st.players[p];
@@ -1375,13 +1693,55 @@
       entry.a = { z, tg: target, vs, ci: m.c.id, at: atkOf(st, st.players[p], z),
         ti: up ? dm0.c.id : null, tpos: dm0 ? dm0.pos : null, tv: up ? (dm0.pos === 'atk' ? atkOf(st, st.players[vs], target) : defOf(st, st.players[vs], target)) : null };
     }
+    if (target !== 'direct' && st.players[vs].mz[target] && has(st, m, 'hiraishin')) {      // Hiraishin: marca la casilla y da derecho a un ataque extra
+      st.marks = st.marks || [];
+      if (!st.marks.some(k => k.by === p && k.vs === vs && k.z === target)) st.marks.push({ by: p, vs, z: target });
+      m.hira = (m.hira || 0) + 1;
+      log(st, p, `Hiraishin: deja una marca en la casilla ${target + 1}`);
+      if (multi(st)) st.log[st.log.length - 1].q = vs;
+    }
     // Gema de la Mente: quien controla la mente del atacante puede cancelar el ataque
     const g = !st.domain && gemOf(st, m.c.uid);
     if (g && st.players[g.p].alive && g.s.gem.uses < 2 && g.s.gem.usedTurn !== st.turn && !yoriFast(st, p, z)) {
       st.pending = { k: 'ability', ab: 'gem', player: g.p, stage: 'ask', uid: m.c.uid, stz: g.i, cont: { k: 'attack', by: p } };
       return;
     }
+    togeWindow(st, p);
+  }
+  /** Toge Inumaki (¡Quieto!): al atacar a él o a un aliado, puede cambiar la posición del atacante y cancelar el ataque. */
+  function togeWindow(st, p) {
+    const a = st.atk, at = a && st.players[a.p].mz[a.z];
+    if (a && at && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && at.pos === 'atk' && !at.down && !yoriFast(st, a.p, a.z)) {
+      for (let i = 0; i < st.n; i++) {
+        const q = (a.vs + i) % st.n, Q = st.players[q];
+        if (!Q.alive || st.team[q] !== st.team[a.vs]) continue;
+        for (let z = 0; z < ZONES; z++) {
+          const m = Q.mz[z];
+          if (!m || m.down || !has(st, m, 'toge')) continue;
+          const u = uOf(m);
+          if (u.tq || u.tgR === curRound(st) || !canTarget(st, q, a.p, a.z)) continue;
+          st.pending = { k: 'ability', ab: 'toge', player: q, stage: 'ask', uid: m.c.uid, nm: mdef(at).name, cont: { k: 'attack', by: p } };
+          return;
+        }
+      }
+    }
     attackWindows(st, p);
+  }
+  /** Fin de un ataque (se resolvió, se canceló o se interceptó): el Endurecimiento de los puños se gasta. */
+  function atkDone(st, a) {
+    const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
+    if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
+  }
+  /** Ataque Hiraishin extra: contra una casilla marcada, sin ventana de respuesta para nadie. */
+  function hiraAttack(st, p, a) {
+    const me = st.players[p], m = me.mz[a.zone], vs = a.vs != null ? a.vs : foeOf(st, p, null);
+    m.hira = Math.max(0, (m.hira || 0) - 1);
+    log(st, p, `${mdef(m).name} ataca con Hiraishin (nadie puede responder)`);
+    const entry = st.log[st.log.length - 1];
+    if (multi(st)) entry.q = vs;
+    const dm0 = st.players[vs].mz[a.target], up = dm0 && !dm0.down;
+    entry.a = { z: a.zone, tg: a.target, vs, ci: m.c.id, at: atkOf(st, me, a.zone), ti: up ? dm0.c.id : null, tpos: dm0 ? dm0.pos : null, tv: up ? (dm0.pos === 'atk' ? atkOf(st, st.players[vs], a.target) : defOf(st, st.players[vs], a.target)) : null, hira: 1 };
+    resolveCombat(st, { p, z: a.zone, target: a.target, vs });
   }
   function attackWindows(st, p) {
     if (openWindow(st, 'attack', { k: 'attack', by: p })) return;
@@ -1389,7 +1749,7 @@
   }
   function continueAttack(st) {
     const a = st.atk; st.atk = null;
-    if (!a || a.negated || st.winner !== null) return;
+    if (!a || a.negated || st.winner !== null) { if (a) atkDone(st, a); return; }
     const at0 = st.players[a.p].mz[a.z];
     if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
       const mm = meliFor(st, a.p, a.vs);
@@ -1414,6 +1774,7 @@
       }
     }
     resolveCombat(st, a);
+    atkDone(st, a);
   }
   /** Un combate ya declarado: a = { p, z, target ('direct' o zona), vs }. */
   function resolveCombat(st, a) {
@@ -1453,7 +1814,11 @@
       else { kill(a.p, a.z, ad.name, defender); lose(st, a.p, B - A); }
     } else {
       const B = Math.max(0, defOf(st, op, a.target) - swordN);
-      if (A > B) { if (!shielded) kill(vs, a.target, dd.name, atker, true); }
+      if (A > B) {
+        const T = atkOf(st, op, a.target), tres = has(st, dm, 'resis');       // Titán de Ataque en defensa: aunque sobreviva, su dueño pierde la diferencia de ATK
+        if (!shielded) kill(vs, a.target, dd.name, atker, true);
+        if (!shielded && !boom && op.mz[a.target] === dm && tres && A > T) { log(st, vs, `${dd.name} resiste el golpe, pero su dueño pierde ${A - T} PV por la diferencia de ATK`); lose(st, vs, A - T); }
+      }
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
@@ -1465,9 +1830,10 @@
     }
     if (boom) {
       const names = [];
-      if (me.mz[a.z] === at) { at.c.spent = at.c.spent || has(st, at, 'boom'); names.push(ad.name); banishMonster(st, a.p, a.z); }
-      if (op.mz[a.target] === dm) { dm.c.spent = dm.c.spent || has(st, dm, 'boom'); names.push(dd.name); banishMonster(st, vs, a.target); }
-      log(st, -1, `¡${boomName} explota! ${names.join(' y ')} ${names.length > 1 ? 'son desterrados' : 'es desterrado'}`);
+      if (me.mz[a.z] === at) { at.c.spent = at.c.spent || has(st, at, 'boom'); if (banishMonster(st, a.p, a.z)) names.push(ad.name); }
+      if (op.mz[a.target] === dm) { dm.c.spent = dm.c.spent || has(st, dm, 'boom'); if (banishMonster(st, vs, a.target)) names.push(dd.name); }
+      if (names.length) log(st, -1, `¡${boomName} explota! ${names.join(' y ')} ${names.length > 1 ? 'son desterrados' : 'es desterrado'}`);
+      else log(st, -1, `¡${boomName} explota! Nadie es desterrado`);
     }
   }
 
@@ -1480,6 +1846,11 @@
   function finishTurn(st) {
     const P = st.players[st.current];
     for (const s of P.mz) if (s) s.atkMod = 0;
+    for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('tonyarm')) {            // Tony Stark: cada turno propio completo en el campo da un material
+      const tn = s.tony || (s.tony = { mat: 0, arm: 0, t: -1 });
+      tn.mat++;
+      log(st, st.current, `${mdef(s).name} reúne materiales para su armadura (${tn.mat})`);
+    }
     st.current = nextAlive(st, st.current);
     startTurn(st);
   }
@@ -1514,7 +1885,7 @@
       }
     }
   }
-  const MODNAME = { kaioken: 'Kaio-ken', conc: 'la Respiración de Concentración Total', marca: 'la Marca de Cazador', kk6: 'Kaio-ken' };
+  const MODNAME = { kurama: 'el Chakra de Kurama', kaioken: 'Kaio-ken', conc: 'la Respiración de Concentración Total', marca: 'la Marca de Cazador', kk6: 'Kaio-ken' };
   /** Fin de los efectos con duración: modificadores, Seis Ojos y fusión de Pothala. */
   function expireMods(st) {
     for (let p = 0; p < st.n; p++) {
@@ -1606,6 +1977,10 @@
       }
     }
     if (st.domain && !findByUid(st, st.domain.uid)) { st.domain = null; log(st, -1, 'El dominio termina'); }
+    for (let p = 0; p < st.n; p++) {                    // Guantelete: sin gema robada equipada, el portador recupera su poder y sus habilidades
+      const P = st.players[p];
+      P.mz.forEach(m => { if (m && m.price && !P.st.some(s => s && s.stolen && s.equipTo != null && P.mz[s.equipTo] === m)) { m.price = false; log(st, p, `${mdef(m).name} recupera su poder y sus habilidades`); } });
+    }
     for (let p = 0; p < st.n; p++) for (const m of st.players[p].mz) {       // Telarañas: si Spider-Man se va, se liberan las habilidades
       if (m && m.sealed && m.sealed.length) { m.sealed = m.sealed.filter(x => findByUid(st, x.by)); if (!m.sealed.length) delete m.sealed; }
     }
@@ -1820,7 +2195,61 @@
         }
       }
       if (m.av && m.av.on && m.av.choice === 'mag' && m.av.n < 3 * g && (m.av.turn !== st.turn || (m.av.tn || 0) < g)) for (const t of foeSTs(st, p)) push({ pw: 'avpred', target: t });
+      // ----- tanda 3 (27-10-2026) -----
+      if (ab.includes('transtitan') && P.lp > 500) P.hand.forEach((c, i) => { if (c.id === 'c_titan_ataque' && spot(P, def(c)) >= 0) push({ pw: 'eren', hand: i }); });
+      if (ab.includes('punos') && (u.pn || 0) < 2 * g && u.pnT !== st.turn && !(m.mods || []).some(x => x.k === 'punos')) push({ pw: 'punos' });
+      if (ab.includes('toge') && u.tgR !== curRound(st)) {         // una sola orden por turno; cada una una vez por invocación
+        for (const t of foeChars(st, p)) {
+          const tm = st.players[t.vs].mz[t.z];
+          if (!u.tq) push({ pw: 'tq', target: t });
+          if (tm.down) continue;
+          if (!u.td) push({ pw: 'td', target: t });
+          if (!u.tm && lvl(tm) <= 4) push({ pw: 'tm', target: t });
+        }
+      }
+      if (ab.includes('semilla') && (u.sdT !== st.turn || (u.sdN || 0) < g)) for (const t of allyChars(st, p)) if (seedList(st, t.vs, t.z, false).length) push({ pw: 'semilla', target: t });
+      if (ab.includes('tonyarm') && m.tony && m.tony.mat > 0 && m.tony.t !== st.turn) push({ pw: 'armadura' });
+      if (m.jk) for (const mode of ['sword', 'shield']) for (const tz of zonesUp(P)) {      // Jake: cambiar de modo o de aliado sin acumular bonificaciones
+        const T = P.mz[tz];
+        if (T.fused || (tz === z && m.jk.mode === mode) || (tz !== z && T.jk)) continue;
+        push({ pw: 'jkmove', mode, target: { vs: p, z: tz } });
+      }
+      if (ab.includes('symb') && m.c.id === 'c_venom' && !m.copy && P.symT !== st.turn && !(m.link && m.link.length) && !m.abs && !m.fused && !m.wide) {
+        for (const tz of zonesUp(P)) { const T = P.mz[tz]; if (tz !== z && !T.sym && !T.fused) push({ pw: 'simb', target: { vs: p, z: tz } }); }
+      }
+      if (ab.includes('sylas') && (u.syT !== st.turn || (u.syN || 0) < g)) {
+        for (const t of foeChars(st, p)) {
+          const tm = st.players[t.vs].mz[t.z];
+          if (tm.down) continue;
+          for (const x of Array.from(new Set(rawAbil(tm)))) if (STEALABLE.includes(x) && !rawAbil(m).includes(x) && !(tm.sealed || []).some(q => q.ab === x)) push({ pw: 'robo', target: t, ab: x });
+        }
+      }
+      if (ab.includes('kurama') && !(m.mods || []).some(x => x.k === 'kurama')) push({ pw: 'kurama' });
     });
+    return out;
+  }
+  const SEEDN = { rojo: 'Rojo', debil: '¡Debilítate!', ola: 'Ola de Fuego' };
+  /** Semilla del Hermitaño: efectos negativos que se pueden quitar de un aliado (con doIt, los quita). Devuelve sus nombres. */
+  function seedList(st, q, z, doIt) {
+    const m = st.players[q].mz[z], out = [];
+    if (!m || m.down) return out;
+    const neg = (m.mods || []).filter(x => (x.atk < 0 || x.def < 0) && x.k !== 'voto');
+    for (const x of neg) out.push(SEEDN[x.k] || x.k);
+    if (m.sealed && m.sealed.length) out.push('Telarañas');
+    if (m.promesa) out.push('Promesa de Poder');
+    const foesT = (k) => st.team[k] !== st.team[q];
+    const kar = [];
+    for (let k = 0; k < st.n; k++) st.players[k].st.forEach((s, i) => {
+      if (s && s.karma && s.karma.phase === 'foe' && s.karma.foeUid === m.c.uid && foesT(k)) { out.push('Karma'); kar.push([k, i]); }
+    });
+    const gm = gemOf(st, m.c.uid);
+    if (gm && foesT(gm.p)) out.push('Gema de la Mente');
+    if (!doIt) return out;
+    m.mods = (m.mods || []).filter(x => !neg.includes(x));
+    delete m.sealed;
+    if (m.promesa) { delete m.promesa; st.corrupt = (st.corrupt || []).filter(c => c.uid !== m.c.uid); }
+    for (const [k, i] of kar) removeST(st, k, i);
+    if (gm && foesT(gm.p)) removeST(st, gm.p, gm.i);
     return out;
   }
   /** Poderes de las magias continuas (Gema de la Mente y Tormenta Eléctrica). */
@@ -1863,12 +2292,15 @@
     if (pd) {
       if (pd.k === 'respond') {
         out.push({ t: 'respond', activate: false });
-        for (const z of pd.cands) out.push({ t: 'respond', activate: true, zone: z });
+        for (const z of pd.cands) {
+          const rd = def(P.st[z].c), os = rd.fx === 'realidad' ? realityOpts(st, p, pd.trigger, pd.cont) : [null];
+          for (const o of os) out.push(o ? { t: 'respond', activate: true, zone: z, opt: o } : { t: 'respond', activate: true, zone: z });
+        }
       } else if (pd.k === 'pick') {
         for (const u of pd.cands) out.push({ t: 'pick', uid: u });
       } else if (pd.k === 'ability') {
-        if (pd.ab === 'steal') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
-        else if (pd.ab === 'karma' || pd.stage === 'target') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
+        if (pd.ab === 'steal' || pd.ab === 'vlearn') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
+        else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
         else { out.push({ t: 'ability', pos: 'atk' }); out.push({ t: 'ability', pos: 'def' }); }
@@ -1882,6 +2314,8 @@
       P.hand.forEach((card, i) => {
         const d = def(card);
         if (d.kind === 'monster') {
+          if (card.id === 'c_jake') zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.jk && !h.fused) for (const mode of ['sword', 'shield']) out.push({ t: 'attach', hand: i, host: hz, mode }); });
+          if (card.id === 'c_venom' && P.symT !== st.turn) zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.sym && !h.fused) out.push({ t: 'attach', hand: i, host: hz, mode: 'venom' }); });
           if (d.couple) {                                // Anti-Venom: se acopla a un aliado (no ocupa casilla)
             if (P.normalUsed) return;
             const need = C().tributesFor(d.level);
@@ -1940,7 +2374,18 @@
           else for (const tz of targets) out.push(mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz });
         }
       });
-      out.push(...powerActs(st, p).filter(a => ['furia', 'bigbang', 'canon', 'relicario', 'genki'].includes(a.pw)));
+      const hseen = new Set();
+      P.mz.forEach((m, z) => {                       // Hiraishin: ataque extra contra una casilla marcada y ocupada por un rival
+        if (!m || m.down || m.pos !== 'atk' || !(m.hira > 0) || !has(st, m, 'hiraishin')) return;
+        for (const mk of (st.marks || [])) {
+          if (mk.by !== p || !fl.includes(mk.vs)) continue;
+          const E2 = st.players[mk.vs], tz = E2.mz[mk.z] ? mk.z : shadowOf(E2, mk.z);
+          if (tz < 0 || !E2.mz[tz] || E2.mz[tz].six || hseen.has(z + ':' + mk.vs + ':' + tz)) continue;
+          hseen.add(z + ':' + mk.vs + ':' + tz);
+          out.push(mu ? { t: 'attack', zone: z, vs: mk.vs, target: tz, hira: true } : { t: 'attack', zone: z, target: tz, hira: true });
+        }
+      });
+      out.push(...powerActs(st, p).filter(a => ['furia', 'bigbang', 'canon', 'relicario', 'genki', 'punos', 'tq', 'td', 'tm', 'kurama'].includes(a.pw)));
       if (!fr.length) out.push({ t: 'endTurn' });
     }
     return out;
@@ -2108,10 +2553,10 @@
         break;
       }
       case 'rojo': {
-        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z], sg = a.inv ? -1 : 1;
         u.rojo = true;
-        addMod(st, tm, 'rojo', -1000, -1000, 0);
-        log(st, p, `${nm} lanza Rojo: ${mdef(tm).name} pierde 1000 ATK y 1000 DEF`);
+        addMod(st, tm, 'rojo', -1000 * sg, -1000 * sg, 0);
+        log(st, p, `${nm} lanza Rojo: ${mdef(tm).name} ${a.inv ? 'gana' : 'pierde'} 1000 ATK y 1000 DEF`);
         if (multi(st)) st.log[st.log.length - 1].q = tq;
         break;
       }
@@ -2126,9 +2571,12 @@
         const tq = a.target.vs, T = st.players[tq];
         if (a.target.area === 'mz') {
           const tm = T.mz[a.target.z];
-          log(st, p, `${nm} lanza Púrpura: ${mdef(tm).name} es desterrado`);
-          if (multi(st)) st.log[st.log.length - 1].q = tq;
-          removeMonster(st, tq, a.target.z, 'banish');
+          if (tm.six) log(st, p, `${nm} lanza Púrpura, pero ${mdef(tm).name} no puede ser desterrado: los Seis Ojos lo protegen`);
+          else {
+            log(st, p, `${nm} lanza Púrpura: ${mdef(tm).name} es desterrado`);
+            if (multi(st)) st.log[st.log.length - 1].q = tq;
+            removeMonster(st, tq, a.target.z, 'banish');
+          }
         } else {
           const s2 = T.st[a.target.z];
           log(st, p, `${nm} lanza Púrpura: una carta de magia/trampa es desterrada`);
@@ -2146,6 +2594,112 @@
         break;
       }
       case 'xform': transformInto(st, p, a.zone, a.hand, null); break;
+      // ----- tanda 3 -----
+      case 'eren': {
+        const inst = P.hand[a.hand];
+        if (!inst || inst.id !== 'c_titan_ataque' || spot(P, def(inst)) < 0 || P.lp <= 500) break;
+        log(st, p, `${nm} se muerde la mano y pierde 500 PV`);
+        lose(st, p, 500);
+        if (st.winner !== null || !P.alive) break;
+        specialSummon(st, p, P.hand.splice(a.hand, 1)[0], 'atk');
+        break;
+      }
+      case 'punos': {
+        u.pn = (u.pn || 0) + 1; u.pnT = st.turn;
+        addMod(st, m, 'punos', 700 * g, 0, 0);
+        log(st, p, `${nm} usa Endurecimiento de los puños: +${700 * g} ATK en su próximo ataque (${u.pn}/${2 * g})`);
+        break;
+      }
+      case 'tq': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm || u.tq) break;
+        u.tq = true; u.tgR = curRound(st);
+        if (tm.down) { tm.down = false; log(st, p, `${nm} usa ¡Quieto!: ${mdef(tm).name} es revelado`); }
+        else { tm.pos = tm.pos === 'atk' ? 'def' : 'atk'; log(st, p, `${nm} usa ¡Quieto!: ${mdef(tm).name} pasa a ${tm.pos === 'atk' ? 'ataque' : 'defensa'}`); }
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
+        break;
+      }
+      case 'td': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z], sg = a.inv ? -1 : 1;
+        if (!tm || tm.down || u.td) break;
+        u.td = true; u.tgR = curRound(st);
+        addMod(st, tm, 'debil', -500 * sg, -500 * sg, 0);
+        log(st, p, `${nm} usa ¡Debilítate!: ${mdef(tm).name} ${a.inv ? 'gana' : 'pierde'} 500 ATK y 500 DEF`);
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
+        break;
+      }
+      case 'tm': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm || tm.down || lvl(tm) > 4 || u.tm) break;
+        u.tm = true; u.tgR = curRound(st);
+        log(st, p, `${nm} usa ¡Muere!: ${mdef(tm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
+        destroyMonster(st, tq, a.target.z, ctx);
+        break;
+      }
+      case 'semilla': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm || tm.down) break;
+        const got = seedList(st, tq, a.target.z, true);
+        if (!got.length) break;
+        u.sdN = u.sdT === st.turn ? (u.sdN || 0) + 1 : 1; u.sdT = st.turn;
+        u.seedLast = { to: mdef(tm).name, what: got };
+        log(st, p, `${nm} usa Semilla del Hermitaño: ${mdef(tm).name} se recupera (${got.join(', ')})`);
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
+        break;
+      }
+      case 'armadura': {
+        const tn = m.tony;
+        if (!tn || tn.mat < 1 || tn.t === st.turn) break;
+        tn.mat--; tn.t = st.turn; tn.arm++;
+        dropMods(m, 'armadura');
+        const n = (1000 + 300 * (tn.arm - 1)) * g;
+        addMod(st, m, 'armadura', n, n, 0);
+        if (tn.arm === 1) { m.form = 'c_tony_armadura'; log(st, p, `${nm} usa Armadura de Iron Man: construye su primera armadura (+${1000 * g} ATK y DEF)`); }
+        else log(st, p, `${nm} usa Armadura de Iron Man: mejora la armadura (+${300 * g} ATK y DEF; total +${n})`);
+        break;
+      }
+      case 'jkmove': {
+        const eq = m.jk, T = P.mz[a.target.z];
+        if (!eq || !T || T.down || T.fused || (T !== m && T.jk)) break;
+        const i = (m.link || []).findIndex(c => c.uid === eq.uid);
+        if (i < 0) break;
+        const inst = m.link.splice(i, 1)[0];
+        if (!m.link.length) delete m.link;
+        dropMods(m, 'jake'); m.jk = null;
+        const gT = gx(P, a.target.z);
+        T.link = (T.link || []).concat([inst]); T.jk = { uid: inst.uid, mode: a.mode };
+        addMod(st, T, 'jake', a.mode === 'sword' ? 600 * gT : 0, a.mode === 'shield' ? 500 * gT : 0, 0);
+        log(st, p, `Jake el Perro pasa a ${mdef(T).name} como ${a.mode === 'sword' ? 'espada (+' + 600 * gT + ' ATK)' : 'escudo (+' + 500 * gT + ' DEF)'}`);
+        break;
+      }
+      case 'simb': {
+        const T = P.mz[a.target.z];
+        if (!T || T.sym || T.fused || P.symT === st.turn || (m.link && m.link.length) || m.abs || m.fused) break;
+        const tg = gx(P, a.target.z), tn = mdef(T).name;
+        const taken = takeOff(st, p, a.zone, 'attach');
+        if (!taken) break;
+        P.symT = st.turn;
+        T.link = (T.link || []).concat([taken.c]); T.sym = { uid: taken.c.uid };
+        addMod(st, T, 'venom', 1400 * tg, 1300 * tg, 0);
+        log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${1400 * tg} ATK y +${1300 * tg} DEF)`);
+        break;
+      }
+      case 'robo': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm || tm.down || !rawAbil(tm).includes(a.ab) || rawAbil(m).includes(a.ab) || !STEALABLE.includes(a.ab) || (tm.sealed || []).some(x => x.ab === a.ab)) break;      // sin nada que robar no gasta el uso
+        u.syN = u.syT === st.turn ? (u.syN || 0) + 1 : 1; u.syT = st.turn;
+        m.ext = (m.ext || []).concat([a.ab]); m.extFrom = Object.assign({}, m.extFrom); m.extFrom[a.ab] = mdef(tm).name;
+        m.c.keep = (m.c.keep || []).concat([{ id: a.ab, from: mdef(tm).name }]);
+        log(st, p, `${nm} usa Robo de habilidades: copia ${(C().AB[a.ab] || [a.ab])[0]} de ${mdef(tm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
+        break;
+      }
+      case 'kurama': {
+        addMod(st, m, 'kurama', 600 * g, 600 * g, 2);
+        log(st, p, `${nm} usa Chakra de Kurama: +${600 * g} ATK y DEF durante 2 turnos`);
+        break;
+      }
       case 'copy': {
         // Copia el estado del objetivo en este momento: forma (nombre, tipo, estrellas, habilidades) y ATK/DEF finales.
         const q = a.target.vs, tz = a.target.z, PT = st.players[q], tm = PT.mz[tz], nd = mdef(tm), oldName = def(m.c).name;
@@ -2274,7 +2828,8 @@
       case 'power': runPower(st, p, a); break;
       case 'spow': doSpower(st, p, a); break;
       case 'toBattle': st.phase = 'battle'; log(st, p, 'pasa a la fase de batalla'); break;
-      case 'attack': declareAttack(st, p, a.zone, a.target, a.vs); break;
+      case 'attack': if (a.hira) hiraAttack(st, p, a); else declareAttack(st, p, a.zone, a.target, a.vs); break;
+      case 'attach': attachCard(st, p, a.hand, a.host, a.mode); break;
       case 'endTurn': endTurn(st); break;
       case 'respond': {
         const pd = st.pending; st.pending = null;
@@ -2282,6 +2837,8 @@
           const s = P.st[a.zone], d = def(s.c);
           log(st, p, `activa la trampa ${d.name}`);
           P.st[a.zone] = null; P.grave.push(s.c);
+          pd.opt = a.opt;
+          if (nextWindow(st, 'trap', { k: 'trapAct', by: p, rp: pd, tid: d.id }, foes(st, p))) break;      // X puede cancelar la trampa
           trapResolve(st, p, d, pd, []);
         } else respondRest(st, pd);
         break;
@@ -2325,10 +2882,63 @@
         if (st.atk) st.atk.negated = true;
         log(st, p, 'La Gema de la Mente cancela el ataque');
         if (s.gem.uses >= 2) { P.st[pd.stz] = null; P.grave.push(s.c); log(st, p, 'La Gema de la Mente se destruye tras su segundo uso'); }
-        if (st.atk) { st.atk = null; }
+        if (st.atk) { const a0 = st.atk; st.atk = null; atkDone(st, a0); }
+        return;
+      }
+      togeWindow(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'toge') {                                    // ¡Quieto! como respuesta: el atacante pasa a defensa y el ataque se cancela
+      const tg = slotByUid(st, p, pd.uid), a0 = st.atk, at = a0 && st.players[a0.p].mz[a0.z];
+      if (a.use && tg && at && at.pos === 'atk' && !uOf(tg.m).tq) {
+        const u = uOf(tg.m);
+        u.tq = true; u.tgR = curRound(st);
+        at.pos = 'def'; at.moved = true;
+        log(st, p, `${mdef(tg.m).name} usa ¡Quieto!: ${mdef(at).name} pasa a defensa y su ataque se cancela`);
+        st.atk = null; atkDone(st, a0);
         return;
       }
       attackWindows(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'glove') {                                   // Guantelete del Infinito: robar la gema que un rival acaba de activar
+      const ch = pd.ch, d = def(ch.inst);
+      if (pd.stage === 'glovetgt') {
+        const c = pd.cands.find(x => x.vs === a.vs && x.z === a.z);
+        if (!c) { st.pending = pd; return; }
+        ch.target = { vs: c.vs, z: c.z };
+        st.chain = ch; if (!openWindow(st, 'spell', { k: 'spell', by: ch.p })) continueSpell(st);
+        return;
+      }
+      const bm = P.mz[pd.bz];
+      if (a.use && bm && !bm.down && firstFree(P.st) >= 0) {
+        const from = pd.by;
+        log(st, p, `El Guantelete del Infinito roba ${d.name} y la equipa a ${mdef(bm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = from;
+        st.players[from].loan = (st.players[from].loan || 0) + 1; P.loan = (P.loan || 0) - 1;      // la carta robada sigue contando para su dueño
+        ch.p = p; ch.stolen = { bz: pd.bz, from };
+        if (d.fx === 'equip') ch.target = { z: pd.bz };
+        if (d.fx === 'gem') {
+          const cands = zoneTargetsUp(st, p).map(c => ({ vs: foeOf(st, p, c), z: c.z }));
+          if (!cands.length) { P.grave.push(ch.inst); log(st, p, `${d.name} no tiene objetivo`); return; }
+          st.pending = { k: 'ability', ab: 'glove', player: p, stage: 'glovetgt', ch, cands, nm: d.name };
+          return;
+        }
+        st.chain = ch; if (!openWindow(st, 'spell', { k: 'spell', by: p })) continueSpell(st);
+        return;
+      }
+      st.chain = ch;                                           // no la roba: la gema sigue su resolución normal
+      if (!openWindow(st, 'spell', { k: 'spell', by: ch.p })) continueSpell(st);
+      return;
+    }
+    if (pd.ab === 'vlearn') {                                  // Venom aprende una habilidad del enemigo destruido
+      if (a.use === false) { log(st, p, 'Venom decide no aprender ninguna habilidad'); return; }
+      const vi = findVenom(st, p, pd.uid);
+      if (!vi || !pd.opts.includes(a.pick)) return;
+      vi.keep = (vi.keep || []).concat([{ id: a.pick, from: pd.from }]);
+      const vm = slotByUid(st, p, pd.uid);
+      if (vm && !(vm.m.ext || []).includes(a.pick)) { vm.m.ext = (vm.m.ext || []).concat([a.pick]); vm.m.extFrom = Object.assign({}, vm.m.extFrom); vm.m.extFrom[a.pick] = pd.from; }
+      log(st, p, `Venom absorbe ${(C().AB[a.pick] || [a.pick])[0]} de ${pd.from}: la conserva para siempre`);
       return;
     }
     if (pd.ab === 'mahoraga') {
@@ -2350,14 +2960,14 @@
       return;
     }
     if (pd.ab === 'shen') {
-      if (a.use && shenAuto(st, pd)) return;      // el jugador decide: si acepta, Shen entra, cancela el efecto y protege
+      if (a.use && shenAuto(st, pd)) { if (pd.a) atkDone(st, pd.a); return; }      // el jugador decide: si acepta, Shen entra, cancela el efecto y protege
       if (pd.ch) { pd.ch.done = (pd.ch.done || []).concat('shen'); st.chain = pd.ch; continueSpell(st); }
       else { st.atk = Object.assign({}, pd.a, { noShen: true }); continueAttack(st); }
       return;
     }
     if (pd.ab === 'meliodas') {
       if (pd.stage === 'ask') {
-        if (!a.use) { meliDecline(st, pd); return; }
+        if (!a.use || (pd.kind === 'power' && pd.pa && pd.pa.pw === 'purpura')) { meliDecline(st, pd); return; }      // validado aquí: Púrpura nunca se refleja
         const cands = meliCands(st, p, pd);
         if (cands === null) { meliApply(st, p, pd, null); return; }
         if (!cands.length) { log(st, p, 'Total Counter no puede reflejar el efecto'); meliDecline(st, pd); return; }
@@ -2378,6 +2988,7 @@
         rikaSpend(st, p, pd.zy, pd.nm, fxs);
         if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
         else if (k === 'trap') { if (st.atk && C().get(pd.tid).fx === 'destroyAttacker') st.atk.negated = true; respondRest(st, pd.rp); }
+        else if (k === 'attack' && pd.a) atkDone(st, pd.a);
         return;
       }
       if (k === 'attack') { st.atk = Object.assign({}, pd.a, { noRika: true }); continueAttack(st); }
@@ -2503,6 +3114,20 @@
     }
 
     const u = uOf(s);
+    // ----- tanda 3 -----
+    { const a3 = abil(st, s), g3 = gx(P, z);
+      if (s.jk) v.jk = { mode: s.jk.mode };
+      if (s.sym) v.sym = true;
+      if (s.tony) v.tony = { mat: s.tony.mat, arm: s.tony.arm, can: s.tony.t !== st.turn };
+      if (s.hira > 0) v.hira = s.hira;
+      if (s.price) v.price = true;
+      if (a3.includes('toge')) v.toge = { tq: !!u.tq, td: !!u.td, tm: !!u.tm, round: u.tgR === curRound(st) };
+      if (a3.includes('punos')) v.pn = { n: u.pn || 0, max: 2 * g3, turn: u.pnT === st.turn };
+      if (a3.includes('semilla')) v.seed = { turn: u.sdT === st.turn, n: u.sdT === st.turn ? (u.sdN || 0) : 0, max: g3, last: u.seedLast || null };
+      if (a3.includes('sylas')) v.stealAll = { n: (s.c.keep || []).length, turn: u.syT === st.turn ? (u.syN || 0) : 0, max: g3 };
+      if (s.c.id === 'c_venom' || (s.c.keep || []).length && !a3.includes('sylas')) v.learned = (s.c.keep || []).map(k => k.id);
+      if (a3.includes('symb')) v.symb = { turn: P.symT === st.turn };
+      if (s.c.keep && s.c.keep.length) v.keep = s.c.keep.map(k => ({ id: k.id, from: k.from })); }
     if (u.kills) v.kills = u.kills;
     if (u.rock) v.rock = u.rock;
     if (u.sun) v.sun = u.sun;
@@ -2528,6 +3153,8 @@
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
     if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;
+    if (s.stolen) v.stolen = true;
+    if (s.glove) v.glove = true;
     return v;
   }
   function playerView(st, p, own) {
@@ -2552,7 +3179,7 @@
       pending = { k: pd.k, player: pd.player };
       if (pd.by != null) pending.by = pd.by;
       if (pd.player === seat) {
-        if (pd.k === 'respond') { pending.trigger = pd.trigger; pending.cands = pd.cands.slice(); }
+        if (pd.k === 'respond') { pending.trigger = pd.trigger; pending.cands = pd.cands.slice(); if (pd.cont && pd.cont.info) pending.info = pd.cont.info; }
         if (pd.k === 'pick') {
           pending.zone = pd.zone;
           const P = st.players[seat], src = pd.zone === 'deck' ? P.deck : P.grave;
@@ -2570,6 +3197,8 @@
           pending.card = { uid: pd.uid, id: (all.find(c => c.uid === pd.uid) || {}).id };
           if (pd.opts) { pending.opts = pd.opts.slice(); pending.from = pd.from; }
           if (pd.cands) pending.cands = pd.cands.map(c => ({ vs: c.vs, z: c.z }));
+          if (pd.info) pending.info = pd.info;
+          if (pd.ch) pending.gem = { id: pd.ch.inst.id };
         }
         if (pd.k === 'discard') pending.excess = st.players[seat].hand.length - HAND_MAX;
       } else if (pd.k === 'respond') pending.trigger = pd.trigger;
@@ -2587,6 +3216,7 @@
       me: players[seat], opp: players[oppSeat], players,
       pending,
       domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (elapsed(st, st.domain.t0))), nm: st.domain.nm || 'de Sukuna', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
+      marks: (st.marks || []).map(k => ({ by: k.by, vs: k.vs, z: k.z })),
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
       log: st.log.slice(-60),
@@ -2597,7 +3227,7 @@
   /** Todas las cartas de un jugador (para comprobar que no se pierde ni se duplica ninguna). */
   function countCards(st, p) {
     const P = st.players[p];
-    let n = P.deck.length + P.hand.length + P.grave.length + P.banish.length;
+    let n = P.deck.length + P.hand.length + P.grave.length + P.banish.length + (P.loan || 0);
     for (const s of P.mz) if (s && (s.owner == null || s.owner === p)) n += 1 + (s.link ? s.link.length : 0);
     for (const s of P.st) if (s) n++;
     for (const Q of st.players) {                                          // lo corrompido o sellado cuenta para su dueño original
@@ -2606,6 +3236,7 @@
     }
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.owner === p) n += 1 + (s.prison.m.link ? s.prison.m.link.length : 0);
     if (st.chain && st.chain.p === p) n++;
+    else if (st.pending && st.pending.ab === 'glove' && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete
     // lo absorbido por Cell cuenta para su dueño original
     for (const Q of st.players) for (const s of Q.mz) if (s && s.abs && s.abs.owner === p) n += 1 + (s.abs.link ? s.abs.link.length : 0);
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.m.abs && s.prison.m.abs.owner === p) n += 1 + (s.prison.m.abs.link ? s.prison.m.abs.link.length : 0);      // lo absorbido por un personaje sellado

@@ -42,7 +42,8 @@
             const atkr = v.atk && v.players[v.atk.p].mz[v.atk.z];
             s = d.fx === 'destroyAttacker' ? 90 : d.fx === 'mirror' ? 80 : 60;
             if (atkr && atkr.atk < 500 && d.fx !== 'destroyAttacker') s = 20;
-          } else if (pd.trigger === 'spell') s = 70;
+          } else if (['power', 'trap', 'destroy', 'reduce'].includes(pd.trigger)) s = 75;
+          else if (pd.trigger === 'spell') s = 70;
           else if (pd.trigger === 'summon') s = 70;
           if (s > bs) { bs = s; best = a; }
         }
@@ -180,9 +181,22 @@
               return -1;
             }
             case 'ydominio': return info.count >= 1 ? 50 : -1;
+            // ----- tanda 3 -----
+            case 'eren': return 62;
+            case 'punos': return v.phase === 'battle' ? 57 : (info.count ? 45 : -1);
+            case 'tq': return tm && tm.down ? 44 : (tm && tm.pos === 'atk' && tm.atk >= 1800 ? 46 : -1);
+            case 'td': return tm ? 42 + (tm.atk || 0) / 400 : -1;
+            case 'tm': return tm ? 56 + (tm.atk || 0) / 300 : -1;
+            case 'semilla': return 47;
+            case 'armadura': return 57;
+            case 'kurama': return info.count ? 54 : 30;
+            case 'robo': return 53;
+            case 'simb': return -1;
+            case 'jkmove': return -1;
           }
           return -1;
         }
+        case 'attach': return a.mode === 'venom' ? 55 : (a.mode === 'sword' ? 50 : 46);
         case 'special': return 63;
         case 'couple': return 49 + (me.mz[a.host] && me.mz[a.host].atk ? me.mz[a.host].atk / 400 : 0);
         case 'activate': case 'activateSet': {

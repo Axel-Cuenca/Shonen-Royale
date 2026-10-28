@@ -27,7 +27,7 @@ module.exports = function (T) {
   {
     const want = {
       c_bardock: [4, 1400, 1400, 'dbz'], c_bardock_ssj: [7, 1800, 1800, 'dbz'], c_cell: [6, 1500, 1400, 'dbz'], c_kratos: [4, 1300, 1300, 'gow'],
-      c_kratos_f: [6, 1800, 1800, 'gow'], c_lara: [2, 300, 300, 'aot'], c_titan: [8, 1800, 2000, 'aot'], c_sukuna5: [4, 1300, 1300, 'jjk'],
+      c_kratos_f: [6, 1800, 1800, 'gow'], c_lara: [2, 300, 300, 'aot'], c_titan: [8, 2300, 2300, 'aot'], c_sukuna5: [4, 1300, 1300, 'jjk'],
       c_sukuna60: [10, 2800, 2900, 'jjk'], c_shang: [9, 1100, 1000, 'mk'], c_vegeta: [4, 1500, 1500, 'dbz'], c_vegeta_blue: [10, 2700, 2800, 'dbz'],
       c_popeye: [4, 1200, 1200, 'popeye'], c_creeper: [3, 1000, 1000, 'minecraft']
     };

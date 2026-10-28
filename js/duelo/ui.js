@@ -111,6 +111,7 @@
     if (D.FriendsUI) { initFriends(); D.FriendsUI.show(show && D.Account.cloud); }   // burger de amigos (arriba a la derecha)
     if (!show) return;
     const nav = [['jugar', 'Jugar', menu], ['mazos', 'Mazos', deckBuilder], ['tienda', 'Tienda', () => shopScreen()], ['cajas', 'Cajas', () => boxScreen()], ['ranking', 'Ranking', () => rankScreen()], ['novedades', 'Novedades', news]];
+    if (lobbyAlive()) nav.splice(1, 0, ['lobby', '🟢 Sala de espera', () => lobbyBack()]);      // la sala sigue viva: acceso directo desde cualquier pantalla
     topEl.replaceChildren(h('div', { class: 'brand' }, embEl(), 'SHONEN ROYALE'),
       h('nav', { class: 'hnav' }, nav.map(n => { const bd = badges()[n[0]]; return h('button', { class: n[0] === curScreen ? 'on' : '', onclick: n[2], title: bd || null }, n[1], bd ? h('i', { class: 'bdg', 'aria-label': bd }) : null); })),
       h('div', { class: 'hright' }, pointsBar(true), acctBar()));
@@ -135,7 +136,7 @@
       .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
   }
   /** «Invitar» sin sala: se crea el lobby (el formato crece solo según cuántos entren, y se puede cambiar) y, ya creado, se manda la invitación (FriendsUI.roomOpened). */
-  function hostNow() { if (lobbyApi && curScreen === 'lobby') lobbyApi.invite(); else lobby({ invite: true }); }
+  function hostNow() { if (lobbyApi && (curScreen === 'lobby' || lobbyAlive())) { if (curScreen !== 'lobby') lobbyBack(); lobbyApi.invite(); } else lobby({ invite: true }); }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
   // ---------------- mazos guardados ----------------
@@ -401,7 +402,12 @@
 
   // ---------------- menú principal ----------------
   let current = null; // partida en curso: { match, cleanup }
-  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } try { current.introStop && current.introStop(); } catch (e) { /* nada */ } current = null; hidePreview(); } closeModal(); }
+  /** Sala de espera viva (con amigos): se puede navegar a cualquier pantalla sin salir de ella; `lobbyBack` la vuelve a mostrar. */
+  let lobbyBack = null;
+  const lobbyAlive = () => !!(lobbyBack && current && !current.started);
+  /** Al cambiar de pantalla: cierra la partida en curso, salvo que sea una sala de espera (esa sigue viva hasta que el jugador salga de ella). */
+  function leaveScreen() { if (!lobbyAlive()) endCurrent(); }
+  function endCurrent() { if (current) { if (D.Social) D.Social.setPlaying(false); try { current.leave && current.leave(); } catch (e) { /* nada */ } try { current.match.close(); } catch (e) { /* nada */ } try { current.cleanup && current.cleanup(); } catch (e) { /* nada */ } try { current.cleanup0 && current.cleanup0(); } catch (e) { /* nada */ } try { current.tutEnd && current.tutEnd(); } catch (e) { /* nada */ } try { current.introStop && current.introStop(); } catch (e) { /* nada */ } current = null; lobbyBack = null; lobbyApi = null; hidePreview(); } closeModal(); }
 
   // emblema y logo: los mismos del splash (index.html); aquí en dorado
   const EMB = '<svg class="emb" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#12080a" stroke="url(#lgG)" stroke-width="3.5"/><circle cx="50" cy="50" r="39" fill="none" stroke="url(#lgG)" stroke-width="1" stroke-dasharray="2 3"/><path d="M50 8 C58 24 74 30 74 52 C74 66 64 78 50 82 C36 78 26 66 26 52 C26 42 32 36 36 30 C36 40 42 44 46 44 C42 32 44 18 50 8 Z" fill="url(#lgR)" stroke="#ffb0a0" stroke-width="1" transform="translate(0 4)"/><path d="M50 30 C54 40 60 44 60 54 C60 62 56 68 50 70 C44 68 40 62 40 54 C40 48 44 46 44 42 C47 46 49 46 50 30Z" fill="#ffd27a" transform="translate(0 4)"/></svg>';
@@ -428,12 +434,13 @@
 
   function menu() {
     scr('jugar');
-    endCurrent(); showBg(true);
+    leaveScreen(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
     const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
     const off = !!bad || few;
     const items = [
-      { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
+      lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
+      : { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
       { t: 'Ranking', d: 'Tu rango, los mejores de la temporada y cómo se sube', f: () => rankScreen() },
@@ -614,6 +621,7 @@
    *  Los asientos que queden libres los juega la computadora. */
   async function lobby(opts) {
     opts = opts || {};
+    if (lobbyAlive()) { lobbyBack(); if (opts.invite && lobbyApi) lobbyApi.invite(); return; }      // ya hay una sala abierta: se vuelve a ella
     S.setTrack('prep'); scr('lobby');
     let key = 'duel', picked = false, room = null, match = null, creating = null, onlineErr = '';
     const fm = () => FORMATS[key];
@@ -630,11 +638,14 @@
       if (!gs.length) { startAI({ level, rival: '', fmt: key }); return; }
       if (canStart()) match.begin();
     }
-    const leaveBtn = btn('Salir de la sala', menu, 'ghost lside');
-    mount(h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA'), btn('👥 Invitar amigos', () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }), 'ghost linv')),
+    let left = false;
+    const leaveBtn = btn('Salir de la sala', () => { left = true; endCurrent(); menu(); }, 'ghost lside');
+    const root = (h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA'), btn('👥 Invitar amigos', () => api.invite().then(() => { if (D.FriendsUI && !D.FriendsUI.isOpen) D.FriendsUI.toggle(); }), 'ghost linv')),
       fmtEl,
       slotsEl, status,
       h('div', { class: 'lbtns' }, lvlBtn, startBtn, leaveBtn)));
+    mount(root);
+    const showLobby = () => { scr('lobby'); S.setTrack('prep'); mount(root); render(); };
 
     function render() {
       const gs = guestsNow();
@@ -701,7 +712,7 @@
             }
           });
         } catch (e) { onlineErr = e.message; creating = null; render(); return false; }
-        if (curScreen !== 'lobby') { room.close(); creating = null; return false; }        // saliste mientras se creaba
+        if (left) { room.close(); creating = null; return false; }        // saliste de la sala mientras se creaba
         onlineErr = '';
         if (D.FriendsUI) D.FriendsUI.roomOpened(room.code);
         match = D.Match.host({ cos: D.Shop.mine(), rk: (D.Rank.state() || {}).pts, deck: activeDeck().ids.slice(), name: room.name, n: fm().n, mode: fm().mode, autoStart: false });
@@ -712,6 +723,7 @@
         });
         const myRoom = room;
         game(match, { cleanup: () => { conn.forEach(c => clearTimeout(c.timer)); myRoom.close(); if (D.FriendsUI) D.FriendsUI.roomClosed(); }, online: true, wait: true });
+        lobbyBack = showLobby; lobbyApi = api; refreshHeader();
         queued.splice(0).forEach(q => onJoin(...q));
         render();
         return true;
@@ -733,15 +745,16 @@
       room = await D.Online.joinRoom(code, {
         onState: st => { if (st === 'direct') clearTimeout(failTimer); else if (st === 'failed') put('msg err', LOSTMSG); },
         onClosed: () => { if (!current || !current.started) put('msg err', 'El anfitrión cerró la sala.'); },
-        onKicked: () => { if (!current || !current.started) { put('msg err', 'La sala se llenó antes de que entraras.'); menu(); } }
+        onKicked: () => { if (!current || !current.started) { put('msg err', 'La sala se llenó antes de que entraras.'); endCurrent(); menu(); } }
       });
     } catch (e) { errBox.replaceChildren(h('div', { class: 'msg err' }, e.message === 'login' ? 'Inicia sesión primero.' : e.message)); return; }
     // sala de espera del invitado: ve quién hay y el formato; el anfitrión decide cuándo empezar
     const slotsEl = h('div', { class: 'lrow' }), info = h('div'), titleEl = h('p', { class: 'lnote' }, 'Conectando con el anfitrión…');
-    const leave = () => { clearTimeout(failTimer); if (match) match.close(); room.close(); menu(); };
-    scr('online');
-    mount(h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: leave }, '← Salir de la sala'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA')), titleEl, slotsEl, info,
+    const leave = () => { clearTimeout(failTimer); if (match) match.close(); room.close(); endCurrent(); menu(); };
+    scr('lobby');
+    const root = (h('div', { class: 'scr lobby' }, h('div', { class: 'ltop' }, h('button', { class: 'back', onclick: leave }, '← Salir de la sala'), h('span', { class: 'ltitle' }, 'SALA DE ESPERA')), titleEl, slotsEl, info,
       h('p', { class: 'sub', style: 'text-align:center' }, 'Cuando el anfitrión empiece el duelo entrarás solo.')));
+    mount(root);
     box = info;
     put('msg ok', 'Dentro de la sala. Conectando con el anfitrión…');
     slotsEl.style.setProperty('--n', 1); slotsEl.replaceChildren(lobbySlot({ img: lobbyMine(), name: room.name, role: 'Tú', stat: 'CONECTANDO' }));
@@ -760,6 +773,7 @@
       }
     });
     game(match, { cleanup: () => { clearTimeout(failTimer); room.close(); }, online: true, wait: true });
+    lobbyBack = () => { scr('lobby'); S.setTrack('prep'); mount(root); }; refreshHeader();
   }
 
   // ---------------- mazos: primero la lista de mazos y luego el editor (arrastrar y soltar en escritorio) ----------------
@@ -783,7 +797,7 @@
   /** Lista de mazos (entrada): una tarjeta por mazo; Editar abre el editor. */
   function deckBuilder() {
     scr('mazos');
-    endCurrent(); S.setTrack('prep');
+    leaveScreen(); S.setTrack('prep');
     const decks = myDecks();
     const again = () => deckBuilder();
     const rename = i => { const d = decks[i], nm = prompt('Nombre del mazo', d.name); if (nm) { d.name = nm.trim().slice(0, 20) || d.name; save(); again(); } };
@@ -828,7 +842,7 @@
   /** Editor de un mazo: colección al centro, detalle de la carta a la derecha, tu mazo abajo. Escritorio: arrastrar y soltar. Móvil: botones − / +. */
   function deckEditor(idx) {
     scr('mazos');
-    endCurrent(); S.setTrack('prep');
+    leaveScreen(); S.setTrack('prep');
     const ro = !!C.test, decks = myDecks();
     idx = Math.max(0, Math.min(idx | 0, decks.length - 1));
     const dk = decks[idx];
@@ -1014,6 +1028,26 @@
     setTimeout(() => { if (current === cur) draw(); }, 1200);
   }
 
+  // ---------------- partidas abandonadas (cerrar la pestaña, recargar, quedarse sin internet) ----------------
+  /** ¿Este navegador se quedó sin internet hace poco? (distingue «me caí yo» de «se cayó el anfitrión») */
+  let lastOffline = 0;
+  addEventListener('offline', () => { lastOffline = Date.now(); });
+  const iWasOffline = () => (typeof navigator !== 'undefined' && navigator.onLine === false) || Date.now() - lastOffline < 120000;
+  const PEND_KEY = 'duelo.rankPend';
+  const pendSet = foes => { try { const u = D.Account.user; if (u && !u.guest) lsSet(PEND_KEY, JSON.stringify({ u: u.uid, t: Date.now(), foes })); } catch (e) { /* nada */ } };
+  const pendClear = () => { try { localStorage.removeItem(PEND_KEY); } catch (e) { /* nada */ } };
+  /** Al abrir la sesión: si la partida anterior se quedó sin terminar por culpa de este jugador, cuenta como derrota (una sola vez). */
+  function pendSettle() {
+    try {
+      const raw = lsGet(PEND_KEY); if (!raw) return;
+      const p = JSON.parse(raw), u = D.Account.user;
+      if (!p || !u || u.guest || p.u !== u.uid) return;
+      pendClear();
+      if (Date.now() - p.t > 24 * 3600 * 1000 || !D.Rank.state()) return;
+      D.Rank.apply({ S: 0, foes: Array.isArray(p.foes) ? p.foes : [] });
+    } catch (e) { /* nada */ }
+  }
+
   // ---------------- la partida ----------------
   function game(match, opts) {
     opts = opts || {};
@@ -1022,9 +1056,27 @@
     // ---- ranking: sólo partidas online con al menos 2 personas y cuenta con nombre ----
     let rankDone = false, rankRes = null;
     const rankable = () => match.kind !== 'ia' && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
+    let armed = false;
+    /** Marca la partida como «en curso» para el ranking: si este jugador la abandona sin avisar, se le cuenta como derrota al volver. */
+    function rankArm() {
+      if (armed || rankDone || !v || v.winner !== null || !rankable()) return;
+      armed = true;
+      const R = D.Rank, mine = (R.state() || {}).pts || 0;
+      pendSet(v.players.filter(p => p.seat !== v.seat && v.team[p.seat] !== v.team[v.seat]).map(p => (match.hum[p.seat] && match.rk && match.rk[p.seat]) ? match.rk[p.seat] : mine));
+    }
+    /** Eliminado en un todos contra todos (por rendirse, por morir o por desconexión): su puesto ya está decidido, no hace falta esperar al final. */
+    function rankOut() {
+      if (rankDone || !v || !rankable() || v.winner !== null || v.me.alive || v.mode === 'teams' || v.n <= 2) return null;
+      const i = v.rank.indexOf(v.seat); if (i < 0) return null;
+      rankDone = true; pendClear();
+      const R = D.Rank, mine = (R.state() || {}).pts || 0, rk = q => (match.hum[q] && match.rk && match.rk[q]) ? match.rk[q] : mine;
+      return (rankRes = R.apply({ S: R.scoreOfPlace(v.n - i, v.n), foes: v.players.filter(p => p.seat !== v.seat).map(p => rk(p.seat)) }));
+    }
     function rankFinish(leaving) {
       if (rankDone || !v || !rankable()) return null;
-      rankDone = true;
+      rankDone = true; pendClear();
+      // el anfitrión se quedó sin internet y «ganó» porque los demás se desconectaron: no cuenta
+      if (!leaving && v.reason && /se desconect/.test(v.reason) && iWasOffline()) return null;
       const R = D.Rank, mine = (R.state() || {}).pts || 0, rk = q => (match.hum[q] && match.rk && match.rk[q]) ? match.rk[q] : mine;
       const draw = v.winner === 'draw' || v.winner === -1, won = v.winner === v.team[v.seat];
       let S, foes;
@@ -1033,21 +1085,22 @@
       else { S = draw ? .5 : won ? 1 : 0; foes = v.players.filter(p => v.team[p.seat] !== v.team[v.seat]).map(p => rk(p.seat)); }
       return (rankRes = R.apply({ S, foes }));
     }
-    cur.leave = () => { if (v && v.winner === null && v.me.alive) rankFinish(true); };
+    cur.leave = () => { if (v && v.winner === null) { if (v.me.alive) rankFinish(true); else rankOut(); } };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
-    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
+    const prepare = () => { if (prepared) return; prepared = true; cur.started = true; lobbyBack = null; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
     if (!opts.wait) prepare();
     if (match.kind === 'ia') tutorial(cur);
     // Contador de turno: 45 s de inactividad (cada acción lo reinicia). Aquí sólo se ve: cuenta atrás, color y un sonido; quien pasa el turno es el anfitrión.
     const TURN_SECS = 45;
-    let tt = { key: '', t0: 0, beeped: false }, ttInt = null;
+    let tt = { key: '', t0: 0, beeped: false, tk: -1 }, ttInt = null;
     function ttTick() {
       const el = document.querySelector('.turntimer');
       if (!el) { clearInterval(ttInt); ttInt = null; return; }
       const left = Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000));
       el.textContent = left > 0 ? '⏱ ' + left + ' s' : '⏱ ¡Tiempo!';
       el.classList.toggle('low', left <= 10 && left > 0); el.classList.toggle('out', left === 0);
+      if (left > 0 && left <= 10 && left !== tt.tk) { tt.tk = left; if (v && v.winner === null && v.current === v.seat) S.tick(left <= 3); }      // cuenta atrás: un pitido por segundo en los últimos 10 s (a quien le toca)
       if (left === 0 && !tt.beeped) { tt.beeped = true; if (v && v.current === v.seat) S.play('error'); }
     }
     // cinemática de entrada: las casillas se materializan en espiral (js/duelo/intro.js); sólo al empezar la partida
@@ -1082,10 +1135,13 @@
     /** Nombre de cada poder (los de la tanda 2 no coinciden con el id de la habilidad). */
     const PWN = { conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', marca: 'Marca de Cazador', desp: 'Despertar del Poder Oculto',
       kaioken: 'Kaio-ken', kaioken6: 'Kaio-ken', genki: 'Genkidama', teach: 'Maestro de las Artes', dominio: 'Ataúd de la Montaña de Hierro', llama: 'Llama Infernal',
-      kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero' };
+      kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
+      eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
+      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
-      llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva' };
+      llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
+      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Venom (Simbiosis)', kurama: 'Chakra de Kurama' };
     /** Técnicas de los Seis Ojos (Guerrero del Infinito): efecto real de cada una, según doPower de engine.js. */
     const SIX_INFO = {
       rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
@@ -1123,6 +1179,14 @@
         o.push('Yuta en el campo: ' + (r.yuta ? 'sí' : 'no') + ' · Anillo de la Promesa equipado: ' + (r.ring ? 'sí' : 'no'));
         if (r.imm) o.push('Inmune a equipamientos, magias y trampas');
       }
+      if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
+      if (s.sym) o.push('Venom equipado (Simbiosis): da +1400 ATK / +1300 DEF y se destruye en su lugar si lo van a destruir');
+      if (s.tony) o.push('Materiales: ' + s.tony.mat + ' · armaduras construidas: ' + s.tony.arm + (s.tony.can ? '' : ' · ya usó la armadura este turno'));
+      if (s.toge) o.push('Órdenes: ¡Quieto! ' + (s.toge.tq ? 'usada' : 'lista') + ' · ¡Debilítate! ' + (s.toge.td ? 'usada' : 'lista') + ' · ¡Muere! ' + (s.toge.tm ? 'usada' : 'lista') + (s.toge.round ? ' · ya dio una orden este turno' : ''));
+      if (s.pn) o.push('Puños endurecidos: ' + s.pn.n + '/' + s.pn.max + ' usos' + (s.pn.turn ? ' · ya usados este turno' : ''));
+      if (s.seed) o.push('Semilla del Hermitaño: ' + s.seed.n + '/' + s.seed.max + ' este turno' + (s.seed.last ? ' · última: ' + s.seed.last.to + ' (' + s.seed.last.what.join(', ') + ')' : ''));
+      if (s.hira) o.push('Hiraishin: puede lanzar ' + s.hira + ' ataque(s) extra a casillas marcadas');
+      if (s.price) o.push('Precio del poder: perdió la mitad de su ATK/DEF base y sus habilidades mientras lleve la gema robada');
       if (s.muted) o.push('Habilidades silenciadas por el dominio');
       if (s.karma) o.push('Karma: muere en ' + s.karma.left + ' turno(s)');
       if (s.gem) o.push('Mente controlada (' + s.gem.left + ' uso(s) de la Gema)');
@@ -1143,12 +1207,13 @@
     const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
+      regenx: 'Pasiva.', transtitan: 'Una vez por cada invocación lograda (paga 500 PV).', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
     function stolenBox(s) {
-      if (!s.stealCap && !(s.extInfo && s.extInfo.length)) return null;
-      const steal = !!s.stealCap, info = s.extInfo || [];
-      const title = (steal ? 'Habilidades robadas' : 'Habilidades absorbidas') + (steal ? ` (${info.length}/${s.stealCap})` : '');
+      if (!s.stealCap && !s.stealAll && !(s.extInfo && s.extInfo.length)) return null;
+      const steal = !!s.stealCap || !!s.stealAll, info = s.extInfo || [], venom = s.c && s.c.id === 'c_venom';
+      const title = venom ? `Habilidades aprendidas (${info.length})` : (steal ? 'Habilidades robadas' : 'Habilidades absorbidas') + (s.stealCap ? ` (${info.length}/${s.stealCap})` : s.stealAll ? ` (${info.length})` : '');
       const items = info.map(x => {
         const ab = C.AB && C.AB[x.id] || [x.id, ''];
         const stTxt = x.state === 'used' ? 'Ya usada' : x.state === 'ready' ? 'Disponible' : 'Pasiva';
@@ -1158,30 +1223,52 @@
         return h('div', { class: 'stitem' }, row, det);
       });
       return h('div', { class: 'stbox' }, h('b', null, title),
-        items.length ? items : h('div', { class: 'sub' }, steal ? 'Aún no ha robado ninguna.' : 'Ninguna.'));
+        items.length ? items : h('div', { class: 'sub' }, venom ? 'Aún no ha aprendido ninguna.' : steal ? 'Aún no ha robado ninguna.' : 'Ninguna.'));
+    }
+    /** Tooltip inmediato de los iconos de estado: sigue al icono y no tapa nada de la ficha. */
+    if (!window.__duelo_badgeTip) {
+      window.__duelo_badgeTip = true;
+      let tip = null;
+      const hide = () => { if (tip) { tip.remove(); tip = null; } };
+      document.addEventListener('mouseover', e => {
+        const i = e.target.closest && e.target.closest('.badges i[data-tip]');
+        if (!i) { hide(); return; }
+        hide();
+        tip = h('div', { class: 'badgetip' }, i.dataset.tip);
+        document.body.append(tip);
+        const r = i.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+        tip.style.left = Math.max(6, Math.min(innerWidth - tr.width - 6, r.left + r.width / 2 - tr.width / 2)) + 'px';
+        tip.style.top = (r.top - tr.height - 8 < 6 ? r.bottom + 8 : r.top - tr.height - 8) + 'px';
+      });
+      document.addEventListener('scroll', hide, true);
     }
     function badgesEl(s) {
-      const b = [];
-      if (s.sh) b.push((s.sh.kind === 'shen' ? '🛡️' : s.sh.kind === 'susano' ? '👹' : '🛡️') + s.sh.cur);
-      else if (s.shield != null) b.push('🛡️' + s.shield);
-      if (s.six) b.push('👁️' + s.six);
-      if (s.fused) b.push('☯️' + s.fused.left);
-      if (s.av) b.push('🧬');
-      if (s.sealedAb && s.sealedAb.length) b.push('🕸️');
-      if (s.promesa) b.push('⛓️');
-      if (s.owner != null) b.push('🎭');
-      if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0))) b.push('⬆️');
-      if (s.link && s.link.length) b.push('🔗');
-      if ((s.ext && s.ext.length) || s.absorbed) b.push('🌀');
-      if (s.fury) b.push('🔥');
-      if (s.domain) b.push('👹');
-      if (s.yuta && s.yuta.dom) b.push('💞');
-      if (s.rika) b.push(s.rika.happy ? '😊' : '😡');
-      if (s.muted) b.push('🔇');
-      if (s.kills) b.push('☠️' + s.kills);
-      if (s.karma) b.push('☯️' + s.karma.left);
-      if (s.gem) b.push('🔮');
-      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', null, x))) : null;
+      const b = [];      // [icono, explicación al pasar el ratón]
+      if (s.sh) b.push([(s.sh.kind === 'shen' ? '🛡️' : s.sh.kind === 'susano' ? '👹' : '🛡️') + s.sh.cur, 'Escudo: ' + s.sh.cur + '/' + s.sh.max]);
+      else if (s.shield != null) b.push(['🛡️' + s.shield, 'Escudo: ' + s.shield]);
+      if (s.six) b.push(['👁️' + s.six, 'Seis Ojos: intocable ' + s.six + ' turno(s)']);
+      if (s.fused) b.push(['☯️' + s.fused.left, 'Fusionado (' + s.fused.left + ' turno(s))']);
+      if (s.av) b.push(['🧬', 'Anti-Venom acoplado']);
+      if (s.sealedAb && s.sealedAb.length) b.push(['🕸️', 'Habilidades selladas: ' + s.sealedAb.map(abn).join(', ')]);
+      if (s.promesa) b.push(['⛓️', 'Promesa de Poder: no puede atacar y cambiará de bando']);
+      if (s.owner != null) b.push(['🎭', 'Corrompido']);
+      if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0))) b.push(['⬆️', 'Bonificaciones: ' + s.mods.filter(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0)).map(m => MODN[m.k] || m.k).join(', ')]);
+      if (s.link && s.link.length) b.push(['🔗', 'Vinculado: ' + s.link.map(nameId).join(', ')]);
+      if ((s.ext && s.ext.length) || s.absorbed) b.push(['🌀', 'Habilidades extra: ' + (s.ext || []).map(abn).join(', ')]);
+      if (s.fury) b.push(['🔥', 'Furia de Esparta activa']);
+      if (s.domain) b.push(['👹', 'Su dominio cubre el campo']);
+      if (s.yuta && s.yuta.dom) b.push(['💞', 'Dominio de Yuta activo']);
+      if (s.rika) b.push([s.rika.happy ? '😊' : '😡', s.rika.happy ? 'Rika contenta' : 'Maldición Incontrolable']);
+      if (s.muted) b.push(['🔇', 'Habilidades silenciadas por el dominio']);
+      if (s.kills) b.push(['☠️' + s.kills, 'Bajas: ' + s.kills]);
+      if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
+      if (s.gem) b.push(['🔮', 'Mente controlada']);
+      if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);
+      if (s.sym) b.push(['🕷️', 'Venom equipado (Simbiosis)']);
+      if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
+      if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
+      if (s.price) b.push(['💎', 'Precio del poder: perdió la mitad de su poder y sus habilidades']);
+      return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', { 'data-tip': x[1] }, x[0]))) : null;
     }
     function act(a) {
       if (!v || v.actor !== v.seat) { S.play('error'); return; }
@@ -1306,6 +1393,12 @@
           startTribute(i, 'couple', opts);
         }, 'Elige el personaje al que se acopla') });
       }
+      const at = mine.filter(a => a.t === 'attach');
+      if (at.length) for (const mode of [...new Set(at.map(a => a.mode))]) {
+        const os = at.filter(a => a.mode === mode);
+        const lb = { sword: 'Equipar como espada (+600 ATK)', shield: 'Equipar como escudo (+500 DEF)', venom: 'Simbiosis: equipar a un aliado (+1400 ATK / +1300 DEF)' }[mode];
+        acts.push({ label: lb + '…', run: () => pickTargets(os.map(a => ({ seat: v.seat, area: 'mz', z: a.host })), t => act(os.find(a => a.host === t.z)), 'Elige el aliado que lo lleva'), cls: 'gold' });
+      }
       const spc = mine.find(a => a.t === 'special');
       if (spc) acts.push({ label: 'Invocar especialmente (ataque)', run: () => act(spc) });
       const sp = mine.filter(a => a.t === 'activate');
@@ -1320,11 +1413,13 @@
       const s = v.me.mz[z], d = C.get(s.c.id), acts = [];
       let hint = null;
       if (myTurn() && !v.pending) {
-        const all = L().filter(a => a.t === 'attack' && a.zone === z);
+        const all = L().filter(a => a.t === 'attack' && a.zone === z && !a.hira);
+        const hira = L().filter(a => a.t === 'attack' && a.zone === z && a.hira);
         const vsOf = a => (a.vs != null ? a.vs : v.opp.seat);
         for (const a of all.filter(a => a.target === 'direct')) acts.push({ label: 'Atacar directamente' + (multi() ? ' a ' + shortOf(vsOf(a)) : ''), run: () => act(a) });
         const onZone = all.filter(a => a.target !== 'direct');
         if (onZone.length) acts.push({ label: 'Atacar…', run: () => pickTargets(onZone.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(onZone.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Elige a quién atacar') });
+        if (hira.length) acts.push({ label: 'Hiraishin: ataque extra…', desc: 'Contra una casilla marcada ocupada por un rival. Nadie puede responder a este ataque. Uno por cada ataque normal.', run: () => pickTargets(hira.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(hira.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Hiraishin: elige la casilla marcada') });
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });
       }
@@ -1336,6 +1431,27 @@
         for (const k of Object.keys(groups)) {
           const g = groups[k];
           if (SIX_INFO[k]) continue;      // Rojo, Azul y Púrpura: más abajo, con su descripción
+          if (k === 'tq' || k === 'td' || k === 'tm') continue;      // las órdenes de Toge: más abajo, con su descripción
+          if (k === 'eren') acts.push({ label: 'Eren se muerde la mano (−500 PV)', desc: 'Invoca al Titán de Ataque desde tu mano a cambio de 500 PV. Eren se queda en el campo.', run: () => act(g[0]) });
+          else if (k === 'punos') acts.push({ label: 'Endurecer los puños (+700 ATK)', desc: 'Su próximo ataque gana +700 ATK. Una vez por turno propio, 2 veces por invocación.', run: () => act(g[0]) });
+          else if (k === 'kurama') acts.push({ label: 'Chakra de Kurama', desc: '+600 ATK y DEF durante 2 turnos propios completos.', run: () => act(g[0]) });
+          else if (k === 'armadura') acts.push({ label: s.tony && s.tony.arm ? 'Mejorar la armadura (+300 ATK/DEF)' : 'Construir la armadura (+1000 ATK/DEF)', desc: 'Gasta 1 material (tienes ' + (s.tony ? s.tony.mat : 0) + '). Una acción por turno.', run: () => act(g[0]) });
+          else if (k === 'jkmove') {
+            for (const mode of ['sword', 'shield']) {
+              const gm = g.filter(a => a.mode === mode);
+              if (gm.length) acts.push({ label: 'Jake: pasar a ' + (mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)') + '…', run: () => choose(gm, 'mz', 'Elige el aliado que lo lleva') });
+            }
+          }
+          else if (k === 'simb') acts.push({ label: 'Simbiosis: equiparse a un aliado…', desc: '+1400 ATK y +1300 DEF para el aliado; Venom deja de ocupar zona.', run: () => choose(g, 'mz', 'Elige el aliado que será su huésped') });
+          else if (k === 'robo') {
+            const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
+            acts.push({ label: 'Robo de habilidades…', desc: 'Copia para siempre una habilidad de un personaje rival. Si no hay nada que robar, no gasta el uso.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {
+              const opts = g.filter(a => a.target.vs === t.seat && a.target.z === t.z);
+              modal(h('div', { class: 'box' }, h('h2', null, '🗝️ ¿Qué habilidad copias?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
+            }, 'Elige al personaje rival') });
+          }
+          else if (k === 'semilla') acts.push({ label: 'Semilla del Hermitaño…', desc: 'Quita los efectos negativos de un aliado y le devuelve su poder.', run: () => choose(g, 'mz', 'Elige al aliado que curas') });
+          else
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }
           else if (k === 'bite') acts.push({ label: abn(k) + ' (−500 PV)', run: () => act(g[0]) });
           else if (k === 'kform') { for (const a of g) acts.push({ label: 'Transformarse en ' + (a.form === 'c_kayn_rhaast' ? 'Rhaast' : 'Asesino Sombra'), run: () => act(a) }); }
@@ -1358,6 +1474,23 @@
         if (s.used.kk6) acts.push({ label: 'Kaio-ken (usada)', off: true, cls: 'ghost' });
         if (s.used.gen) acts.push({ label: 'Genkidama (usada)', off: true, cls: 'ghost' });
         if (s.used.ydom) acts.push({ label: 'Amor Mutuo y Verdadero (usada)', desc: 'Una vez por invocación de Yuta: vuelve a estar disponible si Yuta sale del campo y se invoca de nuevo.', off: true, cls: 'ghost' });
+      }
+      if (s.toge) {        // Toge: las tres órdenes, cada una con su descripción y su estado
+        const can = myTurn() && !v.pending, TG = {
+          tq: ['¡Quieto!', 'Cambia la posición de un personaje rival, o lo voltea si está boca abajo. (Al ser atacados Toge o un aliado, también puede cambiar la posición del atacante y cancelar el ataque.)', s.toge.tq, 'mz'],
+          td: ['¡Debilítate!', 'Un personaje rival pierde 500 ATK y 500 DEF.', s.toge.td, 'mz'],
+          tm: ['¡Muere!', 'Destruye a un personaje rival de 4★ o menos.', s.toge.tm, 'mz']
+        };
+        acts.push({ note: 'Discurso Maldito: una sola orden por turno; cada orden una vez por invocación.' });
+        for (const k of ['tq', 'td', 'tm']) {
+          const g = groups[k], [nm, txt, used] = TG[k];
+          let why = null;
+          if (used) why = 'Ya usada en esta invocación.';
+          else if (s.toge.round) why = 'Ya diste una orden este turno.';
+          else if (!can) why = 'Sólo en tu turno.';
+          else if (!g) why = 'No hay objetivos válidos ahora.';
+          acts.push({ label: nm + (g && !why ? '…' : ''), desc: txt + (why ? ' — ' + why : ''), run: g ? () => choose(g, 'mz', nm + ': elige el personaje rival') : null, off: !!why, cls: why ? 'ghost' : 'gold' });
+        }
       }
       if (s.six && s.sixU) {        // Seis Ojos: las tres técnicas, con lo que hace cada una antes de lanzarla
         const u = s.sixU, can = myTurn() && !v.pending;
@@ -1443,19 +1576,47 @@
     // ----- ventanas de decisión (trampas, elegir carta, descarte) -----
     function trgText(pd) {
       const who = multi() && pd.by != null ? nameOf(pd.by) : 'El rival';
-      return { attack: `${who} declara un ataque.`, spell: `${who} activa una magia.`, summon: `${who} invoca un monstruo.` }[pd.trigger] || '';
+      if (pd.trigger === 'reduce' && pd.info && pd.info.txt) return pd.info.txt;
+      return { attack: `${who} declara un ataque.`, spell: `${who} activa una magia.`, summon: `${who} invoca un monstruo.`, power: `${who} va a usar una habilidad de personaje.`, trap: `${who} va a activar una trampa.`,
+        destroy: `Un efecto de ${who.toLowerCase()} va a destruir a uno de tus personajes.`, reduce: `Un efecto de ${who.toLowerCase()} va a reducir el ATK o la DEF de uno de tus personajes.` }[pd.trigger] || '';
     }
     function pendingUI() {
       const pd = v.pending;
       if (!pd || pd.player !== v.seat || v.winner !== null) { if (modalEl && modalEl.dataset.pend) closeModal(); return; }
       if (pd.k === 'respond') {
         const box = h('div', { class: 'box' }, h('h2', null, '¿Activar una trampa?'), h('p', { class: 'sub' }, trgText(pd)),
-          h('div', { class: 'acts' }, pd.cands.map(z => { const d = C.get(v.me.st[z].c.id); return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text)); })),
+          h('div', { class: 'acts' }, pd.cands.map(z => {
+            const d = C.get(v.me.st[z].c.id), os = L().filter(a => a.t === 'respond' && a.activate && a.zone === z && a.opt);
+            if (!os.length) return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text));
+            // Gema de la Realidad: hay que elegir a quién se redirige el ataque o a quién se destruye en su lugar
+            const lb = pd.trigger === 'attack' ? 'Redirigir el ataque a' : 'Destruir en su lugar a';
+            return h('div', { class: 'optbox' }, h('b', null, `${d.icon} ${d.name}`), h('div', { style: 'font-size:12px;margin:2px 0 6px' }, d.text),
+              os.map(a => { const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
+          })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'steal') {
         const box = h('div', { class: 'box' }, h('h2', null, 'Robar habilidad'), h('p', { class: 'sub' }, `Mataste a ${pd.from || 'un personaje'}. ¿Te quedas con una de sus habilidades?`),
           h('div', { class: 'acts' }, L().filter(a => a.pick != null).map(a => btn(abn(a.pick), () => act(a), 'gold')), btn('No robar', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'vlearn') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🕷️ Venom: absorción de habilidades'), h('p', { class: 'sub' }, `${pd.from || 'Un enemigo'} fue destruido. ¿Venom aprende UNA de sus habilidades para siempre?`),
+          h('div', { class: 'acts' }, (pd.opts || []).map(id => h('button', { class: 'btn gold', onclick: () => act({ t: 'ability', pick: id }) }, abn(id), h('div', { style: 'font-size:12px;font-weight:400' }, ((C.AB[id] || [])[1] || '')))), btn('No aprender', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'glove' && pd.stage === 'ask') {
+        const i = pd.info || {};
+        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y equiparla a ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`),
+          h('p', { class: 'sub' }, i.pen || ''),
+          h('div', { class: 'acts' }, btn('Robar la gema', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'glove') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🧤 ' + (pd.nm || 'Gema robada') + ': elige el objetivo'),
+          h('div', { class: 'acts' }, L().filter(a => a.z != null).map(a => { const m = v.players[a.vs] && v.players[a.vs].mz[a.z]; return btn(`${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'toge') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🗣️ ¡Quieto!'), h('p', { class: 'sub' }, `${pd.nm || 'Un personaje rival'} ataca. Toge Inumaki puede ordenarle ¡Quieto!: pasa a defensa y su ataque se cancela (una vez por invocación, y sólo una orden por turno).`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_toge'))),
+          h('div', { class: 'acts' }, btn('¡Quieto!', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'karma') {
         const box = h('div', { class: 'box' }, h('h2', null, '☯️ Karma'), h('p', { class: 'sub' }, 'Tu personaje murió. Elige al personaje enemigo que arrastrará: morirá en 3 turnos y el tuyo revivirá.'),
@@ -1572,6 +1733,7 @@
       } else if (area === 'mz' && v.players[seat].shadow && v.players[seat].shadow[z] >= 0) {
         el.classList.add('shadowz'); el.append(h('span', { class: 'shd' }, '↔ ocupada por un gigante'));
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
+      if (area === 'mz' && (v.marks || []).some(k => k.vs === seat && k.z === z)) el.append(h('span', { class: 'hmark', title: 'Marca de Hiraishin' }, '⚡'));
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
       if (cur && s && area === 'mz' && s.c && !s.down && (asCard || Holo.src(s.c.id, art))) el.append(...holoEls(s, key, cur, landing, chosen, art, asCard));
       if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas y sacudida una sola vez por golpe
@@ -1884,6 +2046,7 @@
         else if (/boca abajo/.test(t)) snd = 'set';
         else if (/^voltea/.test(t)) snd = 'flip';
         else if (/cambia a/.test(t)) snd = 'pos';
+        else if (/^El Guantelete del Infinito roba /.test(t)) { snd = 'spell'; const d = byName['Guantelete del Infinito']; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.steal); } }
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) { cutAdd({ k: 'card', d, trap: true, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
         else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
         else if (/^Lara Tybur muere y se invoca especialmente a /.test(t)) { snd = 'epic'; needShake = true; const d = byName['Lara Tybur']; if (d) { fileSfx(d.sfx && d.sfx.transform); cin(d, '¡TRANSFORMACIÓN! → Titán Martillo'); } }
@@ -2077,7 +2240,7 @@
       const turnTxt = `Turno ${v.round != null ? v.round : v.turn} · ${multi() && v.current !== v.seat ? shortOf(v.current) : whose} · ${v.phase === 'battle' ? 'Combate' : 'Principal'}`;
       const logTxt = lastLog ? fmtLog(lastLog) : '';
       const tkey = v.turn + ':' + v.current + ':' + (v.seq || 0);   // cada acción reinicia la cuenta
-      if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false };
+      if (tt.key !== tkey) tt = { key: tkey, t0: Date.now(), beeped: false, tk: -1 };
       const timer = v.winner === null && v.players[v.current] && v.players[v.current].alive ? h('div', { class: 'turntimer' }, '⏱ ' + Math.max(0, TURN_SECS - Math.floor((Date.now() - tt.t0) / 1000)) + ' s') : null;
       if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
@@ -2085,7 +2248,7 @@
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), (() => { const b = h('button', { class: 'ib feedb', title: 'Mostrar u ocultar los mensajes de acciones', 'aria-label': 'Mensajes de acciones' }, '💬'); const sync = () => { b.classList.toggle('off', !feedOn()); b.setAttribute('aria-pressed', feedOn() ? 'true' : 'false'); }; b.onclick = () => { feedSet(!feedOn()); sync(); }; sync(); return b; })(), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
-          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
+          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo y cuenta como derrota.' : '¿Rendirte? Cuenta como derrota.')) { if (v && v.winner === null && v.me.alive) rankFinish(true); match.resign(); } }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
@@ -2139,6 +2302,7 @@
       v = nv; newView = true;
       if (sel && !myTurn()) sel = null;
       prepare();
+      rankArm(); rankOut();
       render();
     }
     // mientras suena la cinemática de entrada las jugadas se guardan (sólo la última vista) y se muestran al terminar
@@ -2147,7 +2311,12 @@
     if (D.Rig) { D.Rig.load(); D.Rig.onReady(() => { if (current === cur && v && !introRun) { newView = true; render(); } }); }
     match.onView(nv => { if (introRun) { introQ = nv; return; } handleView(nv); });
     match.onStatus(s => {
-      if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
+      if (s.k === 'closed' && s.idx == null && match.kind === 'guest' && v && v.winner === null && !rankDone) {
+        // se cortó la conexión con el anfitrión: si el que se quedó sin internet soy yo, es una derrota; si es él, la partida no cuenta
+        const me = iWasOffline();
+        if (me) rankFinish(true); else { rankDone = true; pendClear(); }
+        if (!modalEl || !modalEl.dataset.lost) { modal(h('div', { class: 'box' }, h('h2', null, 'Se perdió la conexión'), h('p', { class: 'sub' }, me ? 'Te quedaste sin internet: la partida cuenta como derrota.' : 'Se cortó la conexión con el anfitrión: la partida no cuenta para el ranking.'), btn('Volver al menú', () => { closeModal(); menu(); }, 'gold')), false); if (modalEl) modalEl.dataset.lost = 1; }
+      }
       if (s.k === 'rejected' && !v && !opts.wait) { alert('No se pudo empezar: ' + s.why); menu(); }
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
@@ -2170,6 +2339,7 @@
     mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Cargando tus mazos…')));
     D.Online.reset();
     await openStore(D.Account.user);
+    pendSettle();
     menu();
     if (D.FriendsUI) D.FriendsUI.login().catch(e => console.warn('[Amigos]', e));
     if (!D.Account.user.guest && D.Account.isNameAccount() && !D.Account.hasGoogle()) offerRecovery();
