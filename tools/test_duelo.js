@@ -286,7 +286,7 @@ section('tablero 3+3 y catálogo');
   ok(E.ZONES === 3, 'ZONES = 3');
   ok(typeof Cards.canPlay === 'function', 'Cards.canPlay existe');
   // el catálogo de producción (sin el legado de pruebas) sólo tiene las cartas propias
-  ok(Cards.custom.length === 53 && Cards.custom.filter(c => !c.hidden).length === 51 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 53 (51 visibles + 2 formas de Kayn)');
+  ok(Cards.custom.length === 69 && Cards.custom.filter(c => !c.hidden).length === 66 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 69 (66 visibles + 2 formas de Kayn + Armadura de Tony)');
   const v = E.view(st, 0);
   ok(typeof v.opp.handCount === 'number' && v.opp.handCount === 5, 'la vista dice cuántas cartas tiene el rival en la mano');
 }
@@ -1048,6 +1048,7 @@ require('./test_cartas.js')({ E, Cards, AI, ok, eq, section, act, find, give, mu
 require('./test_tanda2.js')({ E, Cards, AI, ok, eq, section, act, find, give, game });
 require('./test_tanda3.js')({ E, Cards, AI, ok, eq, section, act, find, give, game });
 require('./test_correcciones.js')({ E, Cards, AI, ok, eq, section, act, find, give, game });
+require('./test_tanda3b.js')({ E, Cards, AI, ok, eq, section, act, find, give, game });
 require('./test_tienda.js')({ ok, eq, section });
 require('./test_rank.js')({ ok, eq, section });
 require('./test_temporada.js')({ ok, eq, section });

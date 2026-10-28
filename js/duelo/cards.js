@@ -17,7 +17,8 @@
     rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada',
     popeye: 'Popeye', minecraft: 'Minecraft', prueba: 'Prueba',
     dbz: 'Dragon Ball Z', gow: 'God of War', aot: 'Attack on Titan', jjk: 'Jujutsu Kaisen', mk: 'Mortal Kombat', zodiaco: 'Caballero del Zodiaco',
-    marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos'
+    marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos',
+    adventuretime: 'Hora de Aventura', naruto: 'Naruto'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
@@ -25,7 +26,8 @@
     rock: '#b6a136', ghost: '#735797', dragon: '#6f35fc', dark: '#705746', steel: '#b7b7ce', fairy: '#d685ad',
     popeye: '#2e5aa8', minecraft: '#4a9a3a', prueba: '#8a8fa8',
     dbz: '#e8761a', gow: '#a3262a', aot: '#6b5a3c', jjk: '#6a3fb5', mk: '#b8312f', zodiaco: '#d4a72c',
-    marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b'
+    marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b',
+    adventuretime: '#f5a623', naruto: '#f28c1e'
   };
 
   // ---------------- catálogo ----------------
@@ -86,7 +88,22 @@
     rikaint: ['Rika Orimoto: Intercepción Protectora', 'Cuando un aliado va a morir por un ataque, una magia, una trampa o una habilidad, Rika intercepta el efecto y el aliado se salva. 2 usos por invocación, 1 por turno.'],
     rikamal: ['Maldición Incontrolable', 'Si no hay un Yuta Okkotsu en el campo ni un Anillo de la Promesa equipado, Rika debe atacar cada turno a un personaje del campo (aliado o enemigo) y sólo ataca directo si no hay ninguno.'],
     rikaprot: ['Protección Absoluta', 'No puede recibir equipamientos ni ser afectada por magias o trampas.'],
-    rikavinc: ['El Vínculo con Yuta', 'Con Yuta Okkotsu en el campo, o un Anillo de la Promesa equipado a cualquier personaje, Rika es feliz: +700 ATK y DEF y ataca cuando quiera (+1200 si el portador del anillo es Yuta). No se acumulan.']
+    rikavinc: ['El Vínculo con Yuta', 'Con Yuta Okkotsu en el campo, o un Anillo de la Promesa equipado a cualquier personaje, Rika es feliz: +700 ATK y DEF y ataca cuando quiera (+1200 si el portador del anillo es Yuta). No se acumulan.'],
+    // ---------------- tanda 3 (27-10-2026) ----------------
+    regenx: ['Regeneración extrema', 'Inmune a la destrucción por combate y por habilidades de personaje. Las magias y trampas que lo destruyen sí le afectan; sigue pudiendo ser elegido como objetivo y perder ATK/DEF.'],
+    transtitan: ['Transformación en Titán de Ataque', 'Con Titán de Ataque en tu mano y 2 zonas contiguas libres, paga 500 PV: lo invoca especialmente sin tributos. Eren se queda en el campo. Los 500 PV se pagan una vez por cada invocación lograda.'],
+    punos: ['Endurecimiento de los puños', 'Una vez por turno propio, hasta 2 veces por invocación: su próximo ataque gana +700 ATK (sólo para ese ataque; después se pierde).'],
+    resis: ['Resistencia titánica', '2 vidas: cada vez que fuera a morir (por una magia, trampa, habilidad o un combate) gasta una vida y sobrevive. Si lo atacan con más ATK, sobrevive y su dueño pierde la diferencia de ATK.'],
+    toge: ['Discurso Maldito', 'Tres órdenes, cada una UNA vez por invocación y como máximo una orden por turno: ¡Quieto! (cambia la posición de un personaje rival o voltea uno boca abajo; también puede responder a un ataque contra Toge o un aliado: cambia la posición del atacante y cancela el ataque), ¡Debilítate! (−500 ATK y −500 DEF a un rival) y ¡Muere! (destruye a un personaje rival de 4★ o menos).'],
+    semilla: ['Semilla del Hermitaño', 'Una vez por turno propio, sobre un aliado: quita sus efectos negativos (reducciones de ATK/DEF, habilidades selladas, Promesa de Poder y cartas rivales dañinas como Karma o la Gema de la Mente) y le devuelve el poder perdido, sin pasar de su valor base.'],
+    tonyarm: ['Armadura de Iron Man', 'Cada turno propio completo en el campo reúne materiales. Con el primero construye la primera armadura (+1000 ATK y DEF); con cada turno completo posterior puede mejorarla (+300 ATK y DEF cada vez, sin límite). Una acción por turno.'],
+    jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
+    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da +1400 ATK y +1300 DEF y deja de ocupar su zona. Es opcional: también puede invocarse y combatir con normalidad.'],
+    hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
+    absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
+    sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
+    kurama: ['Chakra de Kurama', '+600 ATK y +600 DEF durante 2 turnos propios completos. No se puede reactivar mientras dure.'],
+    hiraishin: ['Hiraishin — Marca del Dios del Trueno Volador', 'Cada ataque normal contra un personaje deja una marca en esa casilla (se queda aunque el personaje se vaya). Por cada ataque normal puedes lanzar UN ataque Hiraishin extra contra una casilla marcada ocupada por un rival: nadie puede responder a ese ataque.']
   };
   const CUSTOM = [
     mon({
@@ -371,6 +388,82 @@
       id: 'c_guerrero', name: 'Guerrero del Infinito', icon: '👁️', img: I('guerrero_infinito'), fx: 'guerrero', sub: 'cont', cost: 2000,
       text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable (tampoco puede ser desterrado), y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
     }),
+    // ---------------- tanda 3 (27-10-2026) ----------------
+    mon({
+      id: 'c_deadpool', name: 'Deadpool', type: 'marvel', level: 4, atk: 1100, def: 1100, img: I('deadpool'), ab: ['regenx'],
+      text: 'Regeneración extrema: no puede ser destruido en combate ni por habilidades de personaje. Las magias y trampas que lo destruyen sí le afectan, y puede ser elegido como objetivo y perder ATK o DEF.',
+      sfx: { summon: V('deadpool-summon'), attack: V('deadpool-attack') }
+    }),
+    mon({
+      id: 'c_eren', name: 'Eren Jaeger', type: 'aot', level: 3, atk: 400, def: 400, img: I('eren'), ab: ['transtitan'],
+      text: 'Transformación en Titán de Ataque: con Titán de Ataque en tu mano y 2 zonas contiguas libres, paga 500 PV para invocarlo especialmente sin tributos. Eren se queda en el campo. Los 500 PV se pagan una vez por cada invocación lograda.',
+      sfx: { transform: V('eren-transform') }
+    }),
+    mon({
+      id: 'c_titan_ataque', name: 'Titán de Ataque', type: 'aot', level: 7, atk: 2100, def: 2100, img: I('titan_ataque'), wide: true, ab: ['punos', 'resis'],
+      text: 'Ocupa 2 zonas contiguas. Se invoca con 2 tributos o, especialmente, con Eren Jaeger. Endurecimiento de los puños: su próximo ataque gana +700 ATK (una vez por turno propio, 2 veces por invocación). ' +
+        'Resistencia titánica: 2 vidas contra la muerte; si lo atacan con más ATK sobrevive y su dueño pierde la diferencia.'
+    }),
+    mon({
+      id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
+      text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
+        '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
+      sfx: { ability: V('toge-ability'), attack: V('toge-attack') }
+    }),
+    mon({
+      id: 'c_karim', name: 'Maestro Karim', type: 'dbz', level: 1, atk: 400, def: 300, img: I('karim'), ab: ['semilla'],
+      text: 'Semilla del Hermitaño: una vez por turno propio, sobre un aliado: quita sus efectos negativos (reducciones de ATK/DEF, habilidades selladas, cartas rivales dañinas) y le devuelve el poder perdido, sin pasar de su valor base.'
+    }),
+    mon({
+      id: 'c_tony', name: 'Tony Stark', type: 'marvel', level: 2, atk: 400, def: 400, img: I('tony'), ab: ['tonyarm'],
+      text: 'Armadura de Iron Man: cada turno propio completo en el campo reúne materiales. Con el primero construye la primera armadura (+1000 ATK y DEF); con cada turno completo posterior puede mejorarla (+300 ATK y DEF cada vez, sin límite). Una acción por turno.'
+    }),
+    mon({
+      id: 'c_tony_armadura', name: 'Tony Stark', type: 'marvel', level: 2, atk: 400, def: 400, img: I('tony_armadura'), ab: ['tonyarm'], hidden: true,
+      text: 'Forma de Tony Stark con la armadura de Iron Man puesta.'
+    }),
+    mon({
+      id: 'c_jake', name: 'Jake el Perro', type: 'adventuretime', level: 2, atk: 600, def: 500, img: I('jake'), ab: ['jake'],
+      text: 'Transformación en equipo: puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar y el aliado se salva.',
+      sfx: { attack: V('jake-attack') }
+    }),
+    mon({
+      id: 'c_venom', name: 'Venom', type: 'marvel', level: 4, atk: 1400, def: 1300, img: I('venom'), ab: ['symb', 'hostprot', 'absorbv'],
+      text: 'Simbiosis: una vez por turno propio puedes equiparlo a un aliado (+1400 ATK y +1300 DEF; no ocupa zona mientras tanto). Protección del huésped: si el portador fuera a ser destruido, se destruye Venom en su lugar. ' +
+        'Absorción de habilidades: cuando Venom o su portador destruye a un enemigo, Venom aprende para siempre UNA de sus habilidades.',
+      sfx: { summon: V('venom-summon'), attack: V('venom-attack') }
+    }),
+    mon({
+      id: 'c_sylas', name: 'Sylas', type: 'lol', level: 5, atk: 1600, def: 1600, img: I('sylas'), ab: ['sylas'],
+      text: 'Robo de habilidades: una vez por turno copia una habilidad (a elegir) de un personaje rival del campo y la conserva para siempre, sin límite de habilidades acumuladas. Si no hay nada que robar, no gasta el uso.',
+      sfx: { summon: V('sylas-summon'), attack: V('sylas-attack') }
+    }),
+    mon({
+      id: 'c_minato', name: 'Minato Namikaze', type: 'naruto', level: 7, atk: 1900, def: 1800, img: I('minato'), ab: ['kurama', 'hiraishin'],
+      text: 'Chakra de Kurama: +600 ATK y DEF durante 2 turnos propios completos. Hiraishin: cada ataque normal contra un personaje deja una marca en esa casilla; por cada ataque normal puedes lanzar un ataque Hiraishin extra contra una casilla marcada ocupada por un rival, y nadie puede responder a ese ataque.',
+      sfx: { attack: V('minato-attack') }
+    }),
+    spell({
+      id: 'c_guantelete', name: 'Guantelete del Infinito', icon: '🧤', img: I('guantelete'), fx: 'equip', sub: 'equip', glove: true, minStars: 4,
+      text: 'Equípalo a un aliado de 4★ o más. Cuando un rival use una carta cuyo nombre empiece por «Gema», puedes robarla como respuesta y equiparla a tu portador. Precio del poder: si el portador es de 4-5★, al usar la gema robada su ATK y DEF base se reducen a la mitad y pierde sus habilidades; de 6★ o más no sufre nada. (Las gemas-trampa no se pueden robar.)',
+      sfx: { steal: V('guantelete-use') }
+    }),
+    {
+      kind: 'trap', id: 'c_ola_fuego', name: 'Ola de Fuego', icon: '🌊', img: I('ola_fuego'), trigger: 'attack', fx: 'ola',
+      text: 'Cuando un rival declare un ataque, antes del combate: todos sus personajes pierden 500 ATK y 500 DEF.', sfx: { use: V('ola_fuego-use') }
+    },
+    {
+      kind: 'trap', id: 'c_infarto', name: 'Infarto Inesperado', icon: '💔', img: I('infarto'), trigger: 'summon', fx: 'infarto', maxLevel: 4,
+      text: 'Cuando un rival invoque un personaje de 4★ o menos puedes activarla: provocas un infarto y lo destruyes (la trampa va al cementerio). Si prefieres dejarlo vivir, no la actives y sigue puesta.', sfx: { use: V('infarto-use') }
+    },
+    {
+      kind: 'trap', id: 'c_gema_realidad', name: 'Gema de la Realidad', icon: '🔴', img: I('gema_realidad'), triggers: ['attack', 'destroy', 'reduce'], fx: 'realidad',
+      text: 'Un solo uso, con 3 efectos: (1) cuando un rival ataque a un aliado, redirige el ataque a un personaje del campo rival que elijas; (2) cuando una magia, trampa o habilidad rival vaya a destruir a un aliado, destruye en su lugar a un personaje rival que elijas; (3) cuando un efecto rival vaya a reducir el ATK o la DEF de un aliado, esa reducción se convierte en un aumento igual.'
+    },
+    {
+      kind: 'trap', id: 'c_x', name: 'X', icon: '❌', img: I('x'), triggers: ['spell', 'power', 'trap'], fx: 'xcancel',
+      text: 'Cancelación absoluta: cancela una magia, trampa o habilidad de personaje del rival antes de que se resuelva. Si cancelas una magia o trampa, la destruyes; si cancelas una habilidad, la consumes para siempre (sólo esa habilidad de esa invocación del personaje).'
+    },
     {
       kind: 'trap', id: 'c_rayo_solar', name: 'Rayo de Luz Solar', icon: '☀️', img: I('rayo_solar'), trigger: 'attack', fx: 'destroyAttacker',
       text: 'Cuando un personaje enemigo declara un ataque: destrúyelo y cancela ese ataque.', sfx: { use: V('rayo_solar-use') }
