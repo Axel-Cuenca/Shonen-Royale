@@ -1505,3 +1505,13 @@ html.fx3d .zone.tired .holo .hin.rigged { transform: none; filter: none; }
   background: linear-gradient(180deg, #fff 8%, #ffe9a8 38%, #ffb13c 72%, #ff6a1f 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 .05em .12em #000c) drop-shadow(0 0 .25em #ff9a3c88); }
 .game > canvas.ambient.alert { mix-blend-mode: normal; opacity: 1; }
 html.rm .tbanner, html.rm .game > canvas.ambient { display: none; }
+
+/* carta nueva puesta directamente en el tablero: de pie sobre su casilla (en defensa se queda tumbada), con el personaje animado saliendo del marco */
+.board3d .zone .card.m.layered.onboard:not(.def) { position: absolute; left: 50%; bottom: 8%; margin-left: -3.5em; transform-origin: 50% 100%; transform: translateZ(.4em) rotateX(-38deg) scale(1.1); transition: filter .2s; }
+.board3d .zone:hover .card.m.layered.onboard:not(.def):not(.landing) { transform: translateZ(.8em) rotateX(-38deg) scale(1.16); }
+.board3d .zone .card.m.layered.onboard { box-shadow: 0 0 .9em color-mix(in srgb, var(--tc, #888) 55%, transparent), inset 0 0 1.2em #0009; }
+.zone.opp .card.m.layered.onboard { filter: drop-shadow(0 0 .35em #f85a); } .zone.me .card.m.layered.onboard { filter: drop-shadow(0 0 .35em #4ffa); } .zone.ally .card.m.layered.onboard { filter: drop-shadow(0 0 .35em #5fe6a0aa); }
+html.fx3d .zone.atkr .card.layered, html.fx3d .zone.atkr.opp.lowrow .card.layered { animation: none !important; }
+html.fx3d .zone.tired .card.layered.onboard { filter: saturate(.55) brightness(.85); }
+.zone.struck .card.layered.onboard { animation: cfxHitCard .6s linear; }
+@keyframes cfxHitCard { 0% { translate: 0 0; } 8% { translate: -.9em 0; } 17% { translate: .8em 0; } 27% { translate: -.6em 0; } 38% { translate: .45em 0; } 52% { translate: -.28em 0; } 70% { translate: .14em 0; } 100% { translate: 0 0; } }

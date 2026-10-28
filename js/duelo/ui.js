@@ -258,9 +258,10 @@
   }
   /** Cara de carta en capas (fondo · personaje que sale del marco · panel ATK/DEF). El personaje es, por orden: animación externa
    *  verificada → malla animada (Rig, `key` = lugar fijo para que no se reinicie) → recorte estático de la ilustración. */
-  function layerCard(el, d, key) {
+  function layerCard(el, d, key, art) {
     if (!D.CardFX) return;
-    const ext = D.CardFX.animFor(d.id), cut = Holo.src(d.id, myArt(d.id)), o = { saga: d.types && d.types[0] };
+    const a = art !== undefined ? art : myArt(d.id);                    // skin de ilustración: la mía, o la del dueño de la carta en el tablero (null = original)
+    const ext = a ? null : D.CardFX.animFor(d.id), cut = Holo.src(d.id, a), o = { saga: d.types && d.types[0] };
     if (ext) { o.src = ext.u; o.px = ext.px; }
     else { const cv = D.Rig && key ? D.Rig.make(key, d.id, cut, d.level) : null; if (cv) o.canvas = cv; else if (cut) o.src = cut; }
     D.CardFX.layers(el, o);
@@ -1541,7 +1542,7 @@
       const cs = cosOf(seat);
       const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : '') + (struck || lpHit ? ' struck' : '') + (weary ? ' tired' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
-      let cur = null, landing = false, art = null;
+      let cur = null, landing = false, art = null, asCard = false;
       if (s) {
         let c;
         art = area === 'mz' && s.c && !s.down ? cosArt(cs, s.c.id) : null;      // skin de ilustración que le puso SU dueño
@@ -1552,7 +1553,9 @@
         if (skId) { el.dataset.sk = D.Shop.slug(skId); c.dataset.sk = el.dataset.sk; } else delete c.dataset.sk;
         el.append(c);
         const hsrc = area === 'mz' && s.c && !s.down ? Holo.src(s.c.id, art) : null;
-        if (hsrc) c.classList.add('holohide');
+        asCard = !!(area === 'mz' && s.c && !s.down && D.CardFX && D.CardFX.on3d());                       // la carta nueva (en capas) se pone de pie sobre la casilla
+        if (asCard) { layerCard(c, C.get(s.c.id), key, art); c.classList.add('onboard'); }
+        else if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero)) el.append(h('span', { class: 'eqm' }, s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
@@ -1568,7 +1571,7 @@
         el.classList.add('shadowz'); el.append(h('span', { class: 'shd' }, '↔ ocupada por un gigante'));
       } else if (fresh && !firstView && old) fx.push({ k: key, type: 'gone', card: old, fam: lastFam });
       if (fresh) { if (cur) zoneMem.set(key, cur); else zoneMem.delete(key); }
-      if (cur && s && area === 'mz' && s.c && !s.down && Holo.src(s.c.id, art)) el.append(...holoEls(s, key, cur, landing, chosen, art));
+      if (cur && s && area === 'mz' && s.c && !s.down && (asCard || Holo.src(s.c.id, art))) el.append(...holoEls(s, key, cur, landing, chosen, art, asCard));
       if (fresh && (struck || lpHit) && s && s.c && D.CardFX) {                       // partículas y sacudida una sola vez por golpe
         const hk = (v.seq || v.turn) + ':' + key + (struck ? 's' : 'l');
         if (!hitMem.has(hk)) { hitMem.add(hk); if (hitMem.size > 60) hitMem.delete(hitMem.values().next().value); D.CardFX.shards(el, struck ? '#ffcf5a' : '#ff6b6b'); if (D.Rig) D.Rig.hit(key); }
@@ -1586,7 +1589,7 @@
       return el;
     }
     /** Figura de pie + anillo de luz (y, al aparecer, haz de luz y onda). */
-    function holoEls(s, key, cur, landing, chosen, art) {
+    function holoEls(s, key, cur, landing, chosen, art, cardMode) {
       const d = C.get(s.c.id), now = performance.now(), hi = d.level >= 7, lo = d.level <= 4;
       const ms = hi ? 2100 : lo ? 1000 : 1500;
       if (landing) enterMem.set(key, { uid: cur.uid, t0: now, ms });
@@ -1594,6 +1597,11 @@
       const entering = !!m && m.uid === cur.uid && now - m.t0 < m.ms;
       const dl = entering ? `animation-delay:-${Math.round(now - m.t0)}ms;` : '';
       const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
+      if (cardMode) {                                                    // carta de pie: sólo la base luminosa y los efectos de llegada (el personaje va dentro de la carta)
+        const o = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` })];
+        if (entering) o.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
+        return o;
+      }
       const stat = h('div', { class: 'pl' }, s.pos === 'def' ? '🛡️ ' : '', h('b', { class: s.atk > d.atk ? 'up' : s.atk < d.atk ? 'dn' : '' }, String(s.atk)), ' / ', h('b', { class: s.def > d.def ? 'up' : s.def < d.def ? 'dn' : '' }, String(s.def)));
       const bob = `animation-delay:-${((now % 3200) / 1000).toFixed(2)}s`;
       const ext = !art && D.CardFX ? D.CardFX.animFor(d.id) : null;                // animación externa verificada (si no, la figura recortada de siempre)
