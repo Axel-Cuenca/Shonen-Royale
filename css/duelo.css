@@ -1528,3 +1528,8 @@ html.rm .game > canvas.kbg { display: none; }
 /* sin suelo, muros ni torres: sólo las casillas flotan sobre el fondo nuevo */
 html.fxbg .floorgl, html.fxbg .pr { display: none !important; }
 html.fxbg .slab { background: none; }
+/* casillas más anchas y con más aire (1 contra 1; 3-4 jugadores no cambian) */
+html.fxbg .slab:not(.multi) { width: 720px; height: 500px; padding: 22px 50px; }
+html.fxbg .slab:not(.multi) .zrow { grid-template-columns: repeat(3, 15em); gap: 5.2em; }
+html.fxbg .slab:not(.multi) .zone { width: 15em; height: 10.6em; }
+html.fxbg .slab:not(.multi) .zone.st { width: 10.5em; height: 7.8em; }
