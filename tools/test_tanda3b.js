@@ -26,7 +26,7 @@ module.exports = function (T) {
   section('tanda 3b: catálogo');
   {
     const root = path.join(__dirname, '..');
-    for (const id of ['c_deadpool', 'c_eren', 'c_titan_ataque', 'c_toge', 'c_karim', 'c_tony', 'c_jake', 'c_venom', 'c_sylas', 'c_minato', 'c_guantelete', 'c_ola_fuego', 'c_infarto', 'c_gema_realidad']) {
+    for (const id of ['c_deadpool', 'c_eren', 'c_titan_ataque', 'c_toge', 'c_karim', 'c_tony', 'c_jake', 'c_venom', 'c_sylas', 'c_minato', 'c_guantelete', 'c_gema_tiempo', 'c_ola_fuego', 'c_infarto', 'c_gema_realidad']) {
       const c = Cards.get(id);
       ok(c && c.img && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
       for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
@@ -287,6 +287,29 @@ module.exports = function (T) {
     answer(st, 1, { use: true });
     ok(!st.pending && st.players[0].mz[0].pos === 'def' && lp(st, 1) === 8000, 'el atacante pasa a defensa y el ataque se cancela');
     ok(E.view(st, 1).players[1].mz[0].toge.tq, '¡Quieto! queda gastada');
+  }
+
+  section('Gema del Tiempo: retroceso del campo propio');
+  {
+    const st = fresh(0);
+    const gk = put(st, 0, 0, 'c_goku'); const old = JSON.stringify({ mz: st.players[0].mz, st: st.players[0].st });
+    st.players[0].snaps = [old, JSON.stringify({ mz: [null, null, null], st: [null, null, null] })];
+    // desde entonces: Goku murió y entró Zenitsu
+    const gokuInst = st.players[0].mz[0].c; st.players[0].mz[0] = null; st.players[0].grave.push(gokuInst);
+    put(st, 0, 1, 'c_zenitsu'); put(st, 1, 0, 'c_titan', { base: { atk: 100, def: 100 } });
+    hand(st, 0, ['c_gema_tiempo']); const n0 = E.countCards(st, 0), n1 = E.countCards(st, 1);
+    const opp0 = JSON.stringify(st.players[1]);
+    const a = find(st, 0, x => x.t === 'activate' && x.hand === 0);
+    ok(!!a, 'se puede activar en tu turno');
+    act(st, 0, a);
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_goku', 'Goku vuelve a su zona');
+    ok(!st.players[0].mz[1] && st.players[0].hand.some(c => c.id === 'c_zenitsu'), 'Zenitsu, que no estaba, vuelve a la mano');
+    ok(!st.players[0].grave.some(c => c.id === 'c_goku') && grave(st, 0, 'c_gema_tiempo'), 'Goku sale del cementerio y la gema va al cementerio');
+    ok(E.countCards(st, 0) === n0 && E.countCards(st, 1) === n1, 'no se pierde ni se duplica ninguna carta');
+    eq(JSON.stringify(st.players[1]), opp0, 'el campo y el estado del rival no cambian');
+    // sin historial suficiente o fuera de tu turno no se puede
+    const s2 = fresh(0); hand(s2, 0, ['c_gema_tiempo']); s2.players[0].snaps = [JSON.stringify({ mz: [null, null, null], st: [null, null, null] })];
+    ok(!find(s2, 0, x => x.t === 'activate'), 'sin historial suficiente no se ofrece');
   }
   return;
 };

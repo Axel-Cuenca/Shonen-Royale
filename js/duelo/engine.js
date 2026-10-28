@@ -176,6 +176,7 @@
     (st.rmap = st.rmap || [])[st.turn] = st.round;
     const P = st.players[st.current];
     P.normalUsed = false;
+    P.snaps = (P.snaps || []).concat([JSON.stringify({ mz: P.mz, st: P.st })]).slice(-2);      // historial del campo propio al empezar cada turno propio (Gema del Tiempo)
     for (const s of P.mz) if (s) { s.attacked = false; s.moved = false; s.atkMod = 0; s.atkN = 0; s.hira = 0; }
     st.phase = 'main';
     log(st, st.current, `Turno ${st.round}`);
@@ -703,7 +704,57 @@
   const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot'));
   const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
   const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1 };
+  /** Gema del Tiempo: hay una instantánea del campo propio de hace un turno propio. */
+  const canRewind = (st, p) => st.current === p && !!(st.players[p].snaps && st.players[p].snaps.length >= 2);
+  /** Restaura SOLO el campo propio (monstruos y magias/trampas) al estado que tenía al empezar su turno anterior.
+   *  Las cartas se buscan por uid en su mano, mazo, cementerio, destierro o campo: nada se duplica ni se inventa.
+   *  Lo que no se puede reconstruir (cartas que ya no son suyas, cartas rivales en su campo, fusiones, absorbidos, sellados, Karma y
+   *  Gema de la Mente) se deja tal cual; las cartas que tenía en el campo y no estaban entonces vuelven a la mano. */
+  function rewindField(st, p) {
+    const P = st.players[p], snap = JSON.parse(P.snaps[0]);
+    const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused);
+    const lockedSt = s => s && (s.prison || s.gem || s.karma);
+    const pool = {};
+    const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
+    P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
+    P.st.forEach((s, z) => { if (s && !lockedSt(s)) { grab(s); P.st[z] = null; } });
+    const find = (uid) => {
+      if (pool[uid]) { const c = pool[uid]; delete pool[uid]; return c; }
+      for (const k of ['hand', 'grave', 'banish', 'deck']) { const i = P[k].findIndex(c => c.uid === uid); if (i >= 0) return P[k].splice(i, 1)[0]; }
+      return null;
+    };
+    const has = (uid) => !!pool[uid] || ['hand', 'grave', 'banish', 'deck'].some(k => P[k].some(c => c.uid === uid));
+    const claimed = new Set();
+    const restore = (s) => {
+      const uids = [s.c.uid].concat((s.link || []).map(c => c.uid));
+      if (uids.some(u => claimed.has(u) || !has(u))) return null;
+      uids.forEach(u => claimed.add(u));
+      s.c = find(s.c.uid);
+      if (s.link) s.link = s.link.map(c => find(c.uid));
+      return s;
+    };
+    let back = 0;
+    snap.mz.forEach((s, z) => {
+      if (!s || lockedMz(s) || P.mz[z] || s.c.id === undefined) return;
+      const o = occ(P);
+      if (o[z] || (s.wide && (z + 1 >= ZONES || o[z + 1]))) return;
+      const r = restore(s);
+      if (r) { P.mz[z] = r; back++; }
+    });
+    snap.st.forEach((s, z) => {
+      if (!s || lockedSt(s) || P.st[z]) return;
+      const r = restore(s);
+      if (r) { P.st[z] = r; back++; }
+    });
+    for (const uid of Object.keys(pool)) P.hand.push(pool[uid]);       // lo que estaba en el campo y entonces no: vuelve a la mano
+    log(st, p, `La Gema del Tiempo retrocede un turno: su campo vuelve a como estaba al empezar su turno anterior`);
+    return back;
+  }
   const FX = {
+    tiempo: {
+      targets: (st, p) => (canRewind(st, p) ? [null] : []),
+      resolve: (st, p) => { rewindField(st, p); }
+    },
     heal: {
       targets: () => [null],
       resolve: (st, p, d) => { heal(st, p, d.n); log(st, p, `recupera ${d.n} PV`); }

@@ -161,7 +161,7 @@
       sfx: { transform: V('lara-transform') }
     }),
     mon({
-      id: 'c_titan', name: 'Titán Martillo', type: 'aot', level: 8, atk: 1800, def: 2000, img: I('titan'), wide: true,
+      id: 'c_titan', name: 'Titán Martillo', type: 'aot', level: 8, atk: 2300, def: 2300, img: I('titan'), wide: true,
       text: 'Ocupa 2 zonas contiguas de monstruo. Se invoca con 2 tributos, o especialmente con Lara Tybur. Sin habilidades propias.'
     }),
     mon({
@@ -447,6 +447,10 @@
       id: 'c_guantelete', name: 'Guantelete del Infinito', icon: '🧤', img: I('guantelete'), fx: 'equip', sub: 'equip', glove: true, minStars: 4,
       text: 'Equípalo a un aliado de 4★ o más. Cuando un rival use una carta cuyo nombre empiece por «Gema», puedes robarla como respuesta y equiparla a tu portador. Precio del poder: si el portador es de 4-5★, al usar la gema robada su ATK y DEF base se reducen a la mitad y pierde sus habilidades; de 6★ o más no sufre nada. (Las gemas-trampa no se pueden robar.)',
       sfx: { steal: V('guantelete-use') }
+    }),
+    spell({
+      id: 'c_gema_tiempo', name: 'Gema del Tiempo', icon: '⏳', img: I('gema_tiempo'), fx: 'tiempo',
+      text: 'Retroceso temporal: sólo en tu turno, tu campo vuelve a como estaba al empezar tu turno anterior (personajes, posiciones, estadísticas, efectos y equipos). Sólo restaura TU campo; el del rival no cambia. Lo que tenías en el campo y entonces no estaba vuelve a tu mano. Después va al cementerio.'
     }),
     {
       kind: 'trap', id: 'c_ola_fuego', name: 'Ola de Fuego', icon: '🌊', img: I('ola_fuego'), trigger: 'attack', fx: 'ola',
