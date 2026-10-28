@@ -94,14 +94,14 @@
     rikavinc: ['El Vínculo con Yuta', 'Con Yuta Okkotsu en el campo, o un Anillo de la Promesa equipado a cualquier personaje, Rika es feliz: +700 ATK y DEF y ataca cuando quiera (+1200 si el portador del anillo es Yuta). No se acumulan.'],
     // ---------------- tanda 3 (27-10-2026) ----------------
     regenx: ['Regeneración extrema', 'Inmune a la destrucción por combate y por habilidades de personaje. Las magias y trampas que lo destruyen sí le afectan; sigue pudiendo ser elegido como objetivo y perder ATK/DEF.'],
-    transtitan: ['Transformación en Titán de Ataque', 'Con Titán de Ataque en tu mano y 2 zonas contiguas libres, paga 500 PV: lo invoca especialmente sin tributos. Eren se queda en el campo. Los 500 PV se pagan una vez por cada invocación lograda.'],
+    transtitan: ['Transformación en Titán de Ataque', 'Una vez, pagando 500 PV, invoca especialmente a Titán de Ataque desde tu mano en su lugar. También puedes invocarlo si Eren muere por combate o por un efecto. Eren queda vinculado al Titán.'],
     punos: ['Endurecimiento de los puños', 'Una vez por turno propio, hasta 2 veces por invocación: su próximo ataque gana +700 ATK (sólo para ese ataque; después se pierde).'],
     resis: ['Resistencia titánica', '2 vidas: cada vez que fuera a morir (por una magia, trampa, habilidad o un combate) gasta una vida y sobrevive. Si lo atacan con más ATK, sobrevive y su dueño pierde la diferencia de ATK.'],
     toge: ['Discurso Maldito', 'Tres órdenes, cada una UNA vez por invocación y como máximo una orden por turno: ¡Quieto! (cambia la posición de un personaje rival o voltea uno boca abajo; también puede responder a un ataque contra Toge o un aliado: cambia la posición del atacante y cancela el ataque), ¡Debilítate! (−500 ATK y −500 DEF a un rival) y ¡Muere! (destruye a un personaje rival de 4★ o menos).'],
     semilla: ['Semilla del Hermitaño', 'Una vez por turno propio, sobre un aliado: quita sus efectos negativos (reducciones de ATK/DEF, habilidades selladas, Promesa de Poder y cartas rivales dañinas como Karma o la Gema de la Mente) y le devuelve el poder perdido, sin pasar de su valor base.'],
     tonyarm: ['Armadura de Iron Man', 'Cada turno propio completo en el campo reúne materiales. Con el primero construye la primera armadura (+1000 ATK y DEF); con cada turno completo posterior puede mejorarla (+300 ATK y DEF cada vez, sin límite). Una acción por turno.'],
     jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
-    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da +1400 ATK y +1300 DEF y deja de ocupar su zona. Es opcional: también puede invocarse y combatir con normalidad.'],
+    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da la mitad de las estadísticas de Venom (+700 ATK y +650 DEF) y deja de ocupar su zona. Es opcional: también puede invocarse y combatir con normalidad.'],
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
     sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
@@ -271,18 +271,18 @@
       sfx: { ability: V('jogo-ability') }
     }),
     mon({
-      id: 'c_kayn', name: 'Kayn', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn'),
+      id: 'c_kayn', name: 'Kayn', type: 'lol', level: 5, atk: 1700, def: 1700, img: I('kayn'),
       text: 'Rhaast: al asesinar a un enemigo en combate desbloquea esa transformación (al transformarse, +300 ATK y +300 DEF; después, +300 ATK y DEF más por cada asesinato en combate). ' +
         'Asesino Sombra: al infligir daño directo desbloquea esa transformación (+300 ATK por cada enemigo en defensa que asesine estando en ataque, y hasta 2 ataques por turno). ' +
         'Las transformaciones son opcionales y sólo puede elegir una por invocación.',
       sfx: { summon: V('kayn-summon') }
     }),
     mon({
-      id: 'c_kayn_rhaast', name: 'Rhaast', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_rhaast'), hidden: true,
+      id: 'c_kayn_rhaast', name: 'Rhaast', type: 'lol', level: 5, atk: 1700, def: 1700, img: I('kayn_rhaast'), hidden: true,
       text: 'Forma de Kayn. Al transformarse gana +300 ATK y +300 DEF (una sola vez por invocación); después, +300 ATK y +300 DEF más por cada personaje enemigo que asesine en combate.', sfx: { transform: V('kayn-rhaast') }
     }),
     mon({
-      id: 'c_kayn_sombra', name: 'Asesino Sombra', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('kayn_sombra'), hidden: true,
+      id: 'c_kayn_sombra', name: 'Asesino Sombra', type: 'lol', level: 5, atk: 1700, def: 1700, img: I('kayn_sombra'), hidden: true,
       text: 'Forma de Kayn. Hasta 2 ataques por turno; +300 ATK cuando, en ataque, asesina a un personaje enemigo en defensa.', sfx: { transform: V('kayn-sombra') }
     }),
     mon({
@@ -399,7 +399,8 @@
     }),
     mon({
       id: 'c_eren', name: 'Eren Jaeger', type: 'aot', level: 3, atk: 400, def: 400, img: I('eren'), ab: ['transtitan'],
-      text: 'Transformación en Titán de Ataque: con Titán de Ataque en tu mano y 2 zonas contiguas libres, paga 500 PV para invocarlo especialmente sin tributos. Eren se queda en el campo. Los 500 PV se pagan una vez por cada invocación lograda.',
+      text: 'Transformación en Titán de Ataque: una vez, pagando 500 PV, invoca especialmente a Titán de Ataque desde tu mano en su lugar. ' +
+        'También puedes invocarlo si Eren muere por combate o por un efecto. Eren queda vinculado al Titán.',
       sfx: { transform: V('eren-transform') }
     }),
     mon({
@@ -438,7 +439,7 @@
     }),
     mon({
       id: 'c_venom', name: 'Venom', type: 'marvel', level: 4, atk: 1400, def: 1300, img: I('venom'), ab: ['symb', 'hostprot', 'absorbv'],
-      text: 'Simbiosis: una vez por turno propio puedes equiparlo a un aliado (+1400 ATK y +1300 DEF; no ocupa zona mientras tanto). Protección del huésped: si el portador fuera a ser destruido, se destruye Venom en su lugar. ' +
+      text: 'Simbiosis: una vez por turno propio puedes equiparlo a un aliado (+700 ATK y +650 DEF, la mitad de sus estadísticas; no ocupa zona mientras tanto). Protección del huésped: si el portador fuera a ser destruido, se destruye Venom en su lugar. ' +
         'Absorción de habilidades: cuando Venom o su portador destruye a un enemigo, Venom aprende para siempre UNA de sus habilidades.',
       sfx: { summon: V('venom-summon'), attack: V('venom-attack') }
     }),

@@ -65,13 +65,25 @@ module.exports = function (T) {
     const a = pw(st, 0, 'eren');
     ok(!!a, 'Eren puede transformarse con el Titán en la mano');
     act(st, 0, a);
-    ok(st.players[0].mz.some(m => m && m.c.id === 'c_titan_ataque') && st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_eren', 'Titán invocado, Eren se queda');
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_titan_ataque' && st.players[0].mz[0].link.some(c => c.id === 'c_eren'), 'el Titán ocupa el lugar de Eren y Eren queda vinculado (como Lara con el Titán Martillo)');
+    ok(!st.players[0].mz.some((m, i) => m && m.c.id === 'c_eren'), 'Eren ya no está en el campo');
+    ok(!pw(st, 0, 'eren'), 'sólo una vez por invocación');
     eq(lp(st, 0), 7500, 'paga 500 PV');
     const t = st.players[0].mz.findIndex(m => m && m.c.id === 'c_titan_ataque');
     eq(stat(st, 0, t), [2100, 2100], 'Titán de Ataque 2100/2100');
     // sin sitio contiguo
     const s2 = fresh(0); put(s2, 0, 0, 'c_eren'); put(s2, 0, 2, 'c_goku'); put(s2, 0, 4, 'c_goku'); hand(s2, 0, ['c_titan_ataque']);
-    ok(!pw(s2, 0, 'eren') || E.view(s2, 0).players[0].mz.filter(Boolean).length < 6, 'sin 2 zonas contiguas libres no hay transformación (si no caben)');
+    const s3 = fresh(0); put(s3, 0, 0, 'c_eren'); put(s3, 0, 1, 'c_goku'); hand(s3, 0, ['c_titan_ataque']);
+    ok(!pw(s3, 0, 'eren'), 'sin 2 zonas contiguas que incluyan la de Eren no hay transformación');
+    // si Eren muere (combate o efecto) también puede invocar al Titán
+    const s4 = fresh(0); put(s4, 0, 0, 'c_eren', { pos: 'def' }); hand(s4, 0, ['c_titan_ataque']); put(s4, 1, 0, 'c_goku'); ready(s4, 1);
+    toBattle(s4, 1); act(s4, 1, atkA(s4, 1, 0, 0));
+    ok(s4.pending && s4.pending.ab === 'titan' && s4.pending.id === 'c_titan_ataque', 'al morir Eren se ofrece invocar al Titán de Ataque (' + JSON.stringify(s4.pending && { ab: s4.pending.ab, id: s4.pending.id }) + ')');
+    if (s4.pending && s4.pending.ab === 'titan') {
+      answer(s4, 0, { use: true });
+      ok(s4.players[0].mz.some(m => m && m.c.id === 'c_titan_ataque' && m.link.some(c => c.id === 'c_eren')), 'el Titán entra y Eren queda vinculado');
+      eq(lp(s4, 0), 8000, 'esta vía no cuesta PV (como Lara)');
+    }
     // puños
     const pa = pw(st, 0, 'punos'); ok(!!pa, 'Endurecimiento de los puños disponible');
     act(st, 0, pa);
@@ -166,7 +178,7 @@ module.exports = function (T) {
     const a = find(st, 0, x => x.t === 'attach' && x.host === 0 && x.mode === 'venom');
     ok(!!a, 'Venom se puede equipar desde la mano');
     act(st, 0, a);
-    eq(stat(st, 0, 0), [base[0] + 1400, base[1] + 1300], 'da +1400/+1300');
+    eq(stat(st, 0, 0), [base[0] + 700, base[1] + 650], 'da la mitad de las estadísticas de Venom: +700/+650');
     ok(E.countCards(st, 0) === n0, 'no se pierde ninguna carta');
     ok(!find(st, 0, x => x.t === 'attach'), 'una vez por turno');
   }
@@ -266,7 +278,7 @@ module.exports = function (T) {
     // Venom protege a su portador y se destruye en su lugar
     const st = fresh(0); put(st, 0, 0, 'c_goku', { base: { atk: 100, def: 100 } }); hand(st, 0, ['c_venom']);
     act(st, 0, find(st, 0, x => x.t === 'attach' && x.mode === 'venom'));
-    put(st, 1, 0, 'c_titan', { base: { atk: 9000, def: 9000 } }); ready(st, 1);
+    put(st, 1, 0, 'c_titan', { base: { atk: 3000, def: 3000 } }); ready(st, 1);
     toBattle(st, 1); act(st, 1, atkA(st, 1, 0, 0));
     let n = 0; while (st.pending && n++ < 8) { const q = E.actor(st); act(st, q, L(st, q).find(x => x.t === 'respond' && !x.activate) || L(st, q).find(x => x.use === false) || L(st, q)[0]); }
     ok(!!st.players[0].mz[0] && grave(st, 0, 'c_venom'), 'Venom se destruye en lugar de su portador');

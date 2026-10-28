@@ -1187,7 +1187,7 @@
         if (r.imm) o.push('Inmune a equipamientos, magias y trampas');
       }
       if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
-      if (s.sym) o.push('Venom equipado (Simbiosis): da +1400 ATK / +1300 DEF y se destruye en su lugar si lo van a destruir');
+      if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir');
       if (s.tony) o.push('Materiales: ' + s.tony.mat + ' · armaduras construidas: ' + s.tony.arm + (s.tony.can ? '' : ' · ya usó la armadura este turno'));
       if (s.toge) o.push('Órdenes: ¡Quieto! ' + (s.toge.tq ? 'usada' : 'lista') + ' · ¡Debilítate! ' + (s.toge.td ? 'usada' : 'lista') + ' · ¡Muere! ' + (s.toge.tm ? 'usada' : 'lista') + (s.toge.round ? ' · ya dio una orden este turno' : ''));
       if (s.pn) o.push('Puños endurecidos: ' + s.pn.n + '/' + s.pn.max + ' usos' + (s.pn.turn ? ' · ya usados este turno' : ''));
@@ -1214,7 +1214,7 @@
     const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
-      regenx: 'Pasiva.', transtitan: 'Una vez por cada invocación lograda (paga 500 PV).', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
+      regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
     function stolenBox(s) {
@@ -1476,7 +1476,7 @@
       const at = mine.filter(a => a.t === 'attach');
       if (at.length) for (const mode of [...new Set(at.map(a => a.mode))]) {
         const os = at.filter(a => a.mode === mode);
-        const lb = { sword: 'Equipar como espada (+600 ATK)', shield: 'Equipar como escudo (+500 DEF)', venom: 'Simbiosis: equipar a un aliado (+1400 ATK / +1300 DEF)' }[mode];
+        const lb = { sword: 'Equipar como espada (+600 ATK)', shield: 'Equipar como escudo (+500 DEF)', venom: 'Simbiosis: equipar a un aliado (+700 ATK / +650 DEF)' }[mode];
         acts.push({ label: lb + '…', run: () => pickTargets(os.map(a => ({ seat: v.seat, area: 'mz', z: a.host })), t => act(os.find(a => a.host === t.z)), 'Elige el aliado que lo lleva'), cls: 'gold' });
       }
       const spc = mine.find(a => a.t === 'special');
@@ -1512,7 +1512,7 @@
           const g = groups[k];
           if (SIX_INFO[k]) continue;      // Rojo, Azul y Púrpura: más abajo, con su descripción
           if (k === 'tq' || k === 'td' || k === 'tm') continue;      // las órdenes de Toge: más abajo, con su descripción
-          if (k === 'eren') acts.push({ label: 'Eren se muerde la mano (−500 PV)', desc: 'Invoca al Titán de Ataque desde tu mano a cambio de 500 PV. Eren se queda en el campo.', run: () => act(g[0]) });
+          if (k === 'eren') acts.push({ label: 'Eren se muerde la mano (−500 PV)', desc: 'Una vez: paga 500 PV e invoca al Titán de Ataque desde tu mano en su lugar. Eren queda vinculado al Titán.', run: () => act(g[0]) });
           else if (k === 'punos') acts.push({ label: 'Endurecer los puños (+700 ATK)', desc: 'Su próximo ataque gana +700 ATK. Una vez por turno propio, 2 veces por invocación.', run: () => act(g[0]) });
           else if (k === 'kurama') acts.push({ label: 'Chakra de Kurama', desc: '+600 ATK y DEF durante 2 turnos propios completos.', run: () => act(g[0]) });
           else if (k === 'armadura') acts.push({ label: s.tony && s.tony.arm ? 'Mejorar la armadura (+300 ATK/DEF)' : 'Construir la armadura (+1000 ATK/DEF)', desc: 'Gasta 1 material (tienes ' + (s.tony ? s.tony.mat : 0) + '). Una acción por turno.', run: () => act(g[0]) });
@@ -1522,7 +1522,7 @@
               if (gm.length) acts.push({ label: 'Jake: pasar a ' + (mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)') + '…', run: () => choose(gm, 'mz', 'Elige el aliado que lo lleva') });
             }
           }
-          else if (k === 'simb') acts.push({ label: 'Simbiosis: equiparse a un aliado…', desc: '+1400 ATK y +1300 DEF para el aliado; Venom deja de ocupar zona.', run: () => choose(g, 'mz', 'Elige el aliado que será su huésped') });
+          else if (k === 'simb') acts.push({ label: 'Simbiosis: equiparse a un aliado…', desc: '+700 ATK y +650 DEF (la mitad de las estadísticas de Venom) para el aliado; Venom deja de ocupar zona.', run: () => choose(g, 'mz', 'Elige el aliado que será su huésped') });
           else if (k === 'robo') {
             const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
             acts.push({ label: 'Robo de habilidades…', desc: 'Copia para siempre una habilidad de un personaje rival. Si no hay nada que robar, no gasta el uso.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {
@@ -1712,8 +1712,8 @@
           h('div', { class: 'acts' }, L().map(a => { const m = v.players[a.vs].mz[a.z]; return btn(`${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'titan') {
-        const box = h('div', { class: 'box' }, h('h2', null, '¿Invocar a Titán Martillo?'), h('p', { class: 'sub' }, 'Lara Tybur murió: puedes invocar especialmente a Titán Martillo desde tu mano; ella queda vinculada a él.'),
-          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_titan'))),
+        const box = h('div', { class: 'box' }, h('h2', null, '¿Invocar a ' + C.get(pd.id || 'c_titan').name + '?'), h('p', { class: 'sub' }, (pd.nm || 'Lara Tybur') + ' murió: puedes invocar especialmente a ' + C.get(pd.id || 'c_titan').name + ' desde tu mano; queda vinculado a él.'),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get(pd.id || 'c_titan'))),
           h('div', { class: 'acts' }, btn('Sí, invocar', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'mahoraga') {

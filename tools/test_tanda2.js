@@ -33,7 +33,7 @@ module.exports = function (T) {
     const want = {
       c_zenitsu: [4, 1000, 1000, 'demonslayer'], c_patriarca: [2, 800, 800, 'dbz'], c_gyomei: [8, 1900, 1900, 'demonslayer'], c_yoriichi: [11, 2600, 2600, 'demonslayer'],
       c_goku: [4, 1400, 1400, 'dbz'], c_super_vegeta: [6, 1800, 1600, 'dbz'], c_kaiosama: [6, 1500, 1500, 'dbz'], c_jogo: [7, 2100, 2100, 'jjk'],
-      c_kayn: [5, 1400, 1400, 'lol'], c_meliodas: [3, 900, 900, 'pecados'], c_spiderman: [4, 1300, 1500, 'marvel'], c_sauron: [7, 2100, 2100, 'anillos'],
+      c_kayn: [5, 1700, 1700, 'lol'], c_meliodas: [3, 900, 900, 'pecados'], c_spiderman: [4, 1300, 1500, 'marvel'], c_sauron: [7, 2100, 2100, 'anillos'],
       c_mahoraga: [10, 2700, 2800, 'jjk'], c_shen: [6, 1600, 1800, 'lol'], c_la_muerte: [5, 1500, 1500, 'shrek'], c_antivenom: [6, 1000, 1000, 'marvel']
     };
     const root = path.join(__dirname, '..');
@@ -169,11 +169,11 @@ module.exports = function (T) {
     ok(grave(st, 1, 'c_lara') && k.kn.rh, 'Kayn desbloquea Rhaast al asesinar en combate');
     pass(st, 2);
     act(st, 0, pw(st, 0, 'kform', x => x.form === 'c_kayn_rhaast'));
-    eq(stat(st, 0, 0), [1700, 1700], 'Rhaast: +300/+300');
+    eq(stat(st, 0, 0), [2000, 2000], 'Rhaast: +300/+300');
     ok(!pw(st, 0, 'kform'), 'sólo una transformación por invocación');
     ok(E.view(st, 0).players[0].mz[0].c.id === 'c_kayn_rhaast', 'la carta muestra la forma Rhaast');
     put(st, 1, 0, 'c_lara', { pos: 'def' }); toBattle(st, 0); atk(st, 0, 0, 0);
-    eq(stat(st, 0, 0), [2000, 2000], 'Rhaast: +300/+300 por asesinato');
+    eq(stat(st, 0, 0), [2300, 2300], 'Rhaast: +300/+300 por asesinato');
   }
   {
     const st = fresh(); const k = put(st, 0, 0, 'c_kayn'); st.turn = 7; toBattle(st, 0);

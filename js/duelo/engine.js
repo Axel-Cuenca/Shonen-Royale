@@ -127,7 +127,9 @@
   }
   const freeN = P => occ(P).filter(x => !x).length;
   const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : -1);
-  /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur). */
+  /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
+  const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque' };
+  /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur o Eren). */
   function titanAnchor(P, z, free) {
     const o = occ(P, free);
     for (const a of [z, z - 1]) if (a >= 0 && a + 1 < ZONES && !o[a] && !o[a + 1] && (a === z || a + 1 === z)) return a;
@@ -481,7 +483,7 @@
     removeMonster(st, p, z, banish ? 'banish' : 'grave', { death: true });
     if (banish) log(st, p, `${nm} es desterrado por la Espada de Exterminio`);
     if (ab.includes('spinach') && !m.c.spent && !banish) st.trig.push({ k: 'spinach', p, uid: m.c.uid });
-    if (m.c && def(m.c).ab && def(m.c).ab.includes('bite') && !m.copy && !banish) st.trig.push({ k: 'titan', p, uid: m.c.uid, z });
+    if (m.c && TITAN_OF[m.c.id] && !m.copy && !banish) st.trig.push({ k: 'titan', p, uid: m.c.uid, z, tid: TITAN_OF[m.c.id], nm });
     if (killer) {
       const ku = uOf(killer.m);
       ku.kills = (ku.kills || 0) + 1;
@@ -580,10 +582,10 @@
         if (!cap || (ku.stolen || 0) >= cap || !opts.length) continue;
         st.pending = { k: 'ability', ab: 'steal', player: t.p, uid: t.uid, stage: 'ask', from: t.from, opts };
       } else if (t.k === 'titan') {
-        const inst = P.grave.find(c => c.uid === t.uid), ti = handIdx(P, 'c_titan');
+        const inst = P.grave.find(c => c.uid === t.uid), tid = t.tid || 'c_titan', ti = handIdx(P, tid);
         if (!inst || ti < 0) continue;
-        if (titanAnchor(P, t.z) < 0) { log(st, t.p, 'No hay espacio para Titán Martillo'); continue; }
-        st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z };
+        if (titanAnchor(P, t.z) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
+        st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
       } else if (t.k === 'karma') {
         const s = P.st[t.stz];
         if (!s || !s.karma || s.c.uid !== t.uid) continue;
@@ -934,6 +936,8 @@
         if (!A || !B || A.down || B.down || A.fused || B.fused) { log(st, p, 'no tiene objetivo'); return; }
         const atk = atkOf(st, P, t.z) + atkOf(st, P, t.z2), df = defOf(st, P, t.z) + defOf(st, P, t.z2);
         A.fused = { zb: t.z2, t0: st.turn, b: B, atk, def: df, from: [atkOf(st, P, t.z), atkOf(st, P, t.z2), defOf(st, P, t.z), defOf(st, P, t.z2)] };
+        const bo = B.owner != null ? B.owner : p;      // cada carta unida cuenta para su dueño (A puede estar corrompido)
+        B.c.by = bo; for (const l of (B.link || [])) if (l.by == null) l.by = bo;
         A.link = (A.link || []).concat([B.c], B.link || []);
         P.mz[t.z2] = null; P.sealed = (P.sealed || []).concat([t.z2]);
         log(st, p, `${mdef(A).name} y ${mdef(B).name} se fusionan: ${atk} ATK / ${df} DEF durante 2 turnos`);
@@ -1640,8 +1644,8 @@
     h.link = (h.link || []).concat([inst]);
     if (mode === 'venom') {
       h.sym = { uid: inst.uid }; P.symT = st.turn;
-      addMod(st, h, 'venom', 1400 * g, 1300 * g, 0);
-      log(st, p, `equipa a Venom en ${hn} (+${1400 * g} ATK y +${1300 * g} DEF)`);
+      addMod(st, h, 'venom', 700 * g, 650 * g, 0);      // sólo la mitad de las estadísticas de Venom
+      log(st, p, `equipa a Venom en ${hn} (+${700 * g} ATK y +${650 * g} DEF)`);
     } else {
       h.jk = { uid: inst.uid, mode };
       addMod(st, h, 'jake', mode === 'sword' ? 600 * g : 0, mode === 'shield' ? 500 * g : 0, 0);
@@ -2208,7 +2212,7 @@
       }
       if (m.av && m.av.on && m.av.choice === 'mag' && m.av.n < 3 * g && (m.av.turn !== st.turn || (m.av.tn || 0) < g)) for (const t of foeSTs(st, p)) push({ pw: 'avpred', target: t });
       // ----- tanda 3 (27-10-2026) -----
-      if (ab.includes('transtitan') && P.lp > 500) P.hand.forEach((c, i) => { if (c.id === 'c_titan_ataque' && spot(P, def(c)) >= 0) push({ pw: 'eren', hand: i }); });
+      if (ab.includes('transtitan') && !m.copy && canOnce(P, z, u, 'bite') && P.lp > 500 && titanAnchor(P, z, [z]) >= 0) P.hand.forEach((c, i) => { if (c.id === 'c_titan_ataque') push({ pw: 'eren', hand: i }); });      // como Lara: el Titán ocupa su lugar
       if (ab.includes('punos') && (u.pn || 0) < 2 * g && u.pnT !== st.turn && !(m.mods || []).some(x => x.k === 'punos')) push({ pw: 'punos' });
       if (ab.includes('toge') && u.tgR !== curRound(st)) {         // una sola orden por turno; cada una una vez por invocación
         for (const t of foeChars(st, p)) {
@@ -2427,7 +2431,7 @@
         takeOff(st, q, tz, 'absorb');
         if (tm.abs) releaseAbsorbed(st, tm);
         markOnce(u, 'absorb');
-        m.abs = { c: tm.c, link, owner: q, atk, def: df };
+        m.abs = { c: tm.c, link, owner: tm.owner != null ? tm.owner : q, atk, def: df };      // un personaje corrompido vuelve a su dueño original
         m.bonus = m.bonus || { atk: 0, def: 0 };
         m.bonus.atk += Math.floor(atk / 2); m.bonus.def += Math.floor(df / 2);
         m.ext = m.ext || [];
@@ -2634,12 +2638,13 @@
       case 'xform': transformInto(st, p, a.zone, a.hand, null); break;
       // ----- tanda 3 -----
       case 'eren': {
-        const inst = P.hand[a.hand];
-        if (!inst || inst.id !== 'c_titan_ataque' || spot(P, def(inst)) < 0 || P.lp <= 500) break;
+        const inst = P.hand[a.hand], anchor = titanAnchor(P, a.zone, [a.zone]);
+        if (!inst || inst.id !== 'c_titan_ataque' || anchor < 0 || P.lp <= 500) break;
+        markOnce(u, 'bite');
         log(st, p, `${nm} se muerde la mano y pierde 500 PV`);
         lose(st, p, 500);
         if (st.winner !== null || !P.alive) break;
-        specialSummon(st, p, P.hand.splice(a.hand, 1)[0], 'atk');
+        transformInto(st, p, a.zone, a.hand, anchor);      // Eren queda vinculado al Titán de Ataque (como Lara con el Titán Martillo)
         break;
       }
       case 'punos': {
@@ -2719,8 +2724,8 @@
         if (!taken) break;
         P.symT = st.turn;
         T.link = (T.link || []).concat([taken.c]); T.sym = { uid: taken.c.uid };
-        addMod(st, T, 'venom', 1400 * tg, 1300 * tg, 0);
-        log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${1400 * tg} ATK y +${1300 * tg} DEF)`);
+        addMod(st, T, 'venom', 700 * tg, 650 * tg, 0);
+        log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${700 * tg} ATK y +${650 * tg} DEF)`);
         break;
       }
       case 'robo': {
@@ -3055,14 +3060,15 @@
       return;
     }
     if (pd.ab === 'titan') {
-      if (!a.use) { log(st, p, 'decide no invocar a Titán Martillo'); return; }
-      const li = P.grave.findIndex(c => c.uid === pd.uid), ti = handIdx(P, 'c_titan');
+      const tid = pd.id || 'c_titan';
+      if (!a.use) { log(st, p, `decide no invocar a ${def({ id: tid }).name}`); return; }
+      const li = P.grave.findIndex(c => c.uid === pd.uid), ti = handIdx(P, tid);
       const anchor = titanAnchor(P, pd.z);
       if (li < 0 || ti < 0 || anchor < 0) return;
       const lara = P.grave.splice(li, 1)[0], inst = P.hand.splice(ti, 1)[0];
       inst.spent = false;
       P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: true, since: st.turn, attacked: true });
-      log(st, p, `Lara Tybur muere y se invoca especialmente a ${def(inst).name}`);
+      log(st, p, `${def(lara).name} muere y se invoca especialmente a ${def(inst).name}`);
       return;
     }
     if (pd.ab === 'karma') {

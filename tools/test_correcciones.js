@@ -103,13 +103,13 @@ module.exports = function (T) {
     const st = fresh(0); const k = put(st, 0, 0, 'c_kayn'); k.kn.rh = true;
     const a = pw(st, 0, 'kform', x => x.form === 'c_kayn_rhaast');
     act(st, 0, a);
-    eq(stat(st, 0, 0), [1700, 1700], 'Rhaast: +300/+300 al transformarse');
+    eq(stat(st, 0, 0), [2000, 2000], 'Rhaast: +300/+300 al transformarse');
     ok(!E.apply(st, 0, a).ok, 'la transformación no se repite');
-    eq(stat(st, 0, 0), [1700, 1700], 'el bonus no se acumula');
+    eq(stat(st, 0, 0), [2000, 2000], 'el bonus no se acumula');
     eq(E.view(st, 0).players[0].mz[0].mods.filter(m => m.k === 'rhaast').length, 1, 'un solo bonus de transformación');
     ok(/\+300 ATK y \+300 DEF/.test(Cards.get('c_kayn_rhaast').text), 'la carta Rhaast explica el +300');
     // cada asesinato en combate como Rhaast: +300 ATK y DEF más
-    for (const [n, want] of [[1, 2000], [2, 2300]]) {
+    for (const [n, want] of [[1, 2300], [2, 2600]]) {
       put(st, 1, 0, 'c_lara', { pos: 'def' }); ready(st, 0, 7 + 2 * n); st.phase = 'battle'; k.attacked = false; k.atkN = 0;
       act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
       eq(stat(st, 0, 0), [want, want], 'Rhaast tras ' + n + ' asesinato(s): +300/+300 por cada uno');
