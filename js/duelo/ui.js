@@ -1013,6 +1013,26 @@
     setTimeout(() => { if (current === cur) draw(); }, 1200);
   }
 
+  // ---------------- partidas abandonadas (cerrar la pestaña, recargar, quedarse sin internet) ----------------
+  /** ¿Este navegador se quedó sin internet hace poco? (distingue «me caí yo» de «se cayó el anfitrión») */
+  let lastOffline = 0;
+  addEventListener('offline', () => { lastOffline = Date.now(); });
+  const iWasOffline = () => (typeof navigator !== 'undefined' && navigator.onLine === false) || Date.now() - lastOffline < 120000;
+  const PEND_KEY = 'duelo.rankPend';
+  const pendSet = foes => { try { const u = D.Account.user; if (u && !u.guest) lsSet(PEND_KEY, JSON.stringify({ u: u.uid, t: Date.now(), foes })); } catch (e) { /* nada */ } };
+  const pendClear = () => { try { localStorage.removeItem(PEND_KEY); } catch (e) { /* nada */ } };
+  /** Al abrir la sesión: si la partida anterior se quedó sin terminar por culpa de este jugador, cuenta como derrota (una sola vez). */
+  function pendSettle() {
+    try {
+      const raw = lsGet(PEND_KEY); if (!raw) return;
+      const p = JSON.parse(raw), u = D.Account.user;
+      if (!p || !u || u.guest || p.u !== u.uid) return;
+      pendClear();
+      if (Date.now() - p.t > 24 * 3600 * 1000 || !D.Rank.state()) return;
+      D.Rank.apply({ S: 0, foes: Array.isArray(p.foes) ? p.foes : [] });
+    } catch (e) { /* nada */ }
+  }
+
   // ---------------- la partida ----------------
   function game(match, opts) {
     opts = opts || {};
@@ -1021,9 +1041,27 @@
     // ---- ranking: sólo partidas online con al menos 2 personas y cuenta con nombre ----
     let rankDone = false, rankRes = null;
     const rankable = () => match.kind !== 'ia' && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
+    let armed = false;
+    /** Marca la partida como «en curso» para el ranking: si este jugador la abandona sin avisar, se le cuenta como derrota al volver. */
+    function rankArm() {
+      if (armed || rankDone || !v || v.winner !== null || !rankable()) return;
+      armed = true;
+      const R = D.Rank, mine = (R.state() || {}).pts || 0;
+      pendSet(v.players.filter(p => p.seat !== v.seat && v.team[p.seat] !== v.team[v.seat]).map(p => (match.hum[p.seat] && match.rk && match.rk[p.seat]) ? match.rk[p.seat] : mine));
+    }
+    /** Eliminado en un todos contra todos (por rendirse, por morir o por desconexión): su puesto ya está decidido, no hace falta esperar al final. */
+    function rankOut() {
+      if (rankDone || !v || !rankable() || v.winner !== null || v.me.alive || v.mode === 'teams' || v.n <= 2) return null;
+      const i = v.rank.indexOf(v.seat); if (i < 0) return null;
+      rankDone = true; pendClear();
+      const R = D.Rank, mine = (R.state() || {}).pts || 0, rk = q => (match.hum[q] && match.rk && match.rk[q]) ? match.rk[q] : mine;
+      return (rankRes = R.apply({ S: R.scoreOfPlace(v.n - i, v.n), foes: v.players.filter(p => p.seat !== v.seat).map(p => rk(p.seat)) }));
+    }
     function rankFinish(leaving) {
       if (rankDone || !v || !rankable()) return null;
-      rankDone = true;
+      rankDone = true; pendClear();
+      // el anfitrión se quedó sin internet y «ganó» porque los demás se desconectaron: no cuenta
+      if (!leaving && v.reason && /se desconect/.test(v.reason) && iWasOffline()) return null;
       const R = D.Rank, mine = (R.state() || {}).pts || 0, rk = q => (match.hum[q] && match.rk && match.rk[q]) ? match.rk[q] : mine;
       const draw = v.winner === 'draw' || v.winner === -1, won = v.winner === v.team[v.seat];
       let S, foes;
@@ -1032,7 +1070,7 @@
       else { S = draw ? .5 : won ? 1 : 0; foes = v.players.filter(p => v.team[p.seat] !== v.team[v.seat]).map(p => rk(p.seat)); }
       return (rankRes = R.apply({ S, foes }));
     }
-    cur.leave = () => { if (v && v.winner === null && v.me.alive) rankFinish(true); };
+    cur.leave = () => { if (v && v.winner === null) { if (v.me.alive) rankFinish(true); else rankOut(); } };
     let prepared = false;
     // en una sala de espera no se pone todavía el fondo de combate ni su música
     const prepare = () => { if (prepared) return; prepared = true; cur.started = true; lobbyBack = null; if (D.Social && match.kind !== 'ia') D.Social.setPlaying(true); sndButton(false); showBg(false); S.setTrack('battle'); S.setAmbient(true); };
@@ -2119,7 +2157,7 @@
         h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), (() => { const b = h('button', { class: 'ib feedb', title: 'Mostrar u ocultar los mensajes de acciones', 'aria-label': 'Mensajes de acciones' }, '💬'); const sync = () => { b.classList.toggle('off', !feedOn()); b.setAttribute('aria-pressed', feedOn() ? 'true' : 'false'); }; b.onclick = () => { feedSet(!feedOn()); sync(); }; sync(); return b; })(), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
-          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo.' : '¿Rendirte?')) match.resign(); }, title: 'Rendirse' }, '🏳')));
+          h('button', { class: 'ib', onclick: () => { if (confirm(multi() ? '¿Rendirte? Quedarás fuera del duelo y cuenta como derrota.' : '¿Rendirte? Cuenta como derrota.')) { if (v && v.winner === null && v.me.alive) rankFinish(true); match.resign(); } }, title: 'Rendirse' }, '🏳')));
       const acts = h('div', { class: 'acts-bot' },
         canBattle ? btn('⚔ Combate', () => act(L().find(a => a.t === 'toBattle')), 'gold big') : null,
         canEnd ? btn(v.phase === 'battle' ? 'Fin del turno' : 'Terminar turno', () => act(L().find(a => a.t === 'endTurn')), (canBattle ? 'teal' : 'gold') + ' big endturn') : null);
@@ -2163,13 +2201,19 @@
       v = nv; newView = true;
       if (sel && !myTurn()) sel = null;
       prepare();
+      rankArm(); rankOut();
       render();
     }
     // mientras suena la cinemática de entrada las jugadas se guardan (sólo la última vista) y se muestran al terminar
     let introQ = null, introRun = false;
     match.onView(nv => { if (introRun) { introQ = nv; return; } handleView(nv); });
     match.onStatus(s => {
-      if (s.k === 'closed' && v && v.winner === null) { /* el motor ya da la victoria al otro */ }
+      if (s.k === 'closed' && s.idx == null && match.kind === 'guest' && v && v.winner === null && !rankDone) {
+        // se cortó la conexión con el anfitrión: si el que se quedó sin internet soy yo, es una derrota; si es él, la partida no cuenta
+        const me = iWasOffline();
+        if (me) rankFinish(true); else { rankDone = true; pendClear(); }
+        if (!modalEl || !modalEl.dataset.lost) { modal(h('div', { class: 'box' }, h('h2', null, 'Se perdió la conexión'), h('p', { class: 'sub' }, me ? 'Te quedaste sin internet: la partida cuenta como derrota.' : 'Se cortó la conexión con el anfitrión: la partida no cuenta para el ranking.'), btn('Volver al menú', () => { closeModal(); menu(); }, 'gold')), false); if (modalEl) modalEl.dataset.lost = 1; }
+      }
       if (s.k === 'rejected' && !v && !opts.wait) { alert('No se pudo empezar: ' + s.why); menu(); }
     });
     if (!opts.wait) { mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Repartiendo…'))); }
@@ -2192,6 +2236,7 @@
     mount(h('div', { class: 'scr' }, h('p', { class: 'loading' }, 'Cargando tus mazos…')));
     D.Online.reset();
     await openStore(D.Account.user);
+    pendSettle();
     menu();
     if (D.FriendsUI) D.FriendsUI.login().catch(e => console.warn('[Amigos]', e));
     if (!D.Account.user.guest && D.Account.isNameAccount() && !D.Account.hasGoogle()) offerRecovery();
