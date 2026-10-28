@@ -1566,3 +1566,6 @@ html.rm .board3d .zone::before { animation: none; } html.rm .board3d .zone { ani
 /* el tablero sigue al ratón en 3D (bgfx.js pone --brx/--bry) */
 html.fxbg .board3d { transform: translate(-50%, -50%) rotateX(calc(40deg + var(--bry, 0deg))) rotateY(var(--brx, 0deg)) scale(var(--k, 1)) !important; }
 html.rm .board3d { transform: translate(-50%, -50%) rotateX(40deg) scale(var(--k, 1)) !important; }
+/* la carta puesta en el tablero también se inclina hacia el ratón (misma física que en la mano) */
+html.fxbg .board3d .zone .card.m.layered.onboard.tilting:not(.def) { transform: translateZ(1em) rotateX(calc(-34deg + var(--rx, 0deg) * .8)) rotateY(calc(var(--ry, 0deg) * 1.1)) scale(1.07); transition: transform .07s linear; z-index: 8; }
+html.rm .board3d .zone .card.m.layered.onboard.tilting { transform: translateZ(.4em) rotateX(-34deg); }

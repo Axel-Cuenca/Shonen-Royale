@@ -104,7 +104,7 @@
   }
 
   // ---------------- inclinación 3D + paralaje + squash ----------------
-  const SEL = '.hand .card.m, .detail .card.big.m, .card.big.m';
+  const SEL = '.hand .card.m, .detail .card.big.m, .card.big.m, .board3d .zone .card.m.layered.onboard';
   let cur = null, raf = 0, last = null;
   function reset(c) { if (!c) return; c.classList.remove('tilting'); c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); c.style.removeProperty('--mx'); c.style.removeProperty('--my'); }
   function apply() {

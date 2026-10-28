@@ -254,7 +254,7 @@ void main(){
     if (!board) return;
     const nx = mA ? Math.max(-1, Math.min(1, (mouse.x / W - .5) * 2)) : 0, ny = mA ? Math.max(-1, Math.min(1, (mouse.y / H - .5) * 2)) : 0;
     const k = 1 - Math.pow(.92, f);
-    tx += (nx * 7 - tx) * k; ty += (ny * 4 - ty) * k;
+    tx += (nx * 2 - tx) * k; ty += (ny * 1.2 - ty) * k;
     board.style.setProperty('--brx', tx.toFixed(2) + 'deg'); board.style.setProperty('--bry', (-ty).toFixed(2) + 'deg');
   }
 
