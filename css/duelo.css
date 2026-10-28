@@ -1423,14 +1423,6 @@ html[data-feed="0"] .lcol .feed, html[data-feed="0"] .vsban { display: none !imp
 .optbox{display:flex;flex-direction:column;gap:4px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:10px;text-align:left}
 .optbox .btn{font-size:13px}
 
-/* Iconos de estado de los personajes: más grandes, en una fila sobre la ficha, y se agrandan al pasar el ratón */
-.zone.mz .badges { top: -.35em; right: 0; left: 0; bottom: auto; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: .15em; z-index: 9; pointer-events: auto; }
-.zone.mz .badges i { font-size: 1.45em; padding: .02em .3em; border: 1px solid #fff4; background: #000c; box-shadow: 0 1px 4px #0009; cursor: help; transition: transform .12s; }
-.zone.mz .badges i:hover { transform: scale(1.6) translateY(-.15em); position: relative; z-index: 10; }
-
-/* Iconos de estado (corrección): fuera de la ficha, encima de ella, sin tapar el ATK/DEF; el texto sale en un tooltip propio */
-.zone.mz .badges { top: auto; bottom: 100%; left: 0; right: 0; margin-bottom: .1em; transform: none; }
-.board3d .zone.mz .badges { transform: translateZ(24px); }
-.zone.mz .badges i { font-size: 1.1em; cursor: help; }
-.zone.mz .badges i:hover { transform: scale(1.35); }
+/* Iconos de estado: como al principio (columna a la derecha de la ficha); sólo se añade el tooltip al pasar el ratón, sin ningún efecto */
+.zone.mz .badges { pointer-events: auto; }
 .badgetip { position: fixed; z-index: 99999; max-width: 260px; padding: 6px 10px; border-radius: 8px; background: #0b1226f2; color: #fff; border: 1px solid #ffd84a99; font: 600 13px/1.3 Rajdhani, sans-serif; box-shadow: 0 4px 14px #000a; pointer-events: none; }
