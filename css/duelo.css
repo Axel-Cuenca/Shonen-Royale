@@ -1517,3 +1517,11 @@ html.fx3d .zone.tired .card.layered.onboard { filter: saturate(.55) brightness(.
 @keyframes cfxHitCard { 0% { translate: 0 0; } 8% { translate: -.9em 0; } 17% { translate: .8em 0; } 27% { translate: -.6em 0; } 38% { translate: .45em 0; } 52% { translate: -.28em 0; } 70% { translate: .14em 0; } 100% { translate: 0 0; } }
 /* en el tablero el personaje es más pequeño que en la mano: cabe casi entero dentro del marco (los pies quedan en la misma línea) */
 .board3d .zone .card.m.layered.onboard > .cch { left: 4.6%; width: 90.8%; top: 2%; height: 88%; }
+
+/* ---- Fondo cinético (bgfx.js, v2-visual): retícula reactiva por debajo de todo; la arena deja de tapar la pantalla ---- */
+.game > canvas.kbg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
+html.fxbg .game { isolation: isolate; background: #03050e; }
+html.fxbg .stage { background: transparent; }
+html.fxbg .ground, html.fxbg .river, html.fxbg .bb { display: none; }
+html.fxbg .game > canvas.ambient { display: none; }
+html.rm .game > canvas.kbg { display: none; }

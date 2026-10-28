@@ -396,7 +396,7 @@
       h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
       h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))),
-      h('div', { class: 'row' }, tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));
+      h('div', { class: 'row' }, tog('Fondo cinético', () => D.BgFX.on(), v => D.BgFX.set(v)), tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));
   }
 
   // ---------------- menú principal ----------------
@@ -2078,6 +2078,7 @@
         gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))), lcol);
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
+      if (D.BgFX && D.BgFX.attach(gameEl)) D.BgFX.setState({ danger: D.CardFX && D.CardFX.dangerOf(v.me.lp, 8000) > .3, rival: v.current !== v.seat });
       if (D.CardFX) { D.CardFX.ambient.attach(gameEl); D.CardFX.ambient.setDanger(D.CardFX.dangerOf(v.me.lp, 8000)); }
       gameEl.querySelector('.slab').classList.toggle('multi', multi());
       zrowsEl.replaceChildren(...rows);
