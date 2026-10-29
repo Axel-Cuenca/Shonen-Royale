@@ -1691,5 +1691,13 @@ body[data-drag="pool"] .edright { outline: 2px dashed var(--gold); outline-offse
   .edb2t { display: flex; flex-direction: column; min-width: 0; } .edb2t b { font-size: 22px; } .edb2t b.ok { color: var(--green); } .edb2t b.bad { color: var(--gold); } .edb2t small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
-/* Partidas de 3-4 jugadores (29-10-2026): las casillas son más chicas que en el 1 contra 1, así que la carta del tablero se ajusta al ancho de su casilla y no se pisan */
-html.fxbg .slab.multi .zone.mz .card.m.layered.onboard:not(.def) { width: 96%; height: auto; aspect-ratio: 11.4 / 11.8; margin-left: -48%; bottom: 0; }
+/* Partidas de 3-4 jugadores (29-10-2026): tablero más ancho y casillas/cartas más grandes; la carta cabe en su casilla (alto fijo, sin estirarse) y los iconos de estado van dentro de la carta */
+html.fxbg .slab.multi { width: 900px; padding: 12px 20px; }
+html.fxbg .slab.multi .field { font-size: 11px; }
+html.fxbg .slab.multi .field.small { font-size: 9.6px; }
+html.fxbg .slab.multi .zone.mz { width: 9.4em; height: 9.8em; }
+html.fxbg .slab.multi .zone.st { width: 7em; height: 6.6em; }
+html.fxbg .slab.multi .zone.mz .card.m.layered.onboard:not(.def) { width: 88%; height: 92%; min-height: 0; aspect-ratio: auto; margin-left: -44%; bottom: 3%; }
+html.fxbg .board3d:has(.slab.multi) { width: 900px; }
+html.fxbg .slab.multi .zone.mz .badges { left: auto; right: 7%; top: 20%; margin: 0; align-items: flex-end; gap: .15em; transform: translateZ(3.4em) rotateX(-34deg); transform-origin: 50% 100%; }
+html.fxbg .slab.multi .zone.mz .badges i { font-size: 1.05em; padding: .05em .3em; background: #000c; border: 1px solid #ffffff33; box-shadow: 0 0 .4em #000; }
