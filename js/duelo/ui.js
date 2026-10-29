@@ -1685,6 +1685,9 @@
       const s = v.me.st[z], d = C.get(s.c.id), acts = [];
       if (myTurn() && !v.pending) {
         const sw = L().filter(a => a.t === 'spow' && a.zone === z);
+        const gb = sw.filter(a => a.pw === 'gembind');
+        if (gb.length) acts.push({ label: 'Controlar la mente de un rival…', run: () => pickTargets(gb.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(gb.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién controla') });
+        const gt = sw.find(a => a.pw === 'tiempo'); if (gt) acts.push({ label: 'Usar la Gema del Tiempo', run: () => act(gt) });
         const gp = sw.find(a => a.pw === 'gempos'); if (gp) acts.push({ label: 'Cambiar su posición', run: () => act(gp) });
         const ga = sw.filter(a => a.pw === 'gematk');
         if (ga.length) acts.push({ label: 'Obligarlo a atacar a un aliado…', run: () => pickTargets(ga.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(ga.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién ataca') });
@@ -1693,7 +1696,7 @@
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
         if (os.length) acts.push({ label: 'Activar', run: () => spellFlow(os, d) });
       }
-      const extra = stText(s) || (s.gem ? `Controla la mente de un rival. Usos que quedan: ${s.gem.left}.` : s.karma ? (s.karma.phase === 'foe' ? `Karma va a morir en ${s.karma.left} turno(s).` : 'Equipada a un personaje tuyo.') : null);
+      const extra = stText(s) || (s.idle ? 'Robada por Thanos: queda equipada en él y la usas como habilidad en tu turno.' : s.gem ? `Controla la mente de un rival. Usos que quedan: ${s.gem.left}.` : s.karma ? (s.karma.phase === 'foe' ? `Karma va a morir en ${s.karma.left} turno(s).` : 'Equipada a un personaje tuyo.') : null);
       sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : extra);
     }
     function oppClick(seat, area, z) {
@@ -1757,7 +1760,7 @@
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'glove' && pd.stage === 'ask') {
         const i = pd.info || {};
-        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, (i.trap ? `El rival activa la trampa ${pd.nm || 'Gema de la Realidad'}. Puedes robarla: su efecto se cancela y queda boca abajo en tu campo, protegida por ${i.bearer || 'tu portador'} (${i.stars || '?'}★).` : `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`)),
+        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, (i.trap ? `El rival activa la trampa ${pd.nm || 'Gema de la Realidad'}. Puedes robarla: su efecto se cancela y queda boca abajo en tu campo, protegida por ${i.bearer || 'tu portador'} (${i.stars || '?'}★).` : (i.idle ? `El rival activa ${pd.nm || 'una gema'}. ${i.bearer || 'Thanos'} puede robarla: la activación se cancela y la gema queda equipada en él. La usas como habilidad cuando quieras.` : `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`))),
           h('p', { class: 'sub' }, i.pen || ''),
           h('div', { class: 'acts' }, btn('Robar la gema', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;

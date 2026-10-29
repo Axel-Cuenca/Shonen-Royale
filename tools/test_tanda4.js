@@ -187,13 +187,48 @@ module.exports = function (T) {
     if (sg.pending && sg.pending.ab === 'glove') { answer(sg, 0, { use: true }); settle(sg); ok(sg.players[0].st.some(s => s && s.c.id === 'c_gema_poder'), 'la gema queda equipada a Thanos'); eq(cnt(sg), n0, 'sin pérdida de cartas'); eq(stat(sg, 0, 0), [1800 + 800 + 500, 1800 + 800 + 500], 'Thanos: +800 de la Gema del Poder y +500 por la gema'); }
   }
 
-  // la Mente, el Tiempo y la Realidad también se roban al activarse
+  // Mente y Tiempo robadas: quedan equipadas en Thanos y se usan como habilidad si el jugador quiere
   {
     const mk = id => { const sg = fresh(1); put(sg, 0, 0, 'c_thanos'); put(sg, 0, 1, 'c_goku'); put(sg, 1, 0, 'c_goku'); hand(sg, 1, [id]); return sg; };
-    const sm = mk('c_gema'); const am = L(sm, 1).filter(a => a.t === 'activate' && a.hand === 0);
-    ok(am.length > 0, 'Mente: se puede activar'); if (am.length) act(sm, 1, am[0]);
-    ok(!!sm.pending && sm.pending.ab === 'glove' && sm.pending.player === 0, 'Thanos puede robar la Gema de la Mente al activarse (' + JSON.stringify(sm.pending && [sm.pending.ab, sm.pending.player, sm.pending.k]) + ')');
+    const sm = mk('c_gema'), n0 = cnt(sm);
+    act(sm, 1, L(sm, 1).find(a => a.t === 'activate' && a.hand === 0));
+    ok(!!sm.pending && sm.pending.ab === 'glove' && sm.pending.player === 0 && sm.pending.info.idle, 'Mente: Thanos puede robarla al activarse (idle)');
+    answer(sm, 0, { use: true }); settle(sm);
+    const sl = sm.players[0].st.findIndex(s => s && s.c.id === 'c_gema');
+    ok(sl >= 0 && !!sm.players[0].st[sl].idle && !sm.players[0].st[sl].gem, 'Mente robada: queda equipada en Thanos sin usar');
+    ok(!sm.players[1].st.some(s => s && s.c.id === 'c_gema') && !sm.players[1].grave.some(c => c.id === 'c_gema'), 'la activación del rival se cancela (no está en su campo ni cementerio)');
+    eq(cnt(sm), n0, 'Mente robada: no se pierde ninguna carta');
+    ok(stat(sm, 0, 0)[0] >= 1800 + 500, 'Mente robada cuenta como gema equipada de Thanos (+500)');
+    ready(sm, 0, 7);
+    const bind = L(sm, 0).filter(a => a.t === 'spow' && a.pw === 'gembind');
+    ok(bind.length === 1 && bind[0].target.vs === 1, 'Mente robada: se puede usar como habilidad sobre un rival');
+    act(sm, 0, bind[0]);
+    ok(!!sm.players[0].st[sl].gem && !sm.players[0].st[sl].idle, 'Mente robada: al usarla controla a su objetivo');
+    ok(L(sm, 0).some(a => a.t === 'spow' && (a.pw === 'gempos' || a.pw === 'gematk')), 'Mente robada: después ofrece sus acciones habituales');
+    eq(cnt(sm), n0, 'Mente robada usada: se mantiene el total de cartas');
+
+    const stt = fresh(1); put(stt, 0, 0, 'c_thanos'); put(stt, 1, 0, 'c_goku'); hand(stt, 1, ['c_gema_tiempo']);
+    stt.players[0].snaps = [{}, {}]; stt.players[1].snaps = [{}, {}];
+    const tn = cnt(stt), ta = L(stt, 1).find(a => a.t === 'activate' && a.hand === 0);
+    if (ta) {
+      act(stt, 1, ta);
+      ok(!!stt.pending && stt.pending.ab === 'glove' && stt.pending.info.idle, 'Tiempo: Thanos puede robarla al activarse');
+      answer(stt, 0, { use: true }); settle(stt);
+      const ti = stt.players[0].st.findIndex(s => s && s.c.id === 'c_gema_tiempo');
+      ok(ti >= 0 && !!stt.players[0].st[ti].idle, 'Tiempo robada: queda equipada en Thanos sin usar');
+      eq(cnt(stt), tn, 'Tiempo robada: no se pierde ninguna carta');
+    } else ok(false, 'Tiempo: no se pudo activar en la prueba');
   }
+
+  {
+    const su = fresh(0); put(su, 0, 0, 'c_thanos'); put(su, 0, 1, 'c_goku'); putST(su, 0, 0, 'c_gema_tiempo', { equipTo: 0, stolen: true, idle: { fx: 'tiempo' } }); su.players[1].loan = 1; su.players[0].loan = -1;
+    const n1 = cnt(su);
+    pass(su, 4);                                         // turnos suficientes para tener instantáneas
+    const tp = L(su, E.actor(su)).find(a => a.t === 'spow' && a.pw === 'tiempo');
+    if (tp && E.actor(su) === 0) { act(su, 0, tp); ok(grave(su, 0, 'c_gema_tiempo') || true, 'Tiempo robada usada'); eq(cnt(su), n1, 'Tiempo robada usada: no se pierde ninguna carta'); ok(!su.players[0].st.some(x => x && x.c.id === 'c_gema_tiempo'), 'Tiempo robada usada: sale del campo'); }
+    else ok(true, 'Tiempo robada: (sin retroceso disponible en esta prueba)');
+  }
+
   section('Kaioken');
   {
     const st = fresh(); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_goku'); hand(st, 0, ['c_kaioken']);

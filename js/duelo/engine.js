@@ -764,7 +764,7 @@
   function rewindField(st, p) {
     const P = st.players[p], snap = JSON.parse(P.snaps[0]);
     const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused);
-    const lockedSt = s => s && (s.prison || s.gem || s.karma);
+    const lockedSt = s => s && (s.prison || s.gem || s.karma || s.idle);      // la gema robada por Thanos y aún sin usar tampoco se toca
     const pool = {};
     const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
     P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
@@ -1477,10 +1477,9 @@
   function gloveFor(st, p, d) {
     if (!isGem(d) || stOff(st) || st.domain) return null;
     for (const q of foes(st, p)) {
-      const Q = st.players[q];
-      if (d.fx !== 'tiempo' && firstFree(Q.st) < 0) continue;
-      if (d.fx === 'tiempo' && !(Q.snaps && Q.snaps.length >= 2)) continue;      // la Gema del Tiempo robada retrocede el campo del ladrón: necesita su instantánea
-      for (let i = 0; i < ZONES; i++) {
+      const Q = st.players[q], free = firstFree(Q.st) >= 0;
+      const okGlove = d.fx === 'tiempo' ? !!(Q.snaps && Q.snaps.length >= 2) : free;      // la Gema del Tiempo robada con el Guantelete retrocede el campo del ladrón: necesita su instantánea
+      if (okGlove) for (let i = 0; i < ZONES; i++) {
         const s = Q.st[i];
         if (!s || s.down || !s.glove || s.equipTo == null) continue;
         const bm = Q.mz[s.equipTo];
@@ -1488,11 +1487,10 @@
         if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
         return { q, bz: s.equipTo, stz: i };
       }
-      for (let z = 0; z < ZONES; z++) {                      // Thanos lleva el Guantelete incorporado
+      if (free) for (let z = 0; z < ZONES; z++) {            // Thanos lleva el Guantelete incorporado: la gema queda equipada en él y la usa como habilidad cuando quiera
         const bm = Q.mz[z];
         if (!bm || bm.down || !has(st, bm, 'thanosg') || has(st, bm, 'rikaprot')) continue;
-        if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
-        return { q, bz: z, stz: -1 };
+        return { q, bz: z, stz: -1, thanos: true };
       }
     }
     return null;
@@ -1516,7 +1514,7 @@
     const bm = st.players[g.q].mz[g.bz], stars = lvl(bm);
     st.chain = null;
     st.pending = { k: 'ability', ab: 'glove', player: g.q, stage: 'ask', ch, by: p, bz: g.bz, uid: ch.inst.uid, nm: d.name,
-      info: { bearer: mdef(bm).name, stars, pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
+      info: { bearer: mdef(bm).name, stars, thanos: !!g.thanos, idle: !!g.thanos && (d.fx === 'gem' || d.fx === 'tiempo'), pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
     return true;
   }
   function continueSpell(st) {
@@ -2517,6 +2515,11 @@
     if (spellsOff(st)) return out;
     P.st.forEach((s, z) => {
       if (!s || s.down) return;
+      if (s.idle) {                                      // gema robada por Thanos y todavía sin usar
+        if (s.idle.fx === 'gem') { for (const c of zoneTargetsUp(st, p)) out.push({ t: 'spow', zone: z, pw: 'gembind', target: { vs: foeOf(st, p, c), z: c.z } }); }
+        else if (s.idle.fx === 'tiempo' && canRewind(st, p)) out.push({ t: 'spow', zone: z, pw: 'tiempo' });
+        return;
+      }
       if (s.gem && s.gem.uses < 2 && s.gem.usedTurn !== st.turn) {
         const tg = findByUid(st, s.gem.uid);
         if (!tg || tg.m.down) return;
@@ -3091,6 +3094,20 @@
   }
   function doSpower(st, p, a) {
     const P = st.players[p], s = P.st[a.zone], nm = def(s.c).name;
+    if (s.idle) {
+      if (a.pw === 'gembind') {                          // Gema de la Mente robada: se elige a quién controla; luego funciona como siempre
+        const tm = st.players[a.target.vs].mz[a.target.z];
+        if (!tm) return;
+        s.gem = { vs: a.target.vs, uid: tm.c.uid, uses: 0, usedTurn: -1 }; delete s.idle;
+        log(st, p, `${nm}: controla la mente de ${mdef(tm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = a.target.vs;
+      } else if (a.pw === 'tiempo') {                    // Gema del Tiempo robada: retrocede el campo y va al cementerio
+        removeST(st, p, a.zone);
+        log(st, p, `${nm}: usa la Gema del Tiempo`);
+        rewindField(st, p);
+      }
+      return;
+    }
     if (a.pw === 'storm1' || a.pw === 'storm2') {
       const e = a.target.vs, inst = P.hand.splice(a.hand, 1)[0];
       s.storm.usedTurn = st.turn;
@@ -3298,6 +3315,14 @@
         return;
       }
       const bm = P.mz[pd.bz];
+      if (a.use && bm && !bm.down && has(st, bm, 'thanosg') && (d.fx === 'gem' || d.fx === 'tiempo') && firstFree(P.st) >= 0) {
+        const from = pd.by, z = firstFree(P.st);      // Thanos: roba la gema (la activación del rival se cancela) y la deja equipada; la usa después como habilidad si quiere
+        st.players[from].loan = (st.players[from].loan || 0) + 1; P.loan = (P.loan || 0) - 1;
+        P.st[z] = { c: ch.inst, down: false, setTurn: st.turn, equipTo: pd.bz, stolen: true, idle: { fx: d.fx } };
+        log(st, p, `${mdef(bm).name} roba ${d.name} y la equipa: podrá usarla como habilidad`);
+        if (multi(st)) st.log[st.log.length - 1].q = from;
+        return;
+      }
       if (a.use && bm && !bm.down && (d.fx === 'tiempo' || firstFree(P.st) >= 0)) {
         const from = pd.by;
         log(st, p, `El Guantelete del Infinito roba ${d.name} y la equipa a ${mdef(bm).name}`);
@@ -3548,6 +3573,7 @@
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
     if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;
+    if (s.idle) v.idle = true;
     if (s.stolen) v.stolen = true;
     if (s.glove) v.glove = true;
     return v;

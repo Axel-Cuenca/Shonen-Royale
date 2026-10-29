@@ -89,7 +89,7 @@
     rasengan: ['Rasengan', 'Una vez por invocación: +400 ATK sólo durante su siguiente ataque.'],
     mantok: ['Manto del Kyuubi', 'Si lo ataca un personaje con más ATK o DEF, no muere por ese combate y sólo recibe el daño de la diferencia de estadísticas, según su posición.'],
     vinculok: ['Vínculo del manto', 'Comparte su destino con Naruto Chico: si una magia, trampa o habilidad lo destruye, también destruye a Naruto Chico. No puede morir por combate.'],
-    thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales y equiparlas a sí mismo.'],
+    thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales (la activación se cancela) y quedan equipadas en él; si es la Gema de la Mente o la del Tiempo, las usa como habilidad cuando el jugador quiera.'],
     thanosp: ['Poder de las Gemas', 'Por cada gema que tenga equipada, Thanos gana +500 ATK y +500 DEF.'],
     patriarca: ['Despertar del Poder Oculto', 'Otro personaje aliado del campo (nunca él mismo) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
     kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
