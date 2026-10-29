@@ -1144,11 +1144,11 @@
       kaioken: 'Kaio-ken', kaioken6: 'Kaio-ken', genki: 'Genkidama', teach: 'Maestro de las Artes', dominio: 'Ataúd de la Montaña de Hierro', llama: 'Llama Infernal',
       kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
       eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
-      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder' };
+      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
-      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Venom (Simbiosis)', kurama: 'Chakra de Kurama' };
+      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Venom (Simbiosis)', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan' };
     /** Técnicas de los Seis Ojos (Guerrero del Infinito): efecto real de cada una, según doPower de engine.js. */
     const SIX_INFO = {
       rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
@@ -1186,6 +1186,10 @@
         o.push('Yuta en el campo: ' + (r.yuta ? 'sí' : 'no') + ' · Anillo de la Promesa equipado: ' + (r.ring ? 'sí' : 'no'));
         if (r.imm) o.push('Inmune a equipamientos, magias y trampas');
       }
+      if (s.manto) o.push('Manto de Kyuubi: +300 ATK/DEF; recibirá en su lugar el golpe mortal o el efecto que fuera a destruirlo');
+      if (s.exh) o.push('Agotado (Kaioken x10): 0 ATK y 0 DEF hasta el final de su siguiente turno');
+      if (s.ksp) o.push('Kaioken activo (+700 ATK/DEF)' + (s.ksp.x ? ' · x10 ya usado' : ' · puede llevarse a x10 una vez'));
+      if (s.dn) o.push('Death Note: morirá durante el turno de su dueño');
       if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
       if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir');
       if (s.tony) o.push('Materiales: ' + s.tony.mat + ' · armaduras construidas: ' + s.tony.arm + (s.tony.can ? '' : ' · ya usó la armadura este turno'));
@@ -1214,6 +1218,7 @@
     const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
+      majinex: 'Una vez por invocación.', armin: 'Una vez (paga 1000 PV); necesita las 3 zonas libres.', arminsac: 'Cuando Armin muere por un ataque enemigo o una carta; sin pagar PV.', colosal: 'Sólo al entrar por la transformación de Armin.', galsil: 'Pasiva: mientras esté en el campo.', galres: 'Pasiva.', galprot: '2 usos por invocación, 1 por turno.', uidef: 'Una vez por turno.', uicont: 'Una vez por turno.', uivel: 'Pasiva.', manto: 'Una sola vez por invocación.', rasengan: 'Una vez por invocación.', mantok: 'Pasiva.', vinculok: 'Pasiva.', thanosg: 'Pasiva.', thanosp: 'Pasiva.',
       regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
@@ -1265,6 +1270,10 @@
       if (s.fury) b.push(['🔥', 'Furia de Esparta activa']);
       if (s.domain) b.push(['👹', 'Su dominio cubre el campo']);
       if (s.yuta && s.yuta.dom) b.push(['💞', 'Dominio de Yuta activo']);
+      if (s.manto) b.push(['🧥', 'Manto de Kyuubi: recibirá en su lugar el golpe mortal']);
+      if (s.exh) b.push(['💤', 'Agotado: 0 ATK y 0 DEF']);
+      if (s.ksp) b.push(['🔥', 'Kaioken activo' + (s.ksp.x ? ' (x10)' : '')]);
+      if (s.dn) b.push(['📓', 'Death Note: morirá durante el turno de su dueño']);
       if (s.rika) b.push([s.rika.happy ? '😊' : '😡', s.rika.happy ? 'Rika contenta' : 'Maldición Incontrolable']);
       if (s.muted) b.push(['🔇', 'Habilidades silenciadas por el dominio']);
       if (s.kills) b.push(['☠️' + s.kills, 'Bajas: ' + s.kills]);
@@ -1414,7 +1423,21 @@
         }, 'Elige a tu personaje que hace el sacrificio');
       }
       if (d.fx === 'cana') return chooseGrave(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje desterrado que vuelve a tu mano', 'banish');
-      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon', area = d.fx === 'destroyST' ? 'st' : 'mz';
+      if (d.fx === 'botiquin') return pickTargets(list.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(list.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Botiquín: elige al personaje que curas (tuyo o rival)');
+      if (d.fx === 'ultratumba') {        // primero el personaje del cementerio (de cualquier jugador) y luego a quién ataca
+        const seen = new Set(), cs = [];
+        for (const a of list) { const k = a.target.g + ':' + a.target.u; if (seen.has(k)) continue; seen.add(k); const c = ((v.players[a.target.g] || {}).grave || []).find(x => x.uid === a.target.u); if (c) cs.push({ g: a.target.g, u: a.target.u, c }); }
+        return modal(h('div', { class: 'box' }, h('h2', null, '👻 ¿Qué personaje vuelve del más allá?'), h('p', { class: 'sub' }, 'Cementerio de cualquier jugador. Ataca como si estuviera en tu campo y después se destierra.'),
+          h('div', { class: 'cands' }, cs.map(x => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => {
+            closeModal();
+            const opts = list.filter(a => a.target.g === x.g && a.target.u === x.u), zs = opts.filter(a => a.target.tz !== 'direct'), dr = opts.filter(a => a.target.tz === 'direct');
+            if (zs.length) return pickTargets(zs.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.tz })), t => act(zs.find(a => a.target.vs === t.seat && a.target.tz === t.z)), 'Elige a quién ataca');
+            if (dr.length === 1) return act(dr[0]);
+            modal(h('div', { class: 'box' }, h('h2', null, '¿A qué rival ataca directamente?'), h('div', { class: 'acts' }, dr.map(a => btn(nameOf(a.target.vs), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
+          } }, cardEl(C.get(x.c.id)), h('small', null, C.get(x.c.id).name + (x.g !== v.seat ? ' · de ' + nameOf(x.g) : ''))))),
+          btn('Cancelar', closeModal, 'ghost')));
+      }
+      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon' || d.fx === 'deathnote', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
     }
@@ -1537,6 +1560,15 @@
           }
           else if (k === 'odinrev') acts.push({ label: 'Revelación divina…', desc: 'Destruye una carta boca abajo rival (personaje o magia/trampa). Una vez por turno.', run: () => choose(g, null, 'Elige la carta boca abajo rival') });
           else if (k === 'odinbend') acts.push({ label: 'Bendición de poder (+600 ATK y DEF)…', desc: 'Permanente hasta que el personaje sea destruido. Una vez por turno, hasta 3 veces por invocación.', run: () => choose(g, 'mz', 'Elige al aliado que bendices') });
+          else if (k === 'armin') acts.push({ label: 'Transformarse en Titán Colosal (−1000 PV)', desc: 'Una vez: paga 1000 PV e invoca al Titán Colosal desde tu mano (necesita las 3 zonas libres). Armin queda vinculado y la explosión destruye a todos los demás personajes de 10★ o menos.', run: () => act(g[0]) });
+          else if (k === 'manto') {
+            const xs = g.find(a => a.opt === 'xform'), sh = g.find(a => a.opt === 'shield');
+            if (xs) acts.push({ label: 'Manto de Kyuubi: transformarse en Naruto Chico de Una Cola', desc: 'Una sola vez por invocación: invoca a Naruto Chico de Una Cola desde tu mano en su lugar. Quedan vinculados.', run: () => act(xs) });
+            if (sh) acts.push({ label: 'Manto de Kyuubi: manto protector (+300 ATK/DEF)', desc: 'Una sola vez por invocación: el manto recibe en su lugar el golpe mortal o el efecto que fuera a destruirlo; sólo se destruye el manto.', run: () => act(sh) });
+          }
+          else if (k === 'majinex') acts.push({ label: 'Explosión final', desc: 'Se destruye y destruye a todos los personajes de 6★ del campo, aliados y enemigos. Una vez por invocación.', run: () => act(g[0]) });
+          else if (k === 'rasengan') acts.push({ label: 'Rasengan (+400 ATK en el próximo ataque)', desc: 'Una vez por invocación; el aumento se pierde después de ese ataque.', run: () => act(g[0]) });
+          else if (k === 'kaiox10') acts.push({ label: 'Kaioken x10', desc: '+700 ATK y DEF más (+1400 en total) hasta el final de este turno. Después pierde todos los bonos del Kaioken y queda agotado (0 ATK y 0 DEF) durante tu siguiente turno completo.', run: () => act(g[0]) });
           else if (k === 'semilla') acts.push({ label: 'Semilla del Hermitaño…', desc: 'Quita los efectos negativos de un aliado y le devuelve su poder.', run: () => choose(g, 'mz', 'Elige al aliado que curas') });
           else
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }
@@ -1744,6 +1776,21 @@
           h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_rika'))),
           h('div', { class: 'acts' }, btn('Interceptar', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'galio') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🛡️ Galio: Protección heroica'), h('p', { class: 'sub' }, `${pd.nm || 'Un aliado'} va a morir por un ataque enemigo. Galio puede anular ese ataque y evitar su muerte. (2 usos por invocación, 1 por turno)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_galio'))),
+          h('div', { class: 'acts' }, btn('Proteger', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'uicont') {
+        const box = h('div', { class: 'box' }, h('h2', null, '⚡ Goku Ultra Instinto: Contraataque instintivo'), h('p', { class: 'sub' }, `${pd.nm || 'Un enemigo'} declara un ataque contra Goku Ultra Instinto o un aliado. Goku puede intervenir y contraatacar al atacante en su lugar: el ataque original se cancela. (Una vez por turno)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_goku_ui'))),
+          h('div', { class: 'acts' }, btn('Contraatacar', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'uidef') {
+        const box = h('div', { class: 'box' }, h('h2', null, '⚡ Goku Ultra Instinto: Defensa instintiva'), h('p', { class: 'sub' }, `${pd.kind === 'trap' ? 'Una trampa' : 'Una magia'} del rival va a destruir a ${pd.nm || 'un aliado'}. Goku puede destruirla antes de que haga efecto. (Una vez por turno)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_goku_ui'))),
+          h('div', { class: 'acts' }, btn('Destruirla', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'yutalearn') {
         const box = h('div', { class: 'box' }, h('h2', null, '📖 Copia de Técnicas'), h('p', { class: 'sub' }, `${pd.from || 'Un personaje'} usó «${pd.nm || 'una habilidad'}». ¿Yuta Okkotsu la aprende? Se conserva aunque el original salga del campo (1 por turno, máximo 3).`),
           h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_yuta'))),
@@ -1807,7 +1854,7 @@
         asCard = !!(area === 'mz' && s.c && !s.down && D.CardFX && D.CardFX.on3d());                       // la carta nueva (en capas) se pone de pie sobre la casilla
         if (asCard) { layerCard(c, C.get(s.c.id), key, art); c.classList.add('onboard'); }
         else if (hsrc) c.classList.add('holohide');
-        if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); }
+        if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); if (s.huge) el.classList.add('hugeA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero)) el.append(h('span', { class: 'eqm' }, s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
         cur = curOf(s, area); if (art) cur.art = art;
@@ -1849,7 +1896,7 @@
       const m = enterMem.get(key);
       const entering = !!m && m.uid === cur.uid && now - m.t0 < m.ms;
       const dl = entering ? `animation-delay:-${Math.round(now - m.t0)}ms;` : '';
-      const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
+      const cls = 'holo' + (s.pos === 'def' ? ' def' : '') + (s.wide ? ' wide' : '') + (s.huge ? ' huge' : '') + (multi() ? ' compact' : '') + (hi ? ' hi' : lo ? ' lo' : '') + (entering ? ' enter' : '');
       if (cardMode) {                                                    // carta de pie: sólo la base luminosa y los efectos de llegada (el personaje va dentro de la carta)
         const o = [h('div', { class: 'hbase' + (entering ? ' enter' : '') + (chosen ? ' sel' : ''), style: `--ms:${ms}ms;${dl}` })];
         if (entering) o.push(h('div', { class: 'hbeam', style: `--ms:${ms}ms;${dl}` }), h('div', { class: 'hwave', style: `--ms:${ms}ms;${dl}` }));
@@ -2139,9 +2186,11 @@
         else if (/^El Guantelete del Infinito roba /.test(t)) { snd = 'spell'; const d = byName['Guantelete del Infinito']; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.steal); } }
         else if (/^activa la trampa /.test(t)) { snd = 'trap'; const d = byName[t.slice(17)]; if (d) { cutAdd({ k: 'card', d, trap: true, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
         else if (/^activa /.test(t)) { snd = 'spell'; const d = byName[t.slice(7)]; if (d) { cutAdd({ k: 'card', d, mine: l.p === v.seat }); fileSfx(d.sfx && d.sfx.use); } }
+        else if (/^Armin Arlert muere y se invoca especialmente a /.test(t)) { snd = 'epic'; needShake = true; const d = byName['Armin Arlert']; if (d) { fileSfx(d.sfx && d.sfx.transform); cin(d, '¡TRANSFORMACIÓN! → Titán Colosal'); } }
+        else if (/explosión de transformación/.test(t)) { snd = 'explosion'; needShake = true; }
         else if (/^Lara Tybur muere y se invoca especialmente a /.test(t)) { snd = 'epic'; needShake = true; const d = byName['Lara Tybur']; if (d) { fileSfx(d.sfx && d.sfx.transform); cin(d, '¡TRANSFORMACIÓN! → Titán Martillo'); } }
         else if (/ se transforma en /.test(t) || / se muerde la mano/.test(t)) { snd = 'epic'; const m = /^(.+?) (?:se transforma en|se muerde)/.exec(t), d = m && byName[m[1]]; if (d) { const to = / se transforma en ([^:]+?)(?::|$)/.exec(t), toD = to && byName[to[1]]; fileSfx((toD && toD.sfx && toD.sfx.transform) || (d.sfx && d.sfx.transform)); cin(d, '¡TRANSFORMACIÓN!' + (to ? ' → ' + to[1] : '')); } }
-        else if (/ usa Big Bang| activa Relicario| activa el dominio /.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, / Big Bang/.test(t) ? 'BIG BANG' : / el dominio /.test(t) ? 'ATAÚD DE LA MONTAÑA DE HIERRO' : 'RELICARIO DEMONÍACO'); } }
+        else if (/ usa Big Bang| usa Explosión final| activa Relicario| activa el dominio /.test(t)) { snd = 'explosion'; needShake = true; const m = /^(.+?) (?:usa|activa) /.exec(t), d = m && byName[m[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, / Big Bang/.test(t) ? 'BIG BANG' : / el dominio /.test(t) ? 'ATAÚD DE LA MONTAÑA DE HIERRO' : 'RELICARIO DEMONÍACO'); } }
         else if (/ sella con sus telarañas /.test(t)) { snd = 'epic'; const d = byName[/^(.+?) sella /.exec(t)[1]]; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TELARAÑAS'); } }
         else if (/^Total Counter: /.test(t)) { snd = 'shield'; const d = byName['Meliodas 5%']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'TOTAL COUNTER', { mine: l.p === v.seat }); } }
         else if (/\(Asimilación\)/.test(t)) { snd = 'epic'; const d = byName['General Mahoraga']; if (d) { fileSfx(d.sfx && d.sfx.ability); cin(d, 'ASIMILACIÓN'); } }

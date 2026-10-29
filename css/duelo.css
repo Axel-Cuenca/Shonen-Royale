@@ -1629,3 +1629,8 @@ html.rm .sumfx { display: none; }
 .card.m.layered > .cch.full, .board3d .zone .card.m.layered.onboard > .cch.full { left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%;
   border-radius: inherit; filter: none; transform: none; transition: none; }
 .holo .hin > img.full { -webkit-mask-image: none !important; mask-image: none !important; object-fit: cover; object-position: 50% 22%; border-radius: .5em; filter: none !important; }
+
+/* ---- Titán Colosal: ocupa las 3 zonas ---- */
+.zone.hugeA { box-shadow: 0 0 .8em #ff7a3acc; }
+.zone.wideA.hugeA .holo.wide { left: calc(50% + 8.6em); width: 17em; height: 17em; margin-left: -8.5em; }
+.zone.wideA.hugeA .hbase { left: calc(50% + 8.6em); width: 17em; margin-left: -8.5em; border-radius: 50%; }

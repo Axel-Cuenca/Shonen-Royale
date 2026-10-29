@@ -74,6 +74,23 @@
     odincarga: ['Cargas de vida', 'Cada vez que muere un personaje del campo, Odin obtiene 1 carga de vida. Al acumular 3 cargas, puede gastarlas para revivir a un personaje de tu cementerio.'],
     odinrev: ['Revelación divina', 'Una vez por turno, puede destruir una carta boca abajo rival que todavía no haya sido revelada, ya sea un personaje o una magia/trampa.'],
     odinbend: ['Bendición de poder', 'Una vez por turno, hasta 3 veces por invocación, bendice a otro personaje aliado: +600 ATK y +600 DEF de forma permanente hasta que ese personaje sea destruido.'],
+    // ---------------- tanda 4 (28-10-2026) ----------------
+    majinex: ['Explosión final', 'Una vez por invocación: se destruye a sí mismo y destruye a todos los personajes de 6★ del campo, aliados y enemigos.'],
+    armin: ['Transformación en Titán Colosal', 'Una vez, pagando 1000 PV, invoca especialmente al Titán Colosal desde tu mano en su lugar. Armin queda vinculado al Titán. Necesita las 3 zonas de personaje libres.'],
+    arminsac: ['Último sacrificio', 'Si Armin muere por el ataque de un personaje enemigo o por el efecto de una carta, puedes invocar al Titán Colosal desde tu mano sin pagar PV (necesita las 3 zonas libres). Armin queda vinculado a él.'],
+    colosal: ['Explosión de transformación', 'Cuando entra al campo por la transformación de Armin, destruye a todos los demás personajes del campo (aliados y enemigos) de 10★ o menos. No se puede cancelar.'],
+    galsil: ['Campo de silencio', 'Mientras Galio esté en el campo, ningún jugador puede activar cartas mágicas.'],
+    galres: ['Resistencia mágica', 'Inmune a las habilidades de todos los personajes, excepto Púrpura.'],
+    galprot: ['Protección heroica', 'Cuando un personaje aliado vaya a morir por el ataque de un personaje enemigo, puede anular ese ataque y evitar su muerte. 2 usos por invocación, 1 por turno.'],
+    uidef: ['Defensa instintiva', 'Una vez por turno, destruye una magia o trampa que intente destruir a Goku Ultra Instinto o a un personaje aliado (sólo las que tienen como objetivo destruir a un personaje aliado).'],
+    uicont: ['Contraataque instintivo', 'Una vez por turno, cuando un personaje enemigo declare un ataque contra Goku Ultra Instinto o un aliado, puede intervenir y contraatacar al atacante en su lugar.'],
+    uivel: ['Velocidad instintiva', 'Inmune a las habilidades de los personajes enemigos, excepto las de tipo Púrpura.'],
+    manto: ['Manto de Kyuubi', 'Una sola vez: o invoca especialmente a Naruto Chico de Una Cola desde tu mano en su lugar (quedan vinculados), o gana un manto de +300 ATK y +300 DEF que recibe en su lugar el ataque mortal o el efecto que fuera a destruirlo (sólo se destruye el manto).'],
+    rasengan: ['Rasengan', 'Una vez por invocación: +400 ATK sólo durante su siguiente ataque.'],
+    mantok: ['Manto del Kyuubi', 'Si lo ataca un personaje con más ATK o DEF, no muere por ese combate y sólo recibe el daño de la diferencia de estadísticas, según su posición.'],
+    vinculok: ['Vínculo del manto', 'Comparte su destino con Naruto Chico: si una magia, trampa o habilidad lo destruye, también destruye a Naruto Chico. No puede morir por combate.'],
+    thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales y equiparlas a sí mismo.'],
+    thanosp: ['Poder de las Gemas', 'Por cada gema que tenga equipada, Thanos gana +500 ATK y +500 DEF.'],
     patriarca: ['Despertar del Poder Oculto', 'Otro personaje aliado del campo (nunca él mismo) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
     kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
     maestro: ['Maestro de las Artes', 'Enseña a un aliado el Kaio-ken o la Genkidama (una enseñanza por turno, cada habilidad una vez por invocación). Quien la aprende la usa una sola vez por invocación.'],
@@ -413,6 +430,71 @@
       text: 'Cargas de vida: cada vez que muere un personaje del campo, Odin obtiene 1 carga de vida. Al acumular 3 cargas, puede gastarlas para revivir a un personaje del cementerio. ' +
         'Revelación divina: una vez por turno, puede destruir una carta boca abajo que todavía no haya sido revelada, ya sea un personaje o una magia/trampa. ' +
         'Bendición de poder: una vez por turno, durante un máximo de 3 turnos, puede bendecir a un personaje aliado, otorgándole +600 ATK y +600 DEF de forma permanente. El bono se mantiene hasta que el personaje sea destruido.'
+    }),
+    // ---------------- tanda 4 (28-10-2026) ----------------
+    mon({
+      id: 'c_goku_ui', name: 'Goku Ultra Instinto', fam: 'Goku', type: 'dbz', level: 10, atk: 3000, def: 2700, img: I('goku_ui'), ab: ['uidef', 'uicont', 'uivel'], xform: { family: 'Goku' },
+      text: 'Pertenece a la familia Goku: puede invocarse transformando a un Goku del campo (1 turno completo de espera por cada 2 estrellas de diferencia). ' +
+        'Defensa instintiva: una vez por turno destruye una magia o trampa que intente destruir a Goku Ultra Instinto o a un aliado. ' +
+        'Contraataque instintivo: una vez por turno, cuando un enemigo ataque a Goku Ultra Instinto o a un aliado, puede intervenir y contraatacar al atacante en su lugar. ' +
+        'Velocidad instintiva: inmune a las habilidades de los personajes enemigos, excepto Púrpura.',
+      sfx: { transform: V('goku_ui-transform') }
+    }),
+    mon({
+      id: 'c_majin_vegeta', name: 'Majin Vegeta', fam: 'Vegeta', type: 'dbz', level: 6, atk: 1700, def: 1600, img: I('majin_vegeta'), ab: ['majinex'], xfromLv: 4,
+      text: 'Transformación Saiyan: sólo puede entrar transformando desde el campo a un Vegeta de 4★ (1 turno completo de espera); el Vegeta anterior queda vinculado y Majin Vegeta ya no puede volver a transformarse. ' +
+        'Explosión final: una vez por invocación, se destruye a sí mismo y destruye a todos los personajes de 6★ del campo, aliados y enemigos.',
+      sfx: { attack: V('majin_vegeta-attack') }
+    }),
+    mon({
+      id: 'c_armin', name: 'Armin Arlert', type: 'aot', level: 2, atk: 300, def: 300, img: I('armin'), ab: ['armin', 'arminsac'],
+      text: 'Transformación en Titán Colosal: una vez, pagando 1000 PV, invoca especialmente al Titán Colosal desde tu mano en su lugar (necesita las 3 zonas libres); Armin queda vinculado. ' +
+        'Último sacrificio: si Armin muere por el ataque de un enemigo o por el efecto de una carta, puedes invocar al Titán Colosal desde tu mano sin pagar PV.',
+      sfx: { transform: V('armin-transform') }
+    }),
+    mon({
+      id: 'c_titan_colosal', name: 'Titán Colosal', type: 'aot', level: 10, atk: 2900, def: 2900, img: I('titan_colosal'), wide: true, huge: true, ab: ['colosal'],
+      text: 'Tamaño colosal: ocupa las 3 zonas de personaje y necesita las 3 libres. Se invoca con 3 tributos o transformando a Armin. ' +
+        'Explosión de transformación: cuando entra por Armin, destruye a todos los demás personajes del campo, aliados y enemigos, de 10★ o menos. No se puede cancelar.'
+    }),
+    mon({
+      id: 'c_galio', name: 'Galio', type: 'lol', level: 8, atk: 2100, def: 2500, img: I('galio'), wide: true, ab: ['galsil', 'galres', 'galprot'],
+      text: 'Gigante colosal: ocupa 2 zonas contiguas. Campo de silencio: mientras esté en el campo, nadie puede activar cartas mágicas. ' +
+        'Resistencia mágica: inmune a las habilidades de todos los personajes, excepto Púrpura. ' +
+        'Protección heroica: cuando un aliado vaya a morir por el ataque de un enemigo, puede anular ese ataque y evitar su muerte (2 usos por invocación, 1 por turno).',
+      sfx: { summon: V('galio-summon'), attack: V('galio-attack') }
+    }),
+    mon({
+      id: 'c_naruto_chico', name: 'Naruto Chico', type: 'naruto', level: 4, atk: 1300, def: 1300, img: I('naruto_chico'), ab: ['manto', 'rasengan'],
+      text: 'Manto de Kyuubi (una sola vez): elige entre invocar especialmente a Naruto Chico de Una Cola desde tu mano en su lugar (quedan vinculados), o ganar un manto de +300 ATK y DEF que se destruye en su lugar cuando fuera a morir. ' +
+        'Rasengan (una vez por invocación): +400 ATK sólo durante su siguiente ataque.',
+      sfx: { ability: V('naruto_chico-ability') }
+    }),
+    mon({
+      id: 'c_naruto_kyuubi', name: 'Naruto Chico de Una Cola', type: 'naruto', level: 5, atk: 1600, def: 1600, img: I('naruto_kyuubi'), ab: ['mantok', 'vinculok'],
+      text: 'Entra por el Manto de Kyuubi de Naruto Chico o con 1 tributo. Manto del Kyuubi: nunca muere en combate; si lo ataca un personaje con más ATK o DEF sólo recibe la diferencia. ' +
+        'Vínculo del manto: comparte su destino con Naruto Chico; si una magia, trampa o habilidad lo destruye, Naruto Chico también muere.'
+    }),
+    mon({
+      id: 'c_thanos', name: 'Thanos', type: 'marvel', level: 6, atk: 1800, def: 1800, img: I('thanos'), ab: ['thanosg', 'thanosp'],
+      text: 'Guantelete del Infinito incorporado: puede robar las gemas que activen los rivales y equiparlas a sí mismo. Poder de las Gemas: +500 ATK y +500 DEF por cada gema que tenga equipada.',
+      sfx: { attack: V('thanos-attack') }
+    }),
+    spell({
+      id: 'c_botiquin', name: 'Botiquín', icon: '🩹', img: I('botiquin'), fx: 'botiquin',
+      text: 'Elige a un personaje del campo, tuyo o rival: elimina todos sus estados negativos y devuelve el ATK y DEF que le habían quitado. Conserva el resto de sus bonificaciones.'
+    }),
+    spell({
+      id: 'c_kaioken', name: 'Kaioken', icon: '🔥', img: I('kaioken'), fx: 'kaiosp',
+      text: 'Un aliado gana +700 ATK y DEF durante 3 turnos. Mientras dure, puedes llevarlo al límite (Kaioken x10, una sola vez): otros +700 ATK y DEF hasta el final de ese turno; después pierde todos los bonos de Kaioken y queda agotado (0 ATK y DEF) durante tu siguiente turno completo.'
+    }),
+    spell({
+      id: 'c_death_note', name: 'Death Note', icon: '📓', img: I('death_note'), fx: 'deathnote',
+      text: 'Elige a un personaje enemigo: durante el turno de su dueño se destruye y va al cementerio.'
+    }),
+    spell({
+      id: 'c_ultratumba', name: 'Ataque de Ultratumba', icon: '👻', img: I('ultratumba'), fx: 'ultratumba',
+      banish: true, text: 'Elige un personaje del cementerio de cualquier jugador y ataca con él como si estuviera en tu campo. Después del ataque se destierra. Esta magia se destierra tras resolverse.'
     }),
     mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],

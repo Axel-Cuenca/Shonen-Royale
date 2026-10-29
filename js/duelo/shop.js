@@ -113,7 +113,12 @@
     ['si_goku_dbz', 'c_goku', 'Goku DBZ', 'goku_dbz'],
     ['si_zenitsu_postura', 'c_zenitsu', 'Primera postura nro. 2', 'zenitsu_postura'],
     ['si_bardock_super', 'c_bardock', 'Bardock super', 'bardock_super'],
-    ['si_shen_frozen', 'c_shen', 'Frozen Shen', 'shen_frozen']
+    ['si_shen_frozen', 'c_shen', 'Frozen Shen', 'shen_frozen'],
+    ['si_kayn_heraldo', 'c_kayn', 'Kayn heraldo del caos', 'kayn_heraldo'],
+    ['si_minato_relampago', 'c_minato', 'Relámpago amarillo', 'minato_relampago'],
+    ['si_popeye_espinaca', 'c_popeye', 'Popeye a comer espinaca', 'popeye_espinaca'],
+    ['si_shen_original', 'c_shen', 'Shen original', 'shen_original'],
+    ['si_venom_asesino', 'c_venom', 'Venom asesino', 'venom_asesino']
   ];
   for (const [id, card, name, file] of SKINS) ITEMS.push({ id, cat: 'si', name, rar: 'u', price: 0, box: 1, card, img: 'assets/skins/' + file + '.webp' });
   const BY = new Map(ITEMS.map(i => [i.id, i]));

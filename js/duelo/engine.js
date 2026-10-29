@@ -92,10 +92,21 @@
   const has = (st, m, id) => abil(st, m).includes(id);
   /** Dominio de Yuta: las magias y trampas que ya estaban en el campo quedan desactivadas mientras dure. */
   const stOff = st => !!(st.domain && st.domain.noST);
+  /** Galio: Campo de silencio. Mientras haya un Galio boca arriba en el campo, nadie activa magias. */
+  const galioOn = st => st.players.some(P => P.alive && P.mz.some(m => m && !m.down && abil(st, m).includes('galsil')));
+  const spellsOff = st => !!st.domain || galioOn(st);
+  /** Las habilidades de personaje (no las magias ni las trampas) que eligen objetivo: Galio y Goku Ultra Instinto son inmunes a ellas (salvo Púrpura). */
+  let abMode = false;
+  function abImmune(st, byP, q, m, o) {
+    if (!m || m.down || (o && o.purple)) return false;
+    const ab = abil(st, m);
+    return ab.includes('galres') || (ab.includes('uivel') && st.team[byP] !== st.team[q]);
+  }
   const isYuta = m => !!m && !m.down && m.c.id === 'c_yuta' && !m.copy;
 
   function mkSlot(st, inst, o) {
     const m = Object.assign({ c: inst, pos: 'atk', down: false, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 }, o || {});
+    if (def(inst).huge) m.huge = true;
     if (inst.id === 'c_kayn' && !m.kn) m.kn = { rh: false, sh: false };      // transformaciones de Kayn desbloqueadas
     if (inst.keep && inst.keep.length) {                                      // Sylas y Venom conservan lo que aprendieron durante toda la partida
       m.ext = (m.ext || []).slice(); m.extFrom = Object.assign({}, m.extFrom);
@@ -115,23 +126,25 @@
   /** Qué zonas están ocupadas; `free` = zonas que se van a vaciar (tributos). */
   function occ(P, free) {
     const o = new Array(ZONES).fill(false);
-    P.mz.forEach((m, z) => { if (m && !(free && free.includes(z))) { o[z] = true; if (m.wide && z + 1 < ZONES) o[z + 1] = true; } });
+    P.mz.forEach((m, z) => { if (m && !(free && free.includes(z))) { o[z] = true; if (m.wide && z + 1 < ZONES) o[z + 1] = true; if (m.huge) for (let k = z + 1; k < ZONES; k++) o[k] = true; } });
     for (const z of (P.sealed || [])) o[z] = true;                       // la zona que Pothala reserva para la fusión
     return o;
   }
   /** Primera zona donde cabe esa carta (la de la izquierda si ocupa dos), o -1. */
   function spot(P, d, free) {
     const o = occ(P, free);
+    if (d.huge) return o.some(x => x) ? -1 : 0;                           // Titán Colosal: necesita las 3 zonas libres
     if (d.wide) { for (let a = 0; a + 1 < ZONES; a++) if (!o[a] && !o[a + 1]) return a; return -1; }
     return o.indexOf(false);
   }
   const freeN = P => occ(P).filter(x => !x).length;
-  const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : -1);
+  const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : (z === 2 && P.mz[0] && P.mz[0].huge ? 0 : -1));
   /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
-  const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque' };
+  const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque', c_armin: 'c_titan_colosal' };
   /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur o Eren). */
-  function titanAnchor(P, z, free) {
+  function titanAnchor(P, z, free, huge) {
     const o = occ(P, free);
+    if (huge) return o.some(x => x) ? -1 : 0;
     for (const a of [z, z - 1]) if (a >= 0 && a + 1 < ZONES && !o[a] && !o[a + 1] && (a === z || a + 1 === z)) return a;
     return -1;
   }
@@ -281,7 +294,21 @@
     if (m.fur && m.fur === st.turn) n += 700 * (m.furX || 1);
     if (m.cFury && m.cFury === st.turn) n += 700;                       // Furia copiada por Shang Tsung: dura lo mismo que en el original
     if (m.cDom && st.domain && st.domain.uid === m.cDom) n += 500;      // dominio copiado: dura mientras dure el dominio
+    if (ab.includes('thanosp')) n += 500 * thanosGems(st, P, z);        // Thanos: +500 por gema equipada
     if (has(st, m, 'rikavinc')) n += rikaState(st).bonus;               // Rika feliz: Yuta o el Anillo de la Promesa
+    return n;
+  }
+  /** Gemas que lleva Thanos: equipadas a él (también las robadas) o puestas por su dueño (Gema de la Mente). */
+  function thanosGems(st, P, z) {
+    if (stOff(st)) return 0;
+    let n = 0;
+    for (const s of P.st) {
+      if (!s) continue;
+      const d = def(s.c);
+      if (!/^Gema/.test(d.name)) continue;
+      if (s.equipTo === z && (!s.down || s.stolen)) n++;
+      else if (s.equipTo == null && !s.down && d.kind === 'spell' && d.fx === 'gem') n++;
+    }
     return n;
   }
   /** Estado de Rika Orimoto: feliz si hay un Yuta Okkotsu boca arriba en el campo o el Anillo de la Promesa (activo) en su portador original. */
@@ -305,12 +332,14 @@
   const baseOf = m => ((m.copy || m.form) ? mdef(m) : (m.base || def(m.c)));
   function atkOf(st, P, z) {
     const m = P.mz[z];
+    if (m.exh) return 0;                                                  // Kaioken x10: agotado
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
     const b = baseOf(m);
     return Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
   }
   function defOf(st, P, z) {
     const m = P.mz[z];
+    if (m.exh) return 0;
     if (m.fused) return Math.max(0, m.fused.def + modSum(m, 'def'));
     const b = baseOf(m);
     return Math.max(0, (m.price ? Math.floor(b.def / 2) : b.def) + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
@@ -353,7 +382,7 @@
     const m = takeOff(st, p, z, how || 'grave');
     if (!m) return null;
     const O = st.players[m.owner != null ? m.owner : p];                 // un personaje corrompido vuelve a la zona de su dueño original
-    const dest = how === 'banish' ? O.banish : O.grave;
+    const dest = how === 'banish' || m.ghost ? O.banish : O.grave;
     dest.push(m.c);
     for (const l of (m.link || [])) { const LO = l.by != null ? st.players[l.by] : O; (how === 'banish' ? LO.banish : LO.grave).push(l); }      // lo equipado vuelve a quien lo puso
     if (m.abs) releaseAbsorbed(st, m);
@@ -454,6 +483,22 @@
       noteSaved(st, nm);
       return false;
     }
+    if (ctx.src === 'power' && ctx.pw !== 'purpura' && (ab.includes('galres') || (ab.includes('uivel') && ctx.bp != null && st.team[ctx.bp] !== st.team[p]))) {
+      log(st, p, `${nm} es inmune: la habilidad no le afecta`);
+      noteSaved(st, nm);
+      return false;
+    }
+    if (ctx.src === 'combat' && ab.includes('mantok')) {                                   // Naruto Chico de Una Cola: no muere por combate
+      log(st, p, `${nm} resiste el combate gracias al Manto del Kyuubi`);
+      noteSaved(st, nm);
+      return false;
+    }
+    if (m.manto && ctx.src !== 'mark') {                                                   // Naruto Chico: el manto recibe el golpe mortal
+      m.manto = false; dropMods(m, 'manto');
+      log(st, p, `El manto de Kyuubi de ${nm} se destruye en su lugar: ${nm} se salva`);
+      noteSaved(st, nm);
+      return false;
+    }
     if (fromCard && ab.includes('escudo') && shieldOf(m) > 0) {
       uOf(m).sh = 0;
       log(st, p, `El escudo de ${nm} absorbe el efecto y se destruye`);
@@ -479,9 +524,9 @@
     if (m.copy) { revertCopy(st, m, p); return false; }
     const victimAbs = rawAbil(m), victimPos = m.pos;
     const killer = ctx.by ? slotByUid(st, ctx.by.p, ctx.by.uid) : null;
-    const banish = !!killer && ctx.src !== 'mark' && abil(st, killer.m).includes('espada');       // Espada de Exterminio
+    const banish = !!m.ghost || (!!killer && ctx.src !== 'mark' && abil(st, killer.m).includes('espada'));       // Espada de Exterminio
     removeMonster(st, p, z, banish ? 'banish' : 'grave', { death: true });
-    if (banish) log(st, p, `${nm} es desterrado por la Espada de Exterminio`);
+    if (banish) log(st, p, m.ghost ? `${nm} es desterrado` : `${nm} es desterrado por la Espada de Exterminio`);
     if (ab.includes('spinach') && !m.c.spent && !banish) st.trig.push({ k: 'spinach', p, uid: m.c.uid });
     if (m.c && TITAN_OF[m.c.id] && !m.copy && !banish) st.trig.push({ k: 'titan', p, uid: m.c.uid, z, tid: TITAN_OF[m.c.id], nm });
     if (killer) {
@@ -584,7 +629,7 @@
       } else if (t.k === 'titan') {
         const inst = P.grave.find(c => c.uid === t.uid), tid = t.tid || 'c_titan', ti = handIdx(P, tid);
         if (!inst || ti < 0) continue;
-        if (titanAnchor(P, t.z) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
+        if (titanAnchor(P, t.z, undefined, def({ id: tid }).huge) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
         st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
       } else if (t.k === 'karma') {
         const s = P.st[t.stz];
@@ -743,7 +788,7 @@
     snap.mz.forEach((s, z) => {
       if (!s || lockedMz(s) || P.mz[z] || s.c.id === undefined) return;
       const o = occ(P);
-      if (o[z] || (s.wide && (z + 1 >= ZONES || o[z + 1]))) return;
+      if (o[z] || (s.wide && (z + 1 >= ZONES || o[z + 1])) || (s.huge && (z !== 0 || o[1] || o[2]))) return;
       const r = restore(s);
       if (r) { P.mz[z] = r; back++; }
     });
@@ -842,6 +887,79 @@
     storm: {
       targets: () => [null],
       resolve: () => { /* se coloca en continueSpell */ }
+    },
+    // ---------- tanda 4 ----------
+    // Kaioken: +700 ATK/DEF 3 turnos a un aliado; se puede llevar a x10 una vez (ver doPower 'kaiox10')
+    kaiosp: {
+      targets: (st, p) => rikaOwn(st, st.players[p]).filter(z => !(st.players[p].mz[z].mods || []).some(x => x.k === 'kaiospell')).map(z => ({ z })),
+      resolve: (st, p, d, t) => {
+        const m = st.players[p].mz[t && t.z];
+        if (!m || m.down) { log(st, p, 'no tiene objetivo'); return; }
+        addMod(st, m, 'kaiospell', 700, 700, 3); m.ksp = { t0: st.turn, x: 0 };
+        log(st, p, `${mdef(m).name} recibe el Kaioken: +700 ATK y +700 DEF durante 3 turnos`);
+      }
+    },
+    // Botiquín: quita los estados negativos de un personaje del campo, tuyo o rival
+    botiquin: {
+      targets: (st, p) => {
+        const out = [];
+        for (let q = 0; q < st.n; q++) {
+          if (!st.players[q].alive) continue;
+          for (const z of zonesWith(st.players[q].mz)) { const m = st.players[q].mz[z]; if (!m.down && canTarget(st, p, q, z) && !rikaUp(st, m)) out.push({ vs: q, z }); }
+        }
+        return out;
+      },
+      resolve: (st, p, d, t) => {
+        const q = t && t.vs != null ? t.vs : p, m = st.players[q].mz[t && t.z];
+        if (!m) { log(st, p, 'no tiene objetivo'); return; }
+        const nmB = mdef(m).name, names = seedList(st, q, t.z, true, true);
+        log(st, p, `Botiquín: ${nmB} ${names.length ? 'se libera de ' + names.join(', ') : 'no tenía estados negativos'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = q;
+      }
+    },
+    // Death Note: el personaje enemigo muere durante el turno de su dueño
+    deathnote: {
+      targets: (st, p) => zoneTargets(st, p, 'mz'),
+      resolve: (st, p, d, t) => {
+        const e = foeOf(st, p, t), m = st.players[e].mz[t && t.z];
+        if (!m) { log(st, p, 'no tiene objetivo'); return; }
+        m.dn = { by: p };
+        log(st, p, `${m.down ? 'Un personaje boca abajo' : mdef(m).name} queda sentenciado: morirá durante el turno de su dueño`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+      }
+    },
+    // Ataque de Ultratumba: un personaje de cualquier cementerio ataca como si estuviera en tu campo y se destierra
+    ultratumba: {
+      targets: (st, p) => {
+        const P = st.players[p], out = [], tg = [];
+        for (const e of foes(st, p)) {
+          const O = st.players[e], all = zonesWith(O.mz);
+          if (!all.length) { tg.push({ vs: e, tz: 'direct' }); continue; }
+          for (const z of all) if (canTarget(st, p, e, z)) tg.push({ vs: e, tz: z });
+        }
+        if (!tg.length) return out;
+        for (let g = 0; g < st.n; g++) for (const c of st.players[g].grave) {
+          const cd = def(c);
+          if (cd.kind !== 'monster' || spot(P, cd) < 0) continue;
+          for (const x of tg) out.push({ g, u: c.uid, vs: x.vs, tz: x.tz });
+        }
+        return out;
+      },
+      resolve: (st, p, d, t) => {
+        const G = st.players[t.g], P = st.players[p], E = st.players[t.vs], i = G.grave.findIndex(c => c.uid === t.u);
+        if (i < 0 || !E || !E.alive) { log(st, p, 'no tiene objetivo'); return; }
+        const inst = G.grave[i], cd = def(inst), z = spot(P, cd);
+        if (z < 0) { log(st, p, 'no hay espacio para el atacante'); return; }
+        if (t.tz !== 'direct' && !E.mz[t.tz]) { log(st, p, 'su objetivo ya no está en el campo'); return; }
+        if (t.tz === 'direct' && zonesWith(E.mz).length) { log(st, p, 'ya no puede atacar directamente'); return; }
+        G.grave.splice(i, 1);
+        const o = { pos: 'atk', ghost: true, wide: !!cd.wide };
+        if (t.g !== p) o.owner = t.g;
+        P.mz[z] = mkSlot(st, inst, o);
+        log(st, p, `Ataque de Ultratumba: ${cd.name} vuelve del más allá para atacar`);
+        if (multi(st)) st.log[st.log.length - 1].q = t.g;
+        declareAttack(st, p, z, t.tz, t.vs);
+      }
     },
     // ---------- tanda 2 ----------
     // Uno, Dos: un personaje tuyo puede atacar hasta 2 veces este turno
@@ -1088,6 +1206,11 @@
   /** ¿Alguien puede intervenir antes de que esta magia se resuelva? Devuelve el pending a abrir. */
   function spellGuard(st, ch) {
     const d = def(ch.inst), t = ch.target, done = ch.done || [];
+    if ((d.fx === 'destroyOne' || d.fx === 'deathnote') && t && !done.includes('uidef')) {      // Goku Ultra Instinto: Defensa instintiva
+      const vp = foeOf(st, ch.p, t), vm = st.players[vp].mz[t.z];
+      const g = vm && st.team[vp] !== st.team[ch.p] ? uiGuard(st, vp) : null;
+      if (g) return { k: 'ability', ab: 'uidef', kind: 'spell', player: g.q, zy: g.z, stage: 'ask', ch, victim: { p: vp, z: t.z }, nm: mdef(vm).name };
+    }
     if (!HOSTILE[d.fx]) return null;
     if (d.fx === 'destroyOne' && t && !done.includes('shen')) {
       const vp = foeOf(st, ch.p, t), vm = st.players[vp].mz[t.z];
@@ -1183,6 +1306,17 @@
     return null;
   }
   /** Ejecuta un poder pasando por Total Counter y Rika. */
+  /** Titán Colosal entra por Armin: destruye a todos los demás personajes del campo de 10★ o menos. No se puede cancelar. */
+  function colosalBlast(st, p, cz) {
+    const C0 = st.players[p].mz[cz];
+    if (!C0) return;
+    log(st, p, 'Titán Colosal: ¡explosión de transformación! Destruye a todos los personajes de 10★ o menos');
+    for (let q = 0; q < st.n; q++) for (let tz = 0; tz < ZONES; tz++) {
+      const tm = st.players[q].mz[tz];
+      if (!tm || tm === C0 || lvl(tm) > 10) continue;
+      destroyMonster(st, q, tz, { src: 'effect', bp: p });
+    }
+  }
   function runPower(st, p, a, done) {
     done = done || [];
     if (st.players[p].mz[a.zone]) {
@@ -1222,6 +1356,11 @@
         const vz = d.fx === 'destroyAttacker' ? st.atk.z : st.summon.z, vm = st.players[vict].mz[vz];
         const r = vm && !has(st, vm, 'rikaprot') ? rikaGuard(st, vict) : null;        // la propia Rika ya es inmune a las trampas
         if (r) { st.pending = { k: 'ability', ab: 'rika', kind: 'trap', player: r.q, zy: r.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, victim: { p: vict, z: vz }, nm: mdef(vm).name }; return; }
+      }
+      if ((d.fx === 'destroyAttacker' || d.fx === 'destroySummoned' || d.fx === 'infarto') && !done.includes('uidef')) {      // Goku Ultra Instinto: Defensa instintiva
+        const vz = d.fx === 'destroyAttacker' ? st.atk.z : st.summon.z, vm = st.players[vict].mz[vz];
+        const g = vm ? uiGuard(st, vict) : null;
+        if (g) { st.pending = { k: 'ability', ab: 'uidef', kind: 'trap', player: g.q, zy: g.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, victim: { p: vict, z: vz }, nm: mdef(vm).name }; return; }
       }
     }
     applyTrap(st, resp, d, pd, invTeam);
@@ -1349,6 +1488,12 @@
         if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
         return { q, bz: s.equipTo, stz: i };
       }
+      for (let z = 0; z < ZONES; z++) {                      // Thanos lleva el Guantelete incorporado
+        const bm = Q.mz[z];
+        if (!bm || bm.down || !has(st, bm, 'thanosg') || has(st, bm, 'rikaprot')) continue;
+        if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
+        return { q, bz: z, stz: -1 };
+      }
     }
     return null;
   }
@@ -1438,7 +1583,7 @@
     }
     const gd = spellGuard(st, ch);
     if (gd) { st.pending = gd; return; }
-    P.grave.push(ch.inst);
+    (d.banish ? P.banish : P.grave).push(ch.inst);
     if (ch.stolen) {                                   // gema robada que no se queda en el campo (Gema del Tiempo): también cobra el precio del poder
       const bm = P.mz[ch.stolen.bz];
       if (bm && lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, ch.p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
@@ -1607,9 +1752,9 @@
     if (PW_RED.includes(a.pw)) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
     return false;
   }
-  const PWL = { odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -1753,6 +1898,8 @@
   function atkDone(st, a) {
     const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
     if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
+    if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
+    if (m && m.ghost) { log(st, a.p, `${mdef(m).name} es desterrado tras el ataque`); removeMonster(st, a.p, a.z, 'banish'); }
   }
   /** Ataque Hiraishin extra: contra una casilla marcada, sin ventana de respuesta para nadie. */
   function hiraAttack(st, p, a) {
@@ -1765,7 +1912,51 @@
     entry.a = { z: a.zone, tg: a.target, vs, ci: m.c.id, at: atkOf(st, me, a.zone), ti: up ? dm0.c.id : null, tpos: dm0 ? dm0.pos : null, tv: up ? (dm0.pos === 'atk' ? atkOf(st, st.players[vs], a.target) : defOf(st, st.players[vs], a.target)) : null, hira: 1 };
     resolveCombat(st, { p, z: a.zone, target: a.target, vs });
   }
+  /** Goku Ultra Instinto: Contraataque instintivo. Cuando un enemigo ataca a Goku Ultra Instinto o a un aliado, puede intervenir. */
+  function uiCounter(st, p) {
+    const a = st.atk, at = a && st.players[a.p].mz[a.z];
+    if (!a || a.uiDone || !at || at.down || a.target === 'direct' || st.team[a.vs] === st.team[a.p] || !st.players[a.vs].mz[a.target]) return false;
+    for (let i = 0; i < st.n; i++) {
+      const q = (a.vs + i) % st.n, Q = st.players[q];
+      if (!Q.alive || st.team[q] !== st.team[a.vs]) continue;
+      for (let z = 0; z < ZONES; z++) {
+        const m = Q.mz[z];
+        if (!m || m.down || !has(st, m, 'uicont') || uOf(m).ucT === st.turn) continue;
+        st.pending = { k: 'ability', ab: 'uicont', player: q, zy: z, stage: 'ask', uid: m.c.uid, nm: mdef(at).name, cont: { k: 'attack', by: p } };
+        return true;
+      }
+    }
+    return false;
+  }
+  /** Goku Ultra Instinto (Defensa instintiva): un Goku UI aliado de la víctima que aún no la usó este turno: { q, z } o null. */
+  function uiGuard(st, victimP) {
+    for (let i = 0; i < st.n; i++) {
+      const q = (victimP + i) % st.n, Q = st.players[q];
+      if (!Q.alive || st.team[q] !== st.team[victimP]) continue;
+      for (let z = 0; z < ZONES; z++) {
+        const m = Q.mz[z];
+        if (m && !m.down && has(st, m, 'uidef') && uOf(m).udT !== st.turn) return { q, z };
+      }
+    }
+    return null;
+  }
+  /** Galio (Protección heroica): un Galio aliado (no la propia víctima) con usos disponibles: { q, z } o null. */
+  function galioGuard(st, victimP, vz) {
+    for (let i = 0; i < st.n; i++) {
+      const q = (victimP + i) % st.n, Q = st.players[q];
+      if (!Q.alive || st.team[q] !== st.team[victimP]) continue;
+      for (let z = 0; z < ZONES; z++) {
+        const m = Q.mz[z];
+        if (!m || m.down || !has(st, m, 'galprot') || (q === victimP && z === vz)) continue;
+        const u = uOf(m), g = gx(Q, z);
+        if ((u.gp || 0) >= 2 * g || (u.gpT === st.turn && (u.gpN || 0) >= g)) continue;
+        return { q, z };
+      }
+    }
+    return null;
+  }
   function attackWindows(st, p) {
+    if (uiCounter(st, p)) return;
     if (openWindow(st, 'attack', { k: 'attack', by: p })) return;
     continueAttack(st);
   }
@@ -1793,6 +1984,14 @@
         if (v.p === a.p && v.z === a.z) continue;      // el propio atacante no es el «objetivo» del ataque: Rika no lo protege
         const r = rikaGuard(st, v.p);
         if (r) { st.pending = { k: 'ability', ab: 'rika', kind: 'attack', player: r.q, zy: r.z, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
+      }
+    }
+    if (!a.noGalio) {
+      for (const v of deaths) {
+        if (v.p === a.p && v.z === a.z) continue;
+        if (st.team[v.p] === st.team[a.p]) continue;
+        const r = galioGuard(st, v.p, v.z);
+        if (r) { st.pending = { k: 'ability', ab: 'galio', player: r.q, zy: r.z, stage: 'ask', a, victim: v, nm: mdef(st.players[v.p].mz[v.z]).name }; return; }
       }
     }
     resolveCombat(st, a);
@@ -1868,6 +2067,11 @@
   function finishTurn(st) {
     const P = st.players[st.current];
     for (const s of P.mz) if (s) s.atkMod = 0;
+    for (const s of P.mz) {                                      // Kaioken x10: al terminar el turno se pierden los bonos y llega el agotamiento
+      if (!s) continue;
+      if (s.ksp && s.ksp.x === st.turn) { dropMods(s, 'kaiospell'); dropMods(s, 'kaiox10'); s.ksp = null; s.exh = { t: st.turn }; log(st, st.current, `${mdef(s).name} queda agotado: 0 ATK y 0 DEF hasta el final de su siguiente turno`); }
+      else if (s.exh && s.exh.t !== st.turn) { s.exh = null; log(st, st.current, `${mdef(s).name} se recupera del agotamiento`); }
+    }
     for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('tonyarm')) {            // Tony Stark: cada turno propio completo en el campo da un material
       const tn = s.tony || (s.tony = { mat: 0, arm: 0, t: -1 });
       tn.mat++;
@@ -1885,6 +2089,13 @@
     for (let p = 0; p < st.n; p++) {
       const P = st.players[p];
       if (!P.alive) continue;
+      if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Death Note: la sentencia se cumple durante el turno de su dueño
+        const dm = P.mz[z];
+        if (!dm || !dm.dn) continue;
+        const by = dm.dn.by; dm.dn = null;
+        log(st, p, `${dm.down ? 'Un personaje boca abajo' : mdef(dm).name} muere: la Death Note se cumple`);
+        destroyMonster(st, p, z, { src: 'spell', bp: by });
+      }
       for (let i = 0; i < ZONES; i++) {      // Anillo Único: el portador sucumbe a la corrupción
         const s = P.st[i];
         if (!s || !s.ring || s.ring.sauron || elapsed(st, s.ring.t0) < s.ring.n || s.equipTo == null) continue;
@@ -1907,7 +2118,7 @@
       }
     }
   }
-  const MODNAME = { kurama: 'el Chakra de Kurama', kaioken: 'Kaio-ken', conc: 'la Respiración de Concentración Total', marca: 'la Marca de Cazador', kk6: 'Kaio-ken' };
+  const MODNAME = { kaiospell: 'el Kaioken', kurama: 'el Chakra de Kurama', kaioken: 'Kaio-ken', conc: 'la Respiración de Concentración Total', marca: 'la Marca de Cazador', kk6: 'Kaio-ken' };
   /** Fin de los efectos con duración: modificadores, Seis Ojos y fusión de Pothala. */
   function expireMods(st) {
     for (let p = 0; p < st.n; p++) {
@@ -2063,7 +2274,8 @@
       if (d.xform.to) { if (c.id === d.xform.to) wait = d.xform.wait; }
       else if (d.xform.family && (t.fam === d.xform.family || t.name.startsWith(d.xform.family))) wait = Math.ceil(Math.abs(t.level - d.level) / 2);
       if (wait < 0 || turnsOn(st, m) < wait) return;
-      if (spot(P, t, [z]) < 0 && !(t.wide && titanAnchor(P, z, [z]) >= 0)) return;
+      if (t.xfromLv && !(d.level === t.xfromLv && d.fam === t.fam)) return;      // Majin Vegeta: sólo desde un Vegeta de 4★
+      if (spot(P, t, [z]) < 0 && !(t.wide && titanAnchor(P, z, [z], t.huge) >= 0)) return;
       out.push(i);
     });
     return out;
@@ -2075,6 +2287,7 @@
     if (!m) return false;
     if (m.six && !(o && o.ignoreSix)) return false;
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
+    if ((abMode || (o && o.ab)) && abImmune(st, byP, q, m, o)) return false;
     return true;
   }
   /** Personajes enemigos (de los rivales de p) que p puede elegir: [{vs, z}]. */
@@ -2134,6 +2347,10 @@
   }
   /** Poderes de los monstruos del jugador: [{ t:'power', zone, pw, ... }]. */
   function powerActs(st, p) {
+    abMode = true;
+    try { return powerActs0(st, p); } finally { abMode = false; }
+  }
+  function powerActs0(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
     P.mz.forEach((m, z) => {
       if (!m || m.down) return;
@@ -2255,18 +2472,29 @@
         }
       }
       if (ab.includes('kurama') && !(m.mods || []).some(x => x.k === 'kurama')) push({ pw: 'kurama' });
+      // ----- tanda 4 -----
+      if (ab.includes('majinex') && canOnce(P, z, u, 'mj')) push({ pw: 'majinex' });
+      if (ab.includes('armin') && !m.copy && canOnce(P, z, u, 'bite') && P.lp > 1000 && titanAnchor(P, z, [z], true) >= 0) P.hand.forEach((c, i) => { if (c.id === 'c_titan_colosal') push({ pw: 'armin', hand: i }); });
+      if (ab.includes('manto') && !u.mt) {
+        push({ pw: 'manto', opt: 'shield' });
+        P.hand.forEach((c, i) => { if (c.id === 'c_naruto_kyuubi' && spot(P, def(c), [z]) >= 0) push({ pw: 'manto', opt: 'xform', hand: i }); });
+      }
+      if (ab.includes('rasengan') && canOnce(P, z, u, 'ras') && !(m.mods || []).some(x => x.k === 'ras')) push({ pw: 'rasengan' });
+      if (m.ksp && !m.ksp.x && !m.exh && (m.mods || []).some(x => x.k === 'kaiospell')) push({ pw: 'kaiox10' });
     });
     return out;
   }
   const SEEDN = { rojo: 'Rojo', debil: '¡Debilítate!', ola: 'Ola de Fuego' };
   /** Semilla del Hermitaño: efectos negativos que se pueden quitar de un aliado (con doIt, los quita). Devuelve sus nombres. */
-  function seedList(st, q, z, doIt) {
+  function seedList(st, q, z, doIt, extra) {
     const m = st.players[q].mz[z], out = [];
     if (!m || m.down) return out;
     const neg = (m.mods || []).filter(x => (x.atk < 0 || x.def < 0) && x.k !== 'voto');
     for (const x of neg) out.push(SEEDN[x.k] || x.k);
     if (m.sealed && m.sealed.length) out.push('Telarañas');
     if (m.promesa) out.push('Promesa de Poder');
+    if (extra && m.exh) out.push('Agotamiento');
+    if (extra && m.dn) out.push('Death Note');
     const foesT = (k) => st.team[k] !== st.team[q];
     const kar = [];
     for (let k = 0; k < st.n; k++) st.players[k].st.forEach((s, i) => {
@@ -2277,6 +2505,7 @@
     if (!doIt) return out;
     m.mods = (m.mods || []).filter(x => !neg.includes(x));
     delete m.sealed;
+    if (extra) { delete m.exh; delete m.dn; }
     if (m.promesa) { delete m.promesa; st.corrupt = (st.corrupt || []).filter(c => c.uid !== m.c.uid); }
     for (const [k, i] of kar) removeST(st, k, i);
     if (gm && foesT(gm.p)) removeST(st, gm.p, gm.i);
@@ -2285,7 +2514,7 @@
   /** Poderes de las magias continuas (Gema de la Mente y Tormenta Eléctrica). */
   function spowerActs(st, p) {
     const P = st.players[p], out = [];
-    if (st.domain) return out;
+    if (spellsOff(st)) return out;
     P.st.forEach((s, z) => {
       if (!s || s.down) return;
       if (s.gem && s.gem.uses < 2 && s.gem.usedTurn !== st.turn) {
@@ -2371,7 +2600,7 @@
             out.push({ t: 'set', hand: i, tributes: tr });
           }
         } else {
-          if (d.kind === 'spell' && !st.domain) {
+          if (d.kind === 'spell' && !spellsOff(st)) {
             const tg = spellTargets(st, p, card);
             const needsZone = !!PERM[d.fx];
             if (tg.length && (!needsZone || freeCount(P.st) > 0)) for (const t of tg) out.push(t ? { t: 'activate', hand: i, target: t } : { t: 'activate', hand: i });
@@ -2379,7 +2608,7 @@
           if (freeCount(P.st) > 0) out.push({ t: 'setst', hand: i });
         }
       });
-      if (!st.domain) P.st.forEach((s, z) => {
+      if (!spellsOff(st)) P.st.forEach((s, z) => {
         if (!s || !s.down) return;
         const d = def(s.c);
         if (d.kind !== 'spell') return;
@@ -2424,7 +2653,7 @@
   // ---------------- poderes ----------------
   function doPower(st, p, a) {
     const P = st.players[p], m = P.mz[a.zone], u = uOf(m), nm = mdef(m).name;
-    const ctx = { src: 'power', by: { p, uid: m.c.uid }, bp: p }, g = gx(P, a.zone);
+    const ctx = { src: 'power', by: { p, uid: m.c.uid }, bp: p, pw: a.pw }, g = gx(P, a.zone);
     switch (a.pw) {
       case 'canon': {
         if (u.canon) break;      // una sola vez por invocación
@@ -2650,6 +2879,49 @@
         break;
       }
       case 'xform': transformInto(st, p, a.zone, a.hand, null); break;
+      // ----- tanda 4 -----
+      case 'majinex': {
+        markOnce(u, 'mj');
+        log(st, p, `${nm} usa Explosión final: se destruye y arrastra a todos los personajes de 6★`);
+        const hits = [];
+        for (let q = 0; q < st.n; q++) for (let tz = 0; tz < ZONES; tz++) { const tm = st.players[q].mz[tz]; if (tm && !(q === p && tz === a.zone) && lvl(tm) === 6) hits.push([q, tz, tm]); }
+        removeMonster(st, p, a.zone, 'grave');
+        for (const [q, tz, tm] of hits) if (st.players[q].mz[tz] === tm) destroyMonster(st, q, tz, ctx);
+        break;
+      }
+      case 'armin': {
+        const inst = P.hand[a.hand], anchor = titanAnchor(P, a.zone, [a.zone], true);
+        if (!inst || inst.id !== 'c_titan_colosal' || anchor < 0 || P.lp <= 1000) break;
+        markOnce(u, 'bite');
+        log(st, p, `${nm} paga 1000 PV por el poder del Titán Colosal`);
+        lose(st, p, 1000);
+        if (st.winner !== null || !P.alive) break;
+        transformInto(st, p, a.zone, a.hand, anchor);
+        colosalBlast(st, p, anchor);
+        break;
+      }
+      case 'manto': {
+        u.mt = true;
+        if (a.opt === 'xform') {
+          const inst = P.hand[a.hand];
+          if (!inst || inst.id !== 'c_naruto_kyuubi') break;
+          log(st, p, `${nm} activa el Manto de Kyuubi`);
+          transformInto(st, p, a.zone, a.hand, null);
+        } else {
+          m.manto = true; addMod(st, m, 'manto', 300, 300, 0);
+          log(st, p, `${nm} activa el Manto de Kyuubi: +300 ATK y +300 DEF, y un manto que recibirá el golpe mortal`);
+        }
+        break;
+      }
+      case 'rasengan':
+        markOnce(u, 'ras'); addMod(st, m, 'ras', 400 * g, 0, 0);
+        log(st, p, `${nm} usa Rasengan: +${400 * g} ATK en su próximo ataque`);
+        break;
+      case 'kaiox10':
+        if (!m.ksp || m.ksp.x) break;
+        m.ksp.x = st.turn; addMod(st, m, 'kaiox10', 700, 700, 0);
+        log(st, p, `${nm} lleva el Kaioken al límite (x10): +700 ATK y DEF más, +1400 en total, hasta el final del turno`);
+        break;
       // ----- tanda 3 -----
       case 'eren': {
         const inst = P.hand[a.hand], anchor = titanAnchor(P, a.zone, [a.zone]);
@@ -2807,7 +3079,7 @@
     inst.spent = false;
     const link = [old.c].concat(old.link || []);
     let nz = z;
-    if (nd.wide) { nz = anchor != null && anchor >= 0 ? anchor : titanAnchor(P, z, [z]); }
+    if (nd.wide) { nz = anchor != null && anchor >= 0 ? anchor : titanAnchor(P, z, [z], nd.huge); }
     P.mz[z] = null;
     P.mz[nz] = mkSlot(st, inst, { pos: old.pos, down: false, summonedTurn: old.summonedTurn, attacked: old.attacked, atkN: old.atkN, moved: old.moved, atkMod: old.atkMod || 0, owner: old.owner, link, since: st.turn, wide: !!nd.wide });
     // los equipos siguen a la nueva forma
@@ -2944,6 +3216,45 @@
         return;
       }
       togeWindow(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'uicont') {                                  // Goku Ultra Instinto: Contraataque instintivo
+      const gm = slotByUid(st, p, pd.uid), a0 = st.atk, at = a0 && st.players[a0.p].mz[a0.z];
+      if (a.use && gm && !gm.m.down && a0 && at) {
+        uOf(gm.m).ucT = st.turn;
+        log(st, p, `${mdef(gm.m).name} interviene y responde en lugar del aliado: el ataque de ${mdef(at).name} se cancela`);
+        st.atk = null; atkDone(st, a0);
+        resolveCombat(st, { p, z: gm.z, target: a0.z, vs: a0.p });
+        return;
+      }
+      if (a0) a0.uiDone = true;
+      attackWindows(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'uidef') {                                   // Goku Ultra Instinto: Defensa instintiva
+      const gm = P.mz[pd.zy], k = pd.kind;
+      if (a.use && gm && has(st, gm, 'uidef')) {
+        uOf(gm).udT = st.turn;
+        log(st, p, `${mdef(gm).name} usa Defensa instintiva: destruye ${k === 'spell' ? 'la magia' : 'la trampa'} que iba a destruir a ${pd.nm}`);
+        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
+        else respondRest(st, pd.rp);
+        return;
+      }
+      if (k === 'spell') { pd.ch.done = (pd.ch.done || []).concat('uidef'); st.chain = pd.ch; continueSpell(st); }
+      else trapResolve(st, pd.tp, C().get(pd.tid), pd.rp, (pd.done || []).concat('uidef'));
+      return;
+    }
+    if (pd.ab === 'galio') {                                   // Galio: Protección heroica
+      const gm = P.mz[pd.zy], vm = pd.victim ? st.players[pd.victim.p].mz[pd.victim.z] : null;
+      if (a.use && gm && has(st, gm, 'galprot') && vm) {
+        const u = uOf(gm), g = gx(P, pd.zy);
+        u.gp = (u.gp || 0) + 1; u.gpN = u.gpT === st.turn ? (u.gpN || 0) + 1 : 1; u.gpT = st.turn;
+        log(st, p, `${mdef(gm).name} usa Protección heroica: anula el ataque y protege a ${pd.nm} (${Math.max(0, 2 * g - u.gp)}/${2 * g} usos)`);
+        atkDone(st, pd.a);
+        return;
+      }
+      st.atk = Object.assign({}, pd.a, { noGalio: true });
+      continueAttack(st);
       return;
     }
     if (pd.ab === 'toge') {                                    // ¡Quieto! como respuesta: el atacante pasa a defensa y el ataque se cancela
@@ -3095,12 +3406,13 @@
       const tid = pd.id || 'c_titan';
       if (!a.use) { log(st, p, `decide no invocar a ${def({ id: tid }).name}`); return; }
       const li = P.grave.findIndex(c => c.uid === pd.uid), ti = handIdx(P, tid);
-      const anchor = titanAnchor(P, pd.z);
+      const anchor = titanAnchor(P, pd.z, undefined, def({ id: tid }).huge);
       if (li < 0 || ti < 0 || anchor < 0) return;
       const lara = P.grave.splice(li, 1)[0], inst = P.hand.splice(ti, 1)[0];
       inst.spent = false;
       P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: true, since: st.turn, attacked: true });
       log(st, p, `${def(lara).name} muere y se invoca especialmente a ${def(inst).name}`);
+      if (tid === 'c_titan_colosal') colosalBlast(st, p, anchor);
       return;
     }
     if (pd.ab === 'karma') {
@@ -3149,6 +3461,11 @@
     if (s.copy) v.real = s.c.id;
     if (def(s.c).kind === 'monster') { v.atk = atkOf(st, P, z); v.def = defOf(st, P, z); }
     if (s.wide) v.wide = true;
+    if (s.huge) v.huge = true;
+    if (s.manto) v.manto = true;
+    if (s.exh) v.exh = true;
+    if (s.ksp && (s.mods || []).some(x => x.k === 'kaiospell')) v.ksp = { x: !!s.ksp.x };
+    if (s.dn && !s.down) v.dn = true;
     const ab = abil(st, s);
     if (ab.includes('escudo')) v.shield = shieldOf(s);
     if (s.link && s.link.length) v.link = s.link.map(c => c.id);
@@ -3366,7 +3683,7 @@
         if (z < 0 || z >= ZONES) return { ok: false, error: 'Zona no válida.' };
         if (d.kind === 'monster') {
           const o = occ(P);
-          if (o[z] || (d.wide && (z + 1 >= ZONES || o[z + 1]))) return { ok: false, error: 'No cabe en esa zona.' };
+          if (o[z] || (d.wide && (z + 1 >= ZONES || o[z + 1])) || (d.huge && (z !== 0 || o[1] || o[2]))) return { ok: false, error: 'No cabe en esa zona.' };
           const down = !!op.down, inst = { uid: st.nextUid++, id: d.id };
           P.mz[z] = mkSlot(st, inst, { pos: down ? 'def' : (op.pos === 'def' ? 'def' : 'atk'), down, wide: !!d.wide, summonedTurn: st.turn - 2 });
           log(st, p, `[Práctica] coloca ${down ? 'una carta boca abajo' : d.name} en el campo`);

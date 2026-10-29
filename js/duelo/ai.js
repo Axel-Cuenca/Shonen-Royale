@@ -196,6 +196,16 @@
             case 'robo': return 53;
             case 'simb': return -1;
             case 'jkmove': return -1;
+            // ----- tanda 4 -----
+            case 'majinex': {                                                // sólo si arrastra a más 6★ rivales que propios
+              const lv = q => q.mz.reduce((n, t) => n + (t && cardOf(t.c) && cardOf(t.c).level === 6 ? 1 : 0), 0);
+              const f6 = allFoes.reduce((n, q) => n + lv(q), 0), m6 = v.players.filter(q => q.alive && q.team === v.team[v.seat]).reduce((n, q) => n + lv(q), 0);
+              return f6 >= 1 && f6 >= m6 ? 58 + f6 * 3 : -1;
+            }
+            case 'armin': return info.count >= 1 ? 66 : 40;
+            case 'manto': return a.opt === 'xform' ? 60 : 44;
+            case 'rasengan': return v.phase === 'battle' ? 56 : (info.count ? 46 : -1);
+            case 'kaiox10': return -1;
           }
           return -1;
         }
@@ -262,6 +272,13 @@
               const m = me.mz[a.target.z];
               return m && !m.down && info.count ? 41 : -1;
             }
+            case 'kaiosp': { const m = me.mz[a.target.z]; return m && !m.down && info.count ? 51 : -1; }
+            case 'botiquin': {
+              const t = v.players[a.target.vs] && v.players[a.target.vs].mz[a.target.z];
+              return t && v.team[a.target.vs] === v.team[v.seat] && (t.mods || []).some(x => x.atk < 0 || x.def < 0) ? 52 : -1;
+            }
+            case 'deathnote': { const t = opp.mz[a.target.z]; return t ? 48 + (t.down ? 8 : (t.atk || 0) / 150) : -1; }
+            case 'ultratumba': return 47;
             case 'equip': {
               const m = me.mz[a.target.z];
               if (!m || m.down) return -1;
