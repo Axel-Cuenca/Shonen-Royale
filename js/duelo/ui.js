@@ -202,6 +202,11 @@
             const x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H);
             const d = x.getImageData(0, 0, W, H), p = d.data, seen = new Uint8Array(W * H), q = [];
             const light = i => { const a = p[i * 4 + 3]; if (a < 20) return true; return p[i * 4] > 226 && p[i * 4 + 1] > 226 && p[i * 4 + 2] > 226; };
+            // Ilustración completa (borde casi todo de color, con sólo algún trozo claro como un cielo): se deja entera, sin recortar
+            let edgeN = 0, edgeLight = 0;
+            for (let i = 0; i < W; i++) for (const t of [i, (H - 1) * W + i]) { edgeN++; if (light(t)) edgeLight++; }
+            for (let j = 0; j < H; j++) for (const t of [j * W, j * W + W - 1]) { edgeN++; if (light(t)) edgeLight++; }
+            if (edgeLight / edgeN < .6) { res(c.toDataURL('image/png')); return; }
             for (let i = 0; i < W; i++) q.push(i, (H - 1) * W + i);
             for (let j = 0; j < H; j++) q.push(j * W, j * W + W - 1);
             while (q.length) {
@@ -235,7 +240,7 @@
       /** Recorte listo de esa carta (con la skin `img` si se da) o null mientras se prepara. */
       src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k); return cache.get(k) || null; }
     };
-    function want(k) { if (!cache.has(k)) { cache.set(k, null); cutout(k).then(u => cache.set(k, u)); } }
+    function want(k) { if (!cache.has(k)) { cache.set(k, null); cutout(k).then(u => (u && D.CardFX ? D.CardFX.checkFull(u).then(() => u, () => u) : u)).then(u => cache.set(k, u)); } }   // antes de darla por lista se mira si es ilustración completa (así no se monta la malla animada sobre ella)
   })();
   setTimeout(() => Holo.prepare(), 0);
 
