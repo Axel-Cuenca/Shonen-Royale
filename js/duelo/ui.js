@@ -2842,7 +2842,7 @@
       : h('div', { class: 'ent ' + k }, h('p', null, l[en]));
     const items = (G.CHANGELOG || []).filter(e => e.d >= '2026-10-19').map(e => h('div', { class: 'panel nv' },
       h('h2', null, fecha(e.d)),
-      ...SEC.filter(x => e[x[0]] && e[x[0]].length).map(x => h('div', { class: 'nvs' }, h('div', { class: 'nvh' }, x[1 + en]), ...e[x[0]].map(l => ent(x[0], l))))));
+      ...SEC.filter(x => e[x[0]] && e[x[0]].length).map(x => h('div', { class: 'nvs' }, h('div', { class: 'nvh' }, x[1 + en]), ...e[x[0]].slice().reverse().map(l => ent(x[0], l))))));      // lo último que se añadió sale primero
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Novedades'), ...items));
   }
 
