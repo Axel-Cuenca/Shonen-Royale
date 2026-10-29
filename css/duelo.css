@@ -1690,3 +1690,6 @@ body[data-drag="pool"] .edright { outline: 2px dashed var(--gold); outline-offse
   .edbar2 { display: flex; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 30; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #0d1a40; border: 2px solid var(--edge); border-radius: 16px; box-shadow: 0 10px 30px #000a; }
   .edb2t { display: flex; flex-direction: column; min-width: 0; } .edb2t b { font-size: 22px; } .edb2t b.ok { color: var(--green); } .edb2t b.bad { color: var(--gold); } .edb2t small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* Partidas de 3-4 jugadores (29-10-2026): las casillas son más chicas que en el 1 contra 1, así que la carta del tablero se ajusta al ancho de su casilla y no se pisan */
+html.fxbg .slab.multi .zone.mz .card.m.layered.onboard:not(.def) { width: 96%; height: auto; aspect-ratio: 11.4 / 11.8; margin-left: -48%; bottom: 0; }
