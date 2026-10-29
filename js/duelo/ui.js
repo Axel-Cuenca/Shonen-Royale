@@ -2367,7 +2367,11 @@
       if (!st || !b) return;
       const sw = st.clientWidth, sh = st.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
       const rt = top ? Math.max(0, top.offsetHeight - 34) : 0, rb = bot ? Math.max(0, bot.offsetHeight - 40) : 0, avail = sh - rt - rb;
-      const k = Math.max(0.2, Math.min(sw / ((bw + 150) * 1.12), (avail - 4) / (bh * Math.cos(TILT * Math.PI / 180) * 1.06 + 6)));
+      // 3-4 jugadores: el tablero es ancho y la columna de mensajes/chat de la izquierda taparía el campo propio: se aparta de ella
+      const off = q('.slab.multi') && window.innerWidth > 900 && lcol ? lcol.offsetWidth + 24 : 0;
+      const k = Math.max(0.2, Math.min((sw - off) / ((bw + 150) * 1.12), (avail - 4) / (bh * Math.cos(TILT * Math.PI / 180) * 1.06 + 6)));
+      b.style.left = off ? Math.round(off + (sw - off) / 2) + 'px' : '';
+      pr.style.perspectiveOrigin = off ? Math.round(off + (sw - off) / 2) + 'px 50%' : '';
       b.style.setProperty('--k', k.toFixed(3));
       b.style.top = Math.round(rt + avail / 2) + 'px';
       pr.style.perspective = Math.round(bw * k * 2.6) + 'px';
