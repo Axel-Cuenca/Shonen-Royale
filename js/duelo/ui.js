@@ -343,7 +343,7 @@
     const pref = v => { try { if (v === undefined) return localStorage.getItem('duelo.fs') === '1'; localStorage.setItem('duelo.fs', v ? '1' : '0'); } catch (e) { return false; } };
     const touch = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
     const api = {
-      wanted: () => !standalone(),
+      wanted: () => !!cur() || !standalone(),      // dentro de la pantalla completa que pidió el propio botón, el botón tiene que seguir ahí para poder salir (el navegador la cuenta como «display-mode: fullscreen»)
       icon: () => (cur() ? '⤡' : '⛶'),
       sync: () => document.querySelectorAll('.fsb').forEach(b => { b.textContent = api.icon(); b.title = cur() ? 'Salir de pantalla completa' : 'Pantalla completa'; }),
       toggle: () => {
@@ -1222,7 +1222,8 @@
       if (s.ksp) o.push('Kaioken activo (+700 ATK/DEF)' + (s.ksp.x ? ' · x10 ya usado' : ' · puede llevarse a x10 una vez'));
       if (s.dn) o.push('Death Note: morirá durante el turno de su dueño');
       if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
-      if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir');
+      if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir. ' + (s.symLeft == null ? 'Es de Marvel: puede quedarse todo el tiempo.' : 'No es de Marvel: le quedan ' + s.symLeft + ' turno(s) y luego se separa y sale como personaje normal.'));
+      if (s.gems && s.gems.length) o.push('Gemas robadas que lleva consigo (no ocupan zona; se usan como habilidad en tu turno): ' + s.gems.map(id => C.get(id).name).join(', '));
       if (s.tony) o.push('Materiales: ' + s.tony.mat + ' · armaduras construidas: ' + s.tony.arm + (s.tony.can ? '' : ' · ya usó la armadura este turno'));
       if (s.toge) o.push('Órdenes: ¡Quieto! ' + (s.toge.tq ? 'usada' : 'lista') + ' · ¡Debilítate! ' + (s.toge.td ? 'usada' : 'lista') + ' · ¡Muere! ' + (s.toge.tm ? 'usada' : 'lista') + (s.toge.round ? ' · ya dio una orden este turno' : ''));
       if (s.pn) o.push('Puños endurecidos: ' + s.pn.n + '/' + s.pn.max + ' usos' + (s.pn.turn ? ' · ya usados este turno' : ''));
@@ -1311,7 +1312,8 @@
       if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
       if (s.gem) b.push(['🔮', 'Mente controlada']);
       if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);
-      if (s.sym) b.push(['🕷️', 'Venom equipado (Simbiosis)']);
+      if (s.gems && s.gems.length) b.push(['💎' + s.gems.length, 'Gemas robadas equipadas: ' + s.gems.map(id => C.get(id).name).join(', ')]);
+      if (s.sym) b.push(['🕷️' + (s.symLeft == null ? '' : s.symLeft), 'Venom equipado (Simbiosis)' + (s.symLeft == null ? ': sin límite (anfitrión de Marvel)' : ': le quedan ' + s.symLeft + ' turno(s)')]);
       if (s.odin) b.push(['✨' + s.odin.c, 'Odin: ' + s.odin.c + ' carga(s) de vida (3 para revivir a un personaje del cementerio) · bendiciones ' + s.odin.b + '/' + s.odin.max]);
       if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
       if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
@@ -1568,6 +1570,8 @@
           if (k === 'tq' || k === 'td' || k === 'tm') continue;      // las órdenes de Toge: más abajo, con su descripción
           if (k === 'eren') acts.push({ label: 'Eren se muerde la mano (−500 PV)', desc: 'Una vez: paga 500 PV e invoca al Titán de Ataque desde tu mano en su lugar. Eren queda vinculado al Titán.', run: () => act(g[0]) });
           else if (k === 'punos') acts.push({ label: 'Endurecer los puños (+700 ATK)', desc: 'Su próximo ataque gana +700 ATK. Una vez por turno propio, 2 veces por invocación.', run: () => act(g[0]) });
+          else if (k === 'tgtiempo') acts.push({ label: 'Usar la Gema del Tiempo (robada)', desc: 'Retrocede tu campo un turno; la gema va al cementerio.', run: () => act(g[0]) });
+          else if (k === 'tgmente') acts.push({ label: 'Controlar la mente de un rival (Gema robada)…', desc: 'La Gema de la Mente pasa a tu campo de magias y controla al personaje elegido.', run: () => pickTargets(g.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién controla') });
           else if (k === 'kurama') acts.push({ label: 'Chakra de Kurama', desc: '+600 ATK y DEF durante 2 turnos propios completos.', run: () => act(g[0]) });
           else if (k === 'armadura') acts.push({ label: s.tony && s.tony.arm ? 'Mejorar la armadura (+300 ATK/DEF)' : 'Construir la armadura (+1000 ATK/DEF)', desc: 'Gasta 1 material (tienes ' + (s.tony ? s.tony.mat : 0) + '). Una acción por turno.', run: () => act(g[0]) });
           else if (k === 'jkmove') {
@@ -1685,9 +1689,6 @@
       const s = v.me.st[z], d = C.get(s.c.id), acts = [];
       if (myTurn() && !v.pending) {
         const sw = L().filter(a => a.t === 'spow' && a.zone === z);
-        const gb = sw.filter(a => a.pw === 'gembind');
-        if (gb.length) acts.push({ label: 'Controlar la mente de un rival…', run: () => pickTargets(gb.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(gb.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién controla') });
-        const gt = sw.find(a => a.pw === 'tiempo'); if (gt) acts.push({ label: 'Usar la Gema del Tiempo', run: () => act(gt) });
         const gp = sw.find(a => a.pw === 'gempos'); if (gp) acts.push({ label: 'Cambiar su posición', run: () => act(gp) });
         const ga = sw.filter(a => a.pw === 'gematk');
         if (ga.length) acts.push({ label: 'Obligarlo a atacar a un aliado…', run: () => pickTargets(ga.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(ga.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién ataca') });
@@ -1696,7 +1697,7 @@
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
         if (os.length) acts.push({ label: 'Activar', run: () => spellFlow(os, d) });
       }
-      const extra = stText(s) || (s.idle ? 'Robada por Thanos: queda equipada en él y la usas como habilidad en tu turno.' : s.gem ? `Controla la mente de un rival. Usos que quedan: ${s.gem.left}.` : s.karma ? (s.karma.phase === 'foe' ? `Karma va a morir en ${s.karma.left} turno(s).` : 'Equipada a un personaje tuyo.') : null);
+      const extra = stText(s) || (s.gem ? `Controla la mente de un rival. Usos que quedan: ${s.gem.left}.` : s.karma ? (s.karma.phase === 'foe' ? `Karma va a morir en ${s.karma.left} turno(s).` : 'Equipada a un personaje tuyo.') : null);
       sheet(d, acts, d.kind === 'trap' && s.down ? 'Se activará cuando puedas responder.' : extra);
     }
     function oppClick(seat, area, z) {
@@ -1760,7 +1761,7 @@
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'glove' && pd.stage === 'ask') {
         const i = pd.info || {};
-        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, (i.trap ? `El rival activa la trampa ${pd.nm || 'Gema de la Realidad'}. Puedes robarla: su efecto se cancela y queda boca abajo en tu campo, protegida por ${i.bearer || 'tu portador'} (${i.stars || '?'}★).` : (i.idle ? `El rival activa ${pd.nm || 'una gema'}. ${i.bearer || 'Thanos'} puede robarla: la activación se cancela y la gema queda equipada en él. La usas como habilidad cuando quieras.` : `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`))),
+        const box = h('div', { class: 'box' }, h('h2', null, '🧤 Guantelete del Infinito'), h('p', { class: 'sub' }, (i.trap ? `El rival activa la trampa ${pd.nm || 'Gema de la Realidad'}. Puedes robarla: su efecto se cancela y queda boca abajo en tu campo, protegida por ${i.bearer || 'tu portador'} (${i.stars || '?'}★).` : (i.idle ? `El rival activa ${pd.nm || 'una gema'}. ${i.bearer || 'Thanos'} puede robarla: la activación se cancela y la gema queda con él (no ocupa ninguna zona). La usas como habilidad en tu turno cuando quieras.` : `El rival activa ${pd.nm || 'una gema'}. Puedes robarla y ${pd.nm === 'Gema del Tiempo' ? 'usarla con' : 'equiparla a'} ${i.bearer || 'tu portador'} (${i.stars || '?'}★).`))),
           h('p', { class: 'sub' }, i.pen || ''),
           h('div', { class: 'acts' }, btn('Robar la gema', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;

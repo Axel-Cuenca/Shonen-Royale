@@ -89,7 +89,7 @@
     rasengan: ['Rasengan', 'Una vez por invocación: +400 ATK sólo durante su siguiente ataque.'],
     mantok: ['Manto del Kyuubi', 'Si lo ataca un personaje con más ATK o DEF, no muere por ese combate y sólo recibe el daño de la diferencia de estadísticas, según su posición.'],
     vinculok: ['Vínculo del manto', 'Comparte su destino con Naruto Chico: si una magia, trampa o habilidad lo destruye, también destruye a Naruto Chico. No puede morir por combate.'],
-    thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales (la activación se cancela) y quedan equipadas en él; si es la Gema de la Mente o la del Tiempo, las usa como habilidad cuando el jugador quiera.'],
+    thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales (la activación se cancela) y las lleva consigo como habilidades suyas, sin ocupar ninguna zona; la Gema de la Mente y la del Tiempo las usa cuando el jugador quiera (la de la Mente necesita una zona de magia libre al usarla).'],
     thanosp: ['Poder de las Gemas', 'Por cada gema que tenga equipada, Thanos gana +500 ATK y +500 DEF.'],
     patriarca: ['Despertar del Poder Oculto', 'Otro personaje aliado del campo (nunca él mismo) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
     kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
@@ -118,7 +118,7 @@
     semilla: ['Semilla del Hermitaño', 'Una vez por turno propio, sobre un aliado: quita sus efectos negativos (reducciones de ATK/DEF, habilidades selladas, Promesa de Poder y cartas rivales dañinas como Karma o la Gema de la Mente) y le devuelve el poder perdido, sin pasar de su valor base.'],
     tonyarm: ['Armadura de Iron Man', 'Cada turno propio completo en el campo reúne materiales. Con el primero construye la primera armadura (+1000 ATK y DEF); con cada turno completo posterior puede mejorarla (+300 ATK y DEF cada vez, sin límite). Una acción por turno.'],
     jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
-    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da la mitad de las estadísticas de Venom (+700 ATK y +650 DEF) y deja de ocupar su zona. Es opcional: también puede invocarse y combatir con normalidad.'],
+    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da la mitad de las estadísticas de Venom (+700 ATK y +650 DEF) y deja de ocupar su zona. Con un personaje de Marvel puede quedarse todo el tiempo; con cualquier otro sólo 2 turnos: después se separa y sale al campo como personaje normal, y no puede acoplarse de nuevo hasta su siguiente turno. Es opcional: también puede invocarse y combatir con normalidad.'],
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
     sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
@@ -521,7 +521,7 @@
     }),
     mon({
       id: 'c_venom', name: 'Venom', type: 'marvel', level: 4, atk: 1400, def: 1300, img: I('venom'), ab: ['symb', 'hostprot', 'absorbv'],
-      text: 'Simbiosis: una vez por turno propio puedes equiparlo a un aliado (+700 ATK y +650 DEF, la mitad de sus estadísticas; no ocupa zona mientras tanto). Protección del huésped: si el portador fuera a ser destruido, se destruye Venom en su lugar. ' +
+      text: 'Simbiosis: una vez por turno propio puedes equiparlo a un aliado (+700 ATK y +650 DEF, la mitad de sus estadísticas; no ocupa zona mientras tanto; con un anfitrión que no sea de Marvel sólo 2 turnos, luego se separa). Protección del huésped: si el portador fuera a ser destruido, se destruye Venom en su lugar. ' +
         'Absorción de habilidades: cuando Venom o su portador destruye a un enemigo, Venom aprende para siempre UNA de sus habilidades.',
       sfx: { summon: V('venom-summon'), attack: V('venom-attack') }
     }),

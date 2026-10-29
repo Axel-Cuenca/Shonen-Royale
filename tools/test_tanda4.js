@@ -187,46 +187,54 @@ module.exports = function (T) {
     if (sg.pending && sg.pending.ab === 'glove') { answer(sg, 0, { use: true }); settle(sg); ok(sg.players[0].st.some(s => s && s.c.id === 'c_gema_poder'), 'la gema queda equipada a Thanos'); eq(cnt(sg), n0, 'sin pérdida de cartas'); eq(stat(sg, 0, 0), [1800 + 800 + 500, 1800 + 800 + 500], 'Thanos: +800 de la Gema del Poder y +500 por la gema'); }
   }
 
-  // Mente y Tiempo robadas: quedan equipadas en Thanos y se usan como habilidad si el jugador quiere
+  // Mente y Tiempo robadas: Thanos las lleva consigo (sin ocupar zona de magia/trampa) y las usa como habilidad si el jugador quiere
   {
     const mk = id => { const sg = fresh(1); put(sg, 0, 0, 'c_thanos'); put(sg, 0, 1, 'c_goku'); put(sg, 1, 0, 'c_goku'); hand(sg, 1, [id]); return sg; };
     const sm = mk('c_gema'), n0 = cnt(sm);
     act(sm, 1, L(sm, 1).find(a => a.t === 'activate' && a.hand === 0));
-    ok(!!sm.pending && sm.pending.ab === 'glove' && sm.pending.player === 0 && sm.pending.info.idle, 'Mente: Thanos puede robarla al activarse (idle)');
+    ok(!!sm.pending && sm.pending.ab === 'glove' && sm.pending.player === 0 && sm.pending.info.idle, 'Mente: Thanos puede robarla al activarse');
     answer(sm, 0, { use: true }); settle(sm);
-    const sl = sm.players[0].st.findIndex(s => s && s.c.id === 'c_gema');
-    ok(sl >= 0 && !!sm.players[0].st[sl].idle && !sm.players[0].st[sl].gem, 'Mente robada: queda equipada en Thanos sin usar');
+    const th = sm.players[0].mz[0];
+    ok(th.gemsIdle && th.gemsIdle.length === 1 && th.link.some(c => c.id === 'c_gema'), 'Mente robada: queda en Thanos como habilidad');
+    ok(!sm.players[0].st.some(x => x), 'Mente robada: NO ocupa ninguna zona de magia/trampa');
     ok(!sm.players[1].st.some(s => s && s.c.id === 'c_gema') && !sm.players[1].grave.some(c => c.id === 'c_gema'), 'la activación del rival se cancela (no está en su campo ni cementerio)');
     eq(cnt(sm), n0, 'Mente robada: no se pierde ninguna carta');
-    ok(stat(sm, 0, 0)[0] >= 1800 + 500, 'Mente robada cuenta como gema equipada de Thanos (+500)');
+    ok(stat(sm, 0, 0)[0] >= 1800 + 500, 'Mente robada cuenta como gema de Thanos (+500)');
+    ok(E.view(sm, 0).players[0].mz[0].gems.includes('c_gema'), 'la ficha de Thanos enseña la gema que lleva');
     ready(sm, 0, 7);
-    const bind = L(sm, 0).filter(a => a.t === 'spow' && a.pw === 'gembind');
+    const bind = L(sm, 0).filter(a => a.t === 'power' && a.pw === 'tgmente');
     ok(bind.length === 1 && bind[0].target.vs === 1, 'Mente robada: se puede usar como habilidad sobre un rival');
     act(sm, 0, bind[0]);
-    ok(!!sm.players[0].st[sl].gem && !sm.players[0].st[sl].idle, 'Mente robada: al usarla controla a su objetivo');
+    const sl = sm.players[0].st.findIndex(s => s && s.c.id === 'c_gema');
+    ok(sl >= 0 && !!sm.players[0].st[sl].gem && !sm.players[0].mz[0].gemsIdle, 'Mente robada: al usarla controla a su objetivo');
     ok(L(sm, 0).some(a => a.t === 'spow' && (a.pw === 'gempos' || a.pw === 'gematk')), 'Mente robada: después ofrece sus acciones habituales');
     eq(cnt(sm), n0, 'Mente robada usada: se mantiene el total de cartas');
-
+    // sin zona de magia libre no se ofrece usar la Mente
+    const sf = mk('c_gema'); act(sf, 1, L(sf, 1).find(a => a.t === 'activate' && a.hand === 0)); answer(sf, 0, { use: true }); settle(sf); ready(sf, 0, 7);
+    for (let z = 0; z < 3; z++) putST(sf, 0, z, 'c_gema_poder', { down: true });
+    ok(!L(sf, 0).some(a => a.t === 'power' && a.pw === 'tgmente'), 'Mente robada: con las 3 zonas de magia ocupadas no se ofrece');
+    // si Thanos muere, la gema que llevaba va al cementerio de quien la robó
+    const sd = mk('c_gema'), dn = cnt(sd); act(sd, 1, L(sd, 1).find(a => a.t === 'activate' && a.hand === 0)); answer(sd, 0, { use: true }); settle(sd);
+    ready(sd, 1, 8); put(sd, 1, 1, 'c_odin');
+    toBattle(sd, 1); act(sd, 1, atkA(sd, 1, 1, 0)); settle(sd);
+    ok(!sd.players[0].mz[0] && sd.players[0].grave.some(c => c.id === 'c_gema'), 'si Thanos muere, la gema que llevaba va al cementerio de quien la robó');
+    eq(cnt(sd)[0], dn[0], 'Thanos muerto con una gema robada: el total de cartas del ladrón no cambia');
+    ok(!sd.players[0].st.some(x => x) && !sd.players[0].mz.some(m => m && m.link && m.link.some(c => c.id === 'c_gema')), 'la gema no queda en ningún sitio más');
     const stt = fresh(1); put(stt, 0, 0, 'c_thanos'); put(stt, 1, 0, 'c_goku'); hand(stt, 1, ['c_gema_tiempo']);
-    stt.players[0].snaps = [{}, {}]; stt.players[1].snaps = [{}, {}];
+    const snapT = JSON.stringify({ mz: stt.players[0].mz, st: stt.players[0].st }); stt.players[0].snaps = [snapT, snapT]; stt.players[1].snaps = [snapT, snapT];
     const tn = cnt(stt), ta = L(stt, 1).find(a => a.t === 'activate' && a.hand === 0);
-    if (ta) {
-      act(stt, 1, ta);
-      ok(!!stt.pending && stt.pending.ab === 'glove' && stt.pending.info.idle, 'Tiempo: Thanos puede robarla al activarse');
-      answer(stt, 0, { use: true }); settle(stt);
-      const ti = stt.players[0].st.findIndex(s => s && s.c.id === 'c_gema_tiempo');
-      ok(ti >= 0 && !!stt.players[0].st[ti].idle, 'Tiempo robada: queda equipada en Thanos sin usar');
-      eq(cnt(stt), tn, 'Tiempo robada: no se pierde ninguna carta');
-    } else ok(false, 'Tiempo: no se pudo activar en la prueba');
-  }
-
-  {
-    const su = fresh(0); put(su, 0, 0, 'c_thanos'); put(su, 0, 1, 'c_goku'); putST(su, 0, 0, 'c_gema_tiempo', { equipTo: 0, stolen: true, idle: { fx: 'tiempo' } }); su.players[1].loan = 1; su.players[0].loan = -1;
-    const n1 = cnt(su);
-    pass(su, 4);                                         // turnos suficientes para tener instantáneas
-    const tp = L(su, E.actor(su)).find(a => a.t === 'spow' && a.pw === 'tiempo');
-    if (tp && E.actor(su) === 0) { act(su, 0, tp); ok(grave(su, 0, 'c_gema_tiempo') || true, 'Tiempo robada usada'); eq(cnt(su), n1, 'Tiempo robada usada: no se pierde ninguna carta'); ok(!su.players[0].st.some(x => x && x.c.id === 'c_gema_tiempo'), 'Tiempo robada usada: sale del campo'); }
-    else ok(true, 'Tiempo robada: (sin retroceso disponible en esta prueba)');
+    ok(!!ta, 'Tiempo: se puede activar');
+    act(stt, 1, ta);
+    ok(!!stt.pending && stt.pending.ab === 'glove' && stt.pending.info.idle, 'Tiempo: Thanos puede robarla al activarse');
+    answer(stt, 0, { use: true }); settle(stt);
+    ok(stt.players[0].mz[0].gemsIdle && stt.players[0].mz[0].gemsIdle[0].fx === 'tiempo' && !stt.players[0].st.some(x => x), 'Tiempo robada: queda en Thanos sin ocupar zona');
+    eq(cnt(stt), tn, 'Tiempo robada: no se pierde ninguna carta');
+    // usarla: retrocede el campo, la gema va al cementerio y no vuelve
+    ready(stt, 0, 9);
+    put(stt, 0, 2, 'c_zenitsu'); const tn2 = cnt(stt);
+    const tp = L(stt, 0).find(a => a.t === 'power' && a.pw === 'tgtiempo');
+    ok(!!tp, 'Tiempo robada: se ofrece como habilidad');
+    if (tp) { act(stt, 0, tp); ok(grave(stt, 0, 'c_gema_tiempo'), 'Tiempo robada usada: la gema va al cementerio'); eq(cnt(stt), tn2, 'Tiempo robada usada: no se pierde ninguna carta'); const th2 = stt.players[0].mz[0]; ok(th2 && th2.c.id === 'c_thanos' && !(th2.gemsIdle && th2.gemsIdle.length), 'Thanos sigue en su zona y ya no la lleva'); ok(!stt.players[0].mz[2] && stt.players[0].hand.some(c => c.id === 'c_zenitsu'), 'el retroceso devolvió a Zenitsu (que no estaba) a la mano'); }
   }
 
   section('Kaioken');
@@ -326,5 +334,51 @@ module.exports = function (T) {
       } catch (e) { bad = 'excepción: ' + (e.stack || e.message).split('\n').slice(0, 3).join(' | '); }
     }
     ok(!bad, bad || 'partidas con las cartas nuevas sin errores'); ok(done >= 30, done + ' de 80 partidas terminaron');
+  }
+
+  section('Sylas: una habilidad robada por turno (29-10-2026)');
+  {
+    const st = fresh(0); put(st, 0, 0, 'c_sylas'); put(st, 1, 0, 'c_toge'); put(st, 1, 1, 'c_minato');
+    const a1 = pw(st, 0, 'robo');
+    ok(!!a1, 'Sylas puede robar una habilidad');
+    act(st, 0, a1);
+    ok(E.view(st, 0).players[0].mz[0].ext.length === 1, 'copia exactamente una habilidad');
+    ok(!pw(st, 0, 'robo'), 'no puede robar una segunda en el mismo turno');
+    pass(st, 2);
+    ok(E.actor(st) === 0 && st.current === 0, 'vuelve su turno');
+    const a2 = pw(st, 0, 'robo');
+    ok(!!a2, 'al turno siguiente puede robar otra');
+    if (a2) { act(st, 0, a2); ok(E.view(st, 0).players[0].mz[0].ext.length === 2, 'acumula la segunda habilidad'); }
+    ok(!pw(st, 0, 'robo'), 'otra vez una sola por turno');
+  }
+
+  section('Venom: Simbiosis de 2 turnos con no-Marvel (29-10-2026)');
+  {
+    const mk = host => { const st = fresh(0); put(st, 0, 0, host); put(st, 1, 2, 'c_creeper'); hand(st, 0, ['c_venom']); return st; };
+    // anfitrión de Marvel: se queda todo el tiempo
+    const sm = mk('c_deadpool');
+    act(sm, 0, L(sm, 0).find(a => a.t === 'attach' && a.mode === 'venom'));
+    ok(sm.players[0].mz[0].sym, 'Venom se equipa a Deadpool (Marvel)');
+    pass(sm, 2 * 6);
+    ok(sm.players[0].mz[0] && sm.players[0].mz[0].sym && !sm.players[0].mz[1], 'con un anfitrión de Marvel sigue equipado muchos turnos después');
+    ok(E.view(sm, 0).players[0].mz[0].symLeft == null, 'sin cuenta atrás para Marvel');
+    // anfitrión que no es de Marvel: 2 turnos y se separa
+    const sg = mk('c_goku');
+    const n0 = E.countCards(sg, 0);
+    act(sg, 0, L(sg, 0).find(a => a.t === 'attach' && a.mode === 'venom'));
+    ok(E.view(sg, 0).players[0].mz[0].symLeft === 2, 'a Goku le quedan 2 turnos');
+    pass(sg, 2);
+    ok(sg.players[0].mz[0].sym && E.view(sg, 0).players[0].mz[0].symLeft === 2, 'primer turno propio completo: sigue equipado');
+    pass(sg, 2);
+    ok(sg.players[0].mz[0].sym && E.view(sg, 0).players[0].mz[0].symLeft === 1, 'segundo turno: sigue equipado, le queda 1');
+    pass(sg, 2);
+    const P0 = sg.players[0];
+    ok(!P0.mz[0].sym && !(P0.mz[0].link || []).length, 'a los 2 turnos Venom se separa de Goku');
+    ok(P0.mz.some(m => m && m.c.id === 'c_venom' && !m.sym), 'Venom sale al campo como personaje normal');
+    eq(stat(sg, 0, 0), [Cards.get('c_goku').atk, Cards.get('c_goku').def], 'Goku pierde la bonificación');
+    ok(!L(sg, 0).some(a => a.t === 'power' && a.pw === 'simb'), 'no puede acoplarse de nuevo el mismo turno');
+    eq(E.countCards(sg, 0), n0, 'ninguna carta se pierde ni se duplica');
+    pass(sg, 2);
+    ok(L(sg, 0).some(a => a.t === 'power' && a.pw === 'simb'), 'un turno después puede acoplarse otra vez');
   }
 };

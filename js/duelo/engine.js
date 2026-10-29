@@ -301,7 +301,7 @@
   /** Gemas que lleva Thanos: equipadas a él (también las robadas) o puestas por su dueño (Gema de la Mente). */
   function thanosGems(st, P, z) {
     if (stOff(st)) return 0;
-    let n = 0;
+    let n = (P.mz[z] && P.mz[z].gemsIdle ? P.mz[z].gemsIdle.length : 0);      // las gemas robadas que lleva consigo (no ocupan zona)
     for (const s of P.st) {
       if (!s) continue;
       const d = def(s.c);
@@ -561,6 +561,25 @@
     onDeath(st, p, { c: inst }, 'grave');
   }
   /** Jake o Venom equipados protegen a su portador: se destruyen en su lugar (una vez por destrucción) y su bonificación se quita al instante. */
+  /** Simbiosis: Venom puede estar acoplado todo el tiempo a un personaje de Marvel; a cualquier otro sólo 2 turnos (rondas). */
+  const SYM_TURNS = 2;
+  const symLeft = (st, m) => (!m.sym || mdef(m).type === 'marvel' ? null : Math.max(0, SYM_TURNS - Math.max(0, elapsed(st, m.sym.t0 != null ? m.sym.t0 : st.turn))));
+  /** Venom se separa de su anfitrión y sale al campo como personaje normal (necesita una zona libre; si no la hay, espera). Tras separarse, no puede acoplarse otra vez hasta su siguiente turno. */
+  function venomSeparate(st, p, z) {
+    const P = st.players[p], h = P.mz[z];
+    if (!h || !h.sym) return false;
+    const i = (h.link || []).findIndex(c => c.uid === h.sym.uid);
+    if (i < 0) { h.sym = null; dropMods(h, 'venom'); return false; }
+    const inst = h.link[i], d = def(inst), nz = spot(P, d);
+    if (nz < 0) return false;
+    h.link.splice(i, 1); if (!h.link.length) delete h.link;
+    dropMods(h, 'venom'); h.sym = null;
+    inst.spent = false;
+    P.mz[nz] = mkSlot(st, inst, { pos: 'atk' });
+    P.symT = st.turn;
+    log(st, p, `Venom se separa de ${mdef(h).name} y sale como personaje normal: no podrá acoplarse de nuevo hasta su siguiente turno`);
+    return true;
+  }
   function equipDies(st, p, m, key) {
     const eq = m[key], i = (m.link || []).findIndex(c => c.uid === eq.uid);
     if (i < 0) { m[key] = null; return false; }
@@ -763,8 +782,8 @@
    *  Gema de la Mente) se deja tal cual; las cartas que tenía en el campo y no estaban entonces vuelven a la mano. */
   function rewindField(st, p) {
     const P = st.players[p], snap = JSON.parse(P.snaps[0]);
-    const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused);
-    const lockedSt = s => s && (s.prison || s.gem || s.karma || s.idle || s.c.id === 'c_gema_tiempo');      // la gema robada por Thanos y aún sin usar tampoco se toca; ninguna Gema del Tiempo vuelve del cementerio (la usada se queda en él)
+    const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused || (s.gemsIdle && s.gemsIdle.length));      // Thanos con gemas robadas guardadas tampoco se toca
+    const lockedSt = s => s && (s.prison || s.gem || s.karma || s.c.id === 'c_gema_tiempo');      // ninguna Gema del Tiempo vuelve del cementerio (la usada se queda en él)
     const pool = {};
     const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
     P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
@@ -1487,7 +1506,7 @@
         if (d.fx === 'gem' && !zoneTargetsUp(st, q).length) continue;
         return { q, bz: s.equipTo, stz: i };
       }
-      if (free) for (let z = 0; z < ZONES; z++) {            // Thanos lleva el Guantelete incorporado: la gema queda equipada en él y la usa como habilidad cuando quiera
+      if (free || d.fx === 'gem' || d.fx === 'tiempo') for (let z = 0; z < ZONES; z++) {            // Thanos lleva el Guantelete incorporado: la gema queda en él (sin ocupar zona) y la usa como habilidad cuando quiera
         const bm = Q.mz[z];
         if (!bm || bm.down || !has(st, bm, 'thanosg') || has(st, bm, 'rikaprot')) continue;
         return { q, bz: z, stz: -1, thanos: true };
@@ -1514,7 +1533,7 @@
     const bm = st.players[g.q].mz[g.bz], stars = lvl(bm);
     st.chain = null;
     st.pending = { k: 'ability', ab: 'glove', player: g.q, stage: 'ask', ch, by: p, bz: g.bz, uid: ch.inst.uid, nm: d.name,
-      info: { bearer: mdef(bm).name, stars, thanos: !!g.thanos, idle: !!g.thanos && (d.fx === 'gem' || d.fx === 'tiempo'), pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
+      info: { bearer: mdef(bm).name, stars, thanos: !!g.thanos, idle: !!g.thanos, pen: stars <= 5 ? 'Al usarla, ' + mdef(bm).name + ' pierde la mitad de su ATK y DEF base y sus habilidades.' : 'Sin penalización: ' + mdef(bm).name + ' es de 6★ o más.' } };
     return true;
   }
   function continueSpell(st) {
@@ -1750,7 +1769,7 @@
     if (PW_RED.includes(a.pw)) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
     return false;
   }
-  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
   const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
@@ -1800,7 +1819,7 @@
     inst.spent = false; inst.by = p;      // quién puso la carta (para contar las cartas de cada jugador si el anfitrión está corrompido)
     h.link = (h.link || []).concat([inst]);
     if (mode === 'venom') {
-      h.sym = { uid: inst.uid }; P.symT = st.turn;
+      h.sym = { uid: inst.uid, t0: st.turn }; P.symT = st.turn;
       addMod(st, h, 'venom', 700 * g, 650 * g, 0);      // sólo la mitad de las estadísticas de Venom
       log(st, p, `equipa a Venom en ${hn} (+${700 * g} ATK y +${650 * g} DEF)`);
     } else {
@@ -2087,6 +2106,10 @@
     for (let p = 0; p < st.n; p++) {
       const P = st.players[p];
       if (!P.alive) continue;
+      if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Simbiosis: con un anfitrión que no es de Marvel dura 2 turnos
+        const hm = P.mz[z];
+        if (hm && hm.sym && symLeft(st, hm) === 0) venomSeparate(st, p, z);
+      }
       if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Death Note: la sentencia se cumple durante el turno de su dueño
         const dm = P.mz[z];
         if (!dm || !dm.dn) continue;
@@ -2469,6 +2492,12 @@
           for (const x of Array.from(new Set(rawAbil(tm)))) if (STEALABLE.includes(x) && !rawAbil(m).includes(x) && !(tm.sealed || []).some(q => q.ab === x)) push({ pw: 'robo', target: t, ab: x });
         }
       }
+      if (m.gemsIdle && m.gemsIdle.length && !spellsOff(st) && st.current === p) {      // Thanos: gemas robadas que lleva consigo, usadas como habilidad (sin ocupar zona)
+        for (const gi of m.gemsIdle) {
+          if (gi.fx === 'gem') { if (firstFree(P.st) >= 0) for (const c of zoneTargetsUp(st, p)) push({ pw: 'tgmente', gem: gi.uid, target: { vs: foeOf(st, p, c), z: c.z } }); }
+          else if (gi.fx === 'tiempo' && canRewind(st, p)) push({ pw: 'tgtiempo', gem: gi.uid });
+        }
+      }
       if (ab.includes('kurama') && !(m.mods || []).some(x => x.k === 'kurama')) push({ pw: 'kurama' });
       // ----- tanda 4 -----
       if (ab.includes('majinex') && canOnce(P, z, u, 'mj')) push({ pw: 'majinex' });
@@ -2515,11 +2544,6 @@
     if (spellsOff(st)) return out;
     P.st.forEach((s, z) => {
       if (!s || s.down) return;
-      if (s.idle) {                                      // gema robada por Thanos y todavía sin usar
-        if (s.idle.fx === 'gem') { for (const c of zoneTargetsUp(st, p)) out.push({ t: 'spow', zone: z, pw: 'gembind', target: { vs: foeOf(st, p, c), z: c.z } }); }
-        else if (s.idle.fx === 'tiempo' && canRewind(st, p)) out.push({ t: 'spow', zone: z, pw: 'tiempo' });
-        return;
-      }
       if (s.gem && s.gem.uses < 2 && s.gem.usedTurn !== st.turn) {
         const tg = findByUid(st, s.gem.uid);
         if (!tg || tg.m.down) return;
@@ -3013,7 +3037,7 @@
         const taken = takeOff(st, p, a.zone, 'attach');
         if (!taken) break;
         P.symT = st.turn;
-        T.link = (T.link || []).concat([taken.c]); T.sym = { uid: taken.c.uid };
+        T.link = (T.link || []).concat([taken.c]); T.sym = { uid: taken.c.uid, t0: st.turn };
         addMod(st, T, 'venom', 700 * tg, 650 * tg, 0);
         log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${700 * tg} ATK y +${650 * tg} DEF)`);
         break;
@@ -3026,6 +3050,25 @@
         m.c.keep = (m.c.keep || []).concat([{ id: a.ab, from: mdef(tm).name }]);
         log(st, p, `${nm} usa Robo de habilidades: copia ${(C().AB[a.ab] || [a.ab])[0]} de ${mdef(tm).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = tq;
+        break;
+      }
+      case 'tgmente': case 'tgtiempo': {
+        const gi = (m.gemsIdle || []).find(x => x.uid === a.gem), li = (m.link || []).findIndex(c => c.uid === a.gem);
+        if (!gi || li < 0) break;
+        const inst = m.link.splice(li, 1)[0]; if (!m.link.length) delete m.link;
+        m.gemsIdle = m.gemsIdle.filter(x => x.uid !== a.gem); if (!m.gemsIdle.length) delete m.gemsIdle;
+        const gnm = def(inst).name;
+        if (a.pw === 'tgmente') {                        // Gema de la Mente robada: se elige a quién controla; pasa a ser una Mente normal en tu campo de magias
+          const tm = st.players[a.target.vs].mz[a.target.z], z = firstFree(P.st);
+          if (!tm || z < 0) { m.link = (m.link || []).concat([inst]); m.gemsIdle = (m.gemsIdle || []).concat([gi]); break; }
+          P.st[z] = { c: inst, down: false, setTurn: st.turn, equipTo: a.zone, stolen: true, gem: { vs: a.target.vs, uid: tm.c.uid, uses: 0, usedTurn: -1 } };
+          log(st, p, `${nm} usa ${gnm}: controla la mente de ${mdef(tm).name}`);
+          if (multi(st)) st.log[st.log.length - 1].q = a.target.vs;
+        } else {                                         // Gema del Tiempo robada: retrocede el campo y va al cementerio
+          P.grave.push(inst);
+          log(st, p, `${nm} usa ${gnm}`);
+          rewindField(st, p);
+        }
         break;
       }
       case 'kurama': {
@@ -3094,20 +3137,6 @@
   }
   function doSpower(st, p, a) {
     const P = st.players[p], s = P.st[a.zone], nm = def(s.c).name;
-    if (s.idle) {
-      if (a.pw === 'gembind') {                          // Gema de la Mente robada: se elige a quién controla; luego funciona como siempre
-        const tm = st.players[a.target.vs].mz[a.target.z];
-        if (!tm) return;
-        s.gem = { vs: a.target.vs, uid: tm.c.uid, uses: 0, usedTurn: -1 }; delete s.idle;
-        log(st, p, `${nm}: controla la mente de ${mdef(tm).name}`);
-        if (multi(st)) st.log[st.log.length - 1].q = a.target.vs;
-      } else if (a.pw === 'tiempo') {                    // Gema del Tiempo robada: retrocede el campo y va al cementerio
-        removeST(st, p, a.zone);
-        log(st, p, `${nm}: usa la Gema del Tiempo`);
-        rewindField(st, p);
-      }
-      return;
-    }
     if (a.pw === 'storm1' || a.pw === 'storm2') {
       const e = a.target.vs, inst = P.hand.splice(a.hand, 1)[0];
       s.storm.usedTurn = st.turn;
@@ -3315,11 +3344,13 @@
         return;
       }
       const bm = P.mz[pd.bz];
-      if (a.use && bm && !bm.down && has(st, bm, 'thanosg') && (d.fx === 'gem' || d.fx === 'tiempo') && firstFree(P.st) >= 0) {
-        const from = pd.by, z = firstFree(P.st);      // Thanos: roba la gema (la activación del rival se cancela) y la deja equipada; la usa después como habilidad si quiere
+      if (a.use && bm && !bm.down && has(st, bm, 'thanosg') && (d.fx === 'gem' || d.fx === 'tiempo')) {
+        const from = pd.by;      // Thanos: roba la gema (la activación del rival se cancela) y la lleva consigo, sin ocupar zona; la usa después como habilidad si quiere
         st.players[from].loan = (st.players[from].loan || 0) + 1; P.loan = (P.loan || 0) - 1;
-        P.st[z] = { c: ch.inst, down: false, setTurn: st.turn, equipTo: pd.bz, stolen: true, idle: { fx: d.fx } };
-        log(st, p, `${mdef(bm).name} roba ${d.name} y la equipa: podrá usarla como habilidad`);
+        ch.inst.spent = false; ch.inst.by = p;
+        bm.link = (bm.link || []).concat([ch.inst]);
+        bm.gemsIdle = (bm.gemsIdle || []).concat([{ uid: ch.inst.uid, fx: d.fx }]);
+        log(st, p, `${mdef(bm).name} roba ${d.name} y la lleva consigo: podrá usarla como habilidad`);
         if (multi(st)) st.log[st.log.length - 1].q = from;
         return;
       }
@@ -3495,6 +3526,7 @@
     const ab = abil(st, s);
     if (ab.includes('escudo')) v.shield = shieldOf(s);
     if (s.link && s.link.length) v.link = s.link.map(c => c.id);
+    if (s.gemsIdle && s.gemsIdle.length) v.gems = s.gemsIdle.map(g => { const c = (s.link || []).find(x => x.uid === g.uid); return c ? c.id : null; }).filter(Boolean);
     if (s.ext && s.ext.length) {
       v.ext = s.ext.slice();
       v.extInfo = s.ext.map(id => ({ id, from: (s.extFrom || {})[id] || null, state: useState(s, id) }));
@@ -3536,7 +3568,7 @@
     // ----- tanda 3 -----
     { const a3 = abil(st, s), g3 = gx(P, z);
       if (s.jk) v.jk = { mode: s.jk.mode };
-      if (s.sym) v.sym = true;
+      if (s.sym) { v.sym = true; v.symLeft = symLeft(st, s); }
       if (s.tony) v.tony = { mat: s.tony.mat, arm: s.tony.arm, can: s.tony.t !== st.turn };
       if (s.hira > 0) v.hira = s.hira;
       if (s.price) v.price = true;
@@ -3573,7 +3605,6 @@
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
     if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;
-    if (s.idle) v.idle = true;
     if (s.stolen) v.stolen = true;
     if (s.glove) v.glove = true;
     return v;

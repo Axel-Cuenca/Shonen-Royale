@@ -155,8 +155,8 @@
             case 'copy': {
               return tm && m && (tm.atk || 0) > m.atk + 300 ? 30 + tm.atk / 100 : -1;
             }
-            case 'gembind': { const fm = tm; return fm && !fm.down ? 40 + (fm.atk || 0) / 150 : -1; }
-            case 'tiempo': return -1;
+            case 'tgmente': case 'gembind': { const fm = tm; return fm && !fm.down ? 40 + (fm.atk || 0) / 150 : -1; }
+            case 'tgtiempo': case 'tiempo': return -1;
             case 'gempos': return 28;
             case 'gematk': return tm && v.team[a.target.vs] === v.team[v.seat] ? 31 : -1;
             case 'storm1': { const hd = cardOf(me.hand[a.hand]); return 44 + ((tm && tm.atk) || 0) / 100 - hd.atk / 200; }
