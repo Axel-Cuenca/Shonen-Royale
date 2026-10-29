@@ -1634,3 +1634,59 @@ html.rm .sumfx { display: none; }
 .zone.hugeA { box-shadow: 0 0 .8em #ff7a3acc; }
 .zone.wideA.hugeA .holo.wide { left: calc(50% + 8.6em); width: 17em; height: 17em; margin-left: -8.5em; }
 .zone.wideA.hugeA .hbase { left: calc(50% + 8.6em); width: 17em; margin-left: -8.5em; border-radius: 50%; }
+
+/* ===== Editor de mazos (versión 2): colección grande a la izquierda, «Tu mazo» a la derecha, detalle en ventana ===== */
+.ed2 { max-width: 1400px; }
+.edtop { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.edhead { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.edtabs { display: flex; gap: 6px; flex-wrap: wrap; } .edgrow { flex: 1; }
+.edchip { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1.5px solid #2c4590; background: transparent; color: #c9d2ff; font: 700 14px var(--ui, sans-serif); cursor: pointer; white-space: nowrap; }
+.edchip b { font-size: 12px; color: var(--green); } .edchip b.bad { color: #ffb35a; }
+.edchip.on { border-color: var(--gold); background: #1a2a5a; color: #fff3c0; } .edchip.add { border-style: dashed; color: var(--muted); }
+.edchips .edchip.on { background: var(--gold); color: #241a00; border-color: var(--gold); }
+.edpill { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1.5px solid #2c4590; background: #0b1535; font: 700 14px var(--ui, sans-serif); }
+.edpill i { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); } .edpill.ok { color: var(--green); } .edpill.ok i { background: var(--green); } .edpill.bad { color: #ffd98a; }
+.edact { color: var(--green); font: 700 13px var(--ui, sans-serif); } .edmore { width: 44px; padding: 0; font-size: 20px; }
+.edmain { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 22px; align-items: start; margin-top: 12px; }
+.edleft { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.edtools { display: flex; gap: 10px; flex-wrap: wrap; } .edtools input { flex: 1; min-width: 180px; max-width: 320px; } .edchips { display: flex; gap: 8px; flex-wrap: wrap; }
+.edhint { font-size: 13px; }
+.edgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; max-height: calc(100dvh - 330px); min-height: 280px; overflow: auto; align-content: start; padding: 4px 6px 12px 2px; }
+.edc { position: relative; background: #0b1535; border: 2px solid #2c4590; border-radius: 14px; overflow: hidden; cursor: pointer; user-select: none; -webkit-user-select: none; transition: transform .15s ease, border-color .15s ease; display: flex; flex-direction: column; }
+.edc:hover { transform: translateY(-3px); } .edc:focus-visible, .edi:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.edc.in { border-color: var(--gold); } .edc.dim { opacity: .5; }
+.eda { position: relative; height: 150px; background: linear-gradient(180deg, #232e63, #141b40); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+.eda img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; pointer-events: none; }
+.eda.spell img, .eda.trap img { object-position: 50% 50%; } .eda img.full { object-fit: cover; object-position: 50% 22%; }
+.eda .ico { align-self: center; font-size: 44px; }
+.edtag { position: absolute; left: 8px; top: 8px; background: #0a0e1fcc; color: #f6d77f; font: 800 11px var(--ui, sans-serif); padding: 3px 7px; border-radius: 6px; }
+.edc .bd { position: absolute; top: 7px; right: 7px; min-width: 24px; height: 24px; box-sizing: border-box; background: var(--gold); color: #241a00; font: 800 13px var(--ui, sans-serif); border-radius: 999px; padding: 0 6px; display: flex; align-items: center; justify-content: center; }
+.edi { position: absolute; right: 8px; top: 112px; width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1.5px solid var(--gold); background: #0a0e1fd9; color: #f6d77f; font: italic 700 16px Georgia, serif; cursor: pointer; }
+.edn { padding: 8px 11px 11px; display: flex; flex-direction: column; gap: 3px; min-width: 0; } .edn b { font: 700 14px var(--ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .edn span { font-size: 12px; color: var(--muted); }
+.edright { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.edrh { display: flex; align-items: baseline; justify-content: space-between; } .edrh h2 { margin: 0; }
+.edcnt { font: 800 30px var(--ui, sans-serif); line-height: 1; } .edcnt small { font-size: 16px; color: var(--muted); font-weight: 600; }
+.edbar { height: 8px; border-radius: 99px; background: #232e63; overflow: hidden; } .edbar i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 99px; transition: width .25s ease; } .edbar.ok i { background: var(--green); }
+.edstats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); } .edstats b { color: var(--ink); }
+.edsec { font: 700 12px var(--ui, sans-serif); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.edcurve { display: flex; gap: 10px; align-items: flex-end; height: 70px; } .edcv { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; height: 100%; }
+.edcv span { font: 700 11px var(--ui, sans-serif); } .edcv i { width: 100%; background: var(--gold); border-radius: 4px 4px 0 0; opacity: .9; } .edcv small { font-size: 11px; color: var(--muted); }
+.edsep { height: 1px; background: #2c4590; }
+.edlist { display: flex; flex-direction: column; gap: 2px; max-height: calc(100dvh - 560px); min-height: 120px; overflow: auto; }
+.edrow { display: flex; align-items: center; gap: 10px; padding: 5px 6px; border-radius: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; } .edrow:hover { background: #1c2658; }
+.edth { width: 36px; height: 36px; border-radius: 7px; overflow: hidden; flex: none; } .edth .eda { height: 36px; } .edth .eda .ico { font-size: 20px; }
+.edrn { flex: 1; min-width: 0; font: 600 14px var(--ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .edrl { font: 700 12px var(--ui, sans-serif); color: #f6d77f; min-width: 42px; text-align: right; }
+.edst { display: flex; align-items: center; } .edst button { width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #2c4590; background: #19224a; color: var(--ink); font: 800 16px var(--ui, sans-serif); line-height: 1; cursor: pointer; padding: 0; } .edst button.p { color: var(--gold); } .edst b { width: 26px; text-align: center; color: var(--gold); }
+body[data-drag="pool"] .edright { outline: 2px dashed var(--gold); outline-offset: 2px; } body[data-drag="deck"] .edleft { outline: 2px dashed #ff7a6a; outline-offset: 2px; }
+.edright.over, .edleft.over { background: #2a3a6a; }
+.edbar2 { display: none; }
+@media (min-width: 761px) { .modal .box.edm { max-width: 860px; width: calc(100vw - 48px); } .box.edm .detail { flex-direction: row; align-items: flex-start; gap: 24px; padding-top: 44px; } .box.edm .detail .card.big { margin-top: 0; } .box.edm .detail .txt { flex: 1; min-width: 0; } }
+@media (max-width: 860px) {
+  .edmain { display: flex; flex-direction: column; } .edmain > * { min-width: 0; max-width: 100%; box-sizing: border-box; } .edtop .back { order: -1; } .edhead { flex-wrap: nowrap; width: 100%; } .edtabs { flex-wrap: nowrap; overflow-x: auto; flex: 1; padding-bottom: 2px; } .edright { width: 100%; }
+  .edgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; padding-bottom: 80px; } .eda { height: 130px; } .edi { top: 92px; width: 40px; height: 40px; right: 6px; }
+  .ed2[data-tab="pool"] .edright { display: none; } .ed2[data-tab="deck"] .edleft { display: none; }
+  .edright { position: static; } .edlist { max-height: none; padding-bottom: 80px; } .edst button { width: 40px; height: 40px; }
+  .edpill, .edact, .edgrow { display: none; }
+  .edbar2 { display: flex; position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 30; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #0d1a40; border: 2px solid var(--edge); border-radius: 16px; box-shadow: 0 10px 30px #000a; }
+  .edb2t { display: flex; flex-direction: column; min-width: 0; } .edb2t b { font-size: 22px; } .edb2t b.ok { color: var(--green); } .edb2t b.bad { color: var(--gold); } .edb2t small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
