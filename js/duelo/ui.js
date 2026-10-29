@@ -2366,7 +2366,7 @@
       const st = q('.stage'), b = q('.board3d'), pr = q('.persp'), top = q('.hud-top'), bot = q('.hud-bot');
       if (!st || !b) return;
       const sw = st.clientWidth, sh = st.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
-      const rt = top ? Math.max(0, top.offsetHeight - 34) : 0, rb = bot ? Math.max(0, bot.offsetHeight - 40) : 0, avail = sh - rt - rb;
+      const rt = top ? Math.max(0, top.offsetHeight - 34) : 0, rb0 = bot ? Math.max(0, bot.offsetHeight - 40) : 0, rb = window.innerWidth > 900 ? Math.max(rb0, 226) : rb0, avail = sh - rt - rb;      // con la mano vacía el tablero NO crece hasta la zona de abajo: se reserva siempre el hueco de una mano llena
       // 3-4 jugadores: el tablero es ancho y la columna de mensajes/chat de la izquierda taparía el campo propio: se aparta de ella
       const off = q('.slab.multi') && window.innerWidth > 900 && lcol ? lcol.offsetWidth + 24 : 0;
       const k = Math.max(0.2, Math.min((sw - off) / ((bw + (off ? 70 : 150)) * (off ? 1.05 : 1.12)), (avail - (off ? 70 : 4)) / (bh * Math.cos(TILT * Math.PI / 180) * 1.06 + 6)));
