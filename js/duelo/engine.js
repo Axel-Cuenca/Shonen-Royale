@@ -2882,9 +2882,10 @@
       // ----- tanda 4 -----
       case 'majinex': {
         markOnce(u, 'mj');
-        log(st, p, `${nm} usa Explosión final: se destruye y arrastra a todos los personajes de 6★`);
+        const myStars = lvl(P.mz[a.zone]);
+        log(st, p, `${nm} usa Explosión final: se destruye y arrastra a todos los personajes de ${myStars}★ o menos`);
         const hits = [];
-        for (let q = 0; q < st.n; q++) for (let tz = 0; tz < ZONES; tz++) { const tm = st.players[q].mz[tz]; if (tm && !(q === p && tz === a.zone) && lvl(tm) === 6) hits.push([q, tz, tm]); }
+        for (let q = 0; q < st.n; q++) for (let tz = 0; tz < ZONES; tz++) { const tm = st.players[q].mz[tz]; if (tm && !(q === p && tz === a.zone) && lvl(tm) <= myStars) hits.push([q, tz, tm]); }
         removeMonster(st, p, a.zone, 'grave');
         for (const [q, tz, tm] of hits) if (st.players[q].mz[tz] === tm) destroyMonster(st, q, tz, ctx);
         break;

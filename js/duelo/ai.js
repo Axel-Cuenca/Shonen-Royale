@@ -197,8 +197,8 @@
             case 'simb': return -1;
             case 'jkmove': return -1;
             // ----- tanda 4 -----
-            case 'majinex': {                                                // sólo si arrastra a más 6★ rivales que propios
-              const lv = q => q.mz.reduce((n, t) => n + (t && cardOf(t.c) && cardOf(t.c).level === 6 ? 1 : 0), 0);
+            case 'majinex': {                                                // sólo si arrastra a más personajes de 6★ o menos rivales que propios
+              const lv = q => q.mz.reduce((n, t) => n + (t && cardOf(t.c) && cardOf(t.c).level <= 6 ? 1 : 0), 0);
               const f6 = allFoes.reduce((n, q) => n + lv(q), 0), m6 = v.players.filter(q => q.alive && q.team === v.team[v.seat]).reduce((n, q) => n + lv(q), 0);
               return f6 >= 1 && f6 >= m6 ? 58 + f6 * 3 : -1;
             }

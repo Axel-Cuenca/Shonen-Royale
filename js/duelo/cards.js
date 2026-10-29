@@ -75,7 +75,7 @@
     odinrev: ['Revelación divina', 'Una vez por turno, puede destruir una carta boca abajo rival que todavía no haya sido revelada, ya sea un personaje o una magia/trampa.'],
     odinbend: ['Bendición de poder', 'Una vez por turno, hasta 3 veces por invocación, bendice a otro personaje aliado: +600 ATK y +600 DEF de forma permanente hasta que ese personaje sea destruido.'],
     // ---------------- tanda 4 (28-10-2026) ----------------
-    majinex: ['Explosión final', 'Una vez por invocación: se destruye a sí mismo y destruye a todos los personajes de 6★ del campo, aliados y enemigos.'],
+    majinex: ['Explosión final', 'Una vez por invocación: se destruye a sí mismo y destruye a todos los personajes de 6★ o menos del campo, aliados y enemigos.'],
     armin: ['Transformación en Titán Colosal', 'Una vez, pagando 1000 PV, invoca especialmente al Titán Colosal desde tu mano en su lugar. Armin queda vinculado al Titán. Necesita las 3 zonas de personaje libres.'],
     arminsac: ['Último sacrificio', 'Si Armin muere por el ataque de un personaje enemigo o por el efecto de una carta, puedes invocar al Titán Colosal desde tu mano sin pagar PV (necesita las 3 zonas libres). Armin queda vinculado a él.'],
     colosal: ['Explosión de transformación', 'Cuando entra al campo por la transformación de Armin, destruye a todos los demás personajes del campo (aliados y enemigos) de 10★ o menos. No se puede cancelar.'],
@@ -443,7 +443,7 @@
     mon({
       id: 'c_majin_vegeta', name: 'Majin Vegeta', fam: 'Vegeta', type: 'dbz', level: 6, atk: 1700, def: 1600, img: I('majin_vegeta'), ab: ['majinex'], xfromLv: 4,
       text: 'Transformación Saiyan: sólo puede entrar transformando desde el campo a un Vegeta de 4★ (1 turno completo de espera); el Vegeta anterior queda vinculado y Majin Vegeta ya no puede volver a transformarse. ' +
-        'Explosión final: una vez por invocación, se destruye a sí mismo y destruye a todos los personajes de 6★ del campo, aliados y enemigos.',
+        'Explosión final: una vez por invocación, se destruye a sí mismo y destruye a todos los personajes de 6★ o menos del campo, aliados y enemigos.',
       sfx: { attack: V('majin_vegeta-attack') }
     }),
     mon({

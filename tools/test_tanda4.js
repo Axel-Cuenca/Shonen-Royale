@@ -57,11 +57,11 @@ module.exports = function (T) {
     act(st, 0, pw(st, 0, 'xform'));
     ok(ids(st, 0)[0] === 'c_majin_vegeta' && st.players[0].mz[0].link.some(c => c.id === 'c_vegeta'), 'Majin Vegeta queda en el campo con Vegeta vinculado');
     ok(!pw(st, 0, 'xform'), 'Majin Vegeta ya no puede volver a transformarse');
-    // Explosión final: destruye a todos los de 6★ (también aliados) y a sí mismo
+    // Explosión final: destruye a todos los de 6★ o menos (también aliados) y a sí mismo; los de más estrellas sobreviven
     const sx = fresh(); put(sx, 0, 0, 'c_majin_vegeta'); put(sx, 0, 1, 'c_shen'); put(sx, 1, 0, 'c_shen'); put(sx, 1, 1, 'c_vegeta_blue'); put(sx, 1, 2, 'c_goku');
     const n0 = cnt(sx);
     act(sx, 0, pw(sx, 0, 'majinex')); settle(sx);
-    eq([ids(sx, 0), ids(sx, 1)], [[null, null, null], [null, 'c_vegeta_blue', 'c_goku']], 'Explosión final: caen Majin, Shen aliado y Shen rival; el resto sigue');
+    eq([ids(sx, 0), ids(sx, 1)], [[null, null, null], [null, 'c_vegeta_blue', null]], 'Explosión final: caen Majin, Shen aliado, Shen rival y Goku (4★); sólo sigue Vegeta Blue (10★)');
     ok(!pw(sx, 0, 'majinex'), 'Explosión final: una vez por invocación');
     eq(cnt(sx), n0, 'Explosión final: no se pierde ninguna carta');
   }
@@ -187,6 +187,13 @@ module.exports = function (T) {
     if (sg.pending && sg.pending.ab === 'glove') { answer(sg, 0, { use: true }); settle(sg); ok(sg.players[0].st.some(s => s && s.c.id === 'c_gema_poder'), 'la gema queda equipada a Thanos'); eq(cnt(sg), n0, 'sin pérdida de cartas'); eq(stat(sg, 0, 0), [1800 + 800 + 500, 1800 + 800 + 500], 'Thanos: +800 de la Gema del Poder y +500 por la gema'); }
   }
 
+  // la Mente, el Tiempo y la Realidad también se roban al activarse
+  {
+    const mk = id => { const sg = fresh(1); put(sg, 0, 0, 'c_thanos'); put(sg, 0, 1, 'c_goku'); put(sg, 1, 0, 'c_goku'); hand(sg, 1, [id]); return sg; };
+    const sm = mk('c_gema'); const am = L(sm, 1).filter(a => a.t === 'activate' && a.hand === 0);
+    ok(am.length > 0, 'Mente: se puede activar'); if (am.length) act(sm, 1, am[0]);
+    ok(!!sm.pending && sm.pending.ab === 'glove' && sm.pending.player === 0, 'Thanos puede robar la Gema de la Mente al activarse (' + JSON.stringify(sm.pending && [sm.pending.ab, sm.pending.player, sm.pending.k]) + ')');
+  }
   section('Kaioken');
   {
     const st = fresh(); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_goku'); hand(st, 0, ['c_kaioken']);

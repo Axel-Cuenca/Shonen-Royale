@@ -1597,7 +1597,7 @@
             if (xs) acts.push({ label: 'Manto de Kyuubi: transformarse en Naruto Chico de Una Cola', desc: 'Una sola vez por invocación: invoca a Naruto Chico de Una Cola desde tu mano en su lugar. Quedan vinculados.', run: () => act(xs) });
             if (sh) acts.push({ label: 'Manto de Kyuubi: manto protector (+300 ATK/DEF)', desc: 'Una sola vez por invocación: el manto recibe en su lugar el golpe mortal o el efecto que fuera a destruirlo; sólo se destruye el manto.', run: () => act(sh) });
           }
-          else if (k === 'majinex') acts.push({ label: 'Explosión final', desc: 'Se destruye y destruye a todos los personajes de 6★ del campo, aliados y enemigos. Una vez por invocación.', run: () => act(g[0]) });
+          else if (k === 'majinex') acts.push({ label: 'Explosión final', desc: 'Se destruye y destruye a todos los personajes de 6★ o menos del campo, aliados y enemigos. Una vez por invocación.', run: () => act(g[0]) });
           else if (k === 'rasengan') acts.push({ label: 'Rasengan (+400 ATK en el próximo ataque)', desc: 'Una vez por invocación; el aumento se pierde después de ese ataque.', run: () => act(g[0]) });
           else if (k === 'kaiox10') acts.push({ label: 'Kaioken x10', desc: '+700 ATK y DEF más (+1400 en total) hasta el final de este turno. Después pierde todos los bonos del Kaioken y queda agotado (0 ATK y 0 DEF) durante tu siguiente turno completo.', run: () => act(g[0]) });
           else if (k === 'semilla') acts.push({ label: 'Semilla del Hermitaño…', desc: 'Quita los efectos negativos de un aliado y le devuelve su poder.', run: () => choose(g, 'mz', 'Elige al aliado que curas') });
