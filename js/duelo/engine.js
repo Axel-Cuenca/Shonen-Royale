@@ -764,7 +764,7 @@
   function rewindField(st, p) {
     const P = st.players[p], snap = JSON.parse(P.snaps[0]);
     const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused);
-    const lockedSt = s => s && (s.prison || s.gem || s.karma || s.idle);      // la gema robada por Thanos y aún sin usar tampoco se toca
+    const lockedSt = s => s && (s.prison || s.gem || s.karma || s.idle || s.c.id === 'c_gema_tiempo');      // la gema robada por Thanos y aún sin usar tampoco se toca; ninguna Gema del Tiempo vuelve del cementerio (la usada se queda en él)
     const pool = {};
     const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
     P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
@@ -790,7 +790,7 @@
       const o = occ(P);
       if (o[z] || (s.wide && (z + 1 >= ZONES || o[z + 1])) || (s.huge && (z !== 0 || o[1] || o[2]))) return;
       const r = restore(s);
-      if (r) { P.mz[z] = r; back++; }
+      if (r) { Object.assign(r, { attacked: false, moved: false, atkMod: 0, atkN: 0, hira: 0 }); P.mz[z] = r; back++; }      // como al empezar un turno: puede volver a atacar y moverse
     });
     snap.st.forEach((s, z) => {
       if (!s || lockedSt(s) || P.st[z]) return;

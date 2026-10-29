@@ -369,6 +369,32 @@ module.exports = function (T) {
     ok(!find(s2, 0, x => x.t === 'activate'), 'sin historial suficiente no se ofrece');
   }
 
+  section('Gema del Tiempo: la gema usada se queda en el cementerio y los personajes restaurados vuelven a actuar');
+  {
+    const st = fresh(0);
+    const P = st.players[0];
+    put(st, 0, 0, 'c_goku', { attacked: true, moved: true });
+    putST(st, 0, 0, 'c_gema_tiempo', { down: true, setTurn: 0 });
+    const setUid = P.st[0].c.uid;
+    P.snaps = [JSON.stringify({ mz: P.mz, st: P.st }), JSON.stringify({ mz: [null, null, null], st: [null, null, null] })];
+    // la gema boca abajo se activa desde el campo: ya no está en el campo, y la instantánea la tenía
+    const a = find(st, 0, x => x.t === 'activateSet' && x.zone === 0);
+    ok(!!a, 'la gema puesta boca abajo se puede activar');
+    const n0 = E.countCards(st, 0);
+    act(st, 0, a);
+    ok(P.grave.some(c => c.uid === setUid) && !P.st.some(s => s && s.c.uid === setUid) && !P.hand.some(c => c.uid === setUid), 'la gema usada va al cementerio y no vuelve al campo ni a la mano');
+    ok(P.mz[0] && P.mz[0].c.id === 'c_goku' && !P.mz[0].attacked && !P.mz[0].moved, 'Goku restaurado puede atacar y moverse otra vez');
+    eq(E.countCards(st, 0), n0, 'no se pierde ni se duplica ninguna carta');
+    // otra copia boca abajo en el campo no se toca ni se duplica
+    const s3 = fresh(0), Q = s3.players[0];
+    putST(s3, 0, 0, 'c_gema_tiempo', { down: true, setTurn: 0 }); putST(s3, 0, 1, 'c_gema_tiempo', { down: true, setTurn: 0 });
+    Q.snaps = [JSON.stringify({ mz: Q.mz, st: Q.st }), JSON.stringify({ mz: [null, null, null], st: [null, null, null] })];
+    const u0 = Q.st[0].c.uid, u1 = Q.st[1].c.uid, m0 = E.countCards(s3, 0);
+    act(s3, 0, find(s3, 0, x => x.t === 'activateSet' && x.zone === 0));
+    ok(Q.grave.some(c => c.uid === u0) && Q.st[1] && Q.st[1].c.uid === u1, 'la usada al cementerio; la otra copia sigue boca abajo');
+    eq(E.countCards(s3, 0), m0, 'conteo intacto con dos copias');
+  }
+
   section('Meliodas: Total Counter no devuelve Púrpura');
   {
     const mk = () => { const st = fresh(0); put(st, 0, 0, 'c_goku', { six: { t0: st.turn } }); put(st, 1, 0, 'c_meliodas'); return st; };
