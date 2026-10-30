@@ -99,7 +99,7 @@
       const invs = S.inbox();
       if (invs.length) { kids.push(sec('Invitaciones'));
         invs.forEach(i => kids.push(item('fscard hot', h('span', { class: 'fsn' }, h('b', null, i.name), ' te invita a su sala'),
-          h('span', { class: 'fsb' }, h('button', { class: 'btn gold sm', onclick: () => join(i.from) }, 'Unirse'), h('button', { class: 'btn ghost sm', onclick: () => S.declineInvite(i.from) }, 'No'))))); }
+          h('span', { class: 'fsb' }, h('button', { class: 'btn gold sm', onclick: () => join(i.from) }, 'Unirse'), h('button', { class: 'btn ghost sm', onclick: () => S.declineInvite(i.from) }, 'Rechazar'))))); }
       const inc = S.incoming();
       if (inc.length) { kids.push(sec('Solicitudes'));
         inc.forEach(f => kids.push(item('fscard hot', h('span', { class: 'fsn' }, h('b', null, f.name), ' quiere ser tu amigo'),
@@ -127,6 +127,7 @@
   async function invite(f) {
     const S = D.Social;
     if (S.room) { res(await S.invite(f.uid)); return; }
+    if (S.inbox().some(i => i.from === f.uid)) { join(f.uid); return; }      // ya te había invitado él: en vez de abrir otra sala y cruzar invitaciones, entras en la suya
     queuedInvite = f.uid; say('Creando tu sala…'); setOpen(false); cfg.host();      // crea la sala y, al tenerla, roomOpened() manda la invitación
   }
   function join(from) { const r = D.Social.acceptInvite(from); if (!r.ok) { say(r.error, true); render(); return; } joinCode(r.room); }
@@ -145,7 +146,7 @@
     clearTimeout(toastT); if (toast) toast.remove();
     toast = h('div', { class: 'fstoast', role: 'alert' }, h('span', null, h('b', null, i.name), ' te invita a jugar'),
       h('button', { class: 'btn gold sm', onclick: () => { toast.remove(); toast = null; join(i.from); } }, 'Unirse'),
-      h('button', { class: 'btn ghost sm', onclick: () => { toast.remove(); toast = null; D.Social.declineInvite(i.from); } }, 'No'));
+      h('button', { class: 'btn ghost sm', onclick: () => { toast.remove(); toast = null; D.Social.declineInvite(i.from); } }, 'Rechazar'));
     document.body.append(toast); toastT = setTimeout(() => { if (toast) { toast.remove(); toast = null; } }, 15000);
   }
   function onSocial(what) {

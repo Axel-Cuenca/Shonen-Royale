@@ -129,6 +129,8 @@
   }
   /** «Unirse» desde una invitación o desde un amigo: el mismo flujo que escribir el código en «Duelo online». */
   function joinByCode(code) {
+    // si ya tenías una sala abierta (la tuya o la de otro) se cierra ANTES de conectar con la nueva: la conexión directa es una sola y, si se cerrara después, cortaría la recién abierta
+    if (current && !current.started) endCurrent();
     S.setTrack('prep');
     const err = h('div', { class: 'msg' }, 'Conectando con tu cuenta…');
     scr('online'); mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Duelo online'), err));
@@ -136,7 +138,9 @@
       .catch(e => { err.className = 'msg err'; err.textContent = 'No se pudo conectar: ' + e.message; });
   }
   /** «Invitar» sin sala: se crea el lobby (el formato crece solo según cuántos entren, y se puede cambiar) y, ya creado, se manda la invitación (FriendsUI.roomOpened). */
-  function hostNow() { if (lobbyApi && (curScreen === 'lobby' || lobbyAlive())) { if (curScreen !== 'lobby') lobbyBack(); lobbyApi.invite(); } else lobby({ invite: true }); }
+  function hostNow() {
+    if (current && !current.started && current.match && current.match.kind === 'guest') endCurrent();      // estás en la sala de otro: la dejas para abrir la tuya
+    if (lobbyApi && (curScreen === 'lobby' || lobbyAlive())) { if (curScreen !== 'lobby') lobbyBack(); lobbyApi.invite(); } else lobby({ invite: true }); }
   addEventListener('resize', () => { if (topEl.style.display !== 'none') document.documentElement.style.setProperty('--gtop', topEl.offsetHeight + 'px'); });
 
   // ---------------- mazos guardados ----------------
