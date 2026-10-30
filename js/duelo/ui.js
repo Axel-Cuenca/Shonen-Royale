@@ -27,6 +27,11 @@
   const rmGet = () => { try { const v = localStorage.getItem(RM); return v == null ? (matchMedia('(prefers-reduced-motion: reduce)').matches) : v === '1'; } catch (e) { return false; } };
   const rmSet = on => { try { localStorage.setItem(RM, on ? '1' : '0'); } catch (e) { /* nada */ } document.documentElement.classList.toggle('rm', on); };
   document.documentElement.classList.toggle('rm', rmGet());
+  // fondo GIF de batalla en la partida (activo por defecto; se apaga en Ajustes)
+  const GB = 'duelo.gifbg';
+  const gbGet = () => { try { return localStorage.getItem(GB) !== '0'; } catch (e) { return true; } };
+  const gbSet = on => { try { localStorage.setItem(GB, on ? '1' : '0'); } catch (e) { /* nada */ } document.documentElement.classList.toggle('gifbg', on); };
+  document.documentElement.classList.toggle('gifbg', gbGet());
   const FAM = { fire: 'fire', water: 'water', electric: 'electric', ice: 'ice', grass: 'nature', bug: 'nature', poison: 'nature', psychic: 'mystic', ghost: 'mystic', dark: 'mystic', fairy: 'mystic', dragon: 'mystic', demonslayer: 'electric', lol: 'mystic', shrek: 'nature', pecados: 'fire', anillos: 'mystic', marvel: 'phys' };
   const famOf = d => (d && FAM[d.type]) || 'phys';
   const byName = {};
@@ -403,7 +408,7 @@
     fs.value = fsGet();
     modal(h('div', { class: 'box sndbox' }, h('h2', null, 'Ajustes'), ...rows,
       h('div', { class: 'row' }, tog('Música', () => S.musicOn, v => S.setMusic(v)), tog('Efectos', () => S.sfxOn, v => S.setSfx(v)), tog('Silencio', () => S.muted, v => S.setMuted(v))),
-      h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), gfx),
+      h('div', { class: 'row' }, tog('Efectos reducidos', rmGet, rmSet), tog('Fondo GIF de batalla', gbGet, gbSet), gfx),
       h('div', { class: 'row' }, tog('Subtítulos de voces', subsGet, subsSet), fs),
       h('div', { class: 'row' }, tog('Cinemática de entrada', () => D.Intro.on(), v => D.Intro.set(v))),
       h('div', { class: 'row' }, tog('Fondo cinético', () => D.BgFX.on(), v => D.BgFX.set(v)), (() => { const sel = h('select', { onchange: () => D.BgFX.setTheme(sel.value) }, h('option', { value: 'auto' }, 'Fondo: sorpresa'), ...D.BgFX.THEMES.map((t, i) => h('option', { value: String(i) }, t.n))); sel.value = String(D.BgFX.pref()); return sel; })(), tog('Efectos 3D de cartas', () => D.CardFX.on3d(), v => D.CardFX.set3d(v)), tog('Animaciones externas', () => D.CardFX.onExt(), v => D.CardFX.setExt(v)), tog('Personajes animados (PixiJS)', () => { try { return localStorage.getItem('duelo.rig') !== '0'; } catch (e) { return true; } }, v => { try { localStorage.setItem('duelo.rig', v ? '1' : '0'); } catch (e) { /* nada */ } })), note, btn('Cerrar', () => closeModal(), 'ghost')));

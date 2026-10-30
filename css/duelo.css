@@ -1703,3 +1703,15 @@ html.fxbg .slab.multi .zone.mz .badges { left: auto; right: 7%; top: 20%; margin
 html.fxbg .slab.multi .zone.mz .badges i { font-size: 1.05em; padding: .05em .3em; background: #000c; border: 1px solid #ffffff33; box-shadow: 0 0 .4em #000; }
 html.fxbg .slab.multi .zrow { grid-template-columns: repeat(3, 9.4em); gap: .8em; }      /* las columnas de la rejilla antiguas (7.5em) eran más estrechas que las casillas nuevas y se montaban */
 .game:has(.slab.multi) .hud-bot .banner.wait { left: 14px; transform: none; }      /* 3-4 jugadores: «X está jugando…» a la izquierda, sin tapar el marcador de abajo */
+
+/* ---- Fondo de batalla (GIF) — Ajustes → «Fondo GIF de batalla» (duelo.gifbg, activo por defecto) ----
+   El GIF cubre toda la pantalla de partida (background-size: cover) y una capa negra semitransparente (::before) lo oscurece
+   para que las cartas y las casillas se lean bien. Con «Efectos reducidos» se usa la imagen fija (sin animación). */
+html.gifbg .game { isolation: isolate; background: #03050e url('../assets/duelo/bg/batalla.gif') center / cover no-repeat; }
+html.gifbg.rm .game { background-image: url('../assets/duelo/bg/batalla.webp'); }
+html.gifbg .game::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: rgba(0, 0, 0, 0.4); }   /* overlay: subir/bajar el 0.4 para más/menos oscuro */
+html.gifbg .game > canvas.kbg { display: none; }
+html.gifbg .stage { background: transparent; }
+html.gifbg .ground, html.gifbg .river, html.gifbg .bb { display: none; }
+html.gifbg .floorgl, html.gifbg .pr { display: none !important; }
+html.gifbg .slab { background: none; }
