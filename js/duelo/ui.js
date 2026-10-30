@@ -1219,7 +1219,7 @@
       }
       if (s.manto) o.push('Manto de Kyuubi: +300 ATK/DEF; recibirá en su lugar el golpe mortal o el efecto que fuera a destruirlo');
       if (s.exh) o.push('Agotado (Kaioken x10): 0 ATK y 0 DEF hasta el final de su siguiente turno');
-      if (s.ksp) o.push('Kaioken activo (+700 ATK/DEF)' + (s.ksp.x ? ' · x10 ya usado' : ' · puede llevarse a x10 una vez'));
+      if (s.ksp) o.push('Kaioken activo (+400 ATK/DEF)' + (s.ksp.x ? ' · x10 ya usado' : ' · puede llevarse a x10 una vez'));
       if (s.dn) o.push('Death Note: morirá durante el turno de su dueño');
       if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
       if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir. ' + (s.symLeft == null ? 'Es de Marvel: puede quedarse todo el tiempo.' : 'No es de Marvel: le quedan ' + s.symLeft + ' turno(s) y luego se separa y sale como personaje normal.'));
@@ -1603,7 +1603,7 @@
           }
           else if (k === 'majinex') acts.push({ label: 'Explosión final', desc: 'Se destruye y destruye a todos los personajes de 6★ o menos del campo, aliados y enemigos. Una vez por invocación.', run: () => act(g[0]) });
           else if (k === 'rasengan') acts.push({ label: 'Rasengan (+400 ATK en el próximo ataque)', desc: 'Una vez por invocación; el aumento se pierde después de ese ataque.', run: () => act(g[0]) });
-          else if (k === 'kaiox10') acts.push({ label: 'Kaioken x10', desc: '+700 ATK y DEF más (+1400 en total) hasta el final de este turno. Después pierde todos los bonos del Kaioken y queda agotado (0 ATK y 0 DEF) durante tu siguiente turno completo.', run: () => act(g[0]) });
+          else if (k === 'kaiox10') acts.push({ label: 'Kaioken x10', desc: '+400 ATK y DEF más (+800 en total) hasta el final de este turno. Después pierde todos los bonos del Kaioken y queda agotado (0 ATK y 0 DEF) durante tu siguiente turno completo.', run: () => act(g[0]) });
           else if (k === 'semilla') acts.push({ label: 'Semilla del Hermitaño…', desc: 'Quita los efectos negativos de un aliado y le devuelve su poder.', run: () => choose(g, 'mz', 'Elige al aliado que curas') });
           else
           if (k === 'xform') { const seen = new Set(); for (const a of g) { const nm = nameId(v.me.hand[a.hand].id); if (seen.has(nm)) continue; seen.add(nm); acts.push({ label: 'Transformar en ' + nm, run: () => act(a) }); } }

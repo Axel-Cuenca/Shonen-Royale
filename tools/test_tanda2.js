@@ -111,7 +111,7 @@ module.exports = function (T) {
   {
     const st = fresh(); put(st, 0, 0, 'c_goku');
     act(st, 0, pw(st, 0, 'kaioken'));
-    eq(stat(st, 0, 0), [2100, 2100], 'Kaio-ken de Goku: +700/+700');
+    eq(stat(st, 0, 0), [1800, 1800], 'Kaio-ken de Goku: +400/+400');
     ok(!pw(st, 0, 'kaioken'), 'una vez por invocación');
     // Kaio Sama enseña
     const st2 = fresh(); put(st2, 0, 0, 'c_kaiosama'); put(st2, 0, 1, 'c_creeper');
@@ -119,7 +119,7 @@ module.exports = function (T) {
     act(st2, 0, t);
     ok(!pw(st2, 0, 'teach'), 'una enseñanza por turno');
     act(st2, 0, pw(st2, 0, 'kaioken6'));
-    eq(stat(st2, 0, 1), [1600, 1600], 'Kaio-ken aprendido: +600/+600');
+    eq(stat(st2, 0, 1), [1400, 1400], 'Kaio-ken aprendido: +400/+400');
     ok(!pw(st2, 0, 'kaioken6') && E.view(st2, 0).players[0].mz[1].used.kk6, 'Kaio-ken aprendido: una sola vez, marcado como usado');
     pass(st2, 2);
     ok(!!pw(st2, 0, 'teach', x => x.skill === 'genki'), 'al turno siguiente enseña la Genkidama');
@@ -365,7 +365,7 @@ module.exports = function (T) {
     const st = fresh(); put(st, 0, 0, 'c_goku'); cast(st, 0, 'c_gema_poder', { z: 0 });
     eq(stat(st, 0, 0), [2200, 2200], 'Gema del Poder: +800/+800');
     act(st, 0, pw(st, 0, 'kaioken'));
-    eq(stat(st, 0, 0), [3600, 3600], 'con la gema el Kaio-ken da el doble (+1400)');
+    eq(stat(st, 0, 0), [3000, 3000], 'con la gema el Kaio-ken da el doble (+800)');
     ok(!!pw(st, 0, 'kaioken'), 'y se puede usar una segunda vez');
   }
   {
@@ -476,8 +476,8 @@ module.exports = function (T) {
     eq(rounds(mk(), 7), [1, 1, 1, 2, 2, 2, 3], '3 jugadores empezando el asiento 2: una ronda son los tres turnos');
     // una magia de «3 turnos» dura 3 rondas completas, no 3 turnos de jugador
     const st = fresh(); put(st, 0, 0, 'c_goku'); const kk = pw(st, 0, 'kaioken'); act(st, 0, kk);
-    eq(stat(st, 0, 0), [2100, 2100], 'Kaio-ken: +700/+700');
-    pass(st, 6); eq(stat(st, 0, 0), [2100, 2100], 'sigue activo tras 3 turnos de cada jugador (2 rondas)');
+    eq(stat(st, 0, 0), [1800, 1800], 'Kaio-ken: +400/+400');
+    pass(st, 6); eq(stat(st, 0, 0), [1800, 1800], 'sigue activo tras 3 turnos de cada jugador (2 rondas)');
     pass(st, 2); eq(stat(st, 0, 0), [1400, 1400], 'termina al empezar la ronda siguiente a las 3 completas');
   }
   section('Gokumonkyo, Guerrero del Infinito y Rayo de Luz Solar');

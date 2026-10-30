@@ -908,14 +908,14 @@
       resolve: () => { /* se coloca en continueSpell */ }
     },
     // ---------- tanda 4 ----------
-    // Kaioken: +700 ATK/DEF 3 turnos a un aliado; se puede llevar a x10 una vez (ver doPower 'kaiox10')
+    // Kaioken: +400 ATK/DEF 3 turnos a un aliado; se puede llevar a x10 una vez (ver doPower 'kaiox10')
     kaiosp: {
       targets: (st, p) => rikaOwn(st, st.players[p]).filter(z => !(st.players[p].mz[z].mods || []).some(x => x.k === 'kaiospell')).map(z => ({ z })),
       resolve: (st, p, d, t) => {
         const m = st.players[p].mz[t && t.z];
         if (!m || m.down) { log(st, p, 'no tiene objetivo'); return; }
-        addMod(st, m, 'kaiospell', 700, 700, 3); m.ksp = { t0: st.turn, x: 0 };
-        log(st, p, `${mdef(m).name} recibe el Kaioken: +700 ATK y +700 DEF durante 3 turnos`);
+        addMod(st, m, 'kaiospell', 400, 400, 3); m.ksp = { t0: st.turn, x: 0 };
+        log(st, p, `${mdef(m).name} recibe el Kaioken: +400 ATK y +400 DEF durante 3 turnos`);
       }
     },
     // Botiquín: quita los estados negativos de un personaje del campo, tuyo o rival
@@ -2795,13 +2795,13 @@
         break;
       }
       case 'kaioken': {
-        markOnce(u, 'kk'); addMod(st, m, 'kaioken', 700 * g, 700 * g, 3);
-        log(st, p, `${nm} usa Kaio-ken: +${700 * g} ATK y DEF durante 3 turnos`);
+        markOnce(u, 'kk'); addMod(st, m, 'kaioken', 400 * g, 400 * g, 3);
+        log(st, p, `${nm} usa Kaio-ken: +${400 * g} ATK y DEF durante 3 turnos`);
         break;
       }
       case 'kaioken6': {
-        u.kk6 = true; addMod(st, m, 'kaioken', 600 * g, 600 * g, 3);
-        log(st, p, `${nm} usa Kaio-ken: +${600 * g} ATK y DEF durante 3 turnos`);
+        u.kk6 = true; addMod(st, m, 'kaioken', 400 * g, 400 * g, 3);
+        log(st, p, `${nm} usa Kaio-ken: +${400 * g} ATK y DEF durante 3 turnos`);
         break;
       }
       case 'genki': {
@@ -2947,8 +2947,8 @@
         break;
       case 'kaiox10':
         if (!m.ksp || m.ksp.x) break;
-        m.ksp.x = st.turn; addMod(st, m, 'kaiox10', 700, 700, 0);
-        log(st, p, `${nm} lleva el Kaioken al límite (x10): +700 ATK y DEF más, +1400 en total, hasta el final del turno`);
+        m.ksp.x = st.turn; addMod(st, m, 'kaiox10', 400, 400, 0);
+        log(st, p, `${nm} lleva el Kaioken al límite (x10): +400 ATK y DEF más, +800 en total, hasta el final del turno`);
         break;
       // ----- tanda 3 -----
       case 'eren': {
@@ -3692,7 +3692,7 @@
     for (const s of P.st) if (s) n++;
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.owner === p) n += 1 + (s.prison.m.link ? s.prison.m.link.length : 0);
     if (st.chain && st.chain.p === p) n++;
-    else if (st.pending && st.pending.ab === 'glove' && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete
+    else if (st.pending && (st.pending.ab === 'glove' || st.pending.ab === 'uidef') && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete / magia a la espera de la Defensa instintiva de Goku UI
     // lo absorbido por Cell cuenta para su dueño original
     for (const Q of st.players) for (const s of Q.mz) if (s && s.abs && s.abs.owner === p) n += 1 + (s.abs.link ? s.abs.link.length : 0);
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.m.abs && s.prison.m.abs.owner === p) n += 1 + (s.prison.m.abs.link ? s.prison.m.abs.link.length : 0);      // lo absorbido por un personaje sellado

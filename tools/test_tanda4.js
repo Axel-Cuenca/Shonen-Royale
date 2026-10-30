@@ -243,11 +243,11 @@ module.exports = function (T) {
     const ac = L(st, 0).filter(a => a.t === 'activate');
     ok(ac.length === 1 && ac[0].target && ac[0].target.z === 0, 'Kaioken: sólo se puede elegir a un aliado');
     act(st, 0, ac[0]); settle(st);
-    eq(stat(st, 0, 0), [2100, 2100], 'Kaioken: +700/+700');
+    eq(stat(st, 0, 0), [1800, 1800], 'Kaioken: +400/+400');
     ok(grave(st, 0, 'c_kaioken'), 'Kaioken va al cementerio');
     ok(!!pw(st, 0, 'kaiox10'), 'se puede llevar a x10 el mismo turno');
     act(st, 0, pw(st, 0, 'kaiox10'));
-    eq(stat(st, 0, 0), [2800, 2800], 'Kaioken x10: +1400 en total');
+    eq(stat(st, 0, 0), [2200, 2200], 'Kaioken x10: +800 en total');
     ok(!pw(st, 0, 'kaiox10'), 'sólo una vez');
     pass(st, 1);               // fin del turno propio: pierde los bonos y queda agotado
     eq(stat(st, 0, 0), [0, 0], 'agotado: 0 ATK y 0 DEF');

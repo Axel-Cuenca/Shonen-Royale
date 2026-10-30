@@ -92,7 +92,7 @@
     thanosg: ['Guantelete del Infinito (incorporado)', 'Thanos usa la mecánica del Guantelete del Infinito: puede robar las gemas que activen los rivales (la activación se cancela) y las lleva consigo como habilidades suyas, sin ocupar ninguna zona; la Gema de la Mente y la del Tiempo las usa cuando el jugador quiera (la de la Mente necesita una zona de magia libre al usarla).'],
     thanosp: ['Poder de las Gemas', 'Por cada gema que tenga equipada, Thanos gana +500 ATK y +500 DEF.'],
     patriarca: ['Despertar del Poder Oculto', 'Otro personaje aliado del campo (nunca él mismo) gana +700 ATK y DEF durante su invocación. Una vez por turno, hasta 3 veces por invocación.'],
-    kaioken: ['Kaio-ken', 'Una vez por invocación: +700 ATK y DEF durante 3 turnos (+600 si la aprendió de Kaio Sama).'],
+    kaioken: ['Kaio-ken', 'Una vez por invocación: +400 ATK y DEF durante 3 turnos.'],
     maestro: ['Maestro de las Artes', 'Enseña a un aliado el Kaio-ken o la Genkidama (una enseñanza por turno, cada habilidad una vez por invocación). Quien la aprende la usa una sola vez por invocación.'],
     jogodom: ['Ataúd de la Montaña de Hierro', 'Dominio de 2 turnos: +500 ATK y DEF; sólo los personajes de 7★ o más usan habilidades y nadie activa magias ni trampas.'],
     llama: ['Llama Infernal', 'Una vez por invocación: +200 ATK y DEF por cada asesinato propio que lleve contado.'],
@@ -268,7 +268,7 @@
     mon({
       id: 'c_goku', name: 'Goku', fam: 'Goku', type: 'dbz', level: 4, atk: 1400, def: 1400, img: I('goku'), ab: ['kaioken'], xform: { family: 'Goku' },
       text: 'Transformación Saiyan: puede transformarse en otra carta Goku de tu mano (1 turno completo de espera por cada 2 estrellas de diferencia); la anterior queda vinculada. ' +
-        'Kaio-ken (una vez por invocación): +700 ATK y +700 DEF durante 3 turnos.',
+        'Kaio-ken (una vez por invocación): +400 ATK y +400 DEF durante 3 turnos.',
       sfx: { transform: V('goku-transform'), summon: V('goku-summon') }
     }),
     mon({
@@ -278,7 +278,7 @@
     }),
     mon({
       id: 'c_kaiosama', name: 'Kaio Sama', type: 'dbz', level: 6, atk: 1500, def: 1500, img: I('kaio_sama'), ab: ['maestro'],
-      text: 'Maestro de las Artes: enseña a un personaje aliado el Kaio-ken (+600 ATK y DEF durante 3 turnos) o la Genkidama (2500 de daño a cada personaje rival). ' +
+      text: 'Maestro de las Artes: enseña a un personaje aliado el Kaio-ken (+400 ATK y DEF durante 3 turnos) o la Genkidama (2500 de daño a cada personaje rival). ' +
         'Una enseñanza por turno; cada habilidad se puede enseñar una vez por invocación de Kaio Sama. Quien la aprende la usa después, una vez por invocación.'
     }),
     mon({
@@ -486,7 +486,7 @@
     }),
     spell({
       id: 'c_kaioken', name: 'Kaioken', icon: '🔥', img: I('kaioken'), fx: 'kaiosp',
-      text: 'Un aliado gana +700 ATK y DEF durante 3 turnos. Mientras dure, puedes llevarlo al límite (Kaioken x10, una sola vez): otros +700 ATK y DEF hasta el final de ese turno; después pierde todos los bonos de Kaioken y queda agotado (0 ATK y DEF) durante tu siguiente turno completo.'
+      text: 'Un aliado gana +400 ATK y DEF durante 3 turnos. Mientras dure, puedes llevarlo al límite (Kaioken x10, una sola vez): otros +400 ATK y DEF hasta el final de ese turno; después pierde todos los bonos de Kaioken y queda agotado (0 ATK y DEF) durante tu siguiente turno completo.'
     }),
     spell({
       id: 'c_death_note', name: 'Death Note', icon: '📓', img: I('death_note'), fx: 'deathnote',
