@@ -15,6 +15,10 @@
   const D = (window.Duelo = window.Duelo || {});
 
   const TIER_SIZE = 300, STEP = 100, GM = 1800, MAX_PTS = 5000;
+  // Puntos por partida: K 48 (contra alguien de tu nivel: +24 / −24), una victoria da como máximo +34 y como mínimo +10; una derrota quita como máximo 30 y como mínimo 10.
+  const K_FACTOR = 48, WIN_MAX = 34, WIN_MIN = 10, LOSS_MAX = 30, LOSS_MIN = 10;
+  // Escudos: al subir de peldaño (división) o de rango recibes SHIELDS escudos; cada derrota que te haría bajar gasta uno y te quedas en el mínimo de tu peldaño.
+  const SHIELDS = 2;
   const TIERS = [
     { id: 'bronce', name: 'Bronce', color: '#cd7f32' },
     { id: 'plata', name: 'Plata', color: '#cfd8e8' },
@@ -46,12 +50,12 @@
   const expected = (me, opp) => 1 / (1 + Math.pow(10, (opp - me) / 400));
   /** Cambio de PC. me = mis PC · foes = PC de los rivales · S = resultado (1 gané, 0.5 empate, 0 perdí; en todos contra todos, según el puesto). */
   function delta(me, foes, S, K) {
-    K = K || 40;
+    K = K || K_FACTOR;
     const Ea = foes.length ? foes.reduce((a, o) => a + expected(me, o), 0) / foes.length : 0.5;
     let d = Math.round(K * (S - Ea));
-    if (S > 0.5 && d < 8) d = 8;
-    if (S < 0.5 && d > -8) d = -8;
-    return Math.max(-45, Math.min(45, d));
+    if (S > 0.5 && d < WIN_MIN) d = WIN_MIN;
+    if (S < 0.5 && d > -LOSS_MIN) d = -LOSS_MIN;
+    return Math.max(-LOSS_MAX, Math.min(WIN_MAX, d));
   }
   /** Resultado de 0 a 1 por puesto: 1.º = 1 y último = 0. */
   const scoreOfPlace = (place, n) => n <= 1 ? 1 : (n - place) / (n - 1);
@@ -67,11 +71,12 @@
     r.pts = Math.max(0, Math.min(MAX_PTS, Math.floor(Number(r.pts) || 0)));
     r.w = Math.max(0, Math.floor(Number(r.w) || 0)); r.l = Math.max(0, Math.floor(Number(r.l) || 0));
     r.best = Math.max(r.pts, Math.floor(Number(r.best) || 0));
+    r.sh = Math.max(0, Math.min(SHIELDS, Math.floor(Number(r.sh) || 0)));
     if (typeof r.season !== 'string' || !/^\d{4}-\d{2}$/.test(r.season)) { r.season = cur; }
     if (r.season !== cur) {                       // temporada nueva: reinicio parcial
       r.prev = { season: r.season, pts: r.pts, w: r.w, l: r.l, best: r.best };
       r.pending = (Array.isArray(r.pending) ? r.pending : []).filter(x => x && x.season !== r.season).concat([{ season: r.season, best: r.best, w: r.w, l: r.l }]).slice(-12);   // premios por cobrar
-      r.pts = softReset(r.pts); r.w = 0; r.l = 0; r.best = r.pts; r.season = cur; r.pub = false;
+      r.pts = softReset(r.pts); r.w = 0; r.l = 0; r.best = r.pts; r.season = cur; r.pub = false; r.sh = 0;
       saveStore();
     }
     return r;
@@ -106,13 +111,18 @@
     const r = state(); if (!r) return null;
     const before = r.pts, bt = tierOf(before);
     const d = delta(before, (info.foes || []).map(x => Math.max(0, Math.min(MAX_PTS, Math.floor(Number(x)) || before))), info.S);
-    r.pts = Math.max(0, Math.min(MAX_PTS, before + d));
+    let np = Math.max(0, Math.min(MAX_PTS, before + d)), shielded = false;
+    if (np < bt.from && r.sh > 0) { np = bt.from; r.sh--; shielded = true; }      // un escudo evita bajar de peldaño: te quedas en el mínimo
+    r.pts = np;
     if (info.S > 0.5) r.w++; else if (info.S < 0.5) r.l++;
     r.best = Math.max(r.best || 0, r.pts);
     saveStore();
     publish();
     const at = tierOf(r.pts);
-    return { before, after: r.pts, delta: r.pts - before, from: bt, to: at, rankUp: at.pts > before && (at.tier.id !== bt.tier.id || at.step !== bt.step), rankDown: at.pts < before && (at.tier.id !== bt.tier.id || at.step !== bt.step) };
+    const rankUp = at.pts > before && (at.tier.id !== bt.tier.id || at.step !== bt.step), rankDown = at.pts < before && (at.tier.id !== bt.tier.id || at.step !== bt.step);
+    if (rankUp) r.sh = SHIELDS; else if (rankDown) r.sh = 0;
+    if (rankUp || rankDown || shielded) saveStore();
+    return { before, after: r.pts, delta: r.pts - before, from: bt, to: at, rankUp, rankDown, shielded, shields: r.sh };
   }
 
   // ---------------- tabla pública (Firestore) ----------------
@@ -138,5 +148,5 @@
     } catch (e) { lastErr = e.code || e.message; return { ok: false, error: e.code === 'permission-denied' ? 'denied' : (e.code || 'error') }; }
   }
 
-  D.Rank = { TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, pending, claim, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
+  D.Rank = { SHIELDS, WIN_MAX, LOSS_MAX, TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, pending, claim, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
 })();

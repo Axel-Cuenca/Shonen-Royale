@@ -2596,7 +2596,7 @@
   // ---------------- ranking ----------------
   const rkBadge = (pts, small) => { const t = D.Rank.tierOf(pts); return h('span', { class: 'rkb' + (small ? ' sm' : ''), style: `--rc:${t.tier.color}`, title: t.label + ' · ' + pts + ' PC' }, h('i', null, '⬢'), t.step >= 0 ? D.Rank.ROMAN[t.step] : 'GM'); };
   const rankLine = r => h('div', { class: 'rkres ' + (r.delta >= 0 ? 'up' : 'dn') }, rkBadge(r.after), h('b', null, (r.delta >= 0 ? '+' : '') + r.delta + ' PC'), h('span', null, r.to.label + ' · ' + r.after + ' PC'),
-    r.rankUp ? h('em', null, '¡Subes a ' + r.to.label + '!') : r.rankDown ? h('em', { class: 'bad' }, 'Bajas a ' + r.to.label) : null);
+    r.rankUp ? h('em', null, '¡Subes a ' + r.to.label + '! 🛡️ Ganas ' + D.Rank.SHIELDS + ' escudos de protección') : r.shielded ? h('em', null, '🛡️ Un escudo te protege: no bajas de ' + r.to.label + ' (te quedan ' + r.shields + ')') : r.rankDown ? h('em', { class: 'bad' }, 'Bajas a ' + r.to.label) : null);
   async function rankScreen() {
     scr('ranking');
     const R = D.Rank, u = D.Account.user, st = R.state(); S.setTrack('menu');
@@ -2608,12 +2608,13 @@
       guestMsg ? h('div', { class: 'msg err' }, guestMsg) : null,
       info ? h('div', { class: 'rkme', style: `--rc:${info.tier.color}` }, h('div', { class: 'rkbig' }, h('i', null, '⬢'), h('b', null, info.step >= 0 ? R.ROMAN[info.step] : 'GM')),
         h('div', null, h('h2', null, info.label), h('div', { class: 'sub' }, `${st.pts} PC · ${st.w} victorias · ${st.l} derrotas`),
+          st.sh > 0 ? h('div', { class: 'sub', title: 'Cada derrota que te haría bajar de peldaño gasta un escudo y te quedas donde estás' }, '🛡️'.repeat(st.sh) + ' ' + st.sh + (st.sh === 1 ? ' escudo' : ' escudos') + ' de protección') : null,
           info.to ? h('div', { class: 'rkbar' }, h('i', { style: `width:${info.pct}%` })) : null,
           h('small', null, info.to ? `Te faltan ${info.next} PC para ${R.tierOf(info.to).label}` : 'Eres Gran Maestro: sigue sumando para subir en la tabla.'))) : null,
       seasonPrizes(st),
       h('h2', null, 'Los mejores de la temporada'), tbl,
       h('details', { class: 'rkinfo' }, h('summary', null, 'Rangos y cómo se sube'),
-        h('p', null, 'Ganar una partida online suma PC; perder resta. Ganarle a alguien mejor que tú da más; perderle a alguien peor te quita más. En 3 o 4 jugadores cuenta el puesto. Las partidas contra la computadora no cuentan. Si abandonas una partida, cuenta como derrota.'),
+        h('p', null, 'Ganar una partida online suma PC; perder resta. Ganarle a alguien mejor que tú da más; perderle a alguien peor te quita más. En 3 o 4 jugadores cuenta el puesto. Las partidas contra la computadora no cuentan. Si abandonas una partida, cuenta como derrota. Una victoria da como máximo +34 PC. Cada vez que subes de peldaño (I, II, III) o de rango ganas 2 🛡️ escudos: una derrota que te haría bajar gasta un escudo y te quedas en el mínimo de tu peldaño.'),
         h('ul', null, R.TIERS.slice(0, 6).map((t, i) => h('li', null, rkBadge(i * 300), ' ', h('b', null, t.name), ` · ${i * 300}–${i * 300 + 299} PC (3 peldaños de 100)`)), h('li', null, rkBadge(1800), ' ', h('b', null, 'Gran Maestro'), ' · desde 1800 PC')))));
     if (guestMsg) { tbl.replaceChildren(h('p', { class: 'sub' }, 'Inicia sesión para ver la tabla.')); return; }
     await R.publish();

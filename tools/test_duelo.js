@@ -1052,6 +1052,7 @@ require('./test_tanda3b.js')({ E, Cards, AI, ok, eq, section, act, find, give, g
 require('./test_practica.js')({ E, Cards, ok, eq, section, Match });
 require('./test_odin.js')({ E, Cards, ok, eq, section, act, game });
 require('./test_tanda4.js')({ E, Cards, ok, eq, section, act, game });
+require('./test_rank.js')({ ok, eq, section });
 require('./test_tienda.js')({ ok, eq, section });
 require('./test_rank.js')({ ok, eq, section });
 require('./test_temporada.js')({ ok, eq, section });
