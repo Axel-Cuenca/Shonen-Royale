@@ -17,6 +17,7 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* nada */ } };
   const reduced = () => document.documentElement.classList.contains('rm');
   const on = () => ls(KEY) !== '0' && !reduced();
+  const gifOn = () => document.documentElement.classList.contains('gifbg');
 
   // ---------------- estados de ánimo del fondo ----------------
   //   h/s/l: color de líneas y puntos · c0/c1: degradado de fondo (centro → borde) · speed: velocidad del tiempo · amp: amplitud de la ondulación · glow: brillo
@@ -235,6 +236,7 @@ void main(){
     t += dtms / 1000 * cur.speed; beat += dtms / 1000 * cur.speed * (danger ? 3.2 : 0);
     // velocidad del ratón (suavizada)
     mouse.vx *= .85; mouse.vy *= .85;
+    if (gifOn() && !menuMode) { tilt(f, performance.now() - mouse.seen < 4000); return; }   // fondo GIF de batalla: sólo la inclinación del tablero, sin física ni dibujo
     const R = Math.max(130, Math.min(W, H) * .17), R2 = R * R, mA = performance.now() - mouse.seen < 4000;
     const now = performance.now();
     for (let q = ripples.length - 1; q >= 0; q--) if (now - ripples[q].t0 > 2600) ripples.splice(q, 1);
@@ -358,7 +360,7 @@ void main(){
       if (!host || !on()) { if (cv) stop(); return false; }
       if (cv && cv.isConnected && cv.parentNode === host && menuMode === menu) return true;
       if (cv) stop();
-      cv = document.createElement('canvas'); cv.className = 'kbg'; glInit(host, ls('duelo.gfx') === 'low'); cx = cv.getContext('2d', { alpha: !!gl });
+      cv = document.createElement('canvas'); cv.className = 'kbg'; if (menu || !gifOn()) glInit(host, ls('duelo.gfx') === 'low'); cx = cv.getContext('2d', { alpha: !!gl });
       if (!cx) { cv = null; return false; }
       menuMode = menu; if (menu) { danger = false; rival = false; }
       themeIx = menu ? (pref() === 'auto' ? 1 : pref()) : pick(); shA = themeIx; mixV = 0; since = 0; autoMode = !menu && pref() === 'auto';
