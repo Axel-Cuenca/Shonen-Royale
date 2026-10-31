@@ -220,4 +220,45 @@ module.exports = function (T) {
       if (st.pending) { act(st, 0, { t: 'pick', uid: st.pending.cands[0] }); settle(st); ok(ids(st, 0).includes('c_goku'), 'Dexter: Goku revive'); ok(!pw(st, 0, 'maquina'), 'Dexter: la máquina vuelve a prepararse'); }
     }
   }
+
+  section('Vegeta Dios y Bruce Banner / Hulk');
+  {
+    const root = path.join(__dirname, '..');
+    for (const id of ['c_vegeta_dios', 'c_bruce_banner', 'c_hulk']) {
+      const c = Cards.get(id);
+      ok(c && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
+      for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
+      for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': la habilidad ' + a + ' tiene texto');
+    }
+    const st = fresh(); put(st, 0, 0, 'c_vegeta_dios'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_toge'); put(st, 0, 1, 'c_goku');
+    act(st, 0, pw(st, 0, 'dios', a => a.target.z === 0));
+    ok(st.players[1].mz[0].god, 'Poder de Dios: Goku queda atrapado');
+    ok(!pw(st, 0, 'dios'), 'Poder de Dios: una vez por invocación');
+    // el atrapado no usa habilidades ni ataca; nadie ajeno lo elige
+    ready(st, 1);
+    ok(!L(st, 1).some(a => a.t === 'power' && a.zone === 0), 'atrapado: no usa habilidades');
+    act(st, 1, { t: 'toBattle' });
+    ok(!L(st, 1).some(a => a.t === 'attack' && a.zone === 0), 'atrapado: no ataca');
+    // el equipo de Vegeta Dios sí puede atacarlo
+    ready(st, 0); act(st, 0, { t: 'toBattle' });
+    ok(L(st, 0).some(a => a.t === 'attack' && a.target === 0), 'el jugador de Vegeta Dios puede atacar al atrapado');
+    // se libera cuando Vegeta Dios deja el campo
+    const s2 = fresh(); put(s2, 0, 0, 'c_vegeta_dios'); put(s2, 1, 0, 'c_goku');
+    act(s2, 0, pw(s2, 0, 'dios'));
+    E.legal; s2.players[0].mz[0] = null; 
+    // sacrificio: el atrapado no cuenta como tributo
+    const s3 = fresh(1); put(s3, 1, 0, 'c_goku'); put(s3, 1, 1, 'c_goku'); put(s3, 1, 2, 'c_goku'); s3.players[1].mz[0].god = { p: 0, uid: 999 }; s3.players[1].mz[1].god = { p: 0, uid: 999 }; hand(s3, 1, ['c_odin']);
+    ok(!L(s3, 1).some(a => a.t === 'summon'), 'atrapados no pueden sacrificarse (Odin de 10★ necesita 3 tributos)');
+    // Bruce -> Hulk
+    const sb = fresh(1); put(sb, 0, 0, 'c_bruce_banner'); put(sb, 1, 0, 'c_goku'); hand(sb, 0, ['c_hulk']);
+    ok(!pw(sb, 0, 'bruce'), 'Bruce no se transforma voluntariamente');
+    act(sb, 1, { t: 'toBattle' }); act(sb, 1, atkA(sb, 1, 0, 0));
+    let n = 0; while (sb.pending && sb.pending.ab !== 'titan' && n++ < 12) { const q = E.actor(sb), l = L(sb, q); act(sb, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
+    ok(sb.pending && sb.pending.ab === 'titan', 'Bruce: al morir ofrece invocar a Hulk');
+    if (sb.pending && sb.pending.ab === 'titan') {
+      act(sb, 0, { t: 'ability', use: true }); settle(sb);
+      ok(ids(sb, 0)[0] === 'c_hulk' && sb.players[0].mz[0].link.some(c => c.id === 'c_bruce_banner'), 'Hulk entra en su lugar con Bruce vinculado');
+      ok(!sb.players[0].mz[0].wide, 'Hulk ocupa una sola zona');
+    }
+  }
 };

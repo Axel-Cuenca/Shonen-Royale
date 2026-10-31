@@ -118,7 +118,7 @@
   const atkCount = m => (!m.attacked ? 0 : (m.atkN != null ? m.atkN : 9));
   /** Ataques que puede declarar por turno: 1; 2 con Uno, Dos o como Asesino Sombra. */
   const maxAttacks = (st, m) => ((m.uno === st.turn) || m.form === 'c_kayn_sombra' ? 2 : 1);
-  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !(m.canal && m.canal.t === st.turn);      // Freezer: mientras canaliza no ataca
+  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !m.god && !(m.canal && m.canal.t === st.turn);      // Freezer: mientras canaliza no ataca
   const slotByUid = (st, p, uid) => { const P = st.players[p]; for (let z = 0; z < ZONES; z++) if (P.mz[z] && P.mz[z].c.uid === uid) return { p, z, m: P.mz[z] }; return null; };
   function findByUid(st, uid) { for (let p = 0; p < st.n; p++) { const r = slotByUid(st, p, uid); if (r) return r; } return null; }
 
@@ -140,7 +140,9 @@
   const freeN = P => occ(P).filter(x => !x).length;
   const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : (z === 2 && P.mz[0] && P.mz[0].huge ? 0 : -1));
   /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
-  const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque', c_armin: 'c_titan_colosal' };
+  const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque', c_armin: 'c_titan_colosal', c_bruce_banner: 'c_hulk' };
+  /** Dónde entra la forma transformada: los gigantes ocupan 2/3 zonas; Hulk entra en la casilla de Bruce. */
+  function formAnchor(P, z, tid) { const hd = def({ id: tid }); return (hd.wide || hd.huge) ? titanAnchor(P, z, undefined, hd.huge) : (!P.mz[z] ? z : spot(P, hd)); }
   /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur o Eren). */
   function titanAnchor(P, z, free, huge) {
     const o = occ(P, free);
@@ -384,6 +386,7 @@
       } else { P.grave.push(s.c); P.st[i] = null; }
     }
     if (st.domain && st.domain.uid === m.c.uid) { st.domain = null; log(st, -1, 'El dominio termina'); }
+    if (m.god !== undefined || (m.c && rawAbil(m).includes('dios'))) for (const Q of st.players) for (const x of Q.mz) if (x && x.god && x.god.uid === m.c.uid) { x.god = null; log(st, -1, `${mdef(x).name} se libera del campo de energía divina`); }
     if (m.fused) P.sealed = (P.sealed || []).filter(x => x !== m.fused.zb);     // la entidad fusionada deja el campo: se libera la zona reservada
     return m;
   }
@@ -669,7 +672,7 @@
       } else if (t.k === 'titan') {
         const inst = P.grave.find(c => c.uid === t.uid), tid = t.tid || 'c_titan', ti = handIdx(P, tid);
         if (!inst || ti < 0) continue;
-        if (titanAnchor(P, t.z, undefined, def({ id: tid }).huge) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
+        if (formAnchor(P, t.z, tid) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
         st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
       } else if (t.k === 'kuribomo') {                  // Kuriboh Mago Oscuro: se lleva consigo a un personaje enemigo
         const cands = [];
@@ -1245,7 +1248,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -2389,6 +2392,7 @@
     if (!m) return false;
     if (m.six && !(o && o.ignoreSix)) return false;
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
+    if (m.god && st.team[byP] !== st.team[m.god.p]) return false;      // Poder de Dios: sólo interactúa el equipo de Vegeta Dios
     if ((abMode || (o && o.ab)) && abImmune(st, byP, q, m, o)) return false;
     return true;
   }
@@ -2455,7 +2459,7 @@
   function powerActs0(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
     P.mz.forEach((m, z) => {
-      if (!m || m.down) return;
+      if (!m || m.down || m.god) return;      // atrapado por Vegeta Dios: no usa habilidades
       let ab = abil(st, m);
       const u = uOf(m), g = gx(P, z);
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
@@ -2474,6 +2478,7 @@
       if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
       if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
+      if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2683,7 +2688,7 @@
       return out;
     }
     if (st.phase === 'main') {
-      const occupied = zonesWith(P.mz);
+      const occupied = zonesWith(P.mz).filter(z => !P.mz[z].god);      // Vegeta Dios: lo atrapado no se sacrifica
       P.hand.forEach((card, i) => {
         const d = def(card);
         if (d.kind === 'monster') {
@@ -2742,7 +2747,7 @@
         if (!canAttackSlot(st, m)) return;
         if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         for (const e of fl) {
-          const all = zonesWith(st.players[e].mz), targets = all.filter(tz => !st.players[e].mz[tz].six);      // los Seis Ojos no se pueden atacar
+          const all = zonesWith(st.players[e].mz), targets = all.filter(tz => !st.players[e].mz[tz].six && !(st.players[e].mz[tz].god && st.team[p] !== st.team[st.players[e].mz[tz].god.p]));      // los Seis Ojos no se pueden atacar
           if (!all.length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
           else for (const tz of targets) out.push(mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz });
         }
@@ -2808,6 +2813,15 @@
           const tm = st.players[e].mz[tz];
           if (tm && atkOf(st, st.players[e], tz) < 2000) destroyMonster(st, e, tz, ctx);
         }
+        break;
+      }
+      case 'dios': {
+        markOnce(u, 'dios');
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        tm.god = { p, uid: m.c.uid };
+        log(st, p, `${nm} usa Poder de Dios: atrapa a ${tm.down ? 'un personaje boca abajo' : mdef(tm).name} en su campo de energía divina`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
         break;
       }
       case 'maquina': {
@@ -3604,11 +3618,11 @@
       const tid = pd.id || 'c_titan';
       if (!a.use) { log(st, p, `decide no invocar a ${def({ id: tid }).name}`); return; }
       const li = P.grave.findIndex(c => c.uid === pd.uid), ti = handIdx(P, tid);
-      const anchor = titanAnchor(P, pd.z, undefined, def({ id: tid }).huge);
+      const anchor = formAnchor(P, pd.z, tid);
       if (li < 0 || ti < 0 || anchor < 0) return;
       const lara = P.grave.splice(li, 1)[0], inst = P.hand.splice(ti, 1)[0];
       inst.spent = false;
-      P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: true, since: st.turn, attacked: true });
+      P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: !!def(inst).wide, since: st.turn, attacked: true });
       log(st, p, `${def(lara).name} muere y se invoca especialmente a ${def(inst).name}`);
       if (tid === 'c_titan_colosal') colosalBlast(st, p, anchor);
       return;

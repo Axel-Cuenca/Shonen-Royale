@@ -69,6 +69,8 @@
     canal: ['Canalización y Supernova', 'Canaliza un turno completo sin poder atacar; en su turno siguiente lanza la Supernova: destruye a todos los personajes rivales de hasta 7★ y todas las magias y trampas rivales, boca arriba o boca abajo.'],
     cuerno: ['Ataque de Cuerno', 'Una vez por invocación: destruye a un personaje rival de 4★ o menos.'],
     dexter: ['Máquina del tiempo', 'Tras 2 turnos propios completos de preparación, revive 1 personaje de tu cementerio. Después vuelve a prepararse.'],
+    dios: ['Poder de Dios', 'Una vez por invocación: atrapa a un personaje rival en su campo de energía divina. No puede atacar, ser sacrificado ni usar habilidades, y sólo el equipo de Vegeta Dios puede interactuar con él. Se libera si Vegeta Dios deja el campo.'],
+    bruce: ['Transformación en Hulk', 'Cuando muere, puedes invocar especialmente a Hulk desde tu mano en su lugar; quedan vinculados y comparten destino. Sólo como emergencia: no se puede activar voluntariamente.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -570,6 +572,21 @@
       text: 'Máquina del tiempo: tras 2 turnos propios completos de preparación en el campo, revive 1 personaje de tu cementerio. Después la máquina vuelve a prepararse.'
     }),
     mon({
+      id: 'c_vegeta_dios', name: 'Vegeta Dios', fam: 'Vegeta', type: 'dbz', level: 7, atk: 2100, def: 1900, img: I('vegeta_dios'), ab: ['dios'], xform: { family: 'Vegeta' },
+      text: 'Familia Vegeta. Poder de Dios: una vez por invocación atrapa a un personaje rival en su campo de energía divina; no puede atacar, ser sacrificado ni usar habilidades y sólo el equipo de Vegeta Dios puede interactuar con él.',
+      sfx: { attack: V('vegeta_dios-attack'), transform: V('vegeta_dios-transform') }
+    }),
+    mon({
+      id: 'c_bruce_banner', name: 'Bruce Banner', type: 'marvel', level: 1, atk: 200, def: 200, img: I('bruce_banner'), ab: ['bruce'],
+      text: 'Transformación en Hulk: cuando va a morir, puedes invocar especialmente a Hulk desde tu mano en su lugar. Quedan vinculados y comparten destino (como Armin, Lara Tybur y Eren). Sólo en emergencia: no se puede activar voluntariamente ni pagando PV.',
+      sfx: { transform: V('bruce_banner-transform') }
+    }),
+    mon({
+      id: 'c_hulk', name: 'Hulk', type: 'marvel', level: 8, atk: 2600, def: 2600, img: I('hulk'),
+      text: 'Forma de Bruce Banner. Entra desde la mano cuando Bruce está por morir; comparten destino.',
+      sfx: { attack: V('hulk-attack') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -682,7 +699,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

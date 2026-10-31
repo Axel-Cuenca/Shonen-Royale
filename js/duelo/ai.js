@@ -152,6 +152,7 @@
             case 'desmantelar': return 47;
             case 'agujero': return 46;
             case 'maquina': return 63;
+            case 'dios': return tm && v.team[a.target.vs] !== v.team[v.seat] ? 59 + ((tm.atk || 0) / 150) : -1;
             case 'cuerno': return tm && v.team[a.target.vs] !== v.team[v.seat] ? 56 + ((tm.atk || 0) / 200) : -1;
             case 'canal': return allFoes.some(q => q.mz.some(t => t)) ? 44 : -1;
             case 'supernova': return 72;
