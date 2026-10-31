@@ -153,9 +153,18 @@
   // navegador y otra en la nube (js/duelo/account.js); gana la más reciente.
   const KEY = 'duelo.v1';
   let storeKey = KEY;
-  const defaultStore = () => ({ decks: [{ name: 'Mi mazo', ids: [] }], active: 0, updated: 0 });
+  const defaultStore = () => ({ decks: [{ name: 'Mi mazo', ids: [] }], active: 0, updated: 0, tandaV: 1 });
   /** Quita de los mazos guardados las cartas que ya no existen en el catálogo. */
-  function clean(s) { if (s && Array.isArray(s.decks)) for (const d of s.decks) if (Array.isArray(d.ids)) d.ids = d.ids.filter(id => C.get(id)); return s; }
+  function clean(s) { if (s && Array.isArray(s.decks)) for (const d of s.decks) if (Array.isArray(d.ids)) d.ids = d.ids.filter(id => C.get(id)); 
+    // (31/10/2026) Sistema de sobres: los mazos hechos con cartas que no son de la tanda 1 (y que aún no te han tocado) se eliminan, una sola vez.
+    if (s && Array.isArray(s.decks) && !s.tandaV) {
+      const got = (s.pts && s.pts.cards) || {}, before = s.decks.length;
+      s.decks = s.decks.filter(d => !(d.ids || []).some(id => C.tandaOf(id) > 1 && !(got[id] > 0)));
+      s.tandaDel = before - s.decks.length;
+      if (!s.decks.length) s.decks = [{ name: 'Mi mazo', ids: [] }];
+      s.active = Math.min(s.active | 0, s.decks.length - 1); s.tandaV = 1;
+    }
+    return s; }
   function readStore(key) {
     try {
       const s = JSON.parse(localStorage.getItem(key));
@@ -194,6 +203,10 @@
   // en el modo de prueba (?prueba) el mazo es fijo y no se guarda
   const TESTDK = { name: 'Mazo de prueba', get ids() { return C.testDeck(); } };
   const activeDeck = () => C.test ? TESTDK : store.decks[store.active];
+  /** Cartas del mazo que aún no tienes (bloqueadas: salen en sobres). */
+  const lockedIn = ids => C.test ? [] : [...new Set(ids)].filter(id => C.get(id) && !D.Shop.hasCard(id));
+  /** Motivo por el que el mazo no se puede usar ('' si vale): reglas del mazo + cartas que aún no tienes. */
+  const deckBad = ids => C.checkDeck(ids) || (lockedIn(ids).length ? `Tiene ${lockedIn(ids).length} carta(s) bloqueada(s): se consiguen en sobres.` : '');
 
   // ---------------- dibujo de cartas ----------------
   /** Figuras de pie («holograma»): la ilustración de cada personaje con el fondo claro recortado (se hace una vez en el navegador). */
@@ -450,7 +463,7 @@
     scr('jugar');
     leaveScreen(); showBg(true);
     S.setAmbient(false); S.setTrack('menu'); sndButton(true);
-    const dk = activeDeck(), bad = C.checkDeck(dk.ids), few = !C.canPlay();
+    const dk = activeDeck(), bad = deckBad(dk.ids), few = !C.canPlay();
     const off = !!bad || few;
     const items = [
       lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
@@ -475,6 +488,7 @@
     const notes = [];
     if (C.test) notes.push(h('div', { class: 'hnote' }, 'MODO DE PRUEBA: mazo fijo de 30 cartas (Popeye, Creeper, monstruos «Prueba ★N», y magias y trampas «Prueba: …»), sólo contra la computadora. No se guarda nada. Para salir, abre el juego sin «?prueba».'));
     if (few) notes.push(h('div', { class: 'hnote err' }, `Todavía no hay cartas suficientes para jugar: hay ${C.all().length} y hacen falta al menos ${Math.ceil(C.DECK_SIZE / C.MAX_COPIES)} distintas para armar un mazo. Se van añadiendo de a poco; mientras tanto puedes ver las cartas en «Mis mazos».`));
+    if (store.tandaDel) { notes.push(h('div', { class: 'hnote' }, `Llegaron los sobres: ${store.tandaDel} mazo(s) con cartas de otras tandas se eliminaron. Ahora todas las cartas salvo las de la tanda 1 se consiguen en sobres (Cajas).`)); store.tandaDel = 0; save(); }
     if (bad) notes.push(h('div', { class: 'hnote err' }, bad + ' Arréglalo en «Mis mazos».'));
     const u = D.Account.user;
     if (!D.Account.cloud) notes.push(h('div', { class: 'hnote' }, 'Sin conexión con la nube: tus mazos se guardan sólo en este navegador.'));
@@ -811,7 +825,7 @@
     return el;
   }
   const deckInfo = ids => {
-    const cs = ids.map(i => C.get(i)).filter(Boolean), bad = C.checkDeck(ids);
+    const cs = ids.map(i => C.get(i)).filter(Boolean), bad = deckBad(ids);
     return { n: ids.length, bad, mon: cs.filter(c => c.kind === 'monster').length, spl: cs.filter(c => c.kind === 'spell').length, trp: cs.filter(c => c.kind === 'trap').length };
   };
 
@@ -880,6 +894,7 @@
     function say(msg) { flash = msg; clearTimeout(flashT); flashT = setTimeout(() => { flash = ''; renderStatus(); }, 1800); renderStatus(); }
     function add(id) {
       if (ro) { say('Modo de prueba: el mazo es fijo'); return false; }
+      if (!C.test && !D.Shop.hasCard(id)) { S.play('error'); say(`Bloqueada: sale en los sobres de la tanda ${C.tandaOf(id)}`); return false; }
       if (dk.ids.length >= C.DECK_SIZE) { S.play('error'); say(`El mazo ya tiene ${C.DECK_SIZE} cartas: quita una primero`); return false; }
       if (copies(id) >= C.MAX_COPIES) { S.play('error'); say(`Máximo ${C.MAX_COPIES} copias de cada carta`); return false; }
       dk.ids.push(id); save(); S.play('select'); renderAll(); return true;
@@ -964,10 +979,10 @@
     const SUBES = { equip: 'Equipo', cont: 'Continua' };
     const lvTag = c => c.kind === 'monster' ? 'Nv ' + c.level : c.kind === 'spell' ? 'Magia' : 'Trampa';
     function poolCard(c) {
-      const n = copies(c.id), maxed = n >= C.MAX_COPIES || dk.ids.length >= C.DECK_SIZE;
-      const el = h('div', { class: 'edc' + (n ? ' in' : '') + (maxed && !n ? ' dim' : ''), 'data-did': c.id, role: 'button', tabindex: '0', 'aria-label': 'Añadir ' + c.name + ' al mazo',
+      const n = copies(c.id), maxed = n >= C.MAX_COPIES || dk.ids.length >= C.DECK_SIZE, lock = !C.test && !D.Shop.hasCard(c.id);
+      const el = h('div', { class: 'edc' + (n ? ' in' : '') + (maxed && !n ? ' dim' : '') + (lock ? ' locked' : '') + ' rar-' + C.rarityOf(c.id), 'data-did': c.id, role: 'button', tabindex: '0', 'aria-label': 'Añadir ' + c.name + ' al mazo',
         onclick: () => { if (!noClick) add(c.id); }, onkeydown: e => { if (e.target === el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); add(c.id); } } },
-        artEl(c), h('span', { class: 'edtag' }, lvTag(c)), n ? h('span', { class: 'bd' }, '×' + n) : null,
+        artEl(c), h('span', { class: 'edtag' }, lvTag(c)), n ? h('span', { class: 'bd' }, '×' + n) : null, lock ? h('span', { class: 'edlock' }, '🔒 T' + C.tandaOf(c.id)) : null,
         h('button', { class: 'edi', 'aria-label': 'Ver detalle de ' + c.name, onclick: e => { e.stopPropagation(); cardModal(c); } }, 'i'),
         h('div', { class: 'edn' }, h('b', null, c.name), h('span', null, c.kind === 'monster' ? `${c.atk} / ${c.def}` : (SUBES[c.sub] || (c.kind === 'trap' ? 'Boca abajo' : '')))));
       drag(el, c.id, 'pool');
@@ -985,6 +1000,7 @@
     function renderPool() {
       const ql = q.trim().toLowerCase();
       let list = C.all().filter(c => (kind === 'all' || c.kind === kind) && (!type || (c.types && c.types.includes(type))) && (!ql || c.name.toLowerCase().includes(ql)));
+      if (!C.test) list = list.map((c, i) => [c, i]).sort((a, b) => (D.Shop.hasCard(b[0].id) - D.Shop.hasCard(a[0].id)) || a[1] - b[1]).map(x => x[0]);      // primero las que ya tienes
       const total = list.length; list = list.slice(0, shown);
       poolEl.replaceChildren(...list.map(poolCard), ...(total > shown ? [btn(`Ver más (${total - shown})`, () => { shown += 80; renderPool(); }, 'ghost')] : []), ...(!total ? [h('p', { class: 'sub' }, 'No hay cartas con ese filtro.')] : []));
     }
@@ -2728,10 +2744,41 @@
   function boxScreen() {
     scr('cajas');
     const SH = D.Shop; S.setTrack('menu');
-    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: () => shopScreen() }, '← Tienda'), h('h1', null, 'Cajas'),
-      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' puntos'), h('span', { class: 'sub' }, 'Premios al azar. Toca el cofre para ver sus skins.')),
+    mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Cajas y sobres'),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' monedas'), h('span', { class: 'sub' }, `Sobres de ${SH.PACK_SIZE} cartas por ✦ ${SH.PACK_PRICE}. Todas las cartas menos las de la tanda 1 se desbloquean aquí.`)),
+      h('h2', null, '🃏 Sobres por tanda'),
+      h('div', { class: 'bxgrid' }, C.PACK_TANDAS.map(t => { const pg = SH.tandaProgress(t); return h('button', { class: 'bxcard pkcard' + (SH.coins() >= SH.PACK_PRICE ? '' : ' poor'), style: '--bc:#7aa8ff', onclick: () => packScreen(t) },
+        h('div', { class: 'bxic' }, '🃏'), h('b', null, 'Sobre · Tanda ' + t), h('small', null, `${pg.got} / ${pg.total} cartas`), h('span', { class: 'bxpr' }, '✦ ' + SH.PACK_PRICE)); })),
+      h('h2', null, '🎴 Cofre de skins'),
       h('div', { class: 'bxgrid' }, [SH.SKIN_BOX].concat(SH.BOXES).map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor') + (b.kind === 'skins' ? ' skc' : ''), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
         h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, b.kind === 'skins' ? SH.poolOf(b).length + ' skins · ' + fmtPct(SH.skinChance()) + ' % cada una' : SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
+  }
+  const pkArt = c => c && c.img ? h('img', { class: 'cimg', src: c.img, alt: c.name, draggable: 'false' }) : h('span', { class: 'ico', style: 'font-size:44px' }, (c && c.icon) || '✨');
+  /** Sobre de una tanda: probabilidades, tu progreso y la compra. */
+  function packScreen(t) {
+    scr('cajas'); const SH = D.Shop; S.setTrack('menu');
+    const list = C.inTanda(t).map(id => C.get(id)).sort((a, b) => C.RAR_ORDER.indexOf(C.rarityOf(b.id)) - C.RAR_ORDER.indexOf(C.rarityOf(a.id)) || (b.level || 0) - (a.level || 0));
+    const have = new Set(C.RAR_ORDER.map(r => r).filter(r => list.some(c => C.rarityOf(c.id) === r)));
+    const odds = C.RAR_ORDER.filter(r => have.has(r)), tot = odds.reduce((n, r) => n + SH.PACK_ODDS[r], 0);
+    const pg = SH.tandaProgress(t), msg = h('div', { class: 'shmsg msg err' });
+    mount(h('div', { class: 'scr bxdet', style: '--bc:#7aa8ff' }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'),
+      h('h1', null, 'Sobre · Tanda ' + t), h('div', { class: 'bxsub' }, `${SH.PACK_SIZE} cartas al azar de la tanda ${t}`),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' monedas'), h('span', { class: 'sub' }, odds.map(r => `${C.RAR_ES[r]} ${(SH.PACK_ODDS[r] / tot * 100).toFixed(0)}%`).join(' · '))),
+      h('div', { class: 'bxstage' }, h('div', { class: 'bxbig' }, '🃏')), msg,
+      h('div', { class: 'row bxact' }, btn('Abrir ✦ ' + SH.PACK_PRICE, () => { const r = SH.buyPack(t); if (!r.ok) { S.play('error'); msg.textContent = r.error; return; } S.play('confirm'); packReveal(r, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Cancelar', boxScreen, 'ghost')),
+      h('div', { class: 'bxhead' }, `Cartas de esta tanda (${pg.got} / ${pg.total} desbloqueadas)`),
+      h('div', { class: 'bxlist' }, list.map(c => { const own = SH.hasCard(c.id), n = SH.cardCount(c.id), rar = C.rarityOf(c.id);
+        return h('div', { class: 'bxt pkr-' + rar + (own ? ' got' : ' lockd') }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[rar] + (own ? (n > 1 ? ` · ×${n}` : ' ✓') : ' · 🔒'))); }))));
+  }
+  /** Las 3 cartas del sobre se dan vuelta una a una. */
+  function packReveal(r, t) {
+    const SH = D.Shop;
+    const ov = h('div', { class: 'boxov pkov open', style: '--bc:#7aa8ff' }, h('div', { class: 'bx-rays' }), h('h2', null, 'Tu sobre · Tanda ' + t),
+      h('div', { class: 'pkrow' }, r.cards.map((x, i) => { const c = C.get(x.id);
+        return h('div', { class: 'pkc pkr-' + x.rar, style: `--d:${(0.35 + i * 0.55).toFixed(2)}s` }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[x.rar]),
+          h('span', { class: 'pkn' + (x.isNew ? ' new' : '') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)); })),
+      h('div', { class: 'row' }, btn('Otro sobre ✦ ' + SH.PACK_PRICE, () => { ov.remove(); const r2 = SH.buyPack(t); if (!r2.ok) { S.play('error'); packScreen(t); return; } S.play('confirm'); packReveal(r2, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Listo', () => { ov.remove(); packScreen(t); }, 'ghost')));
+    document.body.append(ov);
   }
   /** Detalle de una caja: la caja grande, sus probabilidades y todos los premios posibles (de común a legendario). */
   function boxPrizes(b) {

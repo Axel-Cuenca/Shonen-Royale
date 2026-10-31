@@ -1727,3 +1727,19 @@ html.fxbg .slab:not(.multi) .zone.mz .card.m.layered.onboard:not(.def) { width: 
 html.fxbg .slab.multi .zrow { grid-template-columns: repeat(3, 8.8em); gap: 1.9em; }
 html.fxbg .slab.multi .zone.mz { width: 8.8em; height: 9.2em; }
 html.fxbg .slab.multi .zone.st { width: 6.6em; height: 6.2em; }
+
+/* ---- Cartas bloqueadas (sobres, 31-10-2026) ---- */
+.edc.locked { filter: grayscale(.85) brightness(.55); }
+.edc .edlock { position: absolute; left: 4px; bottom: 34px; z-index: 3; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 8px; background: #000c; color: #ffd84a; border: 1px solid #ffd84a66; }
+.edc.rar-u { box-shadow: inset 0 0 0 2px #5ee08a55; } .edc.rar-r { box-shadow: inset 0 0 0 2px #5fa8ff77; } .edc.rar-e { box-shadow: inset 0 0 0 2px #c47bffaa; } .edc.rar-l { box-shadow: inset 0 0 0 2px #ffd84acc; }
+
+/* ---- Sobres de cartas (31-10-2026) ---- */
+.pkov { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+.pkrow { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 2; }
+.pkc { width: 150px; padding: 12px 10px; border-radius: 14px; background: #0c1a3a; border: 2px solid var(--rc, #4a6ad0); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; opacity: 0; transform: rotateY(90deg) scale(.8); animation: pkflip .6s cubic-bezier(.2, .9, .3, 1.2) var(--d) forwards; box-shadow: 0 0 22px var(--rc, #4a6ad0); }
+.pkc .bxp { height: 110px; display: flex; align-items: center; justify-content: center; } .pkc .cimg { max-height: 110px; max-width: 100%; object-fit: contain; }
+.pkc small { opacity: .85; } .pkn { font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #1b2a55; } .pkn.new { background: #ffd84a; color: #2a1a00; }
+@keyframes pkflip { to { opacity: 1; transform: none; } }
+.pkr-c { --rc: #8fa0c8; } .pkr-u { --rc: #5ee08a; } .pkr-r { --rc: #5fa8ff; } .pkr-e { --rc: #c47bff; } .pkr-l { --rc: #ffd84a; }
+.bxt.pkr-c, .bxt.pkr-u, .bxt.pkr-r, .bxt.pkr-e, .bxt.pkr-l { border-color: var(--rc); } .bxt.lockd { filter: grayscale(.9) brightness(.6); }
+html.rm .pkc { animation-duration: .01s; }

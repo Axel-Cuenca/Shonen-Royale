@@ -154,9 +154,9 @@
   const dupRefund = it => it.cat === 'si' ? SKIN_BOX.dupRefund : Math.round(PRICE[it.rar] * 0.2);
 
   // ---------------- economía ----------------
-  const DAILY = [20, 25, 30, 35, 40, 50, 80];          // día 1..7 de la racha (luego vuelve a empezar)
-  const PLAY_ONLINE = 15, WIN_ONLINE = 25;              // por terminar una partida online / extra por ganar
-  const PLAY_AI = 5, WIN_AI = 10, AI_DAILY_CAP = 50;    // contra la computadora: menos y con tope diario
+  const DAILY = [40, 50, 60, 70, 80, 100, 150];          // día 1..7 de la racha (luego vuelve a empezar)
+  const PLAY_ONLINE = 30, WIN_ONLINE = 50;              // por terminar una partida online / extra por ganar
+  const PLAY_AI = 10, WIN_AI = 20, AI_DAILY_CAP = 150;    // contra la computadora: menos y con tope diario
 
   let getStore = () => null, saveStore = () => { /* nada */ };
   function init(get, save) { getStore = get; saveStore = save; }
@@ -176,6 +176,7 @@
     p.owned = Array.isArray(p.owned) ? p.owned.filter(id => !!byId(id)) : [];
     p.skOwn = p.skOwn && typeof p.skOwn === 'object' && !Array.isArray(p.skOwn) ? p.skOwn : {};
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
+    p.cards = cleanCards(p.cards);
     p.pity = p.pity && typeof p.pity === 'object' ? p.pity : {};
     p.sk = p.sk && typeof p.sk === 'object' && !Array.isArray(p.sk) ? p.sk : {};
     p.si = p.si && typeof p.si === 'object' && !Array.isArray(p.si) ? p.si : {};
@@ -207,6 +208,54 @@
   const skinsFor = cid => { const p = pts(); return p ? (p.skOwn[cid] || []).map(byId).filter(i => i && i.cat === 'sk') : []; };
   const owns = id => { const it = byId(id), p = pts(); return !!it && (!!it.free || (!!p && p.owned.includes(id))); };
   const coins = () => { const p = pts(); return p ? p.coins : 0; };
+
+
+  // ---------------- colección de cartas y sobres (31-10-2026) ----------------
+  // Sólo la tanda 1 viene desbloqueada. El resto sale de los sobres de su tanda: 3 cartas por PACK_PRICE monedas.
+  // p.cards = { idCarta: veces que te ha tocado }: la primera te la da para siempre (se puede usar 2 veces en el mazo) y
+  // las siguientes quedan guardadas como repetidas (para los futuros intercambios: 5 repetidas de una rareza -> 1 de la siguiente).
+  const PACK_PRICE = 50, PACK_SIZE = 3;
+  const PACK_ODDS = { c: 55, u: 25, r: 12, e: 6, l: 2 };      // % de cada rareza al sacar una carta del sobre
+  const cardsApi = () => D.Cards && D.Cards.tandaOf ? D.Cards : null;
+  function cleanCards(o) {
+    const C = cardsApi(), out = {};
+    if (!o || typeof o !== 'object' || Array.isArray(o) || !C) return out;
+    for (const id of Object.keys(o)) { const n = Math.floor(Number(o[id])); if (n > 0 && C.get(id) && C.tandaOf(id) > 1) out[id] = Math.min(n, 999); }
+    return out;
+  }
+  /** ¿La carta está desbloqueada? (tanda 1 siempre; el resto, si ya te tocó en un sobre) */
+  function hasCard(id) { const C = cardsApi(); if (!C || C.tandaOf(id) <= 1) return true; const p = pts(); return !!p && (p.cards[id] | 0) > 0; }
+  /** Veces que te ha tocado (0 = bloqueada). Las de la tanda 1 no se cuentan: ya son tuyas. */
+  const cardCount = id => { const p = pts(); return p ? (p.cards[id] | 0) : 0; };
+  /** Repetidas guardadas de esa carta (las que sobran después de la primera). */
+  const spareOf = id => Math.max(0, cardCount(id) - 1);
+  /** Cuántas cartas de esa tanda tienes desbloqueadas / cuántas tiene. */
+  function tandaProgress(t) { const C = cardsApi(); if (!C) return { got: 0, total: 0 }; const l = C.inTanda(t); return { got: l.filter(hasCard).length, total: l.length }; }
+  /** Una carta al azar de una tanda: primero la rareza (PACK_ODDS, sólo entre las que existen) y luego una de esa rareza. */
+  function rollCard(t, rnd) {
+    const C = cardsApi(); if (!C) return null;
+    const pool = C.inTanda(t); if (!pool.length) return null;
+    const by = {}; for (const id of pool) (by[C.rarityOf(id)] = by[C.rarityOf(id)] || []).push(id);
+    const rs = C.RAR_ORDER.filter(r => by[r]), tot = rs.reduce((n, r) => n + PACK_ODDS[r], 0);
+    let x = rnd() * tot, rar = rs[rs.length - 1];
+    for (const r of rs) { if (x < PACK_ODDS[r]) { rar = r; break; } x -= PACK_ODDS[r]; }
+    const l = by[rar]; return l[Math.min(l.length - 1, Math.floor(rnd() * l.length))];
+  }
+  /** Compra un sobre de la tanda t: cobra, saca PACK_SIZE cartas y las guarda. Devuelve { ok, cards: [{ id, rar, isNew, n }] }. */
+  function buyPack(t, rnd) {
+    const C = cardsApi(), p = pts(); rnd = rnd || Math.random;
+    if (!p || !C || !C.PACK_TANDAS.includes(t)) return { ok: false, error: 'Ese sobre no existe.' };
+    if (p.coins < PACK_PRICE) return { ok: false, error: 'No te alcanzan las monedas.' };
+    p.coins -= PACK_PRICE;
+    const cards = [];
+    for (let i = 0; i < PACK_SIZE; i++) {
+      const id = rollCard(t, rnd); if (!id) continue;
+      const isNew = (p.cards[id] | 0) === 0; p.cards[id] = Math.min(999, (p.cards[id] | 0) + 1);
+      cards.push({ id, rar: C.rarityOf(id), isNew, n: p.cards[id] });
+    }
+    saveStore();
+    return { ok: true, cards, coins: p.coins };
+  }
 
   /** ¿Se puede cobrar hoy? Devuelve { amount, day } (day 1..7) o null. */
   function dailyInfo() {
@@ -390,5 +439,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { PACK_PRICE, PACK_SIZE, PACK_ODDS, hasCard, cardCount, spareOf, tandaProgress, rollCard, buyPack, SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

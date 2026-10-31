@@ -600,6 +600,32 @@
     'xs_potion', 'xs_potion', 'xs_bag', 'xs_revive', 'xs_beam', 'xs_quake', 'xs_twister', 'xs_flame', 'xs_candy', 'xs_band',
     'xt_barrier', 'xt_barrier', 'xt_counter', 'xt_counter', 'xt_mirror', 'xt_negate', 'xt_snare', 'xt_snare'].filter(id => BY_ID.has(id));
 
+
+  // ---------------- tandas, rarezas y sobres (31-10-2026) ----------------
+  // Todas las cartas están BLOQUEADAS salvo las de la tanda 1; el resto se desbloquea en sobres (uno por tanda).
+  // Rareza según estrellas: 1-3 común · 4 poco común · 5-6 rara · 7-9 épica · 10+ legendaria. Magias y trampas: común.
+  const TANDA_IDS = {
+    1: ['popeye', 'creeper', 'bardock', 'bardock_ssj', 'cell', 'kratos', 'kratos_f', 'lara', 'titan', 'sukuna5', 'sukuna60', 'shang', 'vegeta', 'vegeta_blue', 'armadura', 'espada', 'gema', 'karma', 'superball', 'tormenta'],
+    2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
+    3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
+    4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba']
+  };
+  const TANDAS = [1, 2, 3, 4], PACK_TANDAS = [2, 3, 4];
+  const TANDA_OF = {};
+  for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
+  /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */
+  const tandaOf = id => TANDA_OF[id] || 1;
+  const RAR_ORDER = ['c', 'u', 'r', 'e', 'l'];
+  const RAR_ES = { c: 'Común', u: 'Poco común', r: 'Rara', e: 'Épica', l: 'Legendaria' };
+  /** Rareza (c/u/r/e/l) de una carta por su nivel (estrellas). */
+  function rarityOf(id) {
+    const c = BY_ID.get(id); if (!c) return 'c';
+    const n = c.kind === 'monster' ? (c.level || 0) : 0;
+    return n >= 10 ? 'l' : n >= 7 ? 'e' : n >= 5 ? 'r' : n === 4 ? 'u' : 'c';
+  }
+  /** Ids visibles de una tanda. */
+  const inTanda = t => (TANDA_IDS[t] || []).map(k => 'c_' + k).filter(id => BY_ID.has(id) && !BY_ID.get(id).hidden);
+
   // ---------------- mazos ----------------
   const DECK_SIZE = 30, MAX_COPIES = 2;
 
@@ -664,6 +690,7 @@
     all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST).filter(c => !c.hidden),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,
+    TANDAS, PACK_TANDAS, tandaOf, inTanda, rarityOf, RAR_ES, RAR_ORDER,
     tributesFor: level => level >= 10 ? 3 : level >= 7 ? 2 : level >= 5 ? 1 : 0
   };
   if (!isBrowser) module.exports = D.Cards;
