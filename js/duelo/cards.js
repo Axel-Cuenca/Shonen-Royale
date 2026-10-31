@@ -68,6 +68,7 @@
     repulsion: ['Repulsión divina', 'Destruye toda carta mágica rival que lo elija como objetivo a él o a un aliado, y su efecto no se resuelve.'],
     canal: ['Canalización y Supernova', 'Canaliza un turno completo sin poder atacar; en su turno siguiente lanza la Supernova: destruye a todos los personajes rivales de hasta 7★ y todas las magias y trampas rivales, boca arriba o boca abajo.'],
     cuerno: ['Ataque de Cuerno', 'Una vez por invocación: destruye a un personaje rival de 4★ o menos.'],
+    dexter: ['Máquina del tiempo', 'Tras 2 turnos propios completos de preparación, revive 1 personaje de tu cementerio. Después vuelve a prepararse.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -565,6 +566,10 @@
       sfx: { transform: V('goku_dios-transform'), ability: V('goku_dios-kaioken') }
     }),
     mon({
+      id: 'c_dexter', name: 'Dexter', type: 'cartoon', level: 1, atk: 100, def: 100, img: I('dexter'), ab: ['dexter'],
+      text: 'Máquina del tiempo: tras 2 turnos propios completos de preparación en el campo, revive 1 personaje de tu cementerio. Después la máquina vuelve a prepararse.'
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -677,7 +682,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

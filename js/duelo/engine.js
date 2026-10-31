@@ -1245,7 +1245,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -2166,6 +2166,10 @@
       else if (s.exh && s.exh.t !== st.turn) { s.exh = null; log(st, st.current, `${mdef(s).name} se recupera del agotamiento`); }
     }
     for (const s of P.mz) if (s && s.canal && s.canal.t === st.turn && !s.canal.ready) { s.canal.ready = true; log(st, st.current, `${mdef(s).name} completa su canalización: la Supernova estará lista en su próximo turno`); }
+    for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('dexter')) {            // Dexter: cada turno propio completo prepara la máquina del tiempo
+      s.dex = (s.dex || 0) + 1;
+      log(st, st.current, `${mdef(s).name} prepara su máquina del tiempo (${Math.min(s.dex, 2)}/2)`);
+    }
     for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('tonyarm')) {            // Tony Stark: cada turno propio completo en el campo da un material
       const tn = s.tony || (s.tony = { mat: 0, arm: 0, t: -1 });
       tn.mat++;
@@ -2469,6 +2473,7 @@
       if (ab.includes('bigbang') && canOnce(P, z, u, 'bb')) push({ pw: 'bigbang' });
       if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
+      if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2803,6 +2808,14 @@
           const tm = st.players[e].mz[tz];
           if (tm && atkOf(st, st.players[e], tz) < 2000) destroyMonster(st, e, tz, ctx);
         }
+        break;
+      }
+      case 'maquina': {
+        const c = P.grave.filter(i => def(i).kind === 'monster' && spot(P, def(i)) >= 0);
+        if (!c.length) break;
+        m.dex = 0;
+        log(st, p, `${nm} usa la Máquina del tiempo`);
+        st.pending = { k: 'pick', player: p, zone: 'grave', cands: c.map(i => i.uid), cont: 'revive' };
         break;
       }
       case 'canal':

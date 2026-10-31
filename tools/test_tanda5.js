@@ -202,4 +202,22 @@ module.exports = function (T) {
     const s5 = fresh(); put(s5, 0, 0, 'c_goku_dios');
     ok(!!pw(s5, 0, 'kaioken'), 'Goku Dios tiene Kaio-ken');
   }
+
+  section('Dexter');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_dexter', { summonedTurn: 1 }); st.players[0].grave.push({ uid: st.nextUid++, id: 'c_goku' });
+    ok(!pw(st, 0, 'maquina'), 'Dexter: sin preparación no puede usar la máquina');
+    for (let i = 0; i < 2; i++) {
+      let n = 0; while (E.actor(st) === 0 && n++ < 6) act(st, 0, L(st, 0).find(a => a.t === 'endTurn') || L(st, 0).find(a => a.t === 'discard'));
+      n = 0; while (E.actor(st) !== 0 && n++ < 6) { const q = E.actor(st); act(st, q, L(st, q).find(a => a.t === 'endTurn') || L(st, q).find(a => a.t === 'discard')); }
+      if (i === 0) ok(!pw(st, 0, 'maquina'), 'Dexter: con 1 turno completo todavía no');
+    }
+    const a = pw(st, 0, 'maquina');
+    ok(!!a, 'Dexter: tras 2 turnos completos la máquina está lista');
+    if (a) {
+      act(st, 0, a);
+      ok(st.pending && st.pending.k === 'pick', 'Dexter: elige qué personaje revive');
+      if (st.pending) { act(st, 0, { t: 'pick', uid: st.pending.cands[0] }); settle(st); ok(ids(st, 0).includes('c_goku'), 'Dexter: Goku revive'); ok(!pw(st, 0, 'maquina'), 'Dexter: la máquina vuelve a prepararse'); }
+    }
+  }
 };
