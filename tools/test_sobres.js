@@ -37,6 +37,20 @@ module.exports = function (T) {
   // guardado manipulado
   store.pts = { cards: { c_goku: 2, c_popeye: 5, nada: 3, c_odin: -4, c_x: 'a' } };
   const q = SH.pts(); eq(Object.keys(q.cards), ['c_goku'], 'se descartan ids inventados, la tanda 1, negativos y no numéricos');
+  // intercambios: 5 repetidas de una rareza -> 1 de la siguiente
+  { const C2 = C, cm = C2.inTanda(2).filter(id => C2.rarityOf(id) === 'c'), pp = SH.pts(); pp.cards = {}; pp.coins = 0;
+    pp.cards[cm[0]] = 4; pp.cards[cm[1]] = 3;      // repetidas: 3 + 2
+    eq(SH.sparesOf('c').reduce((n, x) => n + x.n, 0), 5, '4 copias y 3 copias = 5 repetidas');
+    ok(!SH.tradeUp({ [cm[0]]: 4 }).ok, 'tienen que ser exactamente 5');
+    ok(!SH.tradeUp({ [cm[0]]: 4, [cm[1]]: 1 }).ok && SH.spareOf(cm[0]) === 3, 'no puedes dar más repetidas de las que tienes (y no se descuenta nada)');
+    const up = C2.inTanda(2).find(id => C2.rarityOf(id) === 'u');
+    ok(!SH.tradeUp({ [cm[0]]: 3, [up]: 2 }).ok, 'las 5 tienen que ser de la misma rareza');
+    const tr = SH.tradeUp({ [cm[0]]: 3, [cm[1]]: 2 }, rnd);
+    ok(tr.ok && tr.card.rar === 'u' && C2.rarityOf(tr.card.id) === 'u' && tr.from === 'c' && tr.to === 'u', 'cambia 5 comunes por 1 poco común');
+    eq([SH.spareOf(cm[0]), SH.spareOf(cm[1])], [0, 0], 'las 5 repetidas se gastan y se queda la primera copia');
+    ok(SH.hasCard(cm[0]) && SH.hasCard(cm[1]) && SH.hasCard(tr.card.id), 'las cartas desbloqueadas siguen siendo tuyas');
+    const lg = C2.inTanda(2).find(id => C2.rarityOf(id) === 'l'); pp.cards[lg] = 6;
+    ok(!SH.tradeUp({ [lg]: 5 }).ok, 'las legendarias no se cambian'); }
   // economía más generosa
   eq([SH.PLAY_ONLINE + SH.WIN_ONLINE, SH.AI_DAILY_CAP >= 150], [80, true], 'más monedas por partida online y tope diario contra la computadora de 150');
 };

@@ -2746,6 +2746,7 @@
     const SH = D.Shop; S.setTrack('menu');
     mount(h('div', { class: 'scr' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Cajas y sobres'),
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' monedas'), h('span', { class: 'sub' }, `Sobres de ${SH.PACK_SIZE} cartas por ✦ ${SH.PACK_PRICE}. Todas las cartas menos las de la tanda 1 se desbloquean aquí.`)),
+      h('div', { class: 'row' }, btn('🔄 Intercambios de repetidas', () => tradeScreen(), 'gold sm')),
       h('h2', null, '🃏 Sobres por tanda'),
       h('div', { class: 'bxgrid' }, C.PACK_TANDAS.map(t => { const pg = SH.tandaProgress(t); return h('button', { class: 'bxcard pkcard' + (SH.coins() >= SH.PACK_PRICE ? '' : ' poor'), style: '--bc:#7aa8ff', onclick: () => packScreen(t) },
         h('div', { class: 'bxic' }, '🃏'), h('b', null, 'Sobre · Tanda ' + t), h('small', null, `${pg.got} / ${pg.total} cartas`), h('span', { class: 'bxpr' }, '✦ ' + SH.PACK_PRICE)); })),
@@ -2754,6 +2755,36 @@
         h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, b.kind === 'skins' ? SH.poolOf(b).length + ' skins · ' + fmtPct(SH.skinChance()) + ' % cada una' : SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
   }
   const pkArt = c => c && c.img ? h('img', { class: 'cimg', src: c.img, alt: c.name, draggable: 'false' }) : h('span', { class: 'ico', style: 'font-size:44px' }, (c && c.icon) || '✨');
+  /** Intercambios: TRADE_N repetidas de una rareza -> 1 carta al azar de la rareza siguiente. */
+  function tradeScreen(rar, picks) {
+    scr('cajas'); const SH = D.Shop; S.setTrack('menu');
+    const order = C.RAR_ORDER.slice(0, -1);      // la legendaria no se cambia por otra
+    rar = rar || order.find(r => SH.sparesOf(r).length) || 'c'; picks = picks || {};
+    const next = C.RAR_ORDER[C.RAR_ORDER.indexOf(rar) + 1], list = SH.sparesOf(rar).map(x => Object.assign({ c: C.get(x.id) }, x));
+    const sel = () => Object.values(picks).reduce((n, v) => n + v, 0), msg = h('div', { class: 'shmsg msg err' });
+    const redo = () => tradeScreen(rar, picks);
+    const go = () => {
+      const r = SH.tradeUp(picks); if (!r.ok) { S.play('error'); msg.textContent = r.error; return; }
+      S.play('confirm'); tradeReveal(r, () => tradeScreen(rar, {}));
+    };
+    mount(h('div', { class: 'scr bxdet', style: '--bc:#7aa8ff' }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'), h('h1', null, 'Intercambios'),
+      h('div', { class: 'bxsub' }, `Da ${SH.TRADE_N} repetidas de la misma rareza y recibe 1 carta al azar de la siguiente`),
+      h('div', { class: 'edchips' }, order.map(r => h('button', { class: 'edchip' + (r === rar ? ' on' : ''), onclick: () => tradeScreen(r, {}) }, `${C.RAR_ES[r]} (${SH.sparesOf(r).reduce((n, x) => n + x.n, 0)})`))),
+      h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, `Elegidas: ${sel()} / ${SH.TRADE_N}`), h('span', { class: 'sub' }, `${C.RAR_ES[rar]} → ${C.RAR_ES[next]}`)), msg,
+      h('div', { class: 'row bxact' }, btn(`Intercambiar ${SH.TRADE_N} → 1 ${C.RAR_ES[next]}`, go, sel() === SH.TRADE_N ? 'gold' : 'ghost')),
+      h('div', { class: 'bxlist' }, list.length ? list.map(x => h('div', { class: 'bxt got pkr-' + rar }, h('div', { class: 'bxp' }, pkArt(x.c)), h('b', null, x.c.name), h('small', null, `Repetidas: ${x.n}`),
+        h('div', { class: 'row', style: 'gap:6px;justify-content:center' },
+          btn('−', () => { if ((picks[x.id] | 0) > 0) { picks[x.id]--; if (!picks[x.id]) delete picks[x.id]; redo(); } }, 'ghost sm'), h('b', null, String(picks[x.id] | 0)),
+          btn('+', () => { if ((picks[x.id] | 0) < x.n && sel() < SH.TRADE_N) { picks[x.id] = (picks[x.id] | 0) + 1; redo(); } }, 'ghost sm')))) : [h('p', { class: 'sub' }, `No tienes repetidas ${C.RAR_ES[rar].toLowerCase()}s todavía. Salen al abrir sobres cuando te toca una carta que ya tienes.`)])));
+  }
+  function tradeReveal(r, done) {
+    const c = C.get(r.card.id);
+    const ov = h('div', { class: 'boxov pkov open', style: '--bc:#7aa8ff' }, h('div', { class: 'bx-rays' }), h('h2', null, 'Intercambio hecho'),
+      h('div', { class: 'pkrow' }, h('div', { class: 'pkc pkr-' + r.card.rar, style: '--d:.3s' }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[r.card.rar]),
+        h('span', { class: 'pkn' + (r.card.isNew ? ' new' : '') }, r.card.isNew ? '¡NUEVA!' : `Repetida · ×${r.card.n}`))),
+      h('div', { class: 'row' }, btn('Listo', () => { ov.remove(); done(); }, 'gold')));
+    document.body.append(ov);
+  }
   /** Sobre de una tanda: probabilidades, tu progreso y la compra. */
   function packScreen(t) {
     scr('cajas'); const SH = D.Shop; S.setTrack('menu');
