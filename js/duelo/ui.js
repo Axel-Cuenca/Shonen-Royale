@@ -256,7 +256,7 @@
     return {
       // la caché va por imagen (no por carta): así cada skin de ilustración tiene su propio recorte
       prepare() {
-        for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.kind === 'monster' && c.img) want(c.img);
+        for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.img) want(c.img);      // personajes, y también las magias/trampas de los sobres
         if (D.Shop && D.Shop.skinPool) for (const it of D.Shop.skinPool()) want(it.img);
       },
       /** Recorte listo de esa carta (con la skin `img` si se da) o null mientras se prepara. */
@@ -2754,7 +2754,13 @@
       h('div', { class: 'bxgrid' }, [SH.SKIN_BOX].concat(SH.BOXES).map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor') + (b.kind === 'skins' ? ' skc' : ''), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
         h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, b.kind === 'skins' ? SH.poolOf(b).length + ' skins · ' + fmtPct(SH.skinChance()) + ' % cada una' : SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
   }
-  const pkArt = c => c && c.img ? h('img', { class: 'cimg', src: c.img, alt: c.name, draggable: 'false' }) : h('span', { class: 'ico', style: 'font-size:44px' }, (c && c.icon) || '✨');
+  /** Ilustración para los sobres: la misma con el fondo claro recortado que usa el tablero (si aún se está preparando, se cambia al estar lista). */
+  const pkArt = c => {
+    if (!(c && c.img)) return h('span', { class: 'ico', style: 'font-size:44px' }, (c && c.icon) || '✨');
+    const im = h('img', { class: 'cimg', src: Holo.src(c.id) || c.img, alt: c.name, draggable: 'false' });
+    if (!Holo.src(c.id)) { let n = 0; const t = setInterval(() => { const u = Holo.src(c.id); if (u) { im.src = u; clearInterval(t); } else if (++n > 25 || !im.isConnected) clearInterval(t); }, 200); }
+    return im;
+  };
   /** Intercambios: TRADE_N repetidas de una rareza -> 1 carta al azar de la rareza siguiente. */
   function tradeScreen(rar, picks) {
     scr('cajas'); const SH = D.Shop; S.setTrack('menu');
