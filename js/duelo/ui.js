@@ -1712,6 +1712,7 @@
     function stText(s) {
       if (s.ring) return s.ring.sauron ? 'Anillo Único en Sauron: +1000 ATK y DEF, sin corrupción.' : `Anillo Único (portador de ${s.ring.stars}★): +${s.ring.atk} ATK y DEF · corrupción en ${s.ring.left} turno(s)` + (s.ring.can ? (s.ring.promesa ? ' · Promesa de Poder ya usada.' : ' · Promesa de Poder disponible.') : '.');
       if (s.susano) return s.susano.awake ? `Susano despierto: escudo ${s.susano.sh}/${s.susano.max}.` : 'Susano dormido: despierta cuando muere otro personaje del mismo tipo que el portador.';
+      if (s.alma) return `Gema del Alma: ${s.alma.eff.length} efecto(s) guardado(s)${s.alma.eff.length ? ' (' + s.alma.eff.map(nameId).join(', ') + ')' : ''} · se agota en ${s.alma.left} turno(s).`;
       if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
@@ -1727,6 +1728,9 @@
         const gp = sw.find(a => a.pw === 'gempos'); if (gp) acts.push({ label: 'Cambiar su posición', run: () => act(gp) });
         const ga = sw.filter(a => a.pw === 'gematk');
         if (ga.length) acts.push({ label: 'Obligarlo a atacar a un aliado…', run: () => pickTargets(ga.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(ga.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Elige a quién ataca') });
+        const alm = sw.filter(a => a.pw === 'almaus');
+        if (alm.length) acts.push({ label: 'Liberar un efecto guardado…', desc: 'Usa uno de los efectos guardados (1 por turno).', run: () => modal(h('div', { class: 'box' }, h('h2', null, '👻 Gema del Alma'), h('p', { class: 'sub' }, 'Elige el efecto y el objetivo.'),
+          h('div', { class: 'acts' }, alm.map(a => { const t = a.target; const tl = !t ? '' : t.u != null ? ' · ' + ((v.me.hand.find(c => c.uid === t.u) || {}).id ? nameId(v.me.hand.find(c => c.uid === t.u).id) : 'carta') : t.z != null ? ' · ' + (t.vs != null ? nameOf(t.vs) + ' ' : '') + 'zona ' + (t.z + 1) : ''; return btn(nameId(s.alma.eff[a.idx]) + tl, () => { closeModal(); act(a); }, 'gold'); }), btn('Cancelar', closeModal, 'ghost')))) });
         const sto = sw.filter(a => a.pw === 'storm1' || a.pw === 'storm2');
         if (sto.length) acts.push({ label: 'Usar la tormenta…', run: () => stormFlow(sto) });
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
@@ -1934,7 +1938,7 @@
         else if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); if (s.huge) el.classList.add('hugeA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
-        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min)) el.append(h('span', { class: 'eqm' }, s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
+        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
         cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');

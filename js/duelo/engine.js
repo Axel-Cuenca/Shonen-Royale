@@ -328,7 +328,7 @@
       const d = def(s.c);
       if (!/^Gema/.test(d.name)) continue;
       if (s.equipTo === z && (!s.down || s.stolen)) n++;
-      else if (s.equipTo == null && !s.down && d.kind === 'spell' && d.fx === 'gem') n++;
+      else if (s.equipTo == null && !s.down && d.kind === 'spell' && (d.fx === 'gem' || d.fx === 'alma')) n++;
     }
     return n;
   }
@@ -840,7 +840,7 @@
   /** Rika Orimoto (Protección Absoluta): las magias y trampas no pueden elegirla ni afectarla. */
   const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot'));
   const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
-  const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1 };
+  const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1, alma: 1 };
   /** Gema del Tiempo: hay una instantánea del campo propio de hace un turno propio. */
   const canRewind = (st, p) => st.current === p && !!(st.players[p].snaps && st.players[p].snaps.length >= 2);
   /** Restaura SOLO el campo propio (monstruos y magias/trampas) al estado que tenía al empezar su turno anterior.
@@ -906,6 +906,11 @@
         const c = searchCands(st, p, d);
         if (c.length) st.pending = { k: 'pick', player: p, zone: 'deck', cands: c.map(i => i.uid), cont: 'search' };
       }
+    },
+    // Gema del Alma: magia continua (la lógica está en almaCollect / spowerActs)
+    alma: {
+      targets: () => [null],
+      resolve: () => { /* se coloca en continueSpell */ }
     },
     // Selección de magia: agrega una magia del mazo a la mano
     searchSpell: {
@@ -1595,7 +1600,7 @@
     continueSpell(st);
   }
   // ---------------- Guantelete del Infinito ----------------
-  const isGem = d => /^Gema/.test(d.name) && ((d.kind === 'spell' && (d.fx === 'equip' || d.fx === 'gem' || d.fx === 'tiempo')) || (d.kind === 'trap' && d.fx === 'realidad'));      // la Gema de la Realidad es trampa: se roba al activarla
+  const isGem = d => /^Gema/.test(d.name) && ((d.kind === 'spell' && (d.fx === 'equip' || d.fx === 'gem' || d.fx === 'tiempo' || d.fx === 'alma')) || (d.kind === 'trap' && d.fx === 'realidad'));      // la Gema de la Realidad es trampa: se roba al activarla
   /** Un portador del Guantelete (de un rival de p) que puede robar la gema que p acaba de activar, o null. */
   function gloveFor(st, p, d) {
     if (!isGem(d) || stOff(st) || st.domain) return null;
@@ -1668,6 +1673,7 @@
         if (okp) slot.gem = { vs: tv, uid: tm.c.uid, uses: 0, usedTurn: -1 };
       }
       if (d.fx === 'storm') slot.storm = { usedTurn: -1 };
+      if (d.fx === 'alma') slot.alma = { t0: st.turn, eff: [], usedTurn: -1 };
       if (d.fx === 'guerrero') slot.guerrero = { waiting: true };
       let prisoner = null, pe = null;
       if (d.fx === 'gokumon') {
@@ -1733,7 +1739,17 @@
       const bm = P.mz[ch.stolen.bz];
       if (bm && lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, ch.p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
     }
+    almaCollect(st, ch, d);
     FX[d.fx].resolve(st, ch.p, d, ch.target);
+  }
+  /** Gema del Alma: guarda el efecto de cada magia enemiga usada sobre un personaje. */
+  function almaCollect(st, ch, d) {
+    const t = ch.target;
+    if (!t || t.z == null || d.fx === 'destroyST' || PERM[d.fx] || !FX[d.fx]) return;
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive || st.team[q] === st.team[ch.p] || stOff(st)) continue;
+      for (const s of st.players[q].st) if (s && !s.down && s.alma) { s.alma.eff.push(d.id); log(st, q, `La Gema del Alma guarda el efecto de ${d.name}`); }
+    }
   }
 
   // ---------------- trampas y ventanas de respuesta ----------------
@@ -1963,6 +1979,11 @@
     for (const z of tributes) removeMonster(st, p, z, 'grave');
     if (inv) {                                         // Reyna Flama: invocada en el campo del rival, que pasa a controlarla
       const E2 = st.players[inv.vs];
+      if (occ(E2)[inv.fz]) {                          // la casilla se ocupó (p. ej. Cell liberó lo que tenía absorbido): otra libre o vuelve a la mano
+        const oe = occ(E2), nf = oe.findIndex(x => !x);
+        if (nf < 0) { P.hand.splice(Math.min(handIdx, P.hand.length), 0, inst); log(st, p, `no queda espacio rival para ${def(inst).name}: vuelve a la mano`); return; }
+        inv = { vs: inv.vs, fz: nf };
+      }
       E2.mz[inv.fz] = mkSlot(st, inst, { pos: 'atk', owner: p });
       P.normalUsed = true;
       if (tributes.length) log(st, p, `ofrece ${tributes.length} tributo${tributes.length > 1 ? 's' : ''}`);
@@ -2253,6 +2274,7 @@
   function timers(st) {
     if (st.domain && elapsed(st, st.domain.t0) >= 2) { log(st, -1, `El dominio ${st.domain.nm || 'de Sukuna'} termina`); st.domain = null; }
     expireMods(st);
+    for (const Q of st.players) for (let i = 0; i < ZONES; i++) { const s = Q.st[i]; if (s && s.alma && elapsed(st, s.alma.t0) >= 5) { Q.st[i] = null; Q.grave.push(s.c); log(st, -1, 'La Gema del Alma se agota y va al cementerio'); } }
     prisons(st);
     corruptions(st);
     for (let p = 0; p < st.n; p++) {
@@ -2715,6 +2737,13 @@
             for (const tz of zonesWith(st.players[q].mz)) if (!(q === tg.p && tz === tg.z)) out.push({ t: 'spow', zone: z, pw: 'gematk', target: { vs: q, z: tz } });
           }
         }
+      }
+      if (s.alma && s.alma.usedTurn !== st.turn) {      // Gema del Alma: libera uno de los efectos guardados
+        s.alma.eff.forEach((id, idx) => {
+          const cd = C().get(id), fx = cd && FX[cd.fx];
+          if (!fx) return;
+          for (const t of fx.targets(st, p, cd)) out.push(t ? { t: 'spow', zone: z, pw: 'almaus', idx, target: t } : { t: 'spow', zone: z, pw: 'almaus', idx });
+        });
       }
       if (s.storm && s.storm.usedTurn !== st.turn) {
         const fl = foes(st, p);
@@ -3366,6 +3395,13 @@
   }
   function doSpower(st, p, a) {
     const P = st.players[p], s = P.st[a.zone], nm = def(s.c).name;
+    if (a.pw === 'almaus') {
+      const id = s.alma.eff.splice(a.idx, 1)[0], cd = C().get(id);
+      s.alma.usedTurn = st.turn;
+      log(st, p, `usa ${nm}: libera el efecto de ${cd.name}`);
+      FX[cd.fx].resolve(st, p, cd, a.target || null);
+      return;
+    }
     if (a.pw === 'storm1' || a.pw === 'storm2') {
       const e = a.target.vs, inst = P.hand.splice(a.hand, 1)[0];
       s.storm.usedTurn = st.turn;
@@ -3866,6 +3902,7 @@
     if (s.susano) v.susano = { awake: !!s.susano.awake, sh: s.susano.sh, max: SUSANO_SH };
     if (s.beast) v.beast = { done: !!s.beast.done };
     if (s.min) v.min = { n: s.min.n };
+    if (s.alma) v.alma = { left: Math.max(0, 5 - elapsed(st, s.alma.t0)), eff: s.alma.eff.slice(), ready: s.alma.usedTurn !== st.turn };
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
     if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;

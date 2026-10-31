@@ -365,4 +365,47 @@ module.exports = function (T) {
       if (ac2) { act(s4, 1, ac2); settle(s4); ok(!ids(s4, 0)[0], 'Sharingan: sólo una vez por turno (la segunda magia lo destruye)'); }
     }
   }
+
+  section('Gema del Alma');
+  {
+    const root = path.join(__dirname, '..');
+    const c = Cards.get('c_gema_alma');
+    ok(c && fs.existsSync(path.join(root, c.img)), 'Gema del Alma tiene imagen');
+    const st = fresh(); hand(st, 0, ['c_gema_alma']); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_goku');
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.hand === 0)); settle(st);
+    const slot = st.players[0].st.find(x => x && x.alma);
+    ok(!!slot, 'Gema del Alma queda en el campo');
+    // el rival usa una magia sobre un personaje
+    hand(st, 1, ['c_superball', 'c_superball']); ready(st, 1);
+    const bo = Cards.all().find(x => x.kind === 'spell' && x.fx === 'boost');
+    hand(st, 1, [bo.id]);
+    const ac = L(st, 1).find(a => a.t === 'activate' && a.hand === 0 && a.target && a.target.z === 0);
+    ok(!!ac, 'hay una magia de objetivo para probar (' + bo.name + ')');
+    if (ac) {
+      act(st, 1, ac); settle(st);
+      eq(slot.alma.eff, [bo.id], 'Gema del Alma: guarda el efecto de la magia enemiga');
+      ready(st, 0);
+      const rel = L(st, 0).filter(a => a.t === 'spow' && a.pw === 'almaus');
+      ok(rel.length > 0, 'Gema del Alma: se puede liberar el efecto');
+      const tgt = rel.find(a => a.target && a.target.z === 0);
+      const base = E.view(st, 0).players[0].mz[0].atk;
+      act(st, 0, tgt); settle(st);
+      eq(E.view(st, 0).players[0].mz[0].atk - base, bo.n || (Cards.get(bo.id).n), 'Gema del Alma: aplica el efecto guardado a un personaje propio');
+      eq(slot.alma.eff.length, 0, 'el efecto se consume');
+      ok(!L(st, 0).some(a => a.t === 'spow' && a.pw === 'almaus'), 'sólo uno por turno / sin efectos');
+    }
+    // una magia propia no se guarda
+    const s2 = fresh(); hand(s2, 0, ['c_gema_alma']); put(s2, 0, 0, 'c_goku');
+    act(s2, 0, L(s2, 0).find(a => a.t === 'activate' && a.hand === 0)); settle(s2);
+    hand(s2, 0, [bo.id]); const own = L(s2, 0).find(a => a.t === 'activate' && a.hand === 0 && a.target);
+    if (own) { act(s2, 0, own); settle(s2); eq(s2.players[0].st.find(x => x && x.alma).alma.eff.length, 0, 'las magias propias no se guardan'); }
+    // se agota a los 5 turnos
+    const s3 = fresh(); hand(s3, 0, ['c_gema_alma']); act(s3, 0, L(s3, 0).find(a => a.t === 'activate' && a.hand === 0)); settle(s3);
+    for (let i = 0; i < 12 && s3.players[0].st.some(x => x && x.alma); i++) { const q = E.actor(s3); act(s3, q, L(s3, q).find(a => a.t === 'endTurn') || L(s3, q).find(a => a.t === 'discard') || L(s3, q)[0]); }
+    ok(!s3.players[0].st.some(x => x && x.alma) && s3.players[0].grave.some(x => x.id === 'c_gema_alma'), 'Gema del Alma: se va al cementerio tras 5 turnos');
+    // Thanos cuenta la gema
+    const s4 = fresh(); put(s4, 0, 0, 'c_thanos'); const b0 = E.view(s4, 0).players[0].mz[0].atk; hand(s4, 0, ['c_gema_alma']);
+    act(s4, 0, L(s4, 0).find(a => a.t === 'activate' && a.hand === 0)); settle(s4);
+    eq(E.view(s4, 0).players[0].mz[0].atk - b0, 500, 'Thanos: +500 ATK por la Gema del Alma');
+  }
 };

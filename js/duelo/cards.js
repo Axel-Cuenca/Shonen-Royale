@@ -612,6 +612,10 @@
       text: 'Forma despertada de Sasuke Chico, vinculada a él. Sharingan: evade un efecto enemigo que lo elija (1 vez por turno, máx. 3). Chidori: +400 ATK en un ataque.',
       sfx: { attack: V('sasuke_marca-attack'), ability: V('sasuke_marca-ability'), chidori: V('sasuke_marca-chidori') }
     }),
+    spell({
+      id: 'c_gema_alma', name: 'Gema del Alma', icon: '👻', img: I('gema_alma'), fx: 'alma', sub: 'cont',
+      text: 'Magia continua. Se queda 5 turnos en tu campo y guarda el efecto de cada magia que un rival use sobre un personaje. Una vez por turno puedes liberar uno de los efectos guardados. Es una gema: Thanos y el Guantelete del Infinito interactúan con ella.'
+    }),
     mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
@@ -725,7 +729,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};
