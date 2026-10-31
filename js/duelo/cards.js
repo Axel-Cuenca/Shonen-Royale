@@ -18,7 +18,8 @@
     popeye: 'Popeye', minecraft: 'Minecraft', prueba: 'Prueba',
     dbz: 'Dragon Ball Z', gow: 'God of War', aot: 'Attack on Titan', jjk: 'Jujutsu Kaisen', mk: 'Mortal Kombat', zodiaco: 'Caballero del Zodiaco',
     marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos',
-    adventuretime: 'Hora de Aventura', naruto: 'Naruto'
+    adventuretime: 'Hora de Aventura', naruto: 'Naruto',
+    looney: 'Looney Tunes', yugioh: 'Yu-Gi-Oh!', cartoon: 'Cartoon Network', dmc: 'Devil May Cry', hp: 'Harry Potter'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
@@ -27,7 +28,8 @@
     popeye: '#2e5aa8', minecraft: '#4a9a3a', prueba: '#8a8fa8',
     dbz: '#e8761a', gow: '#a3262a', aot: '#6b5a3c', jjk: '#6a3fb5', mk: '#b8312f', zodiaco: '#d4a72c',
     marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b',
-    adventuretime: '#f5a623', naruto: '#f28c1e'
+    adventuretime: '#f5a623', naruto: '#f28c1e',
+    looney: '#e0a526', yugioh: '#5b3a8c', cartoon: '#2a8fd0', dmc: '#b3202a', hp: '#7a5c2e'
   };
 
   // ---------------- catálogo ----------------
@@ -63,6 +65,13 @@
     copy: ['Transformación', 'Una vez por turno puede transformarse en un personaje que esté en el campo, copiando su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes (los temporales duran lo mismo que en el original). Sus habilidades copiadas empiezan sin usar. Si lo derrotan transformado, vuelve a su forma y no puede transformarse más.'],
     saiyan: ['Sangre Saiyan', 'Si es revivido, vuelve con +500 ATK y +500 DEF.'],
     escudo: ['Escudo Blue Evolution', 'Escudo de 3000: mientras esté activo, los ataques se resuelven sólo contra el escudo (el ATK y la DEF de Vegeta no cuentan, nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta); las magias/trampas que lo destruyan golpean primero al escudo.'],
+    kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
+    kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
+    agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
+    warsed: ['Sed insaciable', '+500 ATK y +500 DEF cuando ataca a un personaje con más estrellas o es atacado por uno.'],
+    wardep: ['Instinto depredador', '+500 ATK extra cuando lo ataca un personaje con más ATK que él.'],
+    warsangre: ['Sed de sangre', 'Cuando destruye a un enemigo en combate, su jugador recupera 500 PV.'],
+    bigbang1: ['Big Bang', 'Una vez por invocación: destruye a un personaje rival con igual o menos estrellas.'],
     bigbang: ['Big Bang', 'Una vez por invocación: destruye a todos los personajes rivales con menos de 2000 ATK.'],
     xform: ['Transformación', 'Se transforma en otra carta desde tu mano; la carta anterior queda vinculada.'],
     zenitsu1: ['Primera Postura del Rayo', 'Cada vez que declara un ataque, obtiene +200 ATK y +200 DEF durante su invocación.'],
@@ -485,7 +494,7 @@
       text: 'Elige a un personaje del campo, tuyo o rival: elimina todos sus estados negativos y devuelve el ATK y DEF que le habían quitado. Conserva el resto de sus bonificaciones.'
     }),
     spell({
-      id: 'c_kaioken', name: 'Kaioken', icon: '🔥', img: I('kaioken'), fx: 'kaiosp',
+      id: 'c_kaioken', name: 'Kaioken', icon: '🔥', img: I('kaioken'), fx: 'kaiosp', sfx: { use: V('goku_dios-kaioken') },
       text: 'Un aliado gana +400 ATK y DEF durante 3 turnos. Mientras dure, puedes llevarlo al límite (Kaioken x10, una sola vez): otros +400 ATK y DEF hasta el final de ese turno; después pierde todos los bonos de Kaioken y queda agotado (0 ATK y DEF) durante tu siguiente turno completo.'
     }),
     spell({
@@ -495,6 +504,47 @@
     spell({
       id: 'c_ultratumba', name: 'Ataque de Ultratumba', icon: '👻', img: I('ultratumba'), fx: 'ultratumba',
       banish: true, text: 'Elige un personaje del cementerio de cualquier jugador y ataca con él como si estuviera en tu campo. Después del ataque se destierra. Esta magia se destierra tras resolverse.'
+    }),
+    spell({
+      id: 'c_pokeball', name: 'Pokeball', icon: '⚪', img: I('pokeball'), fx: 'special', max: 4,
+      text: 'Invoca especialmente desde tu mano un personaje de 4 estrellas o menos, sin tributos y sin gastar tu invocación normal.',
+      sfx: { use: V('pokeball-use') }
+    }),
+    spell({
+      id: 'c_mark1', name: 'Mark 1', icon: '🤖', img: I('mark1'), fx: 'mark1',
+      text: 'Elige a uno de tus personajes: si es Iron Man gana +1000 ATK; si es otro personaje de Marvel, +700 ATK; cualquier otro, +400 ATK. Sólo ATK, hasta el final del turno; los bonos no se acumulan entre sí.',
+      sfx: { use: V('mark1-use') }
+    }),
+    spell({
+      id: 'c_seleccion_magia', name: 'Selección de magia', icon: '📖', img: I('seleccion_magia'), fx: 'searchSpell',
+      text: 'Elige una carta de magia de tu mazo y agrégala a tu mano.'
+    }),
+    spell({
+      id: 'c_invitacion', name: 'Invitación', icon: '💌', img: I('invitacion'), fx: 'invite', max: 4,
+      text: 'Invoca especialmente desde tu mazo un personaje de 4 estrellas o menos.'
+    }),
+    mon({
+      id: 'c_kuriboh', name: 'Kuriboh', type: 'yugioh', level: 1, atk: 200, def: 200, img: I('kuriboh'), ab: ['kuriboh'],
+      text: 'Cuando es destruido, su jugador es inmune a todo daño durante el resto del turno.'
+    }),
+    mon({
+      id: 'c_kuriboh_mo', name: 'Kuriboh Mago Oscuro', type: 'yugioh', level: 2, atk: 300, def: 300, img: I('kuriboh_mo'), ab: ['kuriboh', 'kuribomo'],
+      text: 'Cuando es destruido, su jugador es inmune a todo daño durante el resto del turno. Además elige a un personaje enemigo: también es destruido (va al cementerio).'
+    }),
+    mon({
+      id: 'c_bugs_bunny', name: 'Bugs Bunny', type: 'looney', level: 2, atk: 600, def: 300, img: I('bugs_bunny'), ab: ['agujero'],
+      text: 'Agujero bajo tierra: una vez por turno destruye una carta de magia/trampa del rival, incluso si está boca abajo.'
+    }),
+    mon({
+      id: 'c_warwick', name: 'Warwick', type: 'lol', level: 4, atk: 1300, def: 1300, img: I('warwick'), ab: ['warsed', 'wardep', 'warsangre'],
+      text: 'Sed insaciable: +500 ATK y DEF cuando ataca a un personaje con más estrellas o es atacado por uno. Instinto depredador: +500 ATK extra cuando lo ataca un personaje con más ATK. ' +
+        'Sed de sangre: cuando destruye a un enemigo en combate, su jugador recupera 500 PV.',
+      sfx: { attack: V('warwick-attack'), summon: V('warwick-summon') }
+    }),
+    mon({
+      id: 'c_vegeta_ssj', name: 'Vegeta Super Saiyajin', fam: 'Vegeta', type: 'dbz', level: 5, atk: 1500, def: 1200, img: I('vegeta_ssj'), ab: ['bigbang1'], xform: { family: 'Vegeta' },
+      text: 'Big Bang: una vez por invocación, destruye a un personaje rival con igual o menos estrellas que él. Familia Vegeta: puede transformarse en otra carta de la familia desde tu mano.',
+      sfx: { attack: V('vegeta_ssj-attack'), transform: V('vegeta_ssj-transform') }
     }),
     mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
@@ -608,9 +658,10 @@
     1: ['popeye', 'creeper', 'bardock', 'bardock_ssj', 'cell', 'kratos', 'kratos_f', 'lara', 'titan', 'sukuna5', 'sukuna60', 'shang', 'vegeta', 'vegeta_blue', 'armadura', 'espada', 'gema', 'karma', 'superball', 'tormenta'],
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
-    4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba']
+    4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj']
   };
-  const TANDAS = [1, 2, 3, 4], PACK_TANDAS = [2, 3, 4];
+  const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};
   for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
   /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */

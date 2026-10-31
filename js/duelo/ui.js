@@ -1198,7 +1198,7 @@
     /** Nombre de cada poder (los de la tanda 2 no coinciden con el id de la habilidad). */
     const PWN = { conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', marca: 'Marca de Cazador', desp: 'Despertar del Poder Oculto',
       kaioken: 'Kaio-ken', kaioken6: 'Kaio-ken', genki: 'Genkidama', teach: 'Maestro de las Artes', dominio: 'Ataúd de la Montaña de Hierro', llama: 'Llama Infernal',
-      kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
+      agujero: 'Agujero bajo tierra', bigbang1: 'Big Bang', kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
       eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
       jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10' };
     const pwName = k => PWN[k] || abn(k);
@@ -1272,7 +1272,7 @@
       if (s.mods && s.mods.length) for (const m of s.mods) if (m.k !== 'av-base') o.push(`${MODN[m.k] || m.k}: ${m.atk ? (m.atk > 0 ? '+' : '') + m.atk + ' ATK' : ''}${m.atk && m.def ? ' / ' : ''}${m.def ? (m.def > 0 ? '+' : '') + m.def + ' DEF' : ''}${m.left != null ? ' · ' + m.left + ' turno(s)' : ''}`);
       return o;
     }
-    const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
+    const LIMIT = { canon: 'Sin límite de usos (cada vez que quieras).', absorb: 'Una vez por invocación.', furia: 'Sólo tras su primera baja; una vez por invocación.', bigbang: 'Una vez por invocación.', relicario: 'Una vez por invocación; no se puede usar con un dominio activo.', desmantelar: 'Una vez por invocación.', agujero: 'Una vez por turno.', bigbang1: 'Una vez por invocación.', kuriboh: 'Pasiva: al ser destruido.', kuribomo: 'Pasiva: al ser destruido.', warsed: 'Pasiva.', wardep: 'Pasiva.', warsangre: 'Pasiva.', boom: 'Una vez por invocación; no se activa en ataques directos.', spinach: 'Una sola vez: al ser destruido.', instinto: 'Pasiva: siempre activa si es tu único personaje.', sangre: 'Pasiva: siempre activa si es tu único personaje.', regen5: 'Pasiva.', regen60: 'Pasiva.', escudo: 'Pasiva.', saiyan: 'Pasiva: al ser revivido.',
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
       majinex: 'Una vez por invocación.', armin: 'Una vez (paga 1000 PV); necesita las 3 zonas libres.', arminsac: 'Cuando Armin muere por un ataque enemigo o una carta; sin pagar PV.', colosal: 'Sólo al entrar por la transformación de Armin.', galsil: 'Pasiva: mientras esté en el campo.', galres: 'Pasiva.', galprot: '2 usos por invocación, 1 por turno.', uidef: 'Una vez por turno.', uicont: 'Una vez por turno.', uivel: 'Pasiva.', manto: 'Una sola vez por invocación.', rasengan: 'Una vez por invocación.', mantok: 'Pasiva.', vinculok: 'Pasiva.', thanosg: 'Pasiva.', thanosp: 'Pasiva.',
@@ -1642,7 +1642,8 @@
               modal(h('div', { class: 'box' }, h('h2', null, '🕸️ ¿Qué habilidad sellas?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
             }, 'Elige al personaje enemigo') });
           }
-          else if (k === 'desmantelar' || k === 'avpred') acts.push({ label: pwName(k) + '…', run: () => choose(g, 'st', 'Elige la magia o trampa rival') });
+          else if (k === 'bigbang1') acts.push({ label: 'Big Bang…', desc: 'Destruye a un personaje rival con igual o menos estrellas. Una vez por invocación.', run: () => choose(g, 'mz', 'Elige al personaje rival') });
+          else if (k === 'desmantelar' || k === 'avpred' || k === 'agujero') acts.push({ label: pwName(k) + '…', run: () => choose(g, 'st', 'Elige la magia o trampa rival') });
           else if (k === 'corromper') acts.push({ label: (g[0].ring ? 'Promesa de Poder (Anillo Único)' : 'Promesa de Poder') + '…', run: () => choose(g, 'mz', 'Elige al personaje enemigo que quedará bajo tu poder') });
           else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
           else acts.push({ label: pwName(k), run: () => act(g[0]) });
@@ -1798,6 +1799,10 @@
         const box = h('div', { class: 'box' }, h('h2', null, '🗣️ ¡Quieto!'), h('p', { class: 'sub' }, `${pd.nm || 'Un personaje rival'} ataca. Toge Inumaki puede ordenarle ¡Quieto!: pasa a defensa y su ataque se cancela (una vez por invocación, y sólo una orden por turno).`),
           h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_toge'))),
           h('div', { class: 'acts' }, btn('¡Quieto!', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'kuribomo') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🧙 Kuriboh Mago Oscuro'), h('p', { class: 'sub' }, 'Fue destruido y se lleva consigo a un personaje enemigo. Elige cuál.'),
+          h('div', { class: 'acts' }, L().map(a => { const m = v.players[a.vs].mz[a.z]; return btn(`${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'karma') {
         const box = h('div', { class: 'box' }, h('h2', null, '☯️ Karma'), h('p', { class: 'sub' }, 'Tu personaje murió. Elige al personaje enemigo que arrastrará: morirá en 3 turnos y el tuyo revivirá.'),

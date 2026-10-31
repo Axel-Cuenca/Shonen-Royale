@@ -255,6 +255,7 @@
   function lose(st, p, n) {
     const P = st.players[p];
     if (!P.alive) return;
+    if (P.imm === st.turn && n > 0) { log(st, p, 'Kuriboh lo protege: no recibe daño este turno'); return; }      // Kuriboh: inmune a todo daño el resto del turno
     P.lp = Math.max(0, P.lp - Math.max(0, n));
     checkWin(st);
   }
@@ -291,6 +292,7 @@
     const ab = abil(st, m);
     if (isSolo(P)) { if (ab.includes('instinto')) n += 400; if (ab.includes('sangre')) n += 800; }
     if (st.domain && st.domain.uid === m.c.uid) n += 500 * (st.domain.x || 1);
+    if (ab.includes('warsed')) { const o = combatFoe(st, m); if (o && !o.down && lvl(o) > lvl(m)) n += 500; }      // Warwick: Sed insaciable
     if (m.fur && m.fur === st.turn) n += 700 * (m.furX || 1);
     if (m.cFury && m.cFury === st.turn) n += 700;                       // Furia copiada por Shang Tsung: dura lo mismo que en el original
     if (m.cDom && st.domain && st.domain.uid === m.cDom) n += 500;      // dominio copiado: dura mientras dure el dominio
@@ -330,12 +332,24 @@
   }
   // m.base: valores propios de esta aparición en el campo (p. ej. Popeye revivido con 1500/1500)
   const baseOf = m => ((m.copy || m.form) ? mdef(m) : (m.base || def(m.c)));
+  /** Combate en curso: el otro personaje del enfrentamiento de `m` (atacante u objetivo), o null. */
+  function combatFoe(st, m) {
+    const cb = st.atk || st.cmb;
+    if (!cb || cb.target === 'direct' || (cb.turn != null && cb.turn !== st.turn)) return null;
+    const att = st.players[cb.p] && st.players[cb.p].mz[cb.z], dfn = st.players[cb.vs] && st.players[cb.vs].mz[cb.target];
+    return att === m ? (dfn || null) : dfn === m ? (att || null) : null;
+  }
   function atkOf(st, P, z) {
     const m = P.mz[z];
     if (m.exh) return 0;                                                  // Kaioken x10: agotado
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
     const b = baseOf(m);
-    return Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
+    const v = Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
+    if (!m.down && abil(st, m).includes('wardep')) {                      // Warwick: Instinto depredador (+500 ATK si lo ataca alguien con más ATK)
+      const cb = st.atk || st.cmb, o = combatFoe(st, m);
+      if (o && cb && st.players[cb.vs].mz[cb.target] === m && atkOf(st, st.players[cb.p], cb.z) > v) return v + 500;
+    }
+    return v;
   }
   function defOf(st, P, z) {
     const m = P.mz[z];
@@ -392,6 +406,12 @@
   /** Una muerte real (cementerio, o desterrado por Mahoraga): La Muerte crece, la Bestia despierta, Susano despierta. */
   function onDeath(st, p, m, how) {
     const nm = mdef(m).name, type = mdef(m).type;
+    const dab = m.c ? rawAbil(m) : [];
+    if (dab.includes('kuriboh')) {                  // Kuriboh: su jugador es inmune a todo daño el resto del turno
+      st.players[p].imm = st.turn;
+      log(st, p, `${nm} protege a su jugador: no recibirá daño el resto del turno`);
+    }
+    if (dab.includes('kuribomo')) st.trig.push({ k: 'kuribomo', p, nm });
     for (let q = 0; q < st.n; q++) {
       const Q = st.players[q];
       if (!Q.alive) continue;
@@ -602,6 +622,7 @@
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (ctx.src === 'combat' && kab.includes('warsangre')) { heal(st, killer.p, 500); log(st, killer.p, `${mdef(km).name} recupera 500 PV (Sed de sangre)`); }
     if (ctx.src === 'combat' && km.c.id === 'c_kayn') {
       const f = km.form;
       if (!f) { if (!kn.rh) { kn.rh = true; log(st, killer.p, 'Kayn desbloquea la transformación en Rhaast'); } }
@@ -650,6 +671,11 @@
         if (!inst || ti < 0) continue;
         if (titanAnchor(P, t.z, undefined, def({ id: tid }).huge) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
         st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
+      } else if (t.k === 'kuribomo') {                  // Kuriboh Mago Oscuro: se lleva consigo a un personaje enemigo
+        const cands = [];
+        for (const e of foes(st, t.p)) for (const z of zonesWith(st.players[e].mz)) if (canTarget(st, t.p, e, z)) cands.push({ vs: e, z });
+        if (!cands.length) continue;
+        st.pending = { k: 'ability', ab: 'kuribomo', player: t.p, stage: 'target', nm: t.nm, cands };
       } else if (t.k === 'karma') {
         const s = P.st[t.stz];
         if (!s || !s.karma || s.c.uid !== t.uid) continue;
@@ -838,6 +864,33 @@
       resolve: (st, p, d) => {
         const c = searchCands(st, p, d);
         if (c.length) st.pending = { k: 'pick', player: p, zone: 'deck', cands: c.map(i => i.uid), cont: 'search' };
+      }
+    },
+    // Selección de magia: agrega una magia del mazo a la mano
+    searchSpell: {
+      targets: (st, p) => st.players[p].deck.some(i => def(i).kind === 'spell') ? [null] : [],
+      resolve: (st, p) => {
+        const c = st.players[p].deck.filter(i => def(i).kind === 'spell');
+        if (c.length) st.pending = { k: 'pick', player: p, zone: 'deck', cands: c.map(i => i.uid), cont: 'searchSpell' };
+      }
+    },
+    // Invitación: invoca especialmente desde el mazo un personaje de hasta 4 estrellas
+    invite: {
+      targets: (st, p, d) => inviteCands(st, p, d).length ? [null] : [],
+      resolve: (st, p, d) => {
+        const c = inviteCands(st, p, d);
+        if (c.length) st.pending = { k: 'pick', player: p, zone: 'deck', cands: c.map(i => i.uid), cont: 'invite' };
+      }
+    },
+    // Mark 1: Iron Man +1000 ATK; otros Marvel +700; el resto +400 (sólo ATK, este turno)
+    mark1: {
+      targets: (st, p) => rikaOwn(st, st.players[p]).map(z => ({ z })),
+      resolve: (st, p, d, t) => {
+        const m = st.players[p].mz[t && t.z];
+        if (!m) { log(st, p, 'no tiene objetivo'); return; }
+        const dm = mdef(m), n = (m.c.id === 'c_tony_armadura' || dm.name === 'Iron Man') ? 1000 : dm.type === 'marvel' ? 700 : 400;
+        m.atkMod = (m.atkMod || 0) + n;
+        log(st, p, `${dm.name} gana ${n} ATK este turno`);
       }
     },
     revive: {
@@ -1134,6 +1187,10 @@
   }
   function zonesWith(arr) { const r = []; arr.forEach((s, i) => { if (s) r.push(i); }); return r; }
   function zonesUp(P) { const r = []; P.mz.forEach((s, i) => { if (s && !s.down) r.push(i); }); return r; }
+  function inviteCands(st, p, d) {
+    const P = st.players[p];
+    return P.deck.filter(i => { const c = def(i); return c.kind === 'monster' && !c.sp && c.level <= (d.max || 4) && spot(P, c) >= 0; });
+  }
   function searchCands(st, p, d) {
     return monsterCands(st.players[p], c => (d.max == null || c.level <= d.max) && (d.min == null || c.level >= d.min));
   }
@@ -1187,7 +1244,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -1913,6 +1970,7 @@
   }
   /** Fin de un ataque (se resolvió, se canceló o se interceptó): el Endurecimiento de los puños se gasta. */
   function atkDone(st, a) {
+    st.cmb = null;
     const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
     if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
     if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
@@ -1979,6 +2037,7 @@
   }
   function continueAttack(st) {
     const a = st.atk; st.atk = null;
+    st.cmb = a ? { p: a.p, z: a.z, target: a.target, vs: a.vs, turn: st.turn } : null;      // el combate sigue en curso (bonos de Warwick)
     if (!a || a.negated || st.winner !== null) { if (a) atkDone(st, a); return; }
     const at0 = st.players[a.p].mz[a.z];
     if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
@@ -2392,6 +2451,8 @@
       if (ab.includes('bigbang') && canOnce(P, z, u, 'bb')) push({ pw: 'bigbang' });
       if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
+      if (ab.includes('agujero') && u.agT !== st.turn) for (const t of foeSTs(st, p)) push({ pw: 'agujero', target: t });      // Bugs Bunny: una vez por turno, aunque la carta esté boca abajo
+      if (ab.includes('bigbang1') && canOnce(P, z, u, 'bb1')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= lvl(m) && canTarget(st, p, e, tz)) push({ pw: 'bigbang1', target: { vs: e, z: tz } }); }
       if (ab.includes('bite') && !m.copy && canOnce(P, z, u, 'bite') && P.lp > 500) {
         P.hand.forEach((c, i) => { if (c.id === 'c_titan' && titanAnchor(P, z, [z]) >= 0) push({ pw: 'bite', hand: i }); });
       }
@@ -2721,6 +2782,22 @@
           const tm = st.players[e].mz[tz];
           if (tm && atkOf(st, st.players[e], tz) < 2000) destroyMonster(st, e, tz, ctx);
         }
+        break;
+      }
+      case 'agujero': {
+        u.agT = st.turn;
+        const e = a.target.vs;
+        log(st, p, `${nm} usa Agujero bajo tierra`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        removeST(st, e, a.target.z);
+        break;
+      }
+      case 'bigbang1': {
+        markOnce(u, 'bb1');
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        log(st, p, `${nm} usa Big Bang contra ${tm ? mdef(tm).name : 'un personaje'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (tm) destroyMonster(st, e, a.target.z, ctx);
         break;
       }
       case 'relicario':
@@ -3228,6 +3305,12 @@
           P.hand.push(c);
           shuffle(st, P.deck);
           log(st, p, 'agrega un monstruo de su mazo a la mano');
+        } else if (pd.cont === 'searchSpell') {
+          const i = P.deck.findIndex(c => c.uid === a.uid);
+          if (i >= 0) { const c = P.deck.splice(i, 1)[0]; P.hand.push(c); shuffle(st, P.deck); log(st, p, 'agrega una magia de su mazo a la mano'); }
+        } else if (pd.cont === 'invite') {
+          const i = P.deck.findIndex(c => c.uid === a.uid);
+          if (i >= 0 && spot(P, def(P.deck[i])) >= 0) { const c = P.deck.splice(i, 1)[0]; shuffle(st, P.deck); specialSummon(st, p, c, 'atk'); }
         } else if (pd.cont === 'revive') {
           const c = P.grave.find(x => x.uid === a.uid);
           if (!c || reviveInst(st, p, c) < 0) { /* sin sitio: se queda en el cementerio */ }
@@ -3472,6 +3555,16 @@
       if (tid === 'c_titan_colosal') colosalBlast(st, p, anchor);
       return;
     }
+    if (pd.ab === 'kuribomo') {
+      const c = pd.cands.find(x => x.vs === a.vs && x.z === a.z);
+      if (!c) { st.pending = pd; return; }
+      const tm = st.players[c.vs].mz[c.z];
+      if (!tm) return;
+      log(st, p, `${pd.nm} se lleva consigo a ${tm.down ? 'un monstruo boca abajo' : mdef(tm).name}`);
+      if (multi(st)) st.log[st.log.length - 1].q = c.vs;
+      destroyMonster(st, c.vs, c.z, { src: 'power', bp: p });
+      return;
+    }
     if (pd.ab === 'karma') {
       const s = P.st[pd.stz], tm = st.players[a.vs] && st.players[a.vs].mz[a.z];
       if (!s || !s.karma) return;
@@ -3505,6 +3598,8 @@
     if (id === 'bigbang') return u.bb ? 'used' : 'ready';
     if (id === 'relicario') return u.relic ? 'used' : 'ready';
     if (id === 'desmantelar') return u.desm ? 'used' : 'ready';
+    if (id === 'bigbang1') return u.bb1 ? 'used' : 'ready';
+    if (id === 'agujero') return 'ready';
     if (id === 'absorb') return u.absorb ? 'used' : 'ready';
     if (id === 'furia') return u.furia ? 'used' : 'ready';
     if (id === 'boom' || id === 'spinach') return m.c.spent ? 'used' : 'ready';
