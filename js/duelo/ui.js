@@ -1706,6 +1706,7 @@
     function stText(s) {
       if (s.ring) return s.ring.sauron ? 'Anillo Único en Sauron: +1000 ATK y DEF, sin corrupción.' : `Anillo Único (portador de ${s.ring.stars}★): +${s.ring.atk} ATK y DEF · corrupción en ${s.ring.left} turno(s)` + (s.ring.can ? (s.ring.promesa ? ' · Promesa de Poder ya usada.' : ' · Promesa de Poder disponible.') : '.');
       if (s.susano) return s.susano.awake ? `Susano despierto: escudo ${s.susano.sh}/${s.susano.max}.` : 'Susano dormido: despierta cuando muere otro personaje del mismo tipo que el portador.';
+      if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
       if (s.prison) return `Tiene sellado a ${nameId(s.prison.c)}: vuelve en ${s.prison.left} turno(s).`;
@@ -1923,7 +1924,7 @@
         else if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); if (s.huge) el.classList.add('hugeA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
-        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero)) el.append(h('span', { class: 'eqm' }, s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
+        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min)) el.append(h('span', { class: 'eqm' }, s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
         cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');

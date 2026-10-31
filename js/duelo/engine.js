@@ -97,8 +97,12 @@
   const spellsOff = st => !!st.domain || galioOn(st);
   /** Las habilidades de personaje (no las magias ni las trampas) que eligen objetivo: Galio y Goku Ultra Instinto son inmunes a ellas (salvo Púrpura). */
   let abMode = false;
+  /** Capa de Invisibilidad / Minions equipados a la casilla z del jugador P. */
+  const cloakOn = (P, z) => P.st.some(s => s && !s.down && s.equipTo === z && def(s.c).cloak);
+  const minionsOf = (P, z) => P.st.find(s => s && !s.down && s.equipTo === z && s.min);
   function abImmune(st, byP, q, m, o) {
     if (!m || m.down || (o && o.purple)) return false;
+    if (st.team[byP] !== st.team[q] && cloakOn(st.players[q], st.players[q].mz.indexOf(m))) return true;      // Capa de Invisibilidad: los personajes enemigos no la eligen
     const ab = abil(st, m);
     return ab.includes('galres') || (ab.includes('uivel') && st.team[byP] !== st.team[q]);
   }
@@ -237,7 +241,9 @@
     for (let z = 0; z < ZONES; z++) {
       const s = P.st[z];
       if (s) {
-        if (s.prison) { const O = st.players[s.prison.owner]; O.grave.push(s.prison.m.c); for (const l of (s.prison.m.link || [])) O.grave.push(l); }
+        if (s.prison) { const O = st.players[s.prison.owner]; O.grave.push(s.prison.m.c); for (const l of (s.prison.m.link || [])) O.grave.push(l);
+          const ab = s.prison.m.abs; if (ab) { const AO = st.players[ab.owner]; AO.grave.push(ab.c); for (const l of (ab.link || [])) AO.grave.push(l); }      // lo que tenía absorbido el personaje sellado vuelve a su dueño
+        }
         P.grave.push(s.c); P.st[z] = null;
       }
     }
@@ -257,6 +263,7 @@
   function lose(st, p, n) {
     const P = st.players[p];
     if (!P.alive) return;
+    if (st.minShield === p && n > 0) { st.minShield = null; log(st, p, 'El Minion absorbe todo el daño del combate'); return; }
     if (P.imm === st.turn && n > 0) { log(st, p, 'Kuriboh lo protege: no recibe daño este turno'); return; }      // Kuriboh: inmune a todo daño el resto del turno
     P.lp = Math.max(0, P.lp - Math.max(0, n));
     checkWin(st);
@@ -491,6 +498,19 @@
     const ab = abil(st, m), nm = mdef(m).name;
     const fromCard = ctx.src === 'spell' || ctx.src === 'trap';
     if (m.six && !ctx.ignoreSix && ctx.src !== 'mark') { log(st, p, `${nm} es intocable: los Seis Ojos lo protegen`); return false; }
+    if (cloakOn(P, z) && ctx.src !== 'spell') { log(st, p, `${nm} es invisible: sólo las cartas mágicas pueden destruirlo`); return false; }      // Capa de Invisibilidad
+    {   // Minions: Sacrificio protector (no ante magias)
+      const ms = ctx.src !== 'spell' ? minionsOf(P, z) : null;
+      if (ms && (ctx.src === 'combat' || ctx.src === 'trap' || ctx.src === 'power')) {
+        if (ms.min.n > 0) {
+          ms.min.n--;
+          log(st, p, `Un Minion se sacrifica por ${nm} (${ms.min.n} restantes): ${nm} sobrevive y no hay daño`);
+          if (ctx.src === 'combat') st.minShield = p;
+          noteSaved(st, nm);
+          return false;
+        }
+      }
+    }
     if (fromCard && ab.includes('rikaprot')) { log(st, p, `${nm} es inmune: las magias y trampas no la afectan`); return false; }
     if (ctx.src !== 'combat' && ctx.src !== 'mark' && ctx.bp != null && st.team[ctx.bp] !== st.team[p] && yoriFast(st, p, z)) {
       log(st, p, `${nm} es demasiado rápido: el efecto no lo alcanza`);
@@ -625,6 +645,7 @@
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (ctx.src === 'combat') { const ms = minionsOf(P, killer.z); if (ms) { ms.min.n++; log(st, killer.p, `Un Minion se une al ejército de ${mdef(km).name} (${ms.min.n})`); } }
     if (ctx.src === 'combat' && kab.includes('warsangre')) { heal(st, killer.p, 500); log(st, killer.p, `${mdef(km).name} recupera 500 PV (Sed de sangre)`); }
     if (ctx.src === 'combat' && km.c.id === 'c_kayn') {
       const f = km.form;
@@ -1609,6 +1630,7 @@
       let okp = z >= 0;
       if (d.fx === 'equip' || d.fx === 'karma') okp = okp && !!P.mz[tz] && !has(st, P.mz[tz], 'rikaprot') && lvl(P.mz[tz]) >= (d.minStars || 0);
       if (d.fx === 'equip' && okp && d.glove) slot.glove = {};
+      if (d.fx === 'equip' && okp && d.minions) slot.min = { n: 0 };
       if (ch.stolen) { slot.stolen = true; if (tz == null) slot.equipTo = ch.stolen.bz; }
       if (d.fx === 'karma' && okp) slot.karma = { phase: 'ally', owner: ch.p, allyUid: P.mz[tz].c.uid };
       if (d.fx === 'equip' && okp) {
@@ -1990,7 +2012,7 @@
   }
   /** Fin de un ataque (se resolvió, se canceló o se interceptó): el Endurecimiento de los puños se gasta. */
   function atkDone(st, a) {
-    st.cmb = null;
+    st.cmb = null; st.minShield = null;
     const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
     if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
     if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
@@ -2747,7 +2769,7 @@
         if (!canAttackSlot(st, m)) return;
         if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         for (const e of fl) {
-          const all = zonesWith(st.players[e].mz), targets = all.filter(tz => !st.players[e].mz[tz].six && !(st.players[e].mz[tz].god && st.team[p] !== st.team[st.players[e].mz[tz].god.p]));      // los Seis Ojos no se pueden atacar
+          const all = zonesWith(st.players[e].mz), targets = all.filter(tz => !st.players[e].mz[tz].six && !cloakOn(st.players[e], tz) && !(st.players[e].mz[tz].god && st.team[p] !== st.team[st.players[e].mz[tz].god.p]));      // los Seis Ojos no se pueden atacar
           if (!all.length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
           else for (const tz of targets) out.push(mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz });
         }
@@ -3769,6 +3791,7 @@
     if (s.promise) { v.promise = true; const bh = findByUid(st, s.bearer); v.bearer = bh ? bh.m.c.id : null; v.bearerOn = !!(bh && s.equipTo != null); }
     if (s.susano) v.susano = { awake: !!s.susano.awake, sh: s.susano.sh, max: SUSANO_SH };
     if (s.beast) v.beast = { done: !!s.beast.done };
+    if (s.min) v.min = { n: s.min.n };
     if (s.guerrero) v.guerrero = { waiting: !!s.guerrero.waiting };
     if (s.prison) v.prison = { c: s.prison.m.c.id, left: Math.min(5, Math.max(0, 5 - (elapsed(st, s.prison.t0)))), owner: s.prison.owner };
     if (s.held) v.held = true;

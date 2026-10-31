@@ -586,6 +586,14 @@
       text: 'Forma de Bruce Banner. Entra desde la mano cuando Bruce está por morir; comparten destino.',
       sfx: { attack: V('hulk-attack') }
     }),
+    spell({
+      id: 'c_capa', name: 'Capa de Invisibilidad', icon: '🧥', img: I('capa_invisibilidad'), fx: 'equip', sub: 'equip', cloak: true,
+      text: 'Equipa a un personaje tuyo: los personajes enemigos no pueden elegirlo con ataques ni con habilidades, pero las cartas mágicas sí. Sólo puede ser destruido por cartas mágicas.'
+    }),
+    spell({
+      id: 'c_minions', name: 'Minions', icon: '🍌', img: I('minions'), fx: 'equip', sub: 'equip', minions: true,
+      text: 'Equipa a un personaje tuyo. Cada vez que gana un combate suma 1 contador. Si es superado en ATK en un combate, se sacrifica un Minion (−1 contador): no hay daño y el personaje sobrevive. Sin contadores, el personaje y esta carta se destruyen. Las cartas mágicas ignoran los contadores.'
+    }),
     mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
@@ -699,7 +707,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

@@ -261,4 +261,41 @@ module.exports = function (T) {
       ok(!sb.players[0].mz[0].wide, 'Hulk ocupa una sola zona');
     }
   }
+
+  section('Capa de Invisibilidad y Minions');
+  {
+    const equip = (st, p, hi, z) => { const a = L(st, p).find(x => x.t === 'activate' && x.hand === hi && x.target && x.target.z === z); if (a) { act(st, p, a); settle(st); } return !!a; };
+    // Capa
+    const st = fresh(); put(st, 0, 0, 'c_goku'); hand(st, 0, ['c_capa']); put(st, 1, 0, 'c_toge'); put(st, 1, 1, 'c_goku');
+    ok(equip(st, 0, 0, 0), 'Capa: se equipa a un aliado');
+    ok(st.players[0].st.some(x => x && x.equipTo === 0), 'Capa: queda equipada');
+    ready(st, 1);
+    ok(!L(st, 1).some(a => a.t === 'power' && a.target && a.target.vs === 0 && a.target.z === 0), 'Capa: las habilidades enemigas no la eligen');
+    act(st, 1, { t: 'toBattle' });
+    ok(!L(st, 1).some(a => a.t === 'attack' && a.target === 0), 'Capa: los ataques enemigos no la eligen');
+    // sólo muere por magia
+    const g = Cards.all().find(c => c.kind === 'spell' && c.fx === 'destroyOne');
+    const s2 = fresh(); put(s2, 0, 0, 'c_goku'); hand(s2, 0, ['c_capa']); equip(s2, 0, 0, 0);
+    hand(s2, 1, [g.id]); ready(s2, 1);
+    const ac = L(s2, 1).find(a => a.t === 'activate' && a.target && a.target.z === 0);
+    ok(!!ac, 'Capa: una magia enemiga sí puede elegirla');
+    if (ac) { act(s2, 1, ac); settle(s2); ok(!ids(s2, 0)[0], 'Capa: la magia la destruye'); ok(s2.players[0].grave.some(c => c.id === 'c_capa'), 'Capa: va al cementerio con su portador'); }
+    // Minions
+    const sm = fresh(); put(sm, 0, 0, 'c_odin'); hand(sm, 0, ['c_minions']); put(sm, 1, 0, 'c_toge'); put(sm, 1, 1, 'c_goku');
+    ok(equip(sm, 0, 0, 0), 'Minions: se equipa');
+    const lp = sm.players[0].lp;
+    act(sm, 0, { t: 'toBattle' }); act(sm, 0, atkA(sm, 0, 0, 0)); settle(sm);
+    eq(sm.players[0].st.find(x => x && x.min).min.n, 1, 'Minions: una victoria suma un contador');
+    // ahora el portador pierde un combate: el Minion se sacrifica y no hay daño
+    const sp = fresh(1); put(sp, 0, 0, 'c_toge'); hand(sp, 0, ['c_minions']); ready(sp, 0); put(sp, 1, 0, 'c_odin'); equip(sp, 0, 0, 0);
+    sp.players[0].st.find(x => x && x.min).min.n = 1; ready(sp, 1);
+    const lp2 = sp.players[0].lp;
+    act(sp, 1, { t: 'toBattle' }); act(sp, 1, atkA(sp, 1, 0, 0)); settle(sp);
+    ok(ids(sp, 0)[0] === 'c_toge', 'Minions: el portador sobrevive a la derrota');
+    eq([sp.players[0].lp, sp.players[0].st.find(x => x && x.min).min.n], [lp2, 0], 'Minions: sin daño y se gasta el contador');
+    // sin contadores: mueren portador y carta
+    ready(sp, 1); for (const m of sp.players[1].mz) if (m) { m.attacked = false; m.atkN = 0; }
+    act(sp, 1, { t: 'toBattle' }); act(sp, 1, atkA(sp, 1, 0, 0)); settle(sp);
+    ok(!ids(sp, 0)[0] && sp.players[0].grave.some(c => c.id === 'c_minions'), 'Minions: sin contadores caen el personaje y la carta');
+  }
 };

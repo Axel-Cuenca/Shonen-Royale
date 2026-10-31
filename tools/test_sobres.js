@@ -8,7 +8,7 @@ module.exports = function (T) {
   const SH = global.window.Duelo.Shop;
   let store = { pts: {} }; SH.init(() => store, () => {});
   // reparto por tandas
-  eq(C.TANDAS.map(t => C.inTanda(t).length), [20, 31, 17, 12, 16], 'tandas de 20, 31, 17, 12 y 16 cartas');
+  eq(C.TANDAS.map(t => C.inTanda(t).length), [20, 31, 17, 12, 18], 'tandas de 20, 31, 17, 12 y 18 cartas');
   const all = C.all().map(c => c.id).filter(id => /^c_/.test(id)), listed = C.TANDAS.flatMap(t => C.inTanda(t));
   ok(all.every(id => listed.includes(id)) && new Set(listed).size === listed.length, 'cada carta del catálogo está en una sola tanda (si añades una, ponla en TANDA_IDS de cards.js)');
   // rarezas por estrellas
