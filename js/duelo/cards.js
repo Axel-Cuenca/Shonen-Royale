@@ -71,6 +71,7 @@
     dexter: ['Máquina del tiempo', 'Tras 2 turnos propios completos de preparación, revive 1 personaje de tu cementerio. Después vuelve a prepararse.'],
     dios: ['Poder de Dios', 'Una vez por invocación: atrapa a un personaje rival en su campo de energía divina. No puede atacar, ser sacrificado ni usar habilidades, y sólo el equipo de Vegeta Dios puede interactuar con él. Se libera si Vegeta Dios deja el campo.'],
     bruce: ['Transformación en Hulk', 'Cuando muere, puedes invocar especialmente a Hulk desde tu mano en su lugar; quedan vinculados y comparten destino. Sólo como emergencia: no se puede activar voluntariamente.'],
+    invasion: ['Invasión ígnea', 'Se invoca en un hueco vacío del campo enemigo, elegido por quien la invoca. Quien la recibe la controla, pero pierde 500 PV al final de cada uno de sus turnos mientras siga ahí. Puede sacrificarla o destruirla.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -595,6 +596,10 @@
       text: 'Equipa a un personaje tuyo. Cada vez que gana un combate suma 1 contador. Si es superado en ATK en un combate, se sacrifica un Minion (−1 contador): no hay daño y el personaje sobrevive. Sin contadores, el personaje y esta carta se destruyen. Las cartas mágicas ignoran los contadores.'
     }),
     mon({
+      id: 'c_reyna_flama', name: 'Reyna Flama', type: 'adventuretime', level: 6, atk: 600, def: 1000, img: I('reyna_flama'), ab: ['invasion'], invade: true,
+      text: 'Invasión ígnea: se invoca (con tributos, 6★) en un hueco vacío del campo ENEMIGO, que elige quien la invoca. Quien la recibe pasa a controlarla, pero pierde 500 PV al final de cada uno de sus turnos mientras siga en su campo. Puede sacrificarla o destruirla.'
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -707,7 +712,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

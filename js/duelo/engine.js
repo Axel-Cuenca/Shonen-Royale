@@ -596,7 +596,7 @@
     dropMods(m, 'av-base'); dropMods(m, 'av-atk'); m.av = null;
     const nm = mdef(m).name;
     if (!inst) return;
-    const O = st.players[m.owner != null ? m.owner : p];
+    const O = st.players[inst.by != null ? inst.by : (m.owner != null ? m.owner : p)];
     O.grave.push(inst);
     log(st, p, `${def(inst).name} muere en lugar de ${nm}: ${nm} se salva y queda normal`);
     st.log[st.log.length - 1].avd = 1;
@@ -629,7 +629,7 @@
     const inst = m.link.splice(i, 1)[0];
     if (!m.link.length) delete m.link;
     dropMods(m, key === 'jk' ? 'jake' : 'venom'); m[key] = null;
-    const nm = mdef(m).name, O = st.players[m.owner != null ? m.owner : p];
+    const nm = mdef(m).name, O = st.players[inst.by != null ? inst.by : (m.owner != null ? m.owner : p)];      // la carta equipada vuelve a quien la puso
     O.grave.push(inst);
     log(st, p, `${def(inst).name} se destruye en lugar de ${nm}: ${nm} se salva y pierde su bonificación`);
     st.log[st.log.length - 1].avd = 1;
@@ -1927,12 +1927,23 @@
       log(st, p, `equipa a Jake el Perro en ${hn} como ${mode === 'sword' ? 'espada (+' + 600 * g + ' ATK)' : 'escudo (+' + 500 * g + ' DEF)'}`);
     }
   }
-  function placeMonster(st, p, handIdx, tributes, faceDown) {
+  function placeMonster(st, p, handIdx, tributes, faceDown, inv) {
     const P = st.players[p];
     const inst = P.hand.splice(handIdx, 1)[0];
     inst.spent = false;
     for (const z of tributes) removeMonster(st, p, z, 'grave');
+    if (inv) {                                         // Reyna Flama: invocada en el campo del rival, que pasa a controlarla
+      const E2 = st.players[inv.vs];
+      E2.mz[inv.fz] = mkSlot(st, inst, { pos: 'atk', owner: p });
+      P.normalUsed = true;
+      if (tributes.length) log(st, p, `ofrece ${tributes.length} tributo${tributes.length > 1 ? 's' : ''}`);
+      log(st, p, `invoca a ${def(inst).name} (ATK ${atkOf(st, E2, inv.fz)}) en el campo de ${multi(st) ? 'otro jugador' : 'su rival'}`);
+      if (multi(st)) st.log[st.log.length - 1].q = inv.vs;
+      entered(st, inv.vs, inv.fz);
+      return;
+    }
     const d = def(inst), z = spot(P, d);
+    if (z < 0) { P.hand.splice(Math.min(handIdx, P.hand.length), 0, inst); log(st, p, `no queda espacio para ${d.name}: vuelve a la mano`); return; }      // p. ej. lo que Cell tenía absorbido volvió a su casilla
     P.mz[z] = mkSlot(st, inst, { pos: faceDown ? 'def' : 'atk', down: !!faceDown, wide: !!d.wide });
     P.normalUsed = true;
     if (tributes.length) log(st, p, `ofrece ${tributes.length} tributo${tributes.length > 1 ? 's' : ''}`);
@@ -2189,6 +2200,11 @@
       if (!s) continue;
       if (s.ksp && s.ksp.x === st.turn) { dropMods(s, 'kaiospell'); dropMods(s, 'kaiox10'); s.ksp = null; s.exh = { t: st.turn }; log(st, st.current, `${mdef(s).name} queda agotado: 0 ATK y 0 DEF hasta el final de su siguiente turno`); }
       else if (s.exh && s.exh.t !== st.turn) { s.exh = null; log(st, st.current, `${mdef(s).name} se recupera del agotamiento`); }
+    }
+    for (const s of P.mz) if (s && !s.down && s.owner != null && s.owner !== st.current && rawAbil(s).includes('invasion')) {      // Reina Flama: quema a quien la controla
+      log(st, st.current, `${mdef(s).name} le quema 500 PV a su controlador`);
+      lose(st, st.current, 500);
+      if (st.winner !== null) return;
     }
     for (const s of P.mz) if (s && s.canal && s.canal.t === st.turn && !s.canal.ready) { s.canal.ready = true; log(st, st.current, `${mdef(s).name} completa su canalización: la Supernova estará lista en su próximo turno`); }
     for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('dexter')) {            // Dexter: cada turno propio completo prepara la máquina del tiempo
@@ -2735,6 +2751,13 @@
           if (P.normalUsed) return;
           const need = C().tributesFor(d.level);
           if (need > occupied.length) return;
+          if (d.invade) {                                // Reyna Flama: entra en un hueco vacío del campo ENEMIGO
+            for (const tr of combos(occupied, need)) for (const e of foes(st, p)) {
+              const oe = occ(st.players[e]);
+              for (let fz = 0; fz < ZONES; fz++) if (!oe[fz]) out.push({ t: 'summon', hand: i, tributes: tr, vs: e, fz });
+            }
+            return;
+          }
           for (const tr of combos(occupied, need)) {
             if (spot(P, d, tr) < 0) continue;
             out.push({ t: 'summon', hand: i, tributes: tr });
@@ -3345,7 +3368,7 @@
     st.seq = (st.seq || 0) + 1;   // cuenta cada acción hecha: reinicia el contador de inactividad del turno
     const P = st.players[p];
     switch (a.t) {
-      case 'summon': placeMonster(st, p, a.hand, a.tributes, false); break;
+      case 'summon': placeMonster(st, p, a.hand, a.tributes, false, a.fz != null ? { vs: a.vs, fz: a.fz } : null); break;
       case 'set': placeMonster(st, p, a.hand, a.tributes, true); break;
       case 'couple': coupleAV(st, p, a.hand, a.host, a.tributes); break;
       case 'special': { const inst = P.hand.splice(a.hand, 1)[0]; specialSummon(st, p, inst, 'atk'); break; }

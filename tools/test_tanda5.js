@@ -298,4 +298,25 @@ module.exports = function (T) {
     act(sp, 1, { t: 'toBattle' }); act(sp, 1, atkA(sp, 1, 0, 0)); settle(sp);
     ok(!ids(sp, 0)[0] && sp.players[0].grave.some(c => c.id === 'c_minions'), 'Minions: sin contadores caen el personaje y la carta');
   }
+
+  section('Reyna Flama');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_goku'); hand(st, 0, ['c_reyna_flama']); put(st, 1, 0, 'c_toge');
+    const opts = L(st, 0).filter(a => a.t === 'summon' && a.hand === 0);
+    ok(opts.length > 0 && opts.every(a => a.vs === 1 && a.fz != null && a.fz !== 0), 'Reyna: sólo se puede invocar en huecos vacíos del campo rival');
+    ok(!L(st, 0).some(a => a.t === 'set' && a.hand === 0), 'Reyna: no se coloca boca abajo');
+    const n0 = [E.countCards(st, 0), E.countCards(st, 1)];
+    const o = opts.find(a => a.fz === 2);
+    act(st, 0, o); settle(st);
+    ok(st.players[1].mz[2] && st.players[1].mz[2].c.id === 'c_reyna_flama' && st.players[1].mz[2].owner === 0, 'Reyna entra en el campo rival, su dueño sigue siendo quien la invocó');
+    eq([E.countCards(st, 0), E.countCards(st, 1)], n0, 'Reyna: sin pérdida de cartas');
+    // quema a su nuevo controlador al terminar su turno
+    const lp = st.players[1].lp;
+    let n = 0; while (E.actor(st) === 0 && n++ < 6) act(st, 0, L(st, 0).find(a => a.t === 'endTurn') || L(st, 0).find(a => a.t === 'discard'));
+    n = 0; while (E.actor(st) === 1 && n++ < 6) act(st, 1, L(st, 1).find(a => a.t === 'endTurn') || L(st, 1).find(a => a.t === 'discard'));
+    eq(st.players[1].lp, lp - 500, 'Reyna: le quita 500 PV a quien la controla');
+    // al morir va al cementerio de su dueño
+    const sx = fresh(); sx.players[0].grave = []; put(sx, 1, 0, 'c_reyna_flama', { owner: 0 });
+    E.destroyMonster && E.destroyMonster(sx, 1, 0, { src: 'spell', bp: 1 });
+  }
 };
