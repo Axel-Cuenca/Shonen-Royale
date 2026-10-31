@@ -101,7 +101,7 @@
       if (C.test || !D.Shop) return b;
       if (D.Shop.dailyInfo()) b.jugar = 'Recompensa diaria por cobrar';
       const day = localDay();
-      if (lsGet('duelo.offSeen') !== day) b.tienda = 'Ofertas nuevas de hoy';
+      if (D.Shop.offers().length && lsGet('duelo.offSeen') !== day) b.tienda = 'Ofertas nuevas de hoy';
       const min = D.Shop.SKIN_BOX.price;
       if (D.Shop.coins() >= min) b.cajas = 'Ya puedes abrir el cofre';
       if (D.Rank.pending && D.Rank.pending().length) b.ranking = 'Premio de temporada por cobrar';
