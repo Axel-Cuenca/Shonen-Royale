@@ -2772,7 +2772,7 @@
       h('div', { class: 'edchips' }, order.map(r => h('button', { class: 'edchip' + (r === rar ? ' on' : ''), onclick: () => tradeScreen(r, {}) }, `${C.RAR_ES[r]} (${SH.sparesOf(r).reduce((n, x) => n + x.n, 0)})`))),
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, `Elegidas: ${sel()} / ${SH.TRADE_N}`), h('span', { class: 'sub' }, `${C.RAR_ES[rar]} → ${C.RAR_ES[next]}`)), msg,
       h('div', { class: 'row bxact' }, btn(`Intercambiar ${SH.TRADE_N} → 1 ${C.RAR_ES[next]}`, go, sel() === SH.TRADE_N ? 'gold' : 'ghost')),
-      h('div', { class: 'bxlist' }, list.length ? list.map(x => h('div', { class: 'bxt got pkr-' + rar }, h('div', { class: 'bxp' }, pkArt(x.c)), h('b', null, x.c.name), h('small', null, `Repetidas: ${x.n}`),
+      h('div', { class: 'bxlist' }, list.length ? list.map(x => h('div', { class: 'pkt got pkr-' + rar }, h('div', { class: 'pkimg' }, pkArt(x.c)), h('b', null, x.c.name), h('small', null, `Repetidas: ${x.n}`),
         h('div', { class: 'row', style: 'gap:6px;justify-content:center' },
           btn('−', () => { if ((picks[x.id] | 0) > 0) { picks[x.id]--; if (!picks[x.id]) delete picks[x.id]; redo(); } }, 'ghost sm'), h('b', null, String(picks[x.id] | 0)),
           btn('+', () => { if ((picks[x.id] | 0) < x.n && sel() < SH.TRADE_N) { picks[x.id] = (picks[x.id] | 0) + 1; redo(); } }, 'ghost sm')))) : [h('p', { class: 'sub' }, `No tienes repetidas ${C.RAR_ES[rar].toLowerCase()}s todavía. Salen al abrir sobres cuando te toca una carta que ya tienes.`)])));
@@ -2780,7 +2780,7 @@
   function tradeReveal(r, done) {
     const c = C.get(r.card.id);
     const ov = h('div', { class: 'boxov pkov open', style: '--bc:#7aa8ff' }, h('div', { class: 'bx-rays' }), h('h2', null, 'Intercambio hecho'),
-      h('div', { class: 'pkrow' }, h('div', { class: 'pkc pkr-' + r.card.rar, style: '--d:.3s' }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[r.card.rar]),
+      h('div', { class: 'pkrow' }, h('div', { class: 'pkc pkr-' + r.card.rar, style: '--d:.3s' }, h('div', { class: 'pkimg' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[r.card.rar]),
         h('span', { class: 'pkn' + (r.card.isNew ? ' new' : '') }, r.card.isNew ? '¡NUEVA!' : `Repetida · ×${r.card.n}`))),
       h('div', { class: 'row' }, btn('Listo', () => { ov.remove(); done(); }, 'gold')));
     document.body.append(ov);
@@ -2799,14 +2799,14 @@
       h('div', { class: 'row bxact' }, btn('Abrir ✦ ' + SH.PACK_PRICE, () => { const r = SH.buyPack(t); if (!r.ok) { S.play('error'); msg.textContent = r.error; return; } S.play('confirm'); packReveal(r, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Cancelar', boxScreen, 'ghost')),
       h('div', { class: 'bxhead' }, `Cartas de esta tanda (${pg.got} / ${pg.total} desbloqueadas)`),
       h('div', { class: 'bxlist' }, list.map(c => { const own = SH.hasCard(c.id), n = SH.cardCount(c.id), rar = C.rarityOf(c.id);
-        return h('div', { class: 'bxt pkr-' + rar + (own ? ' got' : ' lockd') }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[rar] + (own ? (n > 1 ? ` · ×${n}` : ' ✓') : ' · 🔒'))); }))));
+        return h('div', { class: 'pkt pkr-' + rar + (own ? ' got' : ' lockd') }, h('div', { class: 'pkimg' }, pkArt(c), own ? null : h('span', { class: 'pklk' }, '🔒')), h('b', null, c.name), h('small', null, C.RAR_ES[rar] + (own ? (n > 1 ? ` · ×${n}` : ' ✓') : ''))); }))));
   }
   /** Las 3 cartas del sobre se dan vuelta una a una. */
   function packReveal(r, t) {
     const SH = D.Shop;
     const ov = h('div', { class: 'boxov pkov open', style: '--bc:#7aa8ff' }, h('div', { class: 'bx-rays' }), h('h2', null, 'Tu sobre · Tanda ' + t),
       h('div', { class: 'pkrow' }, r.cards.map((x, i) => { const c = C.get(x.id);
-        return h('div', { class: 'pkc pkr-' + x.rar, style: `--d:${(0.35 + i * 0.55).toFixed(2)}s` }, h('div', { class: 'bxp' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[x.rar]),
+        return h('div', { class: 'pkc pkr-' + x.rar, style: `--d:${(0.35 + i * 0.55).toFixed(2)}s` }, h('div', { class: 'pkimg' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[x.rar]),
           h('span', { class: 'pkn' + (x.isNew ? ' new' : '') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)); })),
       h('div', { class: 'row' }, btn('Otro sobre ✦ ' + SH.PACK_PRICE, () => { ov.remove(); const r2 = SH.buyPack(t); if (!r2.ok) { S.play('error'); packScreen(t); return; } S.play('confirm'); packReveal(r2, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Listo', () => { ov.remove(); packScreen(t); }, 'ghost')));
     document.body.append(ov);

@@ -1744,3 +1744,12 @@ html.fxbg .slab.multi .zone.st { width: 6.6em; height: 6.2em; }
 .bxt.pkr-c, .bxt.pkr-u, .bxt.pkr-r, .bxt.pkr-e, .bxt.pkr-l { border-color: var(--rc); } .bxt.lockd { filter: grayscale(.9) brightness(.6); }
 html.rm .pkc { animation-duration: .01s; }
 .pkov > h2, .pkov > .row { position: relative; z-index: 2; }      /* los rayos de fondo (absolutos) tapaban los botones */
+/* Cartas de los sobres: la imagen SIEMPRE dentro de su recuadro, el texto debajo */
+.pkt { flex: 0 0 140px; width: 140px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 8px 10px; text-align: center; border-radius: 10px; background: #0c1a3a; border: 2px solid var(--rc, #4a6ad0); }
+.pkt b { font-size: 13px; line-height: 1.15; } .pkt small { font-size: 11px; opacity: .85; }
+.pkimg { position: relative; width: 100%; height: 112px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; background: #070e22; }
+.pkimg img.cimg { position: static; display: block; width: 100%; height: 100%; object-fit: contain; }
+.pkimg .ico { font-size: 44px; }
+.pkc .pkimg { height: 110px; } .pkc .pkimg img.cimg { max-height: none; max-width: none; }
+.pkt.lockd .pkimg img, .pkt.lockd .pkimg .ico { filter: grayscale(.8) brightness(.65); } .pkt.lockd b, .pkt.lockd small { opacity: .75; }
+.pkimg .pklk { position: absolute; right: 4px; bottom: 4px; font-size: 14px; padding: 1px 5px; border-radius: 8px; background: #000b; }
