@@ -158,4 +158,48 @@ module.exports = function (T) {
     const s2 = fresh(); put(s2, 0, 0, 'c_vegeta'); hand(s2, 0, ['c_vegeta_ssj']);
     ok(!!pw(s2, 0, 'xform'), 'Vegeta SSJ: Vegeta puede transformarse en él');
   }
+
+  section('tanda 5 etapa 2: Freezer, Freezer Segunda Forma y Goku Dios');
+  {
+    const root = path.join(__dirname, '..');
+    const grave = (st, p, id) => st.players[p].grave.some(c => c.id === id);
+    for (const id of ['c_freezer', 'c_freezer2', 'c_goku_dios']) {
+      const c = Cards.get(id);
+      ok(c && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
+      for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
+      for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': la habilidad ' + a + ' tiene texto');
+    }
+    const st = fresh(); put(st, 0, 0, 'c_freezer'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_odin'); put(st, 1, 2, 'c_toge');
+    putST(st, 1, 0, 'c_botiquin', { down: true }); putST(st, 1, 1, 'c_kaioken');
+    ok(!pw(st, 0, 'supernova'), 'Supernova: no se puede sin canalizar');
+    act(st, 0, pw(st, 0, 'canal'));
+    act(st, 0, { t: 'toBattle' });
+    ok(!L(st, 0).some(a => a.t === 'attack'), 'Canalización: Freezer no puede atacar ese turno');
+    let n = 0; while (E.actor(st) === 0 && n++ < 6) act(st, 0, L(st, 0).find(a => a.t === 'endTurn') || L(st, 0).find(a => a.t === 'discard'));
+    ok(!pw(st, 0, 'supernova'), 'Supernova: todavía no, falta su turno siguiente');
+    n = 0; while (E.actor(st) !== 0 && n++ < 6) { const q = E.actor(st); act(st, q, L(st, q).find(a => a.t === 'endTurn') || L(st, q).find(a => a.t === 'discard')); }
+    const sn = pw(st, 0, 'supernova');
+    ok(!!sn, 'Supernova: lista en su turno siguiente');
+    if (sn) {
+      act(st, 0, sn); settle(st);
+      const hv = ids(st, 1);
+      ok(st.players[1].st.every(x => !x), 'Supernova: destruye todas las magias y trampas rivales (boca arriba y boca abajo)');
+      ok(!hv.includes('c_goku') && !hv.includes('c_toge') && hv.includes('c_odin'), 'Supernova: caen los de ≤7★ y sobrevive Odin (10★)');
+      ok(ids(st, 0)[0] === 'c_freezer', 'Supernova: no toca el campo propio');
+    }
+    const s2 = fresh(); put(s2, 0, 0, 'c_freezer2'); put(s2, 1, 0, 'c_goku'); put(s2, 1, 1, 'c_odin');
+    eq(L(s2, 0).filter(a => a.t === 'power' && a.pw === 'cuerno').map(a => a.target.z), [0], 'Ataque de Cuerno: sólo personajes de 4★ o menos');
+    act(s2, 0, pw(s2, 0, 'cuerno')); settle(s2);
+    ok(!ids(s2, 1)[0] && !pw(s2, 0, 'cuerno'), 'Ataque de Cuerno: destruye y es una vez por invocación');
+    const s3 = fresh(); put(s3, 0, 0, 'c_freezer'); hand(s3, 0, ['c_freezer2']);
+    ok(!!pw(s3, 0, 'xform'), 'Freezer puede transformarse en Segunda Forma');
+    const s4 = fresh(1); put(s4, 0, 0, 'c_goku_dios'); put(s4, 0, 1, 'c_goku'); put(s4, 1, 0, 'c_goku');
+    const ds = Cards.all().find(c => c.kind === 'spell' && c.fx === 'destroyOne');
+    hand(s4, 1, [ds.id]);
+    const ac = L(s4, 1).find(a => a.t === 'activate' && a.hand === 0 && a.target && a.target.z === 1);
+    ok(!!ac, 'hay magia que destruye para probar');
+    if (ac) { act(s4, 1, ac); settle(s4); ok(ids(s4, 0)[1] === 'c_goku' && grave(s4, 1, ds.id), 'Repulsión divina: la magia se destruye y el aliado se salva'); }
+    const s5 = fresh(); put(s5, 0, 0, 'c_goku_dios');
+    ok(!!pw(s5, 0, 'kaioken'), 'Goku Dios tiene Kaio-ken');
+  }
 };

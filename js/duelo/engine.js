@@ -118,7 +118,7 @@
   const atkCount = m => (!m.attacked ? 0 : (m.atkN != null ? m.atkN : 9));
   /** Ataques que puede declarar por turno: 1; 2 con Uno, Dos o como Asesino Sombra. */
   const maxAttacks = (st, m) => ((m.uno === st.turn) || m.form === 'c_kayn_sombra' ? 2 : 1);
-  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa;
+  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !(m.canal && m.canal.t === st.turn);      // Freezer: mientras canaliza no ataca
   const slotByUid = (st, p, uid) => { const P = st.players[p]; for (let z = 0; z < ZONES; z++) if (P.mz[z] && P.mz[z].c.uid === uid) return { p, z, m: P.mz[z] }; return null; };
   function findByUid(st, uid) { for (let p = 0; p < st.n; p++) { const r = slotByUid(st, p, uid); if (r) return r; } return null; }
 
@@ -1239,12 +1239,13 @@
     return z;
   }
   const HOSTILE = { destroyOne: 1, destroyST: 1, burn: 1 };
+  const HOSTILE_SKIP = {};
   /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
   const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1, infarto: 1 };
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -1654,6 +1655,22 @@
     if (d.fx === 'destroyOne' && ch.target && !(ch.done || []).includes('gema')) {      // Gema de la Realidad: invierte la destrucción
       const vp = foeOf(st, ch.p, ch.target), vm = st.players[vp].mz[ch.target.z];
       if (vm && st.team[vp] !== st.team[ch.p] && realityWindow(st, 'destroy', ch.p, vp, { k: 'gspell', ch }, `${d.name} va a destruir a ${mdef(vm).name}`)) return;
+    }
+    {   // Goku Dios Super Saiyajin (Repulsión divina): destruye la magia rival que lo elija a él o a un aliado como objetivo
+      const t = ch.target;
+      if (t && t.z != null && d.fx !== 'destroyST' && !HOSTILE_SKIP[d.fx]) {
+        const tp = t.vs != null ? t.vs : (HOSTILE[d.fx] ? foeOf(st, ch.p, t) : ch.p);
+        if (st.team[tp] !== st.team[ch.p] && st.players[tp].mz[t.z]) {
+          for (let q = 0; q < st.n; q++) {
+            if (!st.players[q].alive || st.team[q] !== st.team[tp]) continue;
+            const gm = st.players[q].mz.find(m => m && !m.down && has(st, m, 'repulsion'));
+            if (!gm) continue;
+            log(st, q, `${mdef(gm).name} usa Repulsión divina: destruye ${d.name} y su efecto no se resuelve`);
+            P.grave.push(ch.inst); lose(st, ch.p, d.self || 0);
+            return;
+          }
+        }
+      }
     }
     const gd = spellGuard(st, ch);
     if (gd) { st.pending = gd; return; }
@@ -2148,6 +2165,7 @@
       if (s.ksp && s.ksp.x === st.turn) { dropMods(s, 'kaiospell'); dropMods(s, 'kaiox10'); s.ksp = null; s.exh = { t: st.turn }; log(st, st.current, `${mdef(s).name} queda agotado: 0 ATK y 0 DEF hasta el final de su siguiente turno`); }
       else if (s.exh && s.exh.t !== st.turn) { s.exh = null; log(st, st.current, `${mdef(s).name} se recupera del agotamiento`); }
     }
+    for (const s of P.mz) if (s && s.canal && s.canal.t === st.turn && !s.canal.ready) { s.canal.ready = true; log(st, st.current, `${mdef(s).name} completa su canalización: la Supernova estará lista en su próximo turno`); }
     for (const s of P.mz) if (s && !s.down && s.summonedTurn !== st.turn && rawAbil(s).includes('tonyarm')) {            // Tony Stark: cada turno propio completo en el campo da un material
       const tn = s.tony || (s.tony = { mat: 0, arm: 0, t: -1 });
       tn.mat++;
@@ -2451,6 +2469,9 @@
       if (ab.includes('bigbang') && canOnce(P, z, u, 'bb')) push({ pw: 'bigbang' });
       if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
+      if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
+      if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
+      if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
       if (ab.includes('agujero') && u.agT !== st.turn) for (const t of foeSTs(st, p)) push({ pw: 'agujero', target: t });      // Bugs Bunny: una vez por turno, aunque la carta esté boca abajo
       if (ab.includes('bigbang1') && canOnce(P, z, u, 'bb1')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= lvl(m) && canTarget(st, p, e, tz)) push({ pw: 'bigbang1', target: { vs: e, z: tz } }); }
       if (ab.includes('bite') && !m.copy && canOnce(P, z, u, 'bite') && P.lp > 500) {
@@ -2782,6 +2803,30 @@
           const tm = st.players[e].mz[tz];
           if (tm && atkOf(st, st.players[e], tz) < 2000) destroyMonster(st, e, tz, ctx);
         }
+        break;
+      }
+      case 'canal':
+        m.canal = { t: st.turn, ready: false };
+        log(st, p, `${nm} usa Canalización: concentra su energía y no puede atacar este turno`);
+        break;
+      case 'supernova': {
+        m.canal = null;
+        log(st, p, `${nm} usa Supernova`);
+        for (const e of foes(st, p)) {
+          for (let tz = 0; tz < ZONES; tz++) {
+            const tm = st.players[e].mz[tz];
+            if (tm && lvl(tm) <= 7) destroyMonster(st, e, tz, ctx);
+          }
+          for (let sz = 0; sz < ZONES; sz++) removeST(st, e, sz);
+        }
+        break;
+      }
+      case 'cuerno': {
+        markOnce(u, 'cuer');
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        log(st, p, `${nm} usa Ataque de Cuerno contra ${tm ? mdef(tm).name : 'un personaje'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (tm) destroyMonster(st, e, a.target.z, ctx);
         break;
       }
       case 'agujero': {

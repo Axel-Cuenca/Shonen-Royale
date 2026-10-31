@@ -65,6 +65,9 @@
     copy: ['Transformación', 'Una vez por turno puede transformarse en un personaje que esté en el campo, copiando su estado actual: nombre, tipo, estrellas, habilidades y su ATK/DEF final con todos los bonos y penalizaciones vigentes (los temporales duran lo mismo que en el original). Sus habilidades copiadas empiezan sin usar. Si lo derrotan transformado, vuelve a su forma y no puede transformarse más.'],
     saiyan: ['Sangre Saiyan', 'Si es revivido, vuelve con +500 ATK y +500 DEF.'],
     escudo: ['Escudo Blue Evolution', 'Escudo de 3000: mientras esté activo, los ataques se resuelven sólo contra el escudo (el ATK y la DEF de Vegeta no cuentan, nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta); las magias/trampas que lo destruyan golpean primero al escudo.'],
+    repulsion: ['Repulsión divina', 'Destruye toda carta mágica rival que lo elija como objetivo a él o a un aliado, y su efecto no se resuelve.'],
+    canal: ['Canalización y Supernova', 'Canaliza un turno completo sin poder atacar; en su turno siguiente lanza la Supernova: destruye a todos los personajes rivales de hasta 7★ y todas las magias y trampas rivales, boca arriba o boca abajo.'],
+    cuerno: ['Ataque de Cuerno', 'Una vez por invocación: destruye a un personaje rival de 4★ o menos.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -278,7 +281,7 @@
       id: 'c_goku', name: 'Goku', fam: 'Goku', type: 'dbz', level: 4, atk: 1400, def: 1400, img: I('goku'), ab: ['kaioken'], xform: { family: 'Goku' },
       text: 'Transformación Saiyan: puede transformarse en otra carta Goku de tu mano (1 turno completo de espera por cada 2 estrellas de diferencia); la anterior queda vinculada. ' +
         'Kaio-ken (una vez por invocación): +400 ATK y +400 DEF durante 3 turnos.',
-      sfx: { transform: V('goku-transform'), summon: V('goku-summon') }
+      sfx: { transform: V('goku-transform'), summon: V('goku-summon'), ability: V('goku_dios-kaioken') }
     }),
     mon({
       id: 'c_super_vegeta', name: 'Super Vegeta', fam: 'Vegeta', type: 'dbz', level: 6, atk: 1800, def: 1600, img: I('super_vegeta'), xform: { family: 'Vegeta' },
@@ -547,6 +550,21 @@
       sfx: { attack: V('vegeta_ssj-attack'), transform: V('vegeta_ssj-transform') }
     }),
     mon({
+      id: 'c_freezer', name: 'Freezer', fam: 'Freezer', type: 'dbz', level: 4, atk: 1300, def: 1300, img: I('freezer'), ab: ['canal'], xform: { family: 'Freezer' },
+      text: 'Familia Freezer: se transforma como la familia Vegeta. Canalización: un turno completo sin poder atacar. Supernova: en su turno siguiente destruye a todos los personajes rivales de hasta 7★ y todas las magias y trampas del rival, boca arriba o boca abajo.',
+      sfx: { attack: V('freezer-attack') }
+    }),
+    mon({
+      id: 'c_freezer2', name: 'Freezer Segunda Forma', fam: 'Freezer', type: 'dbz', level: 5, atk: 1700, def: 1800, img: I('freezer2'), ab: ['cuerno'], xform: { family: 'Freezer' },
+      text: 'Familia Freezer. Ataque de Cuerno: una vez por invocación atraviesa y destruye a un personaje rival de 4★ o menos.',
+      sfx: { attack: V('freezer2-attack') }
+    }),
+    mon({
+      id: 'c_goku_dios', name: 'Goku Dios Super Saiyajin', fam: 'Goku', type: 'dbz', level: 9, atk: 2700, def: 2400, img: I('goku_dios'), ab: ['kaioken', 'repulsion'], xform: { family: 'Goku' },
+      text: 'Familia Goku. Repulsión divina: destruye toda carta mágica rival que lo elija a él o a un aliado como objetivo; su efecto no se resuelve. Kaio-ken (una vez por invocación): +400 ATK y DEF durante 3 turnos; después vuelve a 2700/2400.',
+      sfx: { transform: V('goku_dios-transform'), ability: V('goku_dios-kaioken') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -659,7 +677,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};
