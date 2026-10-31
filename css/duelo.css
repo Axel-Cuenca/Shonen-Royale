@@ -1743,3 +1743,4 @@ html.fxbg .slab.multi .zone.st { width: 6.6em; height: 6.2em; }
 .pkr-c { --rc: #8fa0c8; } .pkr-u { --rc: #5ee08a; } .pkr-r { --rc: #5fa8ff; } .pkr-e { --rc: #c47bff; } .pkr-l { --rc: #ffd84a; }
 .bxt.pkr-c, .bxt.pkr-u, .bxt.pkr-r, .bxt.pkr-e, .bxt.pkr-l { border-color: var(--rc); } .bxt.lockd { filter: grayscale(.9) brightness(.6); }
 html.rm .pkc { animation-duration: .01s; }
+.pkov > h2, .pkov > .row { position: relative; z-index: 2; }      /* los rayos de fondo (absolutos) tapaban los botones */
