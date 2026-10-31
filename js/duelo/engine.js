@@ -145,6 +145,16 @@
   const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : (z === 2 && P.mz[0] && P.mz[0].huge ? 0 : -1));
   /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
   const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque', c_armin: 'c_titan_colosal', c_bruce_banner: 'c_hulk' };
+  /** Sasuke Chico (Sharingan): ¿evade ahora un efecto enemigo que lo elige? Gasta un uso (1 por turno, 3 por invocación). */
+  function sharinganEvade(st, q, z) {
+    const m = st.players[q] && st.players[q].mz[z];
+    if (!m || m.down || !has(st, m, 'sharingan')) return false;
+    const u = uOf(m);
+    if ((u.shN || 0) >= 3 || u.shT === st.turn) return false;
+    u.shN = (u.shN || 0) + 1; u.shT = st.turn;
+    log(st, q, `${mdef(m).name} usa Sharingan: evade el efecto (${u.shN}/3)`);
+    return true;
+  }
   /** Dónde entra la forma transformada: los gigantes ocupan 2/3 zonas; Hulk entra en la casilla de Bruce. */
   function formAnchor(P, z, tid) { const hd = def({ id: tid }); return (hd.wide || hd.huge) ? titanAnchor(P, z, undefined, hd.huge) : (!P.mz[z] ? z : spot(P, hd)); }
   /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur o Eren). */
@@ -645,6 +655,7 @@
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (ctx.src === 'combat' && kab.includes('marcamal') && !uOf(km).marca2) st.trig.push({ k: 'marcamal', p: killer.p, uid: km.c.uid });
     if (ctx.src === 'combat') { const ms = minionsOf(P, killer.z); if (ms) { ms.min.n++; log(st, killer.p, `Un Minion se une al ejército de ${mdef(km).name} (${ms.min.n})`); } }
     if (ctx.src === 'combat' && kab.includes('warsangre')) { heal(st, killer.p, 500); log(st, killer.p, `${mdef(km).name} recupera 500 PV (Sed de sangre)`); }
     if (ctx.src === 'combat' && km.c.id === 'c_kayn') {
@@ -695,6 +706,12 @@
         if (!inst || ti < 0) continue;
         if (formAnchor(P, t.z, tid) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
         st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
+      } else if (t.k === 'marcamal') {                  // Sasuke Chico: Marca de maldición tras vencer en combate
+        const sk = slotByUid(st, t.p, t.uid);
+        if (!sk || sk.m.down || uOf(sk.m).marca2) continue;
+        const opts = ['stat'];
+        if (handIdx(P, 'c_sasuke_marca') >= 0) opts.push('form');
+        st.pending = { k: 'ability', ab: 'marcamal', player: t.p, uid: t.uid, stage: 'ask', opts };
       } else if (t.k === 'kuribomo') {                  // Kuriboh Mago Oscuro: se lleva consigo a un personaje enemigo
         const cands = [];
         for (const e of foes(st, t.p)) for (const z of zonesWith(st.players[e].mz)) if (canTarget(st, t.p, e, z)) cands.push({ vs: e, z });
@@ -1269,7 +1286,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -1426,6 +1443,7 @@
     }
     const gd = powerGuard(st, p, a, done);
     if (gd) { st.pending = gd; return; }
+    if (a.target && a.target.vs != null && a.target.z != null && st.team[a.target.vs] !== st.team[p] && !['desmantelar', 'agujero', 'avpred'].includes(a.pw) && sharinganEvade(st, a.target.vs, a.target.z)) return;      // Sasuke Chico
     const m = st.players[p].mz[a.zone], nmU = m ? mdef(m).name : '', yutaU = isYuta(m);
     doPower(st, p, a);
     const idn = PW_AB[a.pw];
@@ -1463,6 +1481,10 @@
         const g = vm ? uiGuard(st, vict) : null;
         if (g) { st.pending = { k: 'ability', ab: 'uidef', kind: 'trap', player: g.q, zy: g.z, stage: 'ask', tp: resp, tid: d.id, rp: pd, done, victim: { p: vict, z: vz }, nm: mdef(vm).name }; return; }
       }
+    }
+    if (vict != null && st.team[vict] !== st.team[resp] && HOSTILE_TRAP[d.fx]) {      // Sasuke Chico (Sharingan)
+      const vz = (d.fx === 'destroyAttacker' || d.fx === 'mirror') ? (st.atk && st.atk.z) : (st.summon && st.summon.z);
+      if (vz != null && sharinganEvade(st, vict, vz)) { respondRest(st, pd); return; }
     }
     applyTrap(st, resp, d, pd, invTeam);
     respondRest(st, pd);
@@ -1695,6 +1717,13 @@
             return;
           }
         }
+      }
+    }
+    {   // Sasuke Chico (Sharingan): evade la magia que lo elige como objetivo
+      const t = ch.target;
+      if (t && t.z != null && d.fx !== 'destroyST') {
+        const tp = t.vs != null ? t.vs : (HOSTILE[d.fx] ? foeOf(st, ch.p, t) : ch.p);
+        if (st.team[tp] !== st.team[ch.p] && sharinganEvade(st, tp, t.z)) { P.grave.push(ch.inst); lose(st, ch.p, d.self || 0); return; }
       }
     }
     const gd = spellGuard(st, ch);
@@ -2026,6 +2055,7 @@
     st.cmb = null; st.minShield = null;
     const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
     if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
+    if (m && m.mods && m.mods.some(x => x.k === 'chi')) { dropMods(m, 'chi'); log(st, a.p, `${mdef(m).name} gasta su Chidori`); }
     if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
     if (m && m.ghost) { log(st, a.p, `${mdef(m).name} es desterrado tras el ataque`); removeMonster(st, a.p, a.z, 'banish'); }
   }
@@ -2517,6 +2547,7 @@
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
       if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
       if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
+      if (ab.includes('chidori') && u.chiT !== st.turn && !(m.mods || []).some(x => x.k === 'chi') && canAttackSlot(st, m)) push({ pw: 'chidori' });
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2715,7 +2746,7 @@
       } else if (pd.k === 'pick') {
         for (const u of pd.cands) out.push({ t: 'pick', uid: u });
       } else if (pd.k === 'ability') {
-        if (pd.ab === 'steal' || pd.ab === 'vlearn') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
+        if (pd.ab === 'steal' || pd.ab === 'vlearn' || pd.ab === 'marcamal') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
@@ -2808,7 +2839,7 @@
           out.push(mu ? { t: 'attack', zone: z, vs: mk.vs, target: tz, hira: true } : { t: 'attack', zone: z, target: tz, hira: true });
         }
       });
-      out.push(...powerActs(st, p).filter(a => ['furia', 'bigbang', 'canon', 'relicario', 'genki', 'punos', 'tq', 'td', 'tm', 'kurama'].includes(a.pw)));
+      out.push(...powerActs(st, p).filter(a => ['furia', 'bigbang', 'canon', 'relicario', 'genki', 'punos', 'tq', 'td', 'tm', 'kurama', 'chidori'].includes(a.pw)));
       if (!fr.length) out.push({ t: 'endTurn' });
     }
     return out;
@@ -2869,6 +2900,10 @@
         if (multi(st)) st.log[st.log.length - 1].q = e;
         break;
       }
+      case 'chidori':
+        u.chiT = st.turn; addMod(st, m, 'chi', 400 * g, 0, 0);
+        log(st, p, `${nm} usa Chidori: +${400 * g} ATK en su próximo ataque`);
+        break;
       case 'maquina': {
         const c = P.grave.filter(i => def(i).kind === 'monster' && spot(P, def(i)) >= 0);
         if (!c.length) break;
@@ -3670,6 +3705,22 @@
       P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: !!def(inst).wide, since: st.turn, attacked: true });
       log(st, p, `${def(lara).name} muere y se invoca especialmente a ${def(inst).name}`);
       if (tid === 'c_titan_colosal') colosalBlast(st, p, anchor);
+      return;
+    }
+    if (pd.ab === 'marcamal') {
+      if (a.use === false || !a.pick) { log(st, p, 'decide no despertar la marca de maldición'); return; }
+      const sk = slotByUid(st, p, pd.uid);
+      if (!sk) return;
+      uOf(sk.m).marca2 = true;
+      if (a.pick === 'form') {
+        const hi = handIdx(P, 'c_sasuke_marca');
+        if (hi < 0) return;
+        log(st, p, `${mdef(sk.m).name} despierta la marca de maldición`);
+        transformInto(st, p, sk.z, hi, null);
+      } else {
+        addMod(st, sk.m, 'marca2', 500, 500, 0);
+        log(st, p, `${mdef(sk.m).name} despierta la marca de maldición: +500 ATK y +500 DEF`);
+      }
       return;
     }
     if (pd.ab === 'kuribomo') {

@@ -319,4 +319,50 @@ module.exports = function (T) {
     const sx = fresh(); sx.players[0].grave = []; put(sx, 1, 0, 'c_reyna_flama', { owner: 0 });
     E.destroyMonster && E.destroyMonster(sx, 1, 0, { src: 'spell', bp: 1 });
   }
+
+  section('Sasuke Chico y Sasuke Marca Despertada');
+  {
+    const root = path.join(__dirname, '..');
+    for (const id of ['c_sasuke', 'c_sasuke_marca']) {
+      const c = Cards.get(id);
+      ok(c && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
+      for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
+      for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': la habilidad ' + a + ' tiene texto');
+    }
+    // Chidori: +400 ATK sólo en un ataque
+    const st = fresh(); put(st, 0, 0, 'c_sasuke'); put(st, 1, 0, 'c_toge', { pos: 'def' });
+    const atk0 = E.view(st, 0).players[0].mz[0].atk;
+    act(st, 0, pw(st, 0, 'chidori'));
+    eq(E.view(st, 0).players[0].mz[0].atk - atk0, 400, 'Chidori: +400 ATK');
+    act(st, 0, { t: 'toBattle' }); act(st, 0, atkA(st, 0, 0, 0));
+    settle(st);
+    eq(E.view(st, 0).players[0].mz[0].atk - atk0 - 0, st.players[0].mz[0].mods && st.players[0].mz[0].mods.length ? 500 : 0, 'Chidori: se gasta tras el ataque (queda sólo el +500 de la marca, si la despierta)');
+    // Marca de maldición: tras vencer, +500/+500
+    const s2 = fresh(); put(s2, 0, 0, 'c_sasuke'); put(s2, 1, 0, 'c_kuriboh', { pos: 'def' });
+    act(s2, 0, { t: 'toBattle' }); act(s2, 0, atkA(s2, 0, 0, 0));
+    let k = 0; while (s2.pending && s2.pending.ab !== 'marcamal' && k++ < 12) { const q = E.actor(s2), l = L(s2, q); act(s2, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
+    ok(s2.pending && s2.pending.ab === 'marcamal', 'Marca de maldición: se ofrece tras vencer en combate');
+    if (s2.pending && s2.pending.ab === 'marcamal') {
+      eq(s2.pending.opts, ['stat'], 'sin la forma en la mano sólo ofrece el aumento');
+      act(s2, 0, { t: 'ability', pick: 'stat' });
+      eq(E.view(s2, 0).players[0].mz[0].atk, 1700, 'Marca de maldición: +500 ATK');
+    }
+    // con la forma en la mano: transformación vinculada
+    const s3 = fresh(); put(s3, 0, 0, 'c_sasuke'); put(s3, 1, 0, 'c_kuriboh', { pos: 'def' }); hand(s3, 0, ['c_sasuke_marca']);
+    act(s3, 0, { t: 'toBattle' }); act(s3, 0, atkA(s3, 0, 0, 0));
+    k = 0; while (s3.pending && s3.pending.ab !== 'marcamal' && k++ < 12) { const q = E.actor(s3), l = L(s3, q); act(s3, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
+    ok(s3.pending && s3.pending.opts && s3.pending.opts.includes('form'), 'Marca: ofrece transformarse si la forma está en la mano');
+    if (s3.pending && s3.pending.opts) { act(s3, 0, { t: 'ability', pick: 'form' }); ok(ids(s3, 0)[0] === 'c_sasuke_marca' && s3.players[0].mz[0].link.some(c => c.id === 'c_sasuke'), 'Sasuke se transforma y queda vinculado'); }
+    // Sharingan: evade una magia que lo elige, una vez por turno
+    const g = Cards.all().find(c => c.kind === 'spell' && c.fx === 'destroyOne');
+    const s4 = fresh(1); put(s4, 0, 0, 'c_sasuke'); put(s4, 1, 0, 'c_goku'); hand(s4, 1, [g.id, g.id]);
+    const ac = L(s4, 1).find(a => a.t === 'activate' && a.hand === 0 && a.target && a.target.z === 0);
+    ok(!!ac, 'hay magia para probar el Sharingan');
+    if (ac) {
+      act(s4, 1, ac); settle(s4);
+      ok(ids(s4, 0)[0] === 'c_sasuke', 'Sharingan: evade la magia');
+      const ac2 = L(s4, 1).find(a => a.t === 'activate' && a.hand === 0 && a.target && a.target.z === 0);
+      if (ac2) { act(s4, 1, ac2); settle(s4); ok(!ids(s4, 0)[0], 'Sharingan: sólo una vez por turno (la segunda magia lo destruye)'); }
+    }
+  }
 };

@@ -72,6 +72,9 @@
     dios: ['Poder de Dios', 'Una vez por invocación: atrapa a un personaje rival en su campo de energía divina. No puede atacar, ser sacrificado ni usar habilidades, y sólo el equipo de Vegeta Dios puede interactuar con él. Se libera si Vegeta Dios deja el campo.'],
     bruce: ['Transformación en Hulk', 'Cuando muere, puedes invocar especialmente a Hulk desde tu mano en su lugar; quedan vinculados y comparten destino. Sólo como emergencia: no se puede activar voluntariamente.'],
     invasion: ['Invasión ígnea', 'Se invoca en un hueco vacío del campo enemigo, elegido por quien la invoca. Quien la recibe la controla, pero pierde 500 PV al final de cada uno de sus turnos mientras siga ahí. Puede sacrificarla o destruirla.'],
+    sharingan: ['Sharingan', 'Evade una habilidad de personaje, una carta mágica o una trampa que lo elija como objetivo (sólo ese efecto se cancela). Una vez por turno, hasta 3 veces por invocación.'],
+    chidori: ['Chidori', '+400 ATK durante un solo ataque; después el ATK vuelve al valor anterior. Una vez por turno.'],
+    marcamal: ['Marca de maldición', 'Tras vencer a un personaje en combate, puede despertar la marca: +500 ATK y DEF, o transformarse (quedando vinculado) en Sasuke Chico Marca Despertada si la tiene en la mano. Una vez por invocación.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -600,6 +603,16 @@
       text: 'Invasión ígnea: se invoca (con tributos, 6★) en un hueco vacío del campo ENEMIGO, que elige quien la invoca. Quien la recibe pasa a controlarla, pero pierde 500 PV al final de cada uno de sus turnos mientras siga en su campo. Puede sacrificarla o destruirla.'
     }),
     mon({
+      id: 'c_sasuke', name: 'Sasuke Chico', type: 'naruto', level: 3, atk: 1200, def: 1200, img: I('sasuke'), ab: ['marcamal', 'sharingan', 'chidori'],
+      text: 'Marca de maldición: tras vencer en combate puede despertarla (+500 ATK/DEF) o transformarse en Sasuke Chico Marca Despertada desde tu mano (quedan vinculados). Sharingan: evade un efecto enemigo que lo elija (1 vez por turno, máx. 3). Chidori: +400 ATK en un ataque.',
+      sfx: { summon: V('sasuke-summon'), attack: V('sasuke-attack'), ability: V('sasuke-ability'), chidori: V('sasuke-chidori') }
+    }),
+    mon({
+      id: 'c_sasuke_marca', name: 'Sasuke Chico Marca Despertada', type: 'naruto', level: 5, atk: 1700, def: 1600, img: I('sasuke_marca'), ab: ['sharingan', 'chidori'],
+      text: 'Forma despertada de Sasuke Chico, vinculada a él. Sharingan: evade un efecto enemigo que lo elija (1 vez por turno, máx. 3). Chidori: +400 ATK en un ataque.',
+      sfx: { attack: V('sasuke_marca-attack'), ability: V('sasuke_marca-ability'), chidori: V('sasuke_marca-chidori') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -712,7 +725,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};
