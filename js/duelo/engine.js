@@ -637,6 +637,8 @@
   /** Jake o Venom equipados protegen a su portador: se destruyen en su lugar (una vez por destrucción) y su bonificación se quita al instante. */
   /** Simbiosis: Venom puede estar acoplado todo el tiempo a un personaje de Marvel; a cualquier otro sólo 2 turnos (rondas). */
   const SYM_TURNS = 2;
+  /** Simbiontes que se acoplan a un aliado: bonificación [ATK, DEF] (la mitad de sus estadísticas). */
+  const SYMB = { c_venom: [700, 650], c_carnage: [650, 650] };
   const symLeft = (st, m) => (!m.sym || mdef(m).type === 'marvel' ? null : Math.max(0, SYM_TURNS - Math.max(0, elapsed(st, m.sym.t0 != null ? m.sym.t0 : st.turn))));
   /** Venom se separa de su anfitrión y sale al campo como personaje normal (necesita una zona libre; si no la hay, espera). Tras separarse, no puede acoplarse otra vez hasta su siguiente turno. */
   function venomSeparate(st, p, z) {
@@ -651,7 +653,7 @@
     inst.spent = false;
     P.mz[nz] = mkSlot(st, inst, { pos: 'atk' });
     P.symT = st.turn;
-    log(st, p, `Venom se separa de ${mdef(h).name} y sale como personaje normal: no podrá acoplarse de nuevo hasta su siguiente turno`);
+    log(st, p, `${def(inst).name} se separa de ${mdef(h).name} y sale como personaje normal: no podrá acoplarse de nuevo hasta su siguiente turno`);
     return true;
   }
   function equipDies(st, p, m, key) {
@@ -670,12 +672,19 @@
   }
   /** La carta de Venom que cuenta para este personaje: él mismo (si es Venom) o el Venom que lleva equipado. */
   function venomOf(m) {
-    if (m.sym) return (m.link || []).find(c => c.uid === m.sym.uid) || null;
+    if (m.sym) { const v = (m.link || []).find(c => c.uid === m.sym.uid); return v && v.id === 'c_venom' ? v : null; }
     return m.c.id === 'c_venom' && !m.copy ? m.c : null;
   }
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (ctx.src === 'combat' && kab.includes('sed') && st.cmb && st.cmb.p === killer.p && st.players[killer.p].mz[st.cmb.z] === km && !km.sed) {      // Carnage: Sed de sangre
+      const gS = gx(P, st.cmb.z);
+      addMod(st, km, 'sed', 400 * gS, 0, 0);
+      km.sed = { t: st.turn, fresh: true };
+      if (km.sedN !== st.turn) { km.sedN = st.turn; km.atkN = Math.max(0, (km.atkN || 1) - 1); log(st, killer.p, `Sed de sangre: ${mdef(km).name} gana +${400 * gS} ATK y puede atacar otra vez`); }
+      else log(st, killer.p, `Sed de sangre: ${mdef(km).name} gana +${400 * gS} ATK`);
+    }
     if (ctx.src === 'combat' && kab.includes('cazador')) {      // Dante: Cazador de demonios
       const ud = uOf(km); ud.dk = (ud.dk || 0) + 1;
       const own = rawAbil(km), opts = ['atk', 'def'].concat(Array.from(new Set((victim.abs || []).filter(x => STEALABLE.includes(x) && !own.includes(x)))));
@@ -2005,9 +2014,10 @@
     inst.spent = false; inst.by = p;      // quién puso la carta (para contar las cartas de cada jugador si el anfitrión está corrompido)
     h.link = (h.link || []).concat([inst]);
     if (mode === 'venom') {
+      const sb = SYMB[inst.id] || SYMB.c_venom;
       h.sym = { uid: inst.uid, t0: st.turn }; P.symT = st.turn;
-      addMod(st, h, 'venom', 700 * g, 650 * g, 0);      // sólo la mitad de las estadísticas de Venom
-      log(st, p, `equipa a Venom en ${hn} (+${700 * g} ATK y +${650 * g} DEF)`);
+      addMod(st, h, 'venom', sb[0] * g, sb[1] * g, 0);      // sólo la mitad de las estadísticas del simbionte
+      log(st, p, `equipa a ${def(inst).name} en ${hn} (+${sb[0] * g} ATK y +${sb[1] * g} DEF)`);
     } else {
       h.jk = { uid: inst.uid, mode };
       addMod(st, h, 'jake', mode === 'sword' ? 600 * g : 0, mode === 'shield' ? 500 * g : 0, 0);
@@ -2117,6 +2127,7 @@
   function atkDone(st, a) {
     st.cmb = null; st.minShield = null;
     const m = a && st.players[a.p] && st.players[a.p].mz[a.z];
+    if (m && m.sed) { if (m.sed.fresh) m.sed.fresh = false; else { dropMods(m, 'sed'); m.sed = null; } }      // el +400 de Sed de sangre sólo vale para el ataque siguiente
     if (m && m.mods && m.mods.some(x => x.k === 'punos')) { dropMods(m, 'punos'); log(st, a.p, `${mdef(m).name} gasta su Endurecimiento de los puños`); }
     if (m && m.mods && m.mods.some(x => x.k === 'chi')) { dropMods(m, 'chi'); log(st, a.p, `${mdef(m).name} gasta su Chidori`); }
     if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
@@ -2288,7 +2299,7 @@
   }
   function finishTurn(st) {
     const P = st.players[st.current];
-    for (const s of P.mz) if (s) s.atkMod = 0;
+    for (const s of P.mz) if (s) { s.atkMod = 0; if (s.sed) { dropMods(s, 'sed'); s.sed = null; } }
     for (const s of P.mz) {                                      // Kaioken x10: al terminar el turno se pierden los bonos y llega el agotamiento
       if (!s) continue;
       if (s.ksp && s.ksp.x === st.turn) { dropMods(s, 'kaiospell'); dropMods(s, 'kaiox10'); s.ksp = null; s.exh = { t: st.turn }; log(st, st.current, `${mdef(s).name} queda agotado: 0 ATK y 0 DEF hasta el final de su siguiente turno`); }
@@ -2338,6 +2349,12 @@
       if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Simbiosis: con un anfitrión que no es de Marvel dura 2 turnos
         const hm = P.mz[z];
         if (hm && hm.sym && symLeft(st, hm) === 0) venomSeparate(st, p, z);
+      }
+      if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Carnage: Regeneración simbionte (los efectos negativos se quitan 1 turno después; lo que destruye no se puede evitar)
+        const rm = P.mz[z];
+        if (!rm || rm.down || !rawAbil(rm).includes('regsim')) continue;
+        if (rm.rg != null && rm.rg !== st.turn) { rm.rg = null; const got = seedList(st, p, z, true, true); if (got.length) log(st, p, `Regeneración simbionte: ${mdef(rm).name} se regenera y vuelve a la normalidad (${got.join(', ')})`); }
+        else if (rm.rg == null && seedList(st, p, z, false, true).length) { rm.rg = st.turn; log(st, p, `${mdef(rm).name} empieza a regenerarse`); }
       }
       if (p === st.current) for (let z = 0; z < ZONES; z++) {      // Death Note: la sentencia se cumple durante el turno de su dueño
         const dm = P.mz[z];
@@ -2724,7 +2741,7 @@
         if (T.fused || (tz === z && m.jk.mode === mode) || (tz !== z && T.jk)) continue;
         push({ pw: 'jkmove', mode, target: { vs: p, z: tz } });
       }
-      if (ab.includes('symb') && m.c.id === 'c_venom' && !m.copy && P.symT !== st.turn && !(m.link && m.link.length) && !m.abs && !m.fused && !m.wide) {
+      if (ab.includes('symb') && SYMB[m.c.id] && !m.copy && P.symT !== st.turn && !(m.link && m.link.length) && !m.abs && !m.fused && !m.wide) {
         for (const tz of zonesUp(P)) { const T = P.mz[tz]; if (tz !== z && !T.sym && !T.fused) push({ pw: 'simb', target: { vs: p, z: tz } }); }
       }
       if (ab.includes('sylas') && (u.syT !== st.turn || (u.syN || 0) < g)) {
@@ -2850,7 +2867,7 @@
         const d = def(card);
         if (d.kind === 'monster') {
           if (card.id === 'c_jake') zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.jk && !h.fused) for (const mode of ['sword', 'shield']) out.push({ t: 'attach', hand: i, host: hz, mode }); });
-          if (card.id === 'c_venom' && P.symT !== st.turn) zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.sym && !h.fused) out.push({ t: 'attach', hand: i, host: hz, mode: 'venom' }); });
+          if (SYMB[card.id] && P.symT !== st.turn) zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.sym && !h.fused) out.push({ t: 'attach', hand: i, host: hz, mode: 'venom' }); });
           if (card.id === 'c_gogeta') {                  // Fusión Saiyajin: Goku base + Vegeta base en el campo (quedan vinculados)
             for (const gz of zonesUp(P)) for (const vz of zonesUp(P)) {
               if (gz === vz || P.mz[gz].c.id !== 'c_goku' || P.mz[vz].c.id !== 'c_vegeta' || P.mz[gz].copy || P.mz[vz].copy) continue;
@@ -3395,8 +3412,9 @@
         if (!taken) break;
         P.symT = st.turn;
         T.link = (T.link || []).concat([taken.c]); T.sym = { uid: taken.c.uid, t0: st.turn };
-        addMod(st, T, 'venom', 700 * tg, 650 * tg, 0);
-        log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${700 * tg} ATK y +${650 * tg} DEF)`);
+        const sb = SYMB[taken.c.id] || SYMB.c_venom;
+        addMod(st, T, 'venom', sb[0] * tg, sb[1] * tg, 0);
+        log(st, p, `${nm} usa Simbiosis: se equipa a ${tn} (+${sb[0] * tg} ATK y +${sb[1] * tg} DEF)`);
         break;
       }
       case 'robo': {

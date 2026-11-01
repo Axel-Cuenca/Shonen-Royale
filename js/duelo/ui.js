@@ -1204,7 +1204,7 @@
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
-      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Venom (Simbiosis)', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan' };
+      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Simbionte (Simbiosis)', sed: 'Sed de sangre', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan' };
     /** Técnicas de los Seis Ojos (Guerrero del Infinito): efecto real de cada una, según doPower de engine.js. */
     const SIX_INFO = {
       rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
@@ -1247,7 +1247,7 @@
       if (s.ksp) o.push('Kaioken activo (+400 ATK/DEF)' + (s.ksp.x ? ' · x10 ya usado' : ' · puede llevarse a x10 una vez'));
       if (s.dn) o.push('Death Note: morirá durante el turno de su dueño');
       if (s.jk) o.push('Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada' : 'escudo'));
-      if (s.sym) o.push('Venom equipado (Simbiosis): da +700 ATK / +650 DEF (la mitad de sus estadísticas) y se destruye en su lugar si lo van a destruir. ' + (s.symLeft == null ? 'Es de Marvel: puede quedarse todo el tiempo.' : 'No es de Marvel: le quedan ' + s.symLeft + ' turno(s) y luego se separa y sale como personaje normal.'));
+      if (s.sym) o.push('Simbionte equipado (Venom o Carnage; Simbiosis): da la mitad de sus estadísticas (Venom +700 ATK / +650 DEF, Carnage +650 / +650) y se destruye en su lugar si lo van a destruir. ' + (s.symLeft == null ? 'Es de Marvel: puede quedarse todo el tiempo.' : 'No es de Marvel: le quedan ' + s.symLeft + ' turno(s) y luego se separa y sale como personaje normal.'));
       if (s.gems && s.gems.length) o.push('Gemas robadas que lleva consigo (no ocupan zona; se usan como habilidad en tu turno): ' + s.gems.map(id => C.get(id).name).join(', '));
       if (s.tony) o.push('Materiales: ' + s.tony.mat + ' · armaduras construidas: ' + s.tony.arm + (s.tony.can ? '' : ' · ya usó la armadura este turno'));
       if (s.toge) o.push('Órdenes: ¡Quieto! ' + (s.toge.tq ? 'usada' : 'lista') + ' · ¡Debilítate! ' + (s.toge.td ? 'usada' : 'lista') + ' · ¡Muere! ' + (s.toge.tm ? 'usada' : 'lista') + (s.toge.round ? ' · ya dio una orden este turno' : ''));
@@ -1276,7 +1276,7 @@
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
       majinex: 'Una vez por invocación.', armin: 'Una vez (paga 1000 PV); necesita las 3 zonas libres.', arminsac: 'Cuando Armin muere por un ataque enemigo o una carta; sin pagar PV.', colosal: 'Sólo al entrar por la transformación de Armin.', galsil: 'Pasiva: mientras esté en el campo.', galres: 'Pasiva.', galprot: '2 usos por invocación, 1 por turno.', uidef: 'Una vez por turno.', uicont: 'Una vez por turno.', uivel: 'Pasiva.', manto: 'Una sola vez por invocación.', rasengan: 'Una vez por invocación.', mantok: 'Pasiva.', vinculok: 'Pasiva.', thanosg: 'Pasiva.', thanosp: 'Pasiva.',
-      regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
+      regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', regsim: 'Pasiva: 1 turno después del efecto negativo.', sed: 'Pasiva: tras destruir a un enemigo atacando; un ataque extra por turno.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
     function stolenBox(s) {
@@ -1338,7 +1338,7 @@
       if (s.gem) b.push(['🔮', 'Mente controlada']);
       if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);
       if (s.gems && s.gems.length) b.push(['💎' + s.gems.length, 'Gemas robadas equipadas: ' + s.gems.map(id => C.get(id).name).join(', ')]);
-      if (s.sym) b.push(['🕷️' + (s.symLeft == null ? '' : s.symLeft), 'Venom equipado (Simbiosis)' + (s.symLeft == null ? ': sin límite (anfitrión de Marvel)' : ': le quedan ' + s.symLeft + ' turno(s)')]);
+      if (s.sym) b.push(['🕷️' + (s.symLeft == null ? '' : s.symLeft), 'Simbionte equipado (Simbiosis)' + (s.symLeft == null ? ': sin límite (anfitrión de Marvel)' : ': le quedan ' + s.symLeft + ' turno(s)')]);
       if (s.odin) b.push(['✨' + s.odin.c, 'Odin: ' + s.odin.c + ' carga(s) de vida (3 para revivir a un personaje del cementerio) · bendiciones ' + s.odin.b + '/' + s.odin.max]);
       if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
       if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
@@ -1613,7 +1613,7 @@
               if (gm.length) acts.push({ label: 'Jake: pasar a ' + (mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)') + '…', run: () => choose(gm, 'mz', 'Elige el aliado que lo lleva') });
             }
           }
-          else if (k === 'simb') acts.push({ label: 'Simbiosis: equiparse a un aliado…', desc: '+700 ATK y +650 DEF (la mitad de las estadísticas de Venom) para el aliado; Venom deja de ocupar zona.', run: () => choose(g, 'mz', 'Elige el aliado que será su huésped') });
+          else if (k === 'simb') acts.push({ label: 'Simbiosis: equiparse a un aliado…', desc: 'Le da al aliado la mitad de las estadísticas del simbionte (Venom +700/+650, Carnage +650/+650); el simbionte deja de ocupar zona.', run: () => choose(g, 'mz', 'Elige el aliado que será su huésped') });
           else if (k === 'robo') {
             const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
             acts.push({ label: 'Robo de habilidades…', desc: 'Copia para siempre una habilidad de un personaje rival. Si no hay nada que robar, no gasta el uso.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {

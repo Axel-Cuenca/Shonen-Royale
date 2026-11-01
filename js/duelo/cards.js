@@ -148,7 +148,9 @@
     semilla: ['Semilla del Hermitaño', 'Una vez por turno propio, sobre un aliado: quita sus efectos negativos (reducciones de ATK/DEF, habilidades selladas, Promesa de Poder y cartas rivales dañinas como Karma o la Gema de la Mente) y le devuelve el poder perdido, sin pasar de su valor base.'],
     tonyarm: ['Armadura de Iron Man', 'Cada turno propio completo en el campo reúne materiales. Con el primero construye la primera armadura (+1000 ATK y DEF); con cada turno completo posterior puede mejorarla (+300 ATK y DEF cada vez, sin límite). Una acción por turno.'],
     jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
-    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar a Venom a un aliado (desde la mano o desde el campo): le da la mitad de las estadísticas de Venom (+700 ATK y +650 DEF) y deja de ocupar su zona. Con un personaje de Marvel puede quedarse todo el tiempo; con cualquier otro sólo 2 turnos: después se separa y sale al campo como personaje normal, y no puede acoplarse de nuevo hasta su siguiente turno. Es opcional: también puede invocarse y combatir con normalidad.'],
+    symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar al simbionte (Venom o Carnage) a un aliado, desde la mano o desde el campo: le da la mitad de las estadísticas del simbionte (Venom +700 ATK y +650 DEF; Carnage +650 ATK y +650 DEF) y deja de ocupar su zona. Con un personaje de Marvel puede quedarse todo el tiempo; con cualquier otro sólo 2 turnos: después se separa y sale al campo como personaje normal, y no puede acoplarse de nuevo hasta su siguiente turno. Es opcional: también puede invocarse y combatir con normalidad.'],
+    regsim: ['Regeneración simbionte', 'Si Carnage recibe un efecto negativo (reducción de ATK/DEF, habilidades selladas, Agotamiento, Death Note…), se regenera y vuelve a la normalidad 1 turno después. No sirve contra lo que lo destruye directamente.'],
+    sed: ['Sed de sangre', 'Cada vez que Carnage destruye a un personaje enemigo en un ataque gana +400 ATK y puede atacar otra vez (un ataque extra por turno). El aumento sólo dura para ese ataque extra; si no destruye a su objetivo no gana nada.'],
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
     sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
@@ -658,6 +660,11 @@
       sfx: { transform: V('gogeta-transform'), ability: V('gogeta-ability') }
     }),
     mon({
+      id: 'c_carnage', name: 'Carnage', type: 'marvel', level: 6, atk: 1300, def: 1300, img: I('carnage'), ab: ['symb', 'regsim', 'sed'],
+      text: 'Simbionte: se acopla a un aliado igual que Venom (+650 ATK y +650 DEF, la mitad de sus estadísticas). Regeneración simbionte: si recibe un efecto negativo se regenera 1 turno después (no evita que lo destruyan). Sed de sangre: cuando destruye a un personaje enemigo atacando gana +400 ATK y puede atacar otra vez.',
+      sfx: {}
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -770,7 +777,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

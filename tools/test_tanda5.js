@@ -554,4 +554,44 @@ module.exports = function (T) {
     let k = 0; while (E.actor(s5) === 0 && k++ < 6) act(s5, 0, L(s5, 0).find(a => a.t === 'endTurn') || L(s5, 0).find(a => a.t === 'discard'));
     eq(ids(s5, 1), [null, null, null], 'Brillo: explota en el turno del controlador y destruye al objetivo y a los contiguos');
   }
+
+  section('Carnage');
+  {
+    const root = path.join(__dirname, '..');
+    const c = Cards.get('c_carnage');
+    ok(c && fs.existsSync(path.join(root, c.img)), 'Carnage tiene imagen');
+    for (const a of c.ab) ok(Cards.AB[a], 'Carnage: la habilidad ' + a + ' tiene texto');
+    eq([c.level, c.atk, c.def, c.type], [6, 1300, 1300, 'marvel'], 'estadísticas de Carnage');
+    // Simbiosis: desde la mano a un aliado (+650/+650)
+    const s1 = fresh(); put(s1, 0, 0, 'c_goku'); hand(s1, 0, ['c_carnage']);
+    const at = L(s1, 0).find(a => a.t === 'attach' && a.mode === 'venom');
+    ok(!!at, 'Carnage se puede equipar desde la mano como Venom');
+    if (at) {
+      const n0 = cnt(s1);
+      act(s1, 0, at);
+      const h = s1.players[0].mz[0];
+      ok(h.sym && h.link.some(x => x.id === 'c_carnage'), 'Carnage queda vinculado al anfitrión');
+      eq((h.mods || []).filter(x => x.k === 'venom').map(x => [x.atk, x.def]), [[650, 650]], 'da +650 ATK y +650 DEF');
+      eq(cnt(s1), n0, 'sin pérdida de cartas');
+    }
+    // Sed de sangre: destruye al objetivo -> +400 ATK y un ataque extra
+    const s2 = fresh(); put(s2, 0, 0, 'c_carnage', { summonedTurn: -3 }); put(s2, 1, 0, 'c_bugs_bunny', { pos: 'def' }); put(s2, 1, 1, 'c_bugs_bunny', { pos: 'def' });
+    act(s2, 0, { t: 'toBattle' }); act(s2, 0, atkA(s2, 0, 0, 0)); settle(s2);
+    const cm = s2.players[0].mz[0];
+    ok(!s2.players[1].mz[0], 'Sed de sangre: el objetivo es destruido');
+    ok((cm.mods || []).some(x => x.k === 'sed' && x.atk === 400), 'Sed de sangre: +400 ATK');
+    const a2 = atkA(s2, 0, 0, 1);
+    ok(!!a2, 'Sed de sangre: puede atacar otra vez');
+    if (a2) { act(s2, 0, a2); settle(s2); ok(!(cm.mods || []).some(x => x.k === 'sed'), 'el +400 se pierde tras el ataque extra'); }
+    ok(!atkA(s2, 0, 0, 0) && !L(s2, 0).some(x => x.t === 'attack' && x.zone === 0), 'no hay un tercer ataque');
+    // sin destruir al objetivo no hay bonus ni ataque extra
+    const s3 = fresh(); put(s3, 0, 0, 'c_carnage', { summonedTurn: -3 }); put(s3, 1, 0, 'c_odin', { pos: 'def' });
+    act(s3, 0, { t: 'toBattle' }); act(s3, 0, atkA(s3, 0, 0, 0)); settle(s3);
+    ok(!(s3.players[0].mz[0] && (s3.players[0].mz[0].mods || []).some(x => x.k === 'sed')) && !L(s3, 0).some(x => x.t === 'attack'), 'sin destruir al objetivo no hay Sed de sangre');
+    // Regeneración simbionte: el efecto negativo se quita al cabo de un turno
+    const s4 = fresh(); const m4 = put(s4, 0, 0, 'c_carnage'); m4.mods = [{ k: 'rojo', atk: -500, def: -500, t0: 0, n: 0 }];
+    let k = 0, turns = 0; const first = s4.turn;
+    while (turns < 2 && k++ < 40) { act(s4, E.actor(s4), L(s4, E.actor(s4)).find(a => a.t === 'endTurn') || L(s4, E.actor(s4)).find(a => a.t === 'discard')); if (E.actor(s4) === 0) { turns++; if (turns === 1) ok((s4.players[0].mz[0].mods || []).some(x => x.k === 'rojo'), 'Regeneración: el efecto sigue durante el turno siguiente'); } }
+    ok(!(s4.players[0].mz[0].mods || []).some(x => x.k === 'rojo'), 'Regeneración: el efecto negativo se quita después de 1 turno');
+  }
 };
