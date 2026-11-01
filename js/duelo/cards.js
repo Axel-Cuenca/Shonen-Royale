@@ -150,6 +150,7 @@
     jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
     symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar al simbionte (Venom o Carnage) a un aliado, desde la mano o desde el campo: le da la mitad de las estadísticas del simbionte (Venom +700 ATK y +650 DEF; Carnage +650 ATK y +650 DEF) y deja de ocupar su zona. Con un personaje de Marvel puede quedarse todo el tiempo; con cualquier otro sólo 2 turnos: después se separa y sale al campo como personaje normal, y no puede acoplarse de nuevo hasta su siguiente turno. Es opcional: también puede invocarse y combatir con normalidad.'],
     regsim: ['Regeneración simbionte', 'Si Carnage recibe un efecto negativo (reducción de ATK/DEF, habilidades selladas, Agotamiento, Death Note…), se regenera y vuelve a la normalidad 1 turno después. No sirve contra lo que lo destruye directamente.'],
+    dsombras: ['Diez Sombras', 'Megumi usa las técnicas de sus sombras (acciones de su dueño): Lobos (+400 ATK/DEF este turno, una vez por turno), Nue (mira en privado una magia/trampa boca abajo rival, una vez por turno), Elefante (destruye una magia/trampa rival, una vez por invocación), Sapo (roba una magia/trampa rival a tu mano, una vez por invocación), Serpiente (inmoviliza a un enemigo hasta que Megumi sea destruido: no ataca, no usa habilidades ni cambia de posición; una vez por invocación) y Conejos (evade automáticamente un ataque, habilidad o magia/trampa que lo vaya a afectar, nunca Púrpura; una vez por invocación). Tras usar al menos 2 técnicas distintas puede sacrificarse para invocar a General Mahoraga desde tu mano: ocupa su lugar y recibes 1700 de daño.'],
     pdragon: ['Puño del Dragón', 'Al atacar puede atravesar al personaje elegido y golpear también otras 1-2 casillas del campo de los rivales en el mismo ataque (tú decides cuántas y cuáles antes de atacar). Cada casilla se resuelve como un combate normal, pero todo cuenta como un solo ataque. Una vez por invocación.'],
     sed: ['Sed de sangre', 'Cada vez que Carnage destruye a un personaje enemigo en un ataque gana +400 ATK y puede atacar otra vez (un ataque extra por turno). El aumento sólo dura para ese ataque extra; si no destruye a su objetivo no gana nada.'],
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
@@ -355,7 +356,7 @@
       id: 'c_mahoraga', name: 'General Mahoraga', type: 'jjk', level: 10, atk: 2700, def: 2800, img: I('mahoraga'), ab: ['asimila', 'espada'],
       text: 'Invocación especial: cuando el rival invoca un personaje de 10★ o más puedes invocar a Mahoraga desde tu mano sin gastar la invocación normal. ' +
         'Asimilación: la primera vez que muere en un turno se regenera; si muere otra vez ese turno, muere de verdad. ' +
-        'Espada de Exterminio: los personajes que mata son desterrados.',
+        'Espada de Exterminio: los personajes que mata son desterrados. También puede invocarse mediante Diez Sombras: Megumi Fushiguro se sacrifica y Mahoraga ocupa su lugar.',
       sfx: { ability: V('mahoraga-ability') }
     }),
     mon({
@@ -666,6 +667,11 @@
       sfx: { transform: V('goku_ssj3-transform'), ability: V('goku_ssj3-ability') }
     }),
     mon({
+      id: 'c_megumi', name: 'Megumi Fushiguro', type: 'jjk', level: 3, atk: 1000, def: 1000, img: I('megumi'), ab: ['dsombras'],
+      text: 'Diez Sombras: usa las técnicas de sus invocaciones. Lobos (+400 ATK/DEF ese turno), Nue (ve una magia/trampa boca abajo), Conejos (evade un ataque, habilidad o magia/trampa; no Púrpura), Elefante (destruye una magia/trampa), Sapo (roba una magia/trampa a tu mano), Serpiente (inmoviliza a un enemigo mientras Megumi siga en pie) y, tras 2 técnicas distintas, sacrificarse para invocar a General Mahoraga desde tu mano (recibes 1700 de daño).',
+      sfx: { ability: V('megumi-ability'), attack: V('megumi-attack') }
+    }),
+    mon({
       id: 'c_carnage', name: 'Carnage', type: 'marvel', level: 6, atk: 1300, def: 1300, img: I('carnage'), ab: ['symb', 'regsim', 'sed'],
       text: 'Simbionte: se acopla a un aliado igual que Venom (+650 ATK y +650 DEF, la mitad de sus estadísticas). Regeneración simbionte: si recibe un efecto negativo se regenera 1 turno después (no evita que lo destruyan). Sed de sangre: cuando destruye a un personaje enemigo atacando gana +400 ATK y puede atacar otra vez.',
       sfx: {}
@@ -783,7 +789,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

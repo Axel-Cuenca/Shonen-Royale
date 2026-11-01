@@ -122,7 +122,7 @@
   const atkCount = m => (!m.attacked ? 0 : (m.atkN != null ? m.atkN : 9));
   /** Ataques que puede declarar por turno: 1; 2 con Uno, Dos o como Asesino Sombra. */
   const maxAttacks = (st, m) => ((m.uno === st.turn) || m.form === 'c_kayn_sombra' ? 2 : 1);
-  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !m.god && !(m.canal && m.canal.t === st.turn);      // Freezer: mientras canaliza no ataca
+  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !m.god && !m.snake && !(m.canal && m.canal.t === st.turn);      // Freezer: mientras canaliza no ataca
   const slotByUid = (st, p, uid) => { const P = st.players[p]; for (let z = 0; z < ZONES; z++) if (P.mz[z] && P.mz[z].c.uid === uid) return { p, z, m: P.mz[z] }; return null; };
   function findByUid(st, uid) { for (let p = 0; p < st.n; p++) { const r = slotByUid(st, p, uid); if (r) return r; } return null; }
 
@@ -146,8 +146,19 @@
   /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
   const TITAN_OF = { c_lara: 'c_titan', c_eren: 'c_titan_ataque', c_armin: 'c_titan_colosal', c_bruce_banner: 'c_hulk' };
   /** Sasuke Chico (Sharingan): ¿evade ahora un efecto enemigo que lo elige? Gasta un uso (1 por turno, 3 por invocación). */
-  function sharinganEvade(st, q, z) {
+  /** Megumi: Conejos evade un ataque, una habilidad o una magia/trampa que vaya a afectarlo (una vez por invocación; nunca Púrpura). */
+  function conejosEvade(st, q, z, pw) {
     const m = st.players[q] && st.players[q].mz[z];
+    if (!m || m.down || !has(st, m, 'dsombras') || pw === 'purpura') return false;
+    const uc = uOf(m);
+    if (uc.dsCnj) return false;
+    uc.dsCnj = true; dsUse(m, 'conejos');
+    log(st, q, `${mdef(m).name} usa Conejos: evade el efecto`);
+    return true;
+  }
+  function sharinganEvade(st, q, z, pw) {
+    const m = st.players[q] && st.players[q].mz[z];
+    if (conejosEvade(st, q, z, pw)) return true;
     if (!m || m.down || !has(st, m, 'sharingan')) return false;
     const u = uOf(m);
     if ((u.shN || 0) >= 3 || u.shT === st.turn) return false;
@@ -155,6 +166,8 @@
     log(st, q, `${mdef(m).name} usa Sharingan: evade el efecto (${u.shN}/3)`);
     return true;
   }
+  /** Megumi: anota qué técnicas de Diez Sombras ha usado en esta invocación (distintas). */
+  function dsUse(m, k) { const u = uOf(m); u.dsU = u.dsU || []; if (!u.dsU.includes(k)) u.dsU.push(k); }
   /** Dónde entra la forma transformada: los gigantes ocupan 2/3 zonas; Hulk entra en la casilla de Bruce. */
   function formAnchor(P, z, tid) { const hd = def({ id: tid }); return (hd.wide || hd.huge) ? titanAnchor(P, z, undefined, hd.huge) : (!P.mz[z] ? z : spot(P, hd)); }
   /** Dónde cabe un Titán que debe cubrir la zona z (la de Lara Tybur o Eren). */
@@ -415,6 +428,7 @@
     }
     if (st.domain && st.domain.uid === m.c.uid) { st.domain = null; log(st, -1, 'El dominio termina'); }
     if (m.god !== undefined || (m.c && rawAbil(m).includes('dios'))) for (const Q of st.players) for (const x of Q.mz) if (x && x.god && x.god.uid === m.c.uid) { x.god = null; log(st, -1, `${mdef(x).name} se libera del campo de energía divina`); }
+    if (m.c && rawAbil(m).includes('dsombras')) for (const Q of st.players) for (const x of Q.mz) if (x && x.snake && x.snake.uid === m.c.uid) { x.snake = null; log(st, -1, `${mdef(x).name} se libera de la Serpiente`); }
     if (m.fused) P.sealed = (P.sealed || []).filter(x => x !== m.fused.zb);     // la entidad fusionada deja el campo: se libera la zona reservada
     return m;
   }
@@ -1499,7 +1513,7 @@
     }
     const gd = powerGuard(st, p, a, done);
     if (gd) { st.pending = gd; return; }
-    if (a.target && a.target.vs != null && a.target.z != null && st.team[a.target.vs] !== st.team[p] && !['desmantelar', 'agujero', 'avpred'].includes(a.pw) && sharinganEvade(st, a.target.vs, a.target.z)) return;      // Sasuke Chico
+    if (a.target && a.target.vs != null && a.target.z != null && st.team[a.target.vs] !== st.team[p] && !['desmantelar', 'agujero', 'avpred'].includes(a.pw) && a.target.area !== 'st' && sharinganEvade(st, a.target.vs, a.target.z, a.pw)) return;      // Sasuke Chico y Megumi (Conejos)
     const m = st.players[p].mz[a.zone], nmU = m ? mdef(m).name : '', yutaU = isYuta(m);
     doPower(st, p, a);
     const idn = PW_AB[a.pw];
@@ -1964,7 +1978,7 @@
     if (PW_RED.includes(a.pw)) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
     return false;
   }
-  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama' };
+  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
   const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
@@ -2198,6 +2212,7 @@
     st.cmb = a ? { p: a.p, z: a.z, target: a.target, vs: a.vs, turn: st.turn } : null;      // el combate sigue en curso (bonos de Warwick)
     if (!a || a.negated || st.winner !== null) { if (a) atkDone(st, a); return; }
     const at0 = st.players[a.p].mz[a.z];
+    if (at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && conejosEvade(st, a.vs, a.target)) { atkDone(st, a); return; }      // Megumi evade el ataque
     if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
       const mm = meliFor(st, a.p, a.vs);
       if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'attack', player: mm.q, mz: mm.z, stage: 'ask', a, nm: mdef(at0).name }; return; }
@@ -2233,6 +2248,7 @@
       if (st.winner !== null || st.players[a.p].mz[a.z] !== at0) break;
       const T = st.players[ex.vs];
       if (!T || !T.alive || !T.mz[ex.z]) continue;
+      if (conejosEvade(st, ex.vs, ex.z)) continue;
       log(st, a.p, `${mdef(at0).name} atraviesa y golpea la casilla ${ex.z + 1}${multi(st) ? ' de ' + (T.name || 'un rival') : ''}`);
       if (multi(st)) st.log[st.log.length - 1].q = ex.vs;
       resolveCombat(st, { p: a.p, z: a.z, target: ex.z, vs: ex.vs });
@@ -2308,7 +2324,7 @@
   }
   function finishTurn(st) {
     const P = st.players[st.current];
-    for (const s of P.mz) if (s) { s.atkMod = 0; if (s.sed) { dropMods(s, 'sed'); s.sed = null; } }
+    for (const s of P.mz) if (s) { s.atkMod = 0; if (s.sed) { dropMods(s, 'sed'); s.sed = null; } dropMods(s, 'lobos'); }
     for (const s of P.mz) {                                      // Kaioken x10: al terminar el turno se pierden los bonos y llega el agotamiento
       if (!s) continue;
       if (s.ksp && s.ksp.x === st.turn) { dropMods(s, 'kaiospell'); dropMods(s, 'kaiox10'); s.ksp = null; s.exh = { t: st.turn }; log(st, st.current, `${mdef(s).name} queda agotado: 0 ATK y 0 DEF hasta el final de su siguiente turno`); }
@@ -2630,7 +2646,7 @@
   function powerActs0(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
     P.mz.forEach((m, z) => {
-      if (!m || m.down || m.god) return;      // atrapado por Vegeta Dios: no usa habilidades
+      if (!m || m.down || m.god || m.snake) return;      // atrapado por Vegeta Dios o inmovilizado por la Serpiente: no usa habilidades
       let ab = abil(st, m);
       const u = uOf(m), g = gx(P, z);
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
@@ -2683,6 +2699,15 @@
       if (ab.includes('gyomei2') && canOnce(P, z, u, 'conc2')) push({ pw: 'conc2' });
       if (ab.includes('gyomei3') && canOnce(P, z, u, 'marca')) push({ pw: 'marca' });
       if (ab.includes('patriarca') && (u.pat || 0) < 3 * g && (u.patT !== st.turn || (u.patTn || 0) < g)) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z)) push({ pw: 'desp', target: t });      // nunca sobre sí mismo
+      // ----- Megumi: Diez Sombras -----
+      if (ab.includes('dsombras')) {
+        if (u.dsLT !== st.turn) push({ pw: 'dslobos' });
+        if (u.dsNT !== st.turn) for (const e of fl) zonesWith(st.players[e].st).forEach(tz => { const sx = st.players[e].st[tz]; if (sx.down && !sx.prison && !(P.nue || []).some(n => n.uid === sx.c.uid)) push({ pw: 'dsnue', target: { vs: e, z: tz, area: 'st' } }); });
+        if (!u.dsEle) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dselef', target: { vs: e, z: tz, area: 'st' } });
+        if (!u.dsSap) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dssapo', target: { vs: e, z: tz, area: 'st' } });
+        if (!u.dsSer) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].snake && canTarget(st, p, e, tz)) push({ pw: 'dsserp', target: { vs: e, z: tz } });
+        if ((u.dsU || []).length >= 2 && P.hand.some(c => c.id === 'c_mahoraga')) push({ pw: 'dsmaho' });
+      }
       // ----- Odin -----
       if (ab.includes('odincarga') && (u.odc || 0) >= 3) P.grave.forEach(i => { const cd = def(i); if (cd.kind === 'monster' && spot(P, cd) >= 0) push({ pw: 'odinvida', u: i.uid }); });
       if (ab.includes('odinrev') && (u.orevT !== st.turn || (u.orevN || 0) < g)) for (const e of fl) {
@@ -2931,6 +2956,7 @@
       });
       P.mz.forEach((m, z) => {
         if (!m) return;
+        if (m.snake) return;      // Serpiente de Megumi: no cambia de posición
         if (m.down && m.summonedTurn < st.turn) out.push({ t: 'flip', zone: z });
         if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn && !(m.pos === 'atk' && has(st, m, 'rikamal') && !rikaState(st).happy)) out.push({ t: 'pos', zone: z });
       });
@@ -3167,6 +3193,66 @@
         u.odc -= 3;
         log(st, p, `${nm} gasta 3 cargas de vida para revivir a ${def(inst).name}`);
         if (reviveInst(st, p, inst) < 0) log(st, p, 'no hay espacio en el campo');
+        break;
+      }
+      case 'dslobos': {
+        u.dsLT = st.turn; dsUse(m, 'lobos');
+        addMod(st, m, 'lobos', 400 * g, 400 * g, 0);
+        log(st, p, `${nm} usa Lobos: +${400 * g} ATK y +${400 * g} DEF este turno`);
+        break;
+      }
+      case 'dsnue': {
+        u.dsNT = st.turn; dsUse(m, 'nue');
+        const e = a.target.vs, sx = st.players[e].st[a.target.z];
+        log(st, p, `${nm} usa Nue`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (sx && sx.down) { P.nue = (P.nue || []).filter(n => n.uid !== sx.c.uid).concat([{ uid: sx.c.uid, vs: e, z: a.target.z }]); }
+        break;
+      }
+      case 'dselef': {
+        u.dsEle = true; dsUse(m, 'elefante');
+        const e = a.target.vs, sx = st.players[e].st[a.target.z];
+        log(st, p, `${nm} lanza al Elefante contra ${sx && !sx.down ? def(sx.c).name : 'una carta de magia/trampa'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (sx) removeST(st, e, a.target.z);
+        break;
+      }
+      case 'dssapo': {
+        u.dsSap = true; dsUse(m, 'sapo');
+        const e = a.target.vs, sx = st.players[e].st[a.target.z];
+        log(st, p, `${nm} usa Sapo`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (sx && !sx.prison) {
+          st.players[e].st[a.target.z] = null;
+          sx.c.spent = false; P.hand.push(sx.c);
+          st.players[e].loan = (st.players[e].loan || 0) + 1; P.loan = (P.loan || 0) - 1;      // la carta robada sigue contando para su dueño
+          log(st, p, `${nm} roba ${sx.down ? 'una carta de magia/trampa' : def(sx.c).name} y la lleva a su mano`);
+        }
+        break;
+      }
+      case 'dsserp': {
+        u.dsSer = true; dsUse(m, 'serpiente');
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        log(st, p, `${nm} usa Serpiente`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (tm) { tm.snake = { uid: m.c.uid }; log(st, p, `${tm.down ? 'Un personaje boca abajo' : mdef(tm).name} queda inmovilizado hasta que ${nm} sea destruido`); }
+        break;
+      }
+      case 'dsmaho': {
+        const hi = handIdx(P, 'c_mahoraga');
+        if (hi < 0 || (u.dsU || []).length < 2) break;
+        const z0 = a.zone;
+        log(st, p, `${nm} se sacrifica para invocar al General Mahoraga`);
+        removeMonster(st, p, z0, 'grave');
+        if (P.mz[z0] || st.winner !== null) break;
+        const hi2 = handIdx(P, 'c_mahoraga');
+        if (hi2 < 0) break;
+        const inst = P.hand.splice(hi2, 1)[0]; inst.spent = false;
+        P.mz[z0] = mkSlot(st, inst, { pos: 'atk' });
+        log(st, p, 'invoca especialmente (Diez Sombras) a General Mahoraga');
+        entered(st, p, z0);
+        log(st, p, 'Diez Sombras: la diferencia de ATK entre ambos (1700) recae en su dueño');
+        lose(st, p, 1700);
         break;
       }
       case 'odinrev': {
@@ -4015,6 +4101,7 @@
     if (s.sealed && s.sealed.length) v.sealedAb = s.sealed.map(x => x.ab);
     if (s.owner != null && s.owner !== st.players.indexOf(P)) v.owner = s.owner;
     if (s.promesa) v.promesa = true;
+    if (s.snake) v.snake = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
     { const uu = uOf(s), yd = !!uu.ydom && abil(st, s).includes('yutadom');
       if (uu.canon || uu.kk6 || uu.gen || yd || (uu.pdr && abil(st, s).includes('pdragon'))) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen, ydom: yd, pdr: !!uu.pdr && abil(st, s).includes('pdragon') }; }
@@ -4126,6 +4213,9 @@
     const spec = (!st.players[seat].alive && st.winner === null) || !!(opts && opts.all);      // opts.all: campo de práctica, se ve todo
     const peek = st.players[seat].mz.some(m => m && !m.down && rawAbil(m).includes('detect'));      // Voldemort: Detección de mentiras (información privada)
     const players = st.players.map((_, i) => playerView(st, i, i === seat || spec, peek));
+    { const nu = st.players[seat].nue;      // Megumi: Nue ve en privado una carta boca abajo
+      if (nu && nu.length) {
+        for (const n of nu.filter(n => { const sx = st.players[n.vs] && st.players[n.vs].st[n.z]; return sx && sx.down && sx.c.uid === n.uid; })) players[n.vs].st[n.z] = Object.assign(stView(st.players[n.vs].st[n.z], true, st), { peeked: true }); } }
     const fl = foes(st, seat);
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {

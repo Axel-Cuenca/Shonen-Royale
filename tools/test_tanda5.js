@@ -628,4 +628,60 @@ module.exports = function (T) {
     const s3 = fresh(); ready(s3, 0, 12); put(s3, 0, 0, 'c_goku'); hand(s3, 0, ['c_goku_ssj3']);
     ok(L(s3, 0).some(x => x.t === 'power' && x.pw === 'xform'), 'Goku SSJ3 se puede invocar transformando a Goku');
   }
+
+  section('Megumi Fushiguro');
+  {
+    const root = path.join(__dirname, '..');
+    const c = Cards.get('c_megumi');
+    ok(c && fs.existsSync(path.join(root, c.img)), 'Megumi tiene imagen');
+    for (const k in c.sfx) ok(fs.existsSync(path.join(root, c.sfx[k])), 'Megumi sonido ' + k + ' existe');
+    for (const a of c.ab) ok(Cards.AB[a], 'Megumi: la habilidad ' + a + ' tiene texto');
+    eq([c.level, c.atk, c.def, c.type], [3, 1000, 1000, 'jjk'], 'estadísticas de Megumi');
+    const s = fresh(); put(s, 0, 0, 'c_megumi'); put(s, 1, 0, 'c_goku'); putST(s, 1, 0, 'c_tormenta', { down: true }); putST(s, 1, 1, 'c_gema_poder', { down: false }); hand(s, 0, ['c_mahoraga']);
+    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: no sin usar 2 técnicas');
+    // Lobos
+    act(s, 0, pw(s, 0, 'dslobos'));
+    ok((s.players[0].mz[0].mods || []).some(x => x.k === 'lobos' && x.atk === 400 && x.def === 400), 'Lobos: +400/+400');
+    ok(!pw(s, 0, 'dslobos'), 'Lobos: una vez por turno');
+    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: con 1 técnica todavía no');
+    // Nue: ve en privado
+    act(s, 0, pw(s, 0, 'dsnue'));
+    const v0 = E.view(s, 0), v1 = E.view(s, 1);
+    ok(v0.players[1].st[0].peeked && v0.players[1].st[0].c.id === 'c_tormenta', 'Nue: el dueño de Megumi ve la carta');
+    ok(v1.players[1].st[0].c && !v1.players[1].st[0].peeked, 'el rival ve la suya (es suya)');
+    const v0b = E.view(s, 0); ok(!v0b.players[1].st[1].peeked, 'sólo la elegida');
+    ok(pw(s, 0, 'dsmaho'), 'Mahoraga: tras 2 técnicas se puede invocar');
+    // Serpiente
+    act(s, 0, pw(s, 0, 'dsserp'));
+    ok(s.players[1].mz[0].snake, 'Serpiente: Goku inmovilizado');
+    ready(s, 1); s.players[1].mz[0].attacked = false; s.players[1].mz[0].atkN = 0;
+    ok(!L(s, 1).some(x => x.t === 'pos'), 'Serpiente: no cambia de posición');
+    act(s, 1, { t: 'toBattle' }); ok(!L(s, 1).some(x => x.t === 'attack' && x.zone === 0), 'Serpiente: no ataca');
+    // Elefante y Sapo
+    ready(s, 0);
+    const n0 = cnt(s);
+    act(s, 0, pw(s, 0, 'dselef', a => a.target.z === 1));
+    ok(!s.players[1].st[1], 'Elefante: destruye la carta boca arriba');
+    act(s, 0, pw(s, 0, 'dssapo', a => a.target.z === 0)); settle(s);
+    ok(!s.players[1].st[0] && s.players[0].hand.some(x => x.id === 'c_tormenta'), 'Sapo: la carta pasa a la mano de Megumi');
+    eq(cnt(s), n0, 'sin pérdida de cartas');
+    // Mahoraga
+    const lp = s.players[0].lp;
+    act(s, 0, pw(s, 0, 'dsmaho')); settle(s);
+    eq(ids(s, 0)[0], 'c_mahoraga', 'Mahoraga ocupa el lugar de Megumi');
+    ok(s.players[0].grave.some(x => x.id === 'c_megumi'), 'Megumi va al cementerio');
+    eq(s.players[0].lp, lp - 1700, 'el dueño recibe 1700 de daño');
+    ok(!s.players[1].mz[0].snake, 'la Serpiente se libera al irse Megumi');
+    ok(!s.players[0].normalUsed, 'es invocación especial');
+    eq(cnt(s), n0, 'sin pérdida de cartas tras Mahoraga');
+    // Conejos: evade un ataque
+    const s2 = fresh(1); put(s2, 0, 0, 'c_megumi'); put(s2, 1, 0, 'c_goku');
+    act(s2, 1, { t: 'toBattle' }); act(s2, 1, atkA(s2, 1, 0, 0)); settle(s2);
+    ok(ids(s2, 0)[0] === 'c_megumi' && ids(s2, 1)[0] === 'c_goku', 'Conejos: Megumi evade el ataque');
+    // segunda vez ya no (una por invocación)
+    s2.players[1].mz[0].attacked = false; s2.players[1].mz[0].atkN = 0; s2.players[1].mz[0].atkMod = 0;
+    const lp2 = s2.players[1].lp;
+    act(s2, 1, atkA(s2, 1, 0, 0)); settle(s2);
+    ok(ids(s2, 0)[0] !== 'c_megumi' || s2.players[1].lp < lp2 || ids(s2, 1)[0] !== 'c_goku', 'Conejos: sólo una vez por invocación');
+  }
 };
