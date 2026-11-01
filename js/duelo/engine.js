@@ -262,7 +262,7 @@
     for (let z = 0; z < ZONES; z++) {
       const s = P.st[z];
       if (s) {
-        if (s.prison) { const O = st.players[s.prison.owner]; O.grave.push(s.prison.m.c); for (const l of (s.prison.m.link || [])) O.grave.push(l);
+        if (s.prison) { const O = st.players[s.prison.owner]; O.grave.push(s.prison.m.c); for (const l of (s.prison.m.link || [])) st.players[l.by != null ? l.by : s.prison.owner].grave.push(l);
           const ab = s.prison.m.abs; if (ab) { const AO = st.players[ab.owner]; AO.grave.push(ab.c); for (const l of (ab.link || [])) AO.grave.push(l); }      // lo que tenía absorbido el personaje sellado vuelve a su dueño
         }
         P.grave.push(s.c); P.st[z] = null;
@@ -4114,7 +4114,7 @@
       }
     });
     for (const s of P.st) if (s) n++;
-    for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.owner === p) n += 1 + (s.prison.m.link ? s.prison.m.link.length : 0);
+    for (const Q of st.players) for (const s of Q.st) if (s && s.prison) { if (s.prison.owner === p) n++; for (const l of (s.prison.m.link || [])) if ((l.by != null ? l.by : s.prison.owner) === p) n++; }
     if (st.chain && st.chain.p === p) n++;
     else if (st.pending && (st.pending.ab === 'glove' || st.pending.ab === 'uidef') && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete / magia a la espera de la Defensa instintiva de Goku UI
     // lo absorbido por Cell cuenta para su dueño original
