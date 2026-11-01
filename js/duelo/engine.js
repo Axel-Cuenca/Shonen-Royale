@@ -87,7 +87,7 @@
     let a = rawAbil(m);
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
     if (m.spentAb && m.spentAb.length) a = a.filter(x => !m.spentAb.includes(x));      // X: habilidades consumidas para siempre
-    return a;
+    return a.includes('gogres') ? a.concat('rikaprot') : a;      // Gogeta: Resistencia absoluta = inmune a las magias y trampas
   }
   const has = (st, m, id) => abil(st, m).includes(id);
   /** Dominio de Yuta: las magias y trampas que ya estaban en el campo quedan desactivadas mientras dure. */
@@ -525,6 +525,10 @@
     const ab = abil(st, m), nm = mdef(m).name;
     const fromCard = ctx.src === 'spell' || ctx.src === 'trap';
     if (m.six && !ctx.ignoreSix && ctx.src !== 'mark') { log(st, p, `${nm} es intocable: los Seis Ojos lo protegen`); return false; }
+    if (ctx.src === 'combat' && ab.includes('gogres')) {      // Gogeta: sólo lo derrota el ataque de un enemigo con más de 2800 ATK
+      const ak = ctx.defn && ctx.by ? slotByUid(st, ctx.by.p, ctx.by.uid) : null;
+      if (!ak || atkOf(st, st.players[ak.p], ak.z) <= 2800) { log(st, p, `${nm} resiste el combate: sólo lo derrota un ataque con más de 2800 ATK`); noteSaved(st, nm); return false; }
+    }
     if (cloakOn(P, z) && ctx.src !== 'spell') { log(st, p, `${nm} es invisible: sólo las cartas mágicas pueden destruirlo`); return false; }      // Capa de Invisibilidad
     {   // Minions: Sacrificio protector (no ante magias)
       const ms = ctx.src !== 'spell' ? minionsOf(P, z) : null;
@@ -602,7 +606,7 @@
     if (killer) {
       const ku = uOf(killer.m);
       ku.kills = (ku.kills || 0) + 1;
-      onKill(st, killer, { p, name: nm, pos: victimPos }, ctx);
+      onKill(st, killer, { p, name: nm, pos: victimPos, abs: victimAbs }, ctx);
       const vinst = st.team[killer.p] !== st.team[p] ? venomOf(killer.m) : null;                 // Venom, o su portador, destruye a un enemigo
       if (vinst) {
         const known = (vinst.keep || []).map(k => k.id).concat(def(vinst).ab || []);
@@ -672,6 +676,11 @@
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (ctx.src === 'combat' && kab.includes('cazador')) {      // Dante: Cazador de demonios
+      const ud = uOf(km); ud.dk = (ud.dk || 0) + 1;
+      const own = rawAbil(km), opts = ['atk', 'def'].concat(Array.from(new Set((victim.abs || []).filter(x => STEALABLE.includes(x) && !own.includes(x)))));
+      st.trig.push({ k: 'dante', p: killer.p, uid: km.c.uid, from: victim.name, opts });
+    }
     if (ctx.src === 'combat' && kab.includes('marcamal') && !uOf(km).marca2) st.trig.push({ k: 'marcamal', p: killer.p, uid: km.c.uid });
     if (ctx.src === 'combat') { const ms = minionsOf(P, killer.z); if (ms) { ms.min.n++; log(st, killer.p, `Un Minion se une al ejército de ${mdef(km).name} (${ms.min.n})`); } }
     if (ctx.src === 'combat' && kab.includes('warsangre')) { heal(st, killer.p, 500); log(st, killer.p, `${mdef(km).name} recupera 500 PV (Sed de sangre)`); }
@@ -729,6 +738,11 @@
         gi.rev = true;
         log(st, t.p, `${def(gi).name} revive con Supervivencia Saiyan`);
         reviveInst(st, t.p, gi);
+      } else if (t.k === 'dante') {                     // elige la recompensa por el asesinato
+        const dk = slotByUid(st, t.p, t.uid);
+        if (!dk || dk.m.down) continue;
+        const own = rawAbil(dk.m);
+        st.pending = { k: 'ability', ab: 'dante', player: t.p, uid: t.uid, stage: 'ask', from: t.from, opts: t.opts.filter(o => o === 'atk' || o === 'def' || !own.includes(o)), n: dk.m.c.id === 'c_dante_dt' ? 400 : 300 };
       } else if (t.k === 'marcamal') {                  // Sasuke Chico: Marca de maldición tras vencer en combate
         const sk = slotByUid(st, t.p, t.uid);
         if (!sk || sk.m.down || uOf(sk.m).marca2) continue;
@@ -1319,7 +1333,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', avada: 'avada', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', brillo: 'brillo', dtrig: 'cazador', dios: 'dios', avada: 'avada', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -2305,6 +2319,15 @@
       m.mods = m.mods.filter(x => !((x.atk < 0 || x.def < 0) && x.t0 !== st.turn));
       log(st, st.current, `${mdef(m).name} se regenera (Regeneración Namekusein): vuelve a su estado normal`);
     }
+    { const cp = st.players[st.current];      // Gogeta: Brillo explota en el turno del controlador
+      for (let z = 0; z < ZONES; z++) {
+        const bm = cp.mz[z];
+        if (!bm || !bm.bri || bm.bri.t0 === st.turn) continue;
+        const by = bm.bri.by, bn = mdef(bm).name;
+        bm.bri = null;
+        log(st, by, `¡El Brillo explota dentro de ${bn}!`);
+        for (const zz of [z - 1, z, z + 1]) if (zz >= 0 && zz < ZONES && cp.mz[zz]) destroyMonster(st, st.current, zz, { src: 'power', bp: by });
+      } }
     expireMods(st);
     for (const Q of st.players) for (let i = 0; i < ZONES; i++) { const s = Q.st[i]; if (s && s.alma && elapsed(st, s.alma.t0) >= 5) { Q.st[i] = null; Q.grave.push(s.c); log(st, -1, 'La Gema del Alma se agota y va al cementerio'); } }
     prisons(st);
@@ -2604,6 +2627,8 @@
       if (ab.includes('chidori') && u.chiT !== st.turn && !(m.mods || []).some(x => x.k === 'chi') && canAttackSlot(st, m)) push({ pw: 'chidori' });
       if (m.c.id === 'c_cell' && m.abs && [5, 6].includes(lvl({ c: m.abs.c })) && !m.copy) P.hand.forEach((c, i) => { if (c.id === 'c_cell_perfecto') push({ pw: 'cellperf', hand: i }); });
       if (ab.includes('avada') && u.avT !== st.turn) for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) { if (q === p && tz === z) continue; if (st.players[q].alive && canTarget(st, p, q, tz)) push({ pw: 'avada', target: { vs: q, z: tz } }); }
+      if (ab.includes('cazador') && m.c.id === 'c_dante' && (u.dk || 0) >= 3) P.hand.forEach((c, i) => { if (c.id === 'c_dante_dt') push({ pw: 'dtrig', hand: i }); });
+      if (ab.includes('brillo') && !u.bri && !m.fused) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 11 && !tm.bri && canTarget(st, p, e, tz)) push({ pw: 'brillo', target: { vs: e, z: tz } }); }
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2809,7 +2834,7 @@
       } else if (pd.k === 'pick') {
         for (const u of pd.cands) out.push({ t: 'pick', uid: u });
       } else if (pd.k === 'ability') {
-        if (pd.ab === 'steal' || pd.ab === 'vlearn' || pd.ab === 'marcamal') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
+        if (pd.ab === 'steal' || pd.ab === 'vlearn' || pd.ab === 'marcamal' || pd.ab === 'dante') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
@@ -2826,6 +2851,12 @@
         if (d.kind === 'monster') {
           if (card.id === 'c_jake') zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.jk && !h.fused) for (const mode of ['sword', 'shield']) out.push({ t: 'attach', hand: i, host: hz, mode }); });
           if (card.id === 'c_venom' && P.symT !== st.turn) zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.sym && !h.fused) out.push({ t: 'attach', hand: i, host: hz, mode: 'venom' }); });
+          if (card.id === 'c_gogeta') {                  // Fusión Saiyajin: Goku base + Vegeta base en el campo (quedan vinculados)
+            for (const gz of zonesUp(P)) for (const vz of zonesUp(P)) {
+              if (gz === vz || P.mz[gz].c.id !== 'c_goku' || P.mz[vz].c.id !== 'c_vegeta' || P.mz[gz].copy || P.mz[vz].copy) continue;
+              if (spot(P, d, [gz, vz]) >= 0) out.push({ t: 'fusion', hand: i, gz, vz });
+            }
+          }
           if (d.couple) {                                // Anti-Venom: se acopla a un aliado (no ocupa casilla)
             if (P.normalUsed) return;
             const need = C().tributesFor(d.level);
@@ -2970,6 +3001,22 @@
         m.abs = null;
         log(st, p, `${def(r.c).name} va al cementerio de su dueño`);
         transformInto(st, p, a.zone, a.hand, null);
+        break;
+      }
+      case 'dtrig': {
+        const old = m, ob = old.bonus ? { atk: old.bonus.atk, def: old.bonus.def } : null, oe = (old.ext || []).slice(), of = Object.assign({}, old.extFrom), od = uOf(old).dk || 0;
+        transformInto(st, p, a.zone, a.hand, null);
+        const nm2 = P.mz[a.zone];
+        if (nm2) { if (ob) nm2.bonus = ob; nm2.ext = oe; nm2.extFrom = of; }      // las mejoras y habilidades pasan íntegras a Devil Trigger
+        break;
+      }
+      case 'brillo': {
+        u.bri = true;
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        tm.bri = { by: p, t0: st.turn };
+        log(st, p, `${nm} usa Brillo: se introduce en ${mdef(tm).name} y explotará en el turno de su controlador`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
         break;
       }
       case 'avada': {
@@ -3522,6 +3569,15 @@
       case 'spow': doSpower(st, p, a); break;
       case 'toBattle': st.phase = 'battle'; log(st, p, 'pasa a la fase de batalla'); break;
       case 'attack': if (a.hira) hiraAttack(st, p, a); else declareAttack(st, p, a.zone, a.target, a.vs); break;
+      case 'fusion': {
+        const inst = P.hand.splice(a.hand, 1)[0], g = P.mz[a.gz], v = P.mz[a.vz];
+        const links = [g.c, v.c].concat(g.link || [], v.link || []);
+        takeOff(st, p, a.gz, 'link'); takeOff(st, p, a.vz, 'link');
+        log(st, p, 'Goku y Vegeta se fusionan');
+        const z = specialSummon(st, p, inst, 'atk');
+        if (P.mz[z]) P.mz[z].link = links;
+        break;
+      }
       case 'attach': attachCard(st, p, a.hand, a.host, a.mode); break;
       case 'endTurn': endTurn(st); break;
       case 'respond': {
@@ -3793,6 +3849,20 @@
       P.mz[anchor] = mkSlot(st, inst, { pos: 'atk', link: [lara], wide: !!def(inst).wide, since: st.turn, attacked: true });
       log(st, p, `${def(lara).name} muere y se invoca especialmente a ${def(inst).name}`);
       if (tid === 'c_titan_colosal') colosalBlast(st, p, anchor);
+      return;
+    }
+    if (pd.ab === 'dante') {
+      const dk = slotByUid(st, p, pd.uid);
+      if (a.use === false || !a.pick || !dk) { log(st, p, 'decide no tomar ninguna recompensa'); return; }
+      const m = dk.m, n = pd.n;
+      m.bonus = m.bonus || { atk: 0, def: 0 };
+      if (a.pick === 'atk') { m.bonus.atk += n; log(st, p, `${mdef(m).name} obtiene +${n} ATK (Cazador de demonios)`); }
+      else if (a.pick === 'def') { m.bonus.def += n; log(st, p, `${mdef(m).name} obtiene +${n} DEF (Cazador de demonios)`); }
+      else if (pd.opts.includes(a.pick)) {
+        m.ext = (m.ext || []).slice(); m.extFrom = Object.assign({}, m.extFrom);
+        if (!m.ext.includes(a.pick)) { m.ext.push(a.pick); m.extFrom[a.pick] = pd.from; }
+        log(st, p, `${mdef(m).name} absorbe la habilidad de ${pd.from}`);
+      }
       return;
     }
     if (pd.ab === 'marcamal') {

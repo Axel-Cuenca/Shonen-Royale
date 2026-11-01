@@ -83,6 +83,9 @@
     inmort: ['Inmortalidad', 'Si es destruido, regresa al campo en el próximo turno de su jugador. Puede regresar hasta 2 veces.'],
     detect: ['Detección de mentiras', 'Mientras esté en el campo, todas las cartas boca abajo de todos los jugadores se ven (sólo para quien lo controla).'],
     vimm: ['Resistencia a efectos negativos', 'Los efectos negativos no le afectan, salvo los que lo destruyen.'],
+    cazador: ['Cazador de demonios', 'Cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +ATK, +DEF o la habilidad del muerto (se acumulan). Con 3 asesinatos puede transformarse en Dante Devil Trigger desde tu mano, pasándole todo.'],
+    brillo: ['Brillo', 'Una vez por invocación: se introduce en un personaje enemigo de 11★ o menos. En el turno de su controlador explota y destruye a ese personaje y a los de las casillas contiguas.'],
+    gogres: ['Resistencia absoluta', 'Inmune a los efectos de magias y trampas. En combate sólo lo derrota el ataque de un personaje enemigo con más de 2800 ATK.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -640,6 +643,21 @@
       sfx: { ability: V('voldemort-ability') }
     }),
     mon({
+      id: 'c_dante', name: 'Dante', type: 'dmc', level: 5, atk: 1700, def: 1700, img: I('dante'), ab: ['cazador'],
+      text: 'Cazador de demonios: cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +300 ATK, +300 DEF o la habilidad del muerto (todo se acumula; usa las habilidades cuando quieras). Con 3 asesinatos y Dante Devil Trigger en la mano puede transformarse en él (vinculados; pasa mejoras y habilidades).',
+      sfx: { attack: V('dante-attack'), transform: V('dante-transform') }
+    }),
+    mon({
+      id: 'c_dante_dt', name: 'Dante Devil Trigger', type: 'dmc', level: 7, atk: 2000, def: 2000, img: I('dante_dt'), ab: ['cazador'],
+      text: 'Forma de Dante, vinculada a él. Cazador de demonios: recompensas de +400 ATK, +400 DEF o la habilidad del muerto. Conserva las mejoras y habilidades que Dante acumuló.',
+      sfx: { transform: V('dante_dt-transform') }
+    }),
+    mon({
+      id: 'c_gogeta', name: 'Gogeta', type: 'dbz', level: 11, atk: 2800, def: 2800, img: I('gogeta'), ab: ['gogres', 'brillo'],
+      text: 'Se invoca con 3 tributos, o por Fusión Saiyajin con Goku y Vegeta base en tu campo (quedan vinculados a él). Brillo: se introduce en un enemigo de 11★ o menos y explota en el turno de su controlador, destruyéndolo a él y a los contiguos. Resistencia absoluta: inmune a magias y trampas; sólo lo derrota un ataque con más de 2800 ATK.',
+      sfx: { transform: V('gogeta-transform'), ability: V('gogeta-ability') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -752,7 +770,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

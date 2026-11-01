@@ -484,4 +484,74 @@ module.exports = function (T) {
     E.legal; sr.players[0].mz[0].mods = []; 
     eq(b, 2000, 'Voldemort: 2000 ATK');
   }
+
+  section('Dante y Dante Devil Trigger');
+  {
+    const root = path.join(__dirname, '..');
+    for (const id of ['c_dante', 'c_dante_dt', 'c_gogeta']) {
+      const c = Cards.get(id);
+      ok(c && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
+      for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
+      for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': la habilidad ' + a + ' tiene texto');
+    }
+    const kill = (st, victimId) => {
+      put(st, 1, 0, victimId, { pos: 'def' });
+      ready(st, 0); st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
+      act(st, 0, { t: 'toBattle' }); act(st, 0, atkA(st, 0, 0, 0));
+      let k = 0; while (st.pending && st.pending.ab !== 'dante' && k++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
+    };
+    const st = fresh(); put(st, 0, 0, 'c_dante'); hand(st, 0, ['c_dante_dt']);
+    kill(st, 'c_kuriboh');
+    ok(st.pending && st.pending.ab === 'dante' && st.pending.opts.includes('atk') && st.pending.opts.includes('def'), 'Cazador: ofrece fuerza / resistencia tras el asesinato');
+    act(st, 0, { t: 'ability', pick: 'atk' });
+    eq(E.view(st, 0).players[0].mz[0].atk, 2000, 'Dante: +300 ATK');
+    eq(!!pw(st, 0, 'dtrig'), false, 'con 1 asesinato todavía no hay transformación');
+    kill(st, 'c_kuriboh'); if (st.pending) act(st, 0, { t: 'ability', pick: 'def' });
+    kill(st, 'c_kuriboh'); if (st.pending) act(st, 0, { t: 'ability', pick: 'atk' });
+    ready(st, 0);
+    const tf = pw(st, 0, 'dtrig');
+    ok(!!tf, 'con 3 asesinatos y Devil Trigger en la mano se puede transformar');
+    if (tf) {
+      const before = E.view(st, 0).players[0].mz[0];
+      act(st, 0, tf); settle(st);
+      const nm = st.players[0].mz[0];
+      ok(nm.c.id === 'c_dante_dt' && nm.link.some(c => c.id === 'c_dante'), 'Devil Trigger entra y Dante queda vinculado');
+      eq(E.view(st, 0).players[0].mz[0].atk, 2000 + 600, 'las mejoras de Dante pasan íntegras (+600 ATK) a Devil Trigger');
+    }
+  }
+
+  section('Gogeta');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_vegeta'); hand(st, 0, ['c_gogeta']);
+    const fu = L(st, 0).find(a => a.t === 'fusion');
+    ok(!!fu, 'Fusión Saiyajin: con Goku y Vegeta base en el campo');
+    if (fu) {
+      const n0 = cnt(st);
+      act(st, 0, fu); settle(st);
+      ok(ids(st, 0).includes('c_gogeta') && ids(st, 0).filter(Boolean).length === 1, 'Gogeta entra y Goku y Vegeta salen del campo');
+      const g = st.players[0].mz.find(Boolean);
+      ok(g.link.some(c => c.id === 'c_goku') && g.link.some(c => c.id === 'c_vegeta'), 'quedan vinculados a Gogeta');
+      ok(!st.players[0].normalUsed, 'es invocación especial');
+      eq(cnt(st), n0, 'sin pérdida de cartas');
+    }
+    const s2 = fresh(); put(s2, 0, 0, 'c_super_vegeta'); put(s2, 0, 1, 'c_goku'); hand(s2, 0, ['c_gogeta']);
+    ok(!L(s2, 0).some(a => a.t === 'fusion'), 'otras versiones de Vegeta no sirven');
+    // inmunidad a magias y combate
+    const g = Cards.all().find(c => c.kind === 'spell' && c.fx === 'destroyOne');
+    const s3 = fresh(1); put(s3, 0, 0, 'c_gogeta'); hand(s3, 1, [g.id]);
+    ok(!L(s3, 1).some(a => a.t === 'activate' && a.target && a.target.z === 0), 'Gogeta: las magias no lo eligen');
+    put(s3, 1, 0, 'c_odin', { atkMod: 300 });   // 2800 ATK exactos
+    const lp = s3.players[0].lp;
+    act(s3, 1, { t: 'toBattle' }); act(s3, 1, atkA(s3, 1, 0, 0)); settle(s3);
+    ok(ids(s3, 0)[0] === 'c_gogeta', 'Gogeta: un atacante con 2800 ATK (no más) no lo derrota');
+    const s4 = fresh(1); put(s4, 0, 0, 'c_gogeta'); put(s4, 1, 0, 'c_odin', { atkMod: 800 });
+    act(s4, 1, { t: 'toBattle' }); act(s4, 1, atkA(s4, 1, 0, 0)); settle(s4);
+    ok(!ids(s4, 0)[0], 'Gogeta: sí cae ante un atacante con más de 2800 ATK');
+    // Brillo
+    const s5 = fresh(); put(s5, 0, 0, 'c_gogeta'); put(s5, 1, 0, 'c_goku'); put(s5, 1, 1, 'c_toge'); put(s5, 1, 2, 'c_shen');
+    act(s5, 0, pw(s5, 0, 'brillo', a => a.target.z === 1));
+    ok(!!s5.players[1].mz[1].bri, 'Brillo: se introduce en el objetivo');
+    let k = 0; while (E.actor(s5) === 0 && k++ < 6) act(s5, 0, L(s5, 0).find(a => a.t === 'endTurn') || L(s5, 0).find(a => a.t === 'discard'));
+    eq(ids(s5, 1), [null, null, null], 'Brillo: explota en el turno del controlador y destruye al objetivo y a los contiguos');
+  }
 };
