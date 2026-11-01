@@ -1276,7 +1276,7 @@
       yutadom: 'Una sola vez por invocación, también con la Gema del Poder; dura 2 turnos completos.', copia: 'Pasiva: aprende una técnica por turno (máx. 3).', rikaint: '2 usos por invocación, uno por turno.', rikamal: 'Pasiva.', rikaprot: 'Pasiva.', rikavinc: 'Pasiva.', zenitsu1: 'Pasiva: con cada ataque que declara.', zenitsu2: 'Una vez por invocación.', gyomei1: 'Pasiva: 4 posturas por invocación.', gyomei2: 'Una vez por invocación.', gyomei3: 'Una vez por invocación; Gyomei muere al terminar.', yoriichi: 'Pasiva: 13 posturas por invocación.',
       patriarca: 'Una vez por turno, hasta 3 veces por invocación.', kaioken: 'Una vez por invocación.', maestro: 'Una enseñanza por turno; cada habilidad una vez por invocación.', jogodom: 'Una vez por invocación.', llama: 'Una vez por invocación; necesita asesinatos.',
       majinex: 'Una vez por invocación.', armin: 'Una vez (paga 1000 PV); necesita las 3 zonas libres.', arminsac: 'Cuando Armin muere por un ataque enemigo o una carta; sin pagar PV.', colosal: 'Sólo al entrar por la transformación de Armin.', galsil: 'Pasiva: mientras esté en el campo.', galres: 'Pasiva.', galprot: '2 usos por invocación, 1 por turno.', uidef: 'Una vez por turno.', uicont: 'Una vez por turno.', uivel: 'Pasiva.', manto: 'Una sola vez por invocación.', rasengan: 'Una vez por invocación.', mantok: 'Pasiva.', vinculok: 'Pasiva.', thanosg: 'Pasiva.', thanosp: 'Pasiva.',
-      regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', regsim: 'Pasiva: 1 turno después del efecto negativo.', sed: 'Pasiva: tras destruir a un enemigo atacando; un ataque extra por turno.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
+      regenx: 'Pasiva.', transtitan: 'Una vez por invocación (paga 500 PV); también si Eren muere.', punos: 'Una vez por turno propio, hasta 2 veces por invocación (x2 con la Gema del Poder).', toge: 'Una sola orden por turno; cada una una vez por invocación.', semilla: 'Una vez por turno propio.', tonyarm: 'Una acción por turno; necesita un material por turno completo.', jake: 'Pasiva mientras esté equipado.', symb: 'Una vez por turno propio.', pdragon: 'Una vez por invocación (no se reinicia con la Gema).', regsim: 'Pasiva: 1 turno después del efecto negativo.', sed: 'Pasiva: tras destruir a un enemigo atacando; un ataque extra por turno.', hostprot: 'Pasiva.', absorbv: 'Una habilidad por enemigo destruido.', sylas: 'Una vez por turno propio.', kurama: 'No se reactiva mientras dura.', hiraishin: 'Un ataque extra por ataque normal; no admite respuestas.',
       sentido: 'Pasiva.', telar: 'Una vez por turno, hasta 2 veces por invocación.', corrupt: 'Cada 3 turnos.', asimila: 'Pasiva: una vez por turno.', espada: 'Pasiva.', muerte: 'Pasiva.', counter: 'Cuando el rival activa una magia hostil.' };
     /** Sección «Habilidades robadas» (Kratos) o «absorbidas» (Cell): propia de esa carta, separada de las originales. */
     function stolenBox(s) {
@@ -1435,6 +1435,24 @@
     function pickTargets(targets, done, text, direct) {
       sel = { kind: 'target', targets, done, text, direct }; render();
     }
+    /** Puño del Dragón: elegir 2 o 3 casillas rivales (las acciones legales ya son todas las combinaciones posibles). */
+    function dragonPick(list, vsOf) {
+      const slots = [], key = (q, z) => q + ':' + z;
+      const addS = (q, z) => { if (!slots.some(x => x.k === key(q, z))) slots.push({ k: key(q, z), q, z }); };
+      for (const a of list) { addS(vsOf(a), a.target); for (const x of a.dragon) addS(x.vs != null ? x.vs : v.opp.seat, x.z); }
+      const chosen = new Set();
+      const find = () => list.find(a => { const ks = [key(vsOf(a), a.target)].concat(a.dragon.map(x => key(x.vs != null ? x.vs : v.opp.seat, x.z))); return ks.length === chosen.size && ks.every(k => chosen.has(k)); });
+      const go = btn('Atacar', () => { const a = find(); if (a) { closeModal(); act(a); } }, 'gold');
+      const info = h('p', { class: 'sub' }, 'Elige 2 o 3 casillas.');
+      const refresh = () => { const a = find(); go.disabled = !a; info.textContent = chosen.size < 2 ? 'Elige 2 o 3 casillas.' : a ? chosen.size + ' casillas elegidas.' : 'Esa combinación no es posible.'; };
+      const rows = slots.map(x => {
+        const m = v.players[x.q] && v.players[x.q].mz[x.z];
+        const b = h('button', { class: 'btn ghost', onclick: () => { if (chosen.has(x.k)) { chosen.delete(x.k); b.classList.remove('on'); } else if (chosen.size < 3) { chosen.add(x.k); b.classList.add('on'); } b.style.outline = chosen.has(x.k) ? '2px solid gold' : ''; refresh(); } }, `${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${multi() ? nameOf(x.q) + ' · ' : ''}casilla ${x.z + 1}`);
+        return b;
+      });
+      refresh();
+      modal(h('div', { class: 'box' }, h('h2', null, '🐉 Puño del Dragón'), info, h('div', { class: 'acts' }, rows), go, btn('Cancelar', closeModal, 'ghost')));
+    }
     function sameSet(a, b) { return a.length === b.length && a.slice().sort().join() === b.slice().sort().join(); }
     function startTribute(i, type, opts2) {
       const need = opts2[0].tributes.length;
@@ -1582,12 +1600,14 @@
       const s = v.me.mz[z], d = C.get(s.c.id), acts = [];
       let hint = null;
       if (myTurn() && !v.pending) {
-        const all = L().filter(a => a.t === 'attack' && a.zone === z && !a.hira);
+        const all = L().filter(a => a.t === 'attack' && a.zone === z && !a.hira && !a.dragon);
+        const drg = L().filter(a => a.t === 'attack' && a.zone === z && a.dragon);
         const hira = L().filter(a => a.t === 'attack' && a.zone === z && a.hira);
         const vsOf = a => (a.vs != null ? a.vs : v.opp.seat);
         for (const a of all.filter(a => a.target === 'direct')) acts.push({ label: 'Atacar directamente' + (multi() ? ' a ' + shortOf(vsOf(a)) : ''), run: () => act(a) });
         const onZone = all.filter(a => a.target !== 'direct');
         if (onZone.length) acts.push({ label: 'Atacar…', run: () => pickTargets(onZone.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(onZone.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Elige a quién atacar') });
+        if (drg.length) acts.push({ label: 'Puño del Dragón…', desc: 'Atraviesa y golpea 2 o 3 casillas rivales en el mismo ataque; tú eliges cuántas y cuáles. Una vez por invocación.', run: () => dragonPick(drg, vsOf) });
         if (hira.length) acts.push({ label: 'Hiraishin: ataque extra…', desc: 'Contra una casilla marcada ocupada por un rival. Nadie puede responder a este ataque. Uno por cada ataque normal.', run: () => pickTargets(hira.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(hira.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Hiraishin: elige la casilla marcada') });
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
         const po = L().find(a => a.t === 'pos' && a.zone === z); if (po) acts.push({ label: s.pos === 'atk' ? 'Pasar a defensa' : 'Pasar a ataque', run: () => act(po), cls: 'ghost' });

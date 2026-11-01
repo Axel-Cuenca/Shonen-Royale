@@ -150,6 +150,7 @@
     jake: ['Transformación en equipo', 'Jake puede jugarse como personaje o equiparse a un aliado como espada (+600 ATK) o escudo (+500 DEF). Si el aliado equipado fuera a ser destruido, Jake se destruye en su lugar.'],
     symb: ['Simbiosis', 'Una vez por turno, en tu turno, puedes equipar al simbionte (Venom o Carnage) a un aliado, desde la mano o desde el campo: le da la mitad de las estadísticas del simbionte (Venom +700 ATK y +650 DEF; Carnage +650 ATK y +650 DEF) y deja de ocupar su zona. Con un personaje de Marvel puede quedarse todo el tiempo; con cualquier otro sólo 2 turnos: después se separa y sale al campo como personaje normal, y no puede acoplarse de nuevo hasta su siguiente turno. Es opcional: también puede invocarse y combatir con normalidad.'],
     regsim: ['Regeneración simbionte', 'Si Carnage recibe un efecto negativo (reducción de ATK/DEF, habilidades selladas, Agotamiento, Death Note…), se regenera y vuelve a la normalidad 1 turno después. No sirve contra lo que lo destruye directamente.'],
+    pdragon: ['Puño del Dragón', 'Al atacar puede atravesar al personaje elegido y golpear también otras 1-2 casillas del campo de los rivales en el mismo ataque (tú decides cuántas y cuáles antes de atacar). Cada casilla se resuelve como un combate normal, pero todo cuenta como un solo ataque. Una vez por invocación.'],
     sed: ['Sed de sangre', 'Cada vez que Carnage destruye a un personaje enemigo en un ataque gana +400 ATK y puede atacar otra vez (un ataque extra por turno). El aumento sólo dura para ese ataque extra; si no destruye a su objetivo no gana nada.'],
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
@@ -660,6 +661,11 @@
       sfx: { transform: V('gogeta-transform'), ability: V('gogeta-ability') }
     }),
     mon({
+      id: 'c_goku_ssj3', name: 'Goku Super Saiyajin 3', fam: 'Goku', type: 'dbz', level: 7, atk: 2100, def: 1800, img: I('goku_ssj3'), ab: ['pdragon'], xform: { family: 'Goku' },
+      text: 'Familia Goku: puede invocarse transformando a un Goku del campo. Puño del Dragón: al atacar atraviesa al personaje elegido y golpea también otras casillas del campo rival en el mismo ataque (eliges cuántas y cuáles). Una vez por invocación.',
+      sfx: { transform: V('goku_ssj3-transform'), ability: V('goku_ssj3-ability') }
+    }),
+    mon({
       id: 'c_carnage', name: 'Carnage', type: 'marvel', level: 6, atk: 1300, def: 1300, img: I('carnage'), ab: ['symb', 'regsim', 'sed'],
       text: 'Simbionte: se acopla a un aliado igual que Venom (+650 ATK y +650 DEF, la mitad de sus estadísticas). Regeneración simbionte: si recibe un efecto negativo se regenera 1 turno después (no evita que lo destruyan). Sed de sangre: cuando destruye a un personaje enemigo atacando gana +400 ATK y puede atacar otra vez.',
       sfx: {}
@@ -777,7 +783,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

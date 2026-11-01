@@ -594,4 +594,38 @@ module.exports = function (T) {
     while (turns < 2 && k++ < 40) { act(s4, E.actor(s4), L(s4, E.actor(s4)).find(a => a.t === 'endTurn') || L(s4, E.actor(s4)).find(a => a.t === 'discard')); if (E.actor(s4) === 0) { turns++; if (turns === 1) ok((s4.players[0].mz[0].mods || []).some(x => x.k === 'rojo'), 'Regeneración: el efecto sigue durante el turno siguiente'); } }
     ok(!(s4.players[0].mz[0].mods || []).some(x => x.k === 'rojo'), 'Regeneración: el efecto negativo se quita después de 1 turno');
   }
+
+  section('Goku Super Saiyajin 3');
+  {
+    const root = path.join(__dirname, '..');
+    const c = Cards.get('c_goku_ssj3');
+    ok(c && fs.existsSync(path.join(root, c.img)), 'Goku SSJ3 tiene imagen');
+    for (const k in c.sfx) ok(fs.existsSync(path.join(root, c.sfx[k])), 'Goku SSJ3 sonido ' + k + ' existe');
+    for (const a of c.ab) ok(Cards.AB[a], 'Goku SSJ3: la habilidad ' + a + ' tiene texto');
+    eq([c.level, c.atk, c.def, c.fam, c.type], [7, 2100, 1800, 'Goku', 'dbz'], 'estadísticas de Goku SSJ3');
+    // Puño del Dragón: elige 2 casillas y las golpea en un solo ataque
+    const st = fresh(); put(st, 0, 0, 'c_goku_ssj3', { summonedTurn: -3 });
+    put(st, 1, 0, 'c_bugs_bunny', { pos: 'def' }); put(st, 1, 1, 'c_bugs_bunny', { pos: 'def' }); put(st, 1, 2, 'c_bugs_bunny', { pos: 'def' });
+    act(st, 0, { t: 'toBattle' });
+    const drg = L(st, 0).filter(x => x.t === 'attack' && x.dragon);
+    eq(drg.length, 4, 'Puño del Dragón: 3 combinaciones de 2 casillas y 1 de 3');
+    const normal = L(st, 0).filter(x => x.t === 'attack' && !x.dragon && !x.hira);
+    eq(normal.length, 3, 'siguen los ataques normales');
+    const n0 = cnt(st);
+    act(st, 0, drg.find(x => x.dragon.length === 2)); settle(st);
+    eq(ids(st, 1), [null, null, null], 'Puño del Dragón: las tres casillas quedan destruidas en el mismo ataque');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    ok(!L(st, 0).some(x => x.t === 'attack' && x.zone === 0), 'cuenta como un solo ataque');
+    // una vez por invocación
+    const s2 = fresh(); put(s2, 0, 0, 'c_goku_ssj3', { summonedTurn: -3 });
+    put(s2, 1, 0, 'c_odin', { pos: 'def' }); put(s2, 1, 1, 'c_odin', { pos: 'def' });
+    act(s2, 0, { t: 'toBattle' });
+    act(s2, 0, L(s2, 0).find(x => x.t === 'attack' && x.dragon)); settle(s2);
+    ok(s2.players[0].mz[0] && s2.players[0].mz[0].attacked, 'ataca igualmente aunque rebote');
+    s2.players[0].mz[0].attacked = false; s2.players[0].mz[0].atkN = 0;
+    ok(!L(s2, 0).some(x => x.t === 'attack' && x.dragon), 'Puño del Dragón: sólo una vez por invocación');
+    // la familia Goku: puede transformarse desde Goku
+    const s3 = fresh(); ready(s3, 0, 12); put(s3, 0, 0, 'c_goku'); hand(s3, 0, ['c_goku_ssj3']);
+    ok(L(s3, 0).some(x => x.t === 'power' && x.pw === 'xform'), 'Goku SSJ3 se puede invocar transformando a Goku');
+  }
 };

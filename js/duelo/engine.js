@@ -2075,11 +2075,12 @@
     stage(p, z, true);
     stage(vs, tz, false);
   }
-  function declareAttack(st, p, z, target, vs) {
+  function declareAttack(st, p, z, target, vs, extra) {
     const m = st.players[p].mz[z];
     m.atkN = atkCount(m) + 1; m.attacked = true;
     if (vs == null) vs = foeOf(st, p, null);
     st.atk = { p, z, target, vs, negated: false };
+    if (extra && extra.length) st.atk.extra = extra;      // Puño del Dragón: otras casillas atravesadas en el mismo ataque
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
     const entry = st.log[st.log.length - 1];
@@ -2228,6 +2229,14 @@
       }
     }
     resolveCombat(st, a);
+    if (a.extra) for (const ex of a.extra) {      // Puño del Dragón: el mismo ataque atraviesa y golpea las demás casillas elegidas
+      if (st.winner !== null || st.players[a.p].mz[a.z] !== at0) break;
+      const T = st.players[ex.vs];
+      if (!T || !T.alive || !T.mz[ex.z]) continue;
+      log(st, a.p, `${mdef(at0).name} atraviesa y golpea la casilla ${ex.z + 1}${multi(st) ? ' de ' + (T.name || 'un rival') : ''}`);
+      if (multi(st)) st.log[st.log.length - 1].q = ex.vs;
+      resolveCombat(st, { p: a.p, z: a.z, target: ex.z, vs: ex.vs });
+    }
     atkDone(st, a);
   }
   /** Un combate ya declarado: a = { p, z, target ('direct' o zona), vs }. */
@@ -2938,6 +2947,16 @@
           if (!all.length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
           else for (const tz of targets) out.push(mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz });
         }
+        if (has(st, m, 'pdragon') && !uOf(m).pdr) {      // Puño del Dragón: 2 o 3 casillas en el mismo ataque (una vez por invocación, aunque haya Gema)
+          const cands = [];
+          for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.six && !cloakOn(st.players[e], tz) && !(tm.god && st.team[p] !== st.team[tm.god.p])) cands.push({ vs: e, z: tz }); }
+          const mk = c => mu ? { vs: c.vs, z: c.z } : { z: c.z };
+          for (let i = 0; i < cands.length; i++) for (let j = i + 1; j < cands.length; j++) {
+            const base = c => mu ? { t: 'attack', zone: z, vs: c.vs, target: c.z } : { t: 'attack', zone: z, target: c.z };
+            out.push(Object.assign(base(cands[i]), { dragon: [mk(cands[j])] }));
+            for (let k = j + 1; k < cands.length; k++) out.push(Object.assign(base(cands[i]), { dragon: [mk(cands[j]), mk(cands[k])] }));
+          }
+        }
       });
       const hseen = new Set();
       P.mz.forEach((m, z) => {                       // Hiraishin: ataque extra contra una casilla marcada y ocupada por un rival
@@ -3586,7 +3605,13 @@
       case 'power': runPower(st, p, a); break;
       case 'spow': doSpower(st, p, a); break;
       case 'toBattle': st.phase = 'battle'; log(st, p, 'pasa a la fase de batalla'); break;
-      case 'attack': if (a.hira) hiraAttack(st, p, a); else declareAttack(st, p, a.zone, a.target, a.vs); break;
+      case 'attack':
+        if (a.hira) hiraAttack(st, p, a);
+        else {
+          if (a.dragon) { const dm = P.mz[a.zone]; uOf(dm).pdr = true; log(st, p, `${mdef(dm).name} usa Puño del Dragón: atraviesa ${a.dragon.length + 1} casillas en el mismo ataque`); }
+          declareAttack(st, p, a.zone, a.target, a.vs, a.dragon && a.dragon.map(x => ({ vs: x.vs != null ? x.vs : foeOf(st, p, null), z: x.z })));
+        }
+        break;
       case 'fusion': {
         const inst = P.hand.splice(a.hand, 1)[0], g = P.mz[a.gz], v = P.mz[a.vz];
         const links = [g.c, v.c].concat(g.link || [], v.link || []);
@@ -3992,7 +4017,7 @@
     if (s.promesa) v.promesa = true;
     if (s.learn) v.learn = Object.assign({}, s.learn);
     { const uu = uOf(s), yd = !!uu.ydom && abil(st, s).includes('yutadom');
-      if (uu.canon || uu.kk6 || uu.gen || yd) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen, ydom: yd }; }
+      if (uu.canon || uu.kk6 || uu.gen || yd || (uu.pdr && abil(st, s).includes('pdragon'))) v.used = { canon: !!uu.canon, kk6: !!uu.kk6, gen: !!uu.gen, ydom: yd, pdr: !!uu.pdr && abil(st, s).includes('pdragon') }; }
     if (s.c.id === 'c_yuta') {          // Yuta: usos de Rika, habilidades aprendidas y dominio
       const yu = uOf(s), gg = gx(P, z);
       v.yuta = { rk: Math.max(0, 2 * gg - (yu.rk || 0)), rkMax: 2 * gg, rkTurn: yu.rkT === st.turn, rkNext: !(yu.rkT === st.turn && (yu.rkTn || 0) >= gg), rkLast: yu.rkLast || null, learned: (yu.learned || []).slice(), lrnTurn: yu.lrnT === st.turn, dom: !!(st.domain && st.domain.uid === s.c.uid) };
