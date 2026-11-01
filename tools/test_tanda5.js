@@ -684,4 +684,16 @@ module.exports = function (T) {
     act(s2, 1, atkA(s2, 1, 0, 0)); settle(s2);
     ok(ids(s2, 0)[0] !== 'c_megumi' || s2.players[1].lp < lp2 || ids(s2, 1)[0] !== 'c_goku', 'Conejos: sólo una vez por invocación');
   }
+
+  section('Pothala con un Cell que lleva un personaje absorbido');
+  {
+    const st = fresh(); put(st, 0, 0, 'c_cell'); put(st, 0, 1, 'c_goku'); hand(st, 0, ['c_pothala']);
+    const ab = { uid: st.nextUid++, id: 'c_popeye' };
+    st.players[1].deck.pop();
+    st.players[0].mz[0].abs = { c: ab, owner: 1, link: [] };
+    const n0 = cnt(st);
+    const a = L(st, 0).find(x => x.t === 'activate' && x.target && x.target.z2 != null);
+    ok(!!a, 'Pothala disponible');
+    if (a) { act(st, 0, a); settle(st); eq(cnt(st), n0, 'Pothala: no se pierde la carta absorbida por Cell'); }
+  }
 };

@@ -4252,6 +4252,7 @@
     else if (st.pending && (st.pending.ab === 'glove' || st.pending.ab === 'uidef') && st.pending.ch && st.pending.ch.p === p && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete / magia a la espera de la Defensa instintiva de Goku UI
     // lo absorbido por Cell cuenta para su dueño original
     for (const Q of st.players) for (const s of Q.mz) if (s && s.abs && s.abs.owner === p) n += 1 + (s.abs.link ? s.abs.link.length : 0);
+    for (const Q of st.players) for (const s of Q.mz) if (s && s.fused && s.fused.b && s.fused.b.abs && s.fused.b.abs.owner === p) n += 1 + (s.fused.b.abs.link ? s.fused.b.abs.link.length : 0);      // lo absorbido por el personaje que quedó fusionado
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison && s.prison.m.abs && s.prison.m.abs.owner === p) n += 1 + (s.prison.m.abs.link ? s.prison.m.abs.link.length : 0);      // lo absorbido por un personaje sellado
     return n;
   }

@@ -791,7 +791,7 @@
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi']
   };
-  const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
+  const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4, 5];
   const TANDA_OF = {};
   for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
   /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */
