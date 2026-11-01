@@ -151,6 +151,7 @@
             case 'relicario': return info.count >= 2 ? 48 : -1;
             case 'desmantelar': return 47;
             case 'agujero': return 46;
+            case 'avada': return tm ? (v.team[a.target.vs] !== v.team[v.seat] ? 64 + ((tm.atk || 0) / 150) : -1) : -1;
             case 'maquina': return 63;
             case 'dios': return tm && v.team[a.target.vs] !== v.team[v.seat] ? 59 + ((tm.atk || 0) / 150) : -1;
             case 'cuerno': return tm && v.team[a.target.vs] !== v.team[v.seat] ? 56 + ((tm.atk || 0) / 200) : -1;

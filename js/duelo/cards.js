@@ -79,6 +79,10 @@
     saiyan6: ['Sangre Saiyan', 'Si regresa de una resurrección desde el cementerio, gana +600 ATK y +600 DEF.'],
     superv: ['Supervivencia Saiyan', 'Si es destruido y va al cementerio, revive una vez por carta con +600 ATK y +600 DEF. No funciona si es desterrado.'],
     regenn: ['Regeneración Namekusein', 'Los efectos negativos que reducen sus estadísticas se revierten al empezar su siguiente turno (no si lo destruyen).'],
+    avada: ['Avada Kedavra', 'Una vez por turno: destierra a cualquier personaje del campo, directamente (sin pasar por el cementerio).'],
+    inmort: ['Inmortalidad', 'Si es destruido, regresa al campo en el próximo turno de su jugador. Puede regresar hasta 2 veces.'],
+    detect: ['Detección de mentiras', 'Mientras esté en el campo, todas las cartas boca abajo de todos los jugadores se ven (sólo para quien lo controla).'],
+    vimm: ['Resistencia a efectos negativos', 'Los efectos negativos no le afectan, salvo los que lo destruyen.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -626,6 +630,16 @@
       sfx: { transform: V('cell_perfecto-transform') }
     }),
     mon({
+      id: 'c_sukuna50', name: 'Ryomen Sukuna 50%', type: 'jjk', level: 9, atk: 2600, def: 2600, img: I('sukuna50'), ab: ['regen60', 'relicario'],
+      text: 'Resistencia maldita: inmune a las magias, trampas y habilidades que intenten asesinarlo. Relicario Demoníaco (opcional, una vez por invocación): +500 ATK y DEF (3100/3100) durante 2 turnos; mientras dure, bloquea las magias, trampas y habilidades enemigas, salvo las de personajes de 10★ o más.',
+      sfx: { attack: V('sukuna50-attack'), ability: V('sukuna50-ability') }
+    }),
+    mon({
+      id: 'c_voldemort', name: 'Voldemort', type: 'hp', level: 10, atk: 2000, def: 2000, img: I('voldemort'), ab: ['avada', 'inmort', 'detect', 'vimm'],
+      text: 'Avada Kedavra: una vez por turno destierra a cualquier personaje del campo. Inmortalidad: si es destruido regresa en el próximo turno de su jugador (hasta 2 veces). Detección de mentiras: sus cartas boca abajo y las de todos se ven sólo para quien lo controla. Inmune a los efectos negativos, salvo los que lo destruyen.',
+      sfx: { ability: V('voldemort-ability') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -738,7 +752,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};

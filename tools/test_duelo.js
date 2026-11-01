@@ -286,7 +286,7 @@ section('tablero 3+3 y catálogo');
   ok(E.ZONES === 3, 'ZONES = 3');
   ok(typeof Cards.canPlay === 'function', 'Cards.canPlay existe');
   // el catálogo de producción (sin el legado de pruebas) sólo tiene las cartas propias
-  ok(Cards.custom.length === 106 && Cards.custom.filter(c => !c.hidden).length === 103 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 106 (103 visibles + 2 formas de Kayn + Armadura de Tony)');
+  ok(Cards.custom.length === 108 && Cards.custom.filter(c => !c.hidden).length === 105 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 108 (105 visibles + 2 formas de Kayn + Armadura de Tony)');
   const v = E.view(st, 0);
   ok(typeof v.opp.handCount === 'number' && v.opp.handCount === 5, 'la vista dice cuántas cartas tiene el rival en la mano');
 }
@@ -751,7 +751,8 @@ function checkMulti(st, tag) {
       const O = st.players[q];
       const spec = !st.players[seat].alive && st.winner === null;
       const hidden = (spec ? [] : O.hand.map(c => c.uid)).concat(O.deck.map(c => c.uid));
-      if (!spec) { for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid); for (const s of O.st) if (s && s.down) hidden.push(s.c.uid); }
+      const peek = st.players[seat].mz.some(m => m && !m.down && (Cards.get(m.c.id).ab || []).includes('detect'));      // Voldemort ve las cartas boca abajo
+      if (!spec && !peek) { for (const s of O.mz) if (s && s.down) hidden.push(s.c.uid); for (const s of O.st) if (s && s.down) hidden.push(s.c.uid); }
       for (const u of hidden) if (v.includes(`"uid":${u},`) || v.includes(`"uid":${u}}`)) throw new Error(`${tag}: la vista del asiento ${seat} filtra la carta ${u} de ${q}`);
     }
   }

@@ -212,6 +212,17 @@
     st.phase = 'main';
     log(st, st.current, `Turno ${st.round}`);
     if (st.turn > 1) drawCards(st, st.current, 1);
+    if (st.vret && st.vret.length) {                 // Voldemort vuelve en el siguiente turno de su jugador
+      const keep = [];
+      for (const r of st.vret) {
+        if (r.p !== st.current || r.t0 >= st.turn) { keep.push(r); continue; }
+        const Pp = st.players[r.p], gi = Pp.grave.find(c => c.uid === r.uid);
+        if (!gi || !Pp.alive) continue;
+        if (reviveInst(st, r.p, gi) < 0) { keep.push(r); continue; }
+        log(st, r.p, `${def(gi).name} regresa (Inmortalidad)`);
+      }
+      st.vret = keep;
+    }
     timers(st);
   }
   /** Siguiente asiento con vida, en orden. */
@@ -296,7 +307,7 @@
   const isSolo = P => P.mz.filter(Boolean).length === 1;
   /** Modificadores de la invocación actual (tanda 2): [{ k, atk, def, t0, n }]; n = turnos completos que duran (0 = toda la invocación). */
   const modSum = (m, key) => (m.mods || []).reduce((n, x) => n + (x[key] || 0), 0);
-  function addMod(st, m, k, atk, def, n) { const e = { k, atk: atk || 0, def: def || 0, t0: st.turn, n: n || 0 }; (m.mods = m.mods || []).push(e); return e; }
+  function addMod(st, m, k, atk, def, n) { if (m && (atk < 0 || def < 0) && m.c && rawAbil(m).includes('vimm')) return {}; const e = { k, atk: atk || 0, def: def || 0, t0: st.turn, n: n || 0 }; (m.mods = m.mods || []).push(e); return e; }
   const dropMods = (m, k) => { if (m.mods) m.mods = m.mods.filter(x => x.k !== k); };
   /** Gema del Poder: duplica los usos y los aumentos de las habilidades. */
   const gemOn = (P, z) => P.st.some(s => s && !s.down && s.equipTo === z && def(s.c).pgem);
@@ -430,6 +441,11 @@
     if (dab.includes('kuriboh')) {                  // Kuriboh: su jugador es inmune a todo daño el resto del turno
       st.players[p].imm = st.turn;
       log(st, p, `${nm} protege a su jugador: no recibirá daño el resto del turno`);
+    }
+    if (dab.includes('inmort') && how === 'grave' && m.c && (m.c.imm || 0) < 2) {      // Voldemort: Inmortalidad (2 regresos)
+      m.c.imm = (m.c.imm || 0) + 1;
+      (st.vret = st.vret || []).push({ p: m.owner != null ? m.owner : p, uid: m.c.uid, t0: st.turn });
+      log(st, p, `${nm} volverá en el próximo turno de su jugador (${m.c.imm}/2)`);
     }
     if (dab.includes('superv') && how === 'grave' && m.c && !m.c.rev) st.trig.push({ k: 'superv', p: m.owner != null ? m.owner : p, uid: m.c.uid });      // Cell Perfecto: Supervivencia Saiyan
     if (dab.includes('kuribomo')) st.trig.push({ k: 'kuribomo', p, nm });
@@ -1303,7 +1319,7 @@
   /** Habilidades hostiles que Total Counter puede devolver. */
   const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
-  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
+  const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', dios: 'dios', avada: 'avada', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
   /** Total Counter: un Meliodas boca arriba de un rival del que actúa (y, si se indica, del equipo de la víctima) que aún no lo usó este turno: { q, z } o null. */
   function meliFor(st, byP, victimP) {
@@ -2584,9 +2600,10 @@
       if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
       if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
-      if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
+      if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && !rawAbil(tm).includes('vimm') && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
       if (ab.includes('chidori') && u.chiT !== st.turn && !(m.mods || []).some(x => x.k === 'chi') && canAttackSlot(st, m)) push({ pw: 'chidori' });
       if (m.c.id === 'c_cell' && m.abs && [5, 6].includes(lvl({ c: m.abs.c })) && !m.copy) P.hand.forEach((c, i) => { if (c.id === 'c_cell_perfecto') push({ pw: 'cellperf', hand: i }); });
+      if (ab.includes('avada') && u.avT !== st.turn) for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) { if (q === p && tz === z) continue; if (st.players[q].alive && canTarget(st, p, q, tz)) push({ pw: 'avada', target: { vs: q, z: tz } }); }
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2953,6 +2970,15 @@
         m.abs = null;
         log(st, p, `${def(r.c).name} va al cementerio de su dueño`);
         transformInto(st, p, a.zone, a.hand, null);
+        break;
+      }
+      case 'avada': {
+        u.avT = st.turn;
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        log(st, p, `${nm} usa Avada Kedavra contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        removeMonster(st, e, a.target.z, 'banish', { death: true });
         break;
       }
       case 'chidori':
@@ -3936,7 +3962,7 @@
     if (s.glove) v.glove = true;
     return v;
   }
-  function playerView(st, p, own) {
+  function playerView(st, p, own, peek) {
     const P = st.players[p];
     return {
       seat: p, team: st.team[p], alive: P.alive, lp: P.lp, deckCount: P.deck.length, normalUsed: P.normalUsed,
@@ -3944,9 +3970,9 @@
       handCount: P.hand.length,
       grave: P.grave.map(i => ({ uid: i.uid, id: i.id })),
       banish: P.banish.map(i => ({ uid: i.uid, id: i.id })),
-      mz: P.mz.map((s, z) => slotView(st, P, s, z, own)),
+      mz: P.mz.map((s, z) => slotView(st, P, s, z, own || peek)),
       shadow: P.mz.map((s, z) => shadowOf(P, z)),
-      st: P.st.map(s => stView(s, own, st)),
+      st: P.st.map(s => stView(s, own || peek, st)),
       sealed: (P.sealed || []).slice()
     };
   }
@@ -3985,7 +4011,8 @@
     }
     // Un jugador eliminado mira la partida como espectador: ve las manos y las cartas boca abajo de los que siguen
     const spec = (!st.players[seat].alive && st.winner === null) || !!(opts && opts.all);      // opts.all: campo de práctica, se ve todo
-    const players = st.players.map((_, i) => playerView(st, i, i === seat || spec));
+    const peek = st.players[seat].mz.some(m => m && !m.down && rawAbil(m).includes('detect'));      // Voldemort: Detección de mentiras (información privada)
+    const players = st.players.map((_, i) => playerView(st, i, i === seat || spec, peek));
     const fl = foes(st, seat);
     const oppSeat = fl.length ? fl[0] : st.players.findIndex((P, i) => i !== seat && st.team[i] !== st.team[seat]);
     return {

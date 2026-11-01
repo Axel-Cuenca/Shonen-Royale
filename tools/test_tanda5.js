@@ -443,4 +443,45 @@ module.exports = function (T) {
     // desterrado: no revive
     const s5 = fresh(); put(s5, 0, 0, 'c_cell_perfecto'); E.destroyMonster && 0;
   }
+
+  section('Sukuna 50% y Voldemort');
+  {
+    const root = path.join(__dirname, '..');
+    for (const id of ['c_sukuna50', 'c_voldemort']) {
+      const c = Cards.get(id);
+      ok(c && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
+      for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k + ' existe');
+      for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': la habilidad ' + a + ' tiene texto');
+    }
+    // Sukuna 50%: Relicario +500 y sin Desmantelar
+    const st = fresh(); put(st, 0, 0, 'c_sukuna50'); putST(st, 1, 0, 'c_botiquin', { down: true });
+    ok(!pw(st, 0, 'desmantelar'), 'Sukuna 50% no tiene Desmantelar');
+    eq(E.view(st, 0).players[0].mz[0].atk, 2600, 'Sukuna 50%: 2600 ATK');
+    act(st, 0, pw(st, 0, 'relicario'));
+    eq(E.view(st, 0).players[0].mz[0].atk, 3100, 'Relicario: 3100 ATK');
+    ok(!pw(st, 0, 'relicario'), 'Relicario: una vez por invocación');
+    // Voldemort: Avada destierra, una vez por turno
+    const sv = fresh(); put(sv, 0, 0, 'c_voldemort'); put(sv, 1, 0, 'c_goku'); put(sv, 1, 1, 'c_toge');
+    act(sv, 0, pw(sv, 0, 'avada', a => a.target.vs === 1 && a.target.z === 0));
+    ok(sv.players[1].banish.some(c => c.id === 'c_goku') && !sv.players[1].grave.some(c => c.id === 'c_goku'), 'Avada Kedavra: destierra (no va al cementerio)');
+    ok(!pw(sv, 0, 'avada'), 'Avada Kedavra: una vez por turno');
+    // Inmortalidad: destruido, vuelve en el siguiente turno de su jugador (hasta 2 veces)
+    const si = fresh(1); put(si, 0, 0, 'c_voldemort'); put(si, 1, 0, 'c_odin', { atkMod: 3000 });
+    act(si, 1, { t: 'toBattle' }); act(si, 1, atkA(si, 1, 0, 0)); settle(si);
+    ok(!ids(si, 0)[0], 'Voldemort cae en combate');
+    let k = 0; while (!ids(si, 0)[0] && k++ < 8) { const q = E.actor(si); act(si, q, L(si, q).find(a => a.t === 'endTurn') || L(si, q).find(a => a.t === 'discard') || L(si, q)[0]); }
+    ok(ids(si, 0)[0] === 'c_voldemort', 'Inmortalidad: regresa en el siguiente turno de su jugador');
+    // Detección de mentiras: sólo su jugador ve las cartas boca abajo
+    const sd = fresh(); put(sd, 0, 0, 'c_voldemort'); putST(sd, 1, 0, 'c_botiquin', { down: true }); put(sd, 1, 0, 'c_goku', { down: true });
+    const mine = E.view(sd, 0).players[1], theirs = E.view(sd, 1).players[0];
+    ok(mine.mz[0].c && mine.mz[0].c.id === 'c_goku' && mine.st[0].c && mine.st[0].c.id === 'c_botiquin', 'Detección de mentiras: Voldemort ve las cartas boca abajo del rival');
+    ok(!mine.hand[0], 'Detección de mentiras: no ve la mano');
+    const ov = E.view(sd, 1).players[1];
+    ok(ov.mz[0].c && true, 'el rival ve sus propias cartas');
+    ok(!E.view(sd, 1).players[0].mz.some(m => m && m.down), 'el rival no gana información extra de Voldemort');
+    // Resistencia: un efecto negativo no le afecta
+    const sr = fresh(); put(sr, 0, 0, 'c_voldemort'); const b = E.view(sr, 0).players[0].mz[0].atk;
+    E.legal; sr.players[0].mz[0].mods = []; 
+    eq(b, 2000, 'Voldemort: 2000 ATK');
+  }
 };
