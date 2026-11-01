@@ -408,4 +408,39 @@ module.exports = function (T) {
     act(s4, 0, L(s4, 0).find(a => a.t === 'activate' && a.hand === 0)); settle(s4);
     eq(E.view(s4, 0).players[0].mz[0].atk - b0, 500, 'Thanos: +500 ATK por la Gema del Alma');
   }
+
+  section('Cell Perfecto');
+  {
+    const root = path.join(__dirname, '..');
+    const c = Cards.get('c_cell_perfecto');
+    ok(c && fs.existsSync(path.join(root, c.img)) && fs.existsSync(path.join(root, c.sfx.transform)), 'Cell Perfecto tiene imagen y sonido');
+    for (const a of c.ab) ok(Cards.AB[a], 'Cell Perfecto: la habilidad ' + a + ' tiene texto');
+    // transformación: Cell Semi Perfecto absorbió a uno de 5-6★ y Cell Perfecto está en la mano
+    const st = fresh(); put(st, 0, 0, 'c_cell'); put(st, 1, 0, 'c_super_vegeta'); hand(st, 0, ['c_cell_perfecto']);
+    ok(!pw(st, 0, 'cellperf'), 'sin absorber no puede transformarse');
+    act(st, 0, pw(st, 0, 'absorb', a => a.target.z === 0)); settle(st);
+    const n0 = cnt(st);
+    const tf = pw(st, 0, 'cellperf');
+    ok(!!tf, 'tras absorber a un personaje de 6★ ofrece la transformación');
+    if (tf) {
+      act(st, 0, tf); settle(st);
+      ok(ids(st, 0)[0] === 'c_cell_perfecto', 'Cell Perfecto entra');
+      ok(st.players[1].grave.some(x => x.id === 'c_super_vegeta') && !st.players[0].mz[0].abs, 'el absorbido va al cementerio de su dueño y no queda vinculado');
+      eq(cnt(st), n0, 'sin pérdida de cartas');
+    }
+    // no con un absorbido de 4★
+    const s2 = fresh(); put(s2, 0, 0, 'c_cell'); put(s2, 1, 0, 'c_goku'); hand(s2, 0, ['c_cell_perfecto']);
+    act(s2, 0, pw(s2, 0, 'absorb')); ok(!pw(s2, 0, 'cellperf'), 'con un absorbido de 4★ no hay transformación');
+    // absorción perfecta: 70 % y todas las habilidades
+    const s3 = fresh(); put(s3, 0, 0, 'c_cell_perfecto'); put(s3, 1, 0, 'c_odin');
+    const b = E.view(s3, 0).players[0].mz[0].atk, oa = E.view(s3, 1).players[1].mz[0].atk;
+    act(s3, 0, pw(s3, 0, 'absorb')); settle(s3);
+    eq(E.view(s3, 0).players[0].mz[0].atk - b, Math.floor(oa * 0.7), 'Absorción perfecta: 70% del ATK');
+    // Supervivencia Saiyan: revive una vez con +600
+    const s4 = fresh(1); put(s4, 0, 0, 'c_cell_perfecto'); put(s4, 1, 0, 'c_odin', { atkMod: 2000 });
+    act(s4, 1, { t: 'toBattle' }); act(s4, 1, atkA(s4, 1, 0, 0)); settle(s4);
+    ok(ids(s4, 0)[0] === 'c_cell_perfecto' && s4.players[0].mz[0].bonus && s4.players[0].mz[0].bonus.atk === 600, 'Supervivencia Saiyan: revive con +600 ATK/DEF');
+    // desterrado: no revive
+    const s5 = fresh(); put(s5, 0, 0, 'c_cell_perfecto'); E.destroyMonster && 0;
+  }
 };

@@ -431,6 +431,7 @@
       st.players[p].imm = st.turn;
       log(st, p, `${nm} protege a su jugador: no recibirá daño el resto del turno`);
     }
+    if (dab.includes('superv') && how === 'grave' && m.c && !m.c.rev) st.trig.push({ k: 'superv', p: m.owner != null ? m.owner : p, uid: m.c.uid });      // Cell Perfecto: Supervivencia Saiyan
     if (dab.includes('kuribomo')) st.trig.push({ k: 'kuribomo', p, nm });
     for (let q = 0; q < st.n; q++) {
       const Q = st.players[q];
@@ -706,6 +707,12 @@
         if (!inst || ti < 0) continue;
         if (formAnchor(P, t.z, tid) < 0) { log(st, t.p, `No hay espacio para ${def({ id: tid }).name}`); continue; }
         st.pending = { k: 'ability', ab: 'titan', player: t.p, uid: t.uid, stage: 'ask', z: t.z, id: tid, nm: t.nm || def(inst).name };
+      } else if (t.k === 'superv') {                    // Cell Perfecto revive una vez por carta si cae al cementerio
+        const gi = P.grave.find(c => c.uid === t.uid);
+        if (!gi || gi.rev) continue;
+        gi.rev = true;
+        log(st, t.p, `${def(gi).name} revive con Supervivencia Saiyan`);
+        reviveInst(st, t.p, gi);
       } else if (t.k === 'marcamal') {                  // Sasuke Chico: Marca de maldición tras vencer en combate
         const sk = slotByUid(st, t.p, t.uid);
         if (!sk || sk.m.down || uOf(sk.m).marca2) continue;
@@ -778,6 +785,11 @@
   /** «Sangre Saiyan»: al ser revivido vuelve con +500 ATK y +500 DEF durante esa invocación. */
   function onRevive(st, p, z) {
     const m = st.players[p].mz[z];
+    if (m && has(st, m, 'saiyan6')) {
+      m.bonus = m.bonus || { atk: 0, def: 0 };
+      m.bonus.atk += 600; m.bonus.def += 600;
+      log(st, p, `${mdef(m).name}: Sangre Saiyan (+600 ATK y +600 DEF)`);
+    }
     if (m && has(st, m, 'saiyan')) {
       m.bonus = m.bonus || { atk: 0, def: 0 };
       m.bonus.atk += 500; m.bonus.def += 500;
@@ -2273,6 +2285,10 @@
   /** Al empezar un turno: fin del dominio de Sukuna y cuenta atrás de Karma. */
   function timers(st) {
     if (st.domain && elapsed(st, st.domain.t0) >= 2) { log(st, -1, `El dominio ${st.domain.nm || 'de Sukuna'} termina`); st.domain = null; }
+    for (const m of st.players[st.current].mz) if (m && !m.down && rawAbil(m).includes('regenn') && m.mods && m.mods.some(x => (x.atk < 0 || x.def < 0) && x.t0 !== st.turn)) {
+      m.mods = m.mods.filter(x => !((x.atk < 0 || x.def < 0) && x.t0 !== st.turn));
+      log(st, st.current, `${mdef(m).name} se regenera (Regeneración Namekusein): vuelve a su estado normal`);
+    }
     expireMods(st);
     for (const Q of st.players) for (let i = 0; i < ZONES; i++) { const s = Q.st[i]; if (s && s.alma && elapsed(st, s.alma.t0) >= 5) { Q.st[i] = null; Q.grave.push(s.c); log(st, -1, 'La Gema del Alma se agota y va al cementerio'); } }
     prisons(st);
@@ -2556,7 +2572,7 @@
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
       if (ab.includes('yutadom') && !u.ydom && !st.domain) push({ pw: 'ydominio' });      // una sola vez por invocación de Yuta (también con la Gema)
       if (ab.includes('canon') && !u.canon && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
-      if (ab.includes('absorb') && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
+      if ((ab.includes('absorb') || ab.includes('absorbp')) && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
           const tm = st.players[q].mz[tz];
           if ((q === p && tz === z) || tm.down || !st.players[q].alive || lvl(tm) > lvl(m) || !canTarget(st, p, q, tz)) continue;
@@ -2570,6 +2586,7 @@
       if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
       if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
       if (ab.includes('chidori') && u.chiT !== st.turn && !(m.mods || []).some(x => x.k === 'chi') && canAttackSlot(st, m)) push({ pw: 'chidori' });
+      if (m.c.id === 'c_cell' && m.abs && [5, 6].includes(lvl({ c: m.abs.c })) && !m.copy) P.hand.forEach((c, i) => { if (c.id === 'c_cell_perfecto') push({ pw: 'cellperf', hand: i }); });
       if (ab.includes('canal') && !m.canal && !m.attacked && m.pos === 'atk') push({ pw: 'canal' });                                  // Freezer: canalización de un turno completo
       if (ab.includes('canal') && m.canal && m.canal.ready && m.canal.t !== st.turn) push({ pw: 'supernova' });
       if (ab.includes('cuerno') && canOnce(P, z, u, 'cuer')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 4 && canTarget(st, p, e, tz)) push({ pw: 'cuerno', target: { vs: e, z: tz } }); }
@@ -2891,7 +2908,8 @@
       case 'absorb': {
         const q = a.target.vs, tz = a.target.z, tm = st.players[q].mz[tz], td = mdef(tm);
         const atk = atkOf(st, st.players[q], tz), df = defOf(st, st.players[q], tz);
-        const give = Array.from(new Set(rawAbil(tm).filter(x => GIVE.includes(x))));
+        const perfect = rawAbil(m).includes('absorbp'), ratio = perfect ? 0.7 : 0.5;      // Cell Perfecto: 70 % y todas las habilidades
+        const give = Array.from(new Set(rawAbil(tm).filter(x => perfect ? !['absorb', 'absorbp'].includes(x) : GIVE.includes(x))));
         const link = tm.link || [];
         log(st, p, `${nm} absorbe a ${td.name}`);
         if (multi(st)) st.log[st.log.length - 1].q = q;
@@ -2900,11 +2918,11 @@
         markOnce(u, 'absorb');
         m.abs = { c: tm.c, link, owner: tm.owner != null ? tm.owner : q, atk, def: df };      // un personaje corrompido vuelve a su dueño original
         m.bonus = m.bonus || { atk: 0, def: 0 };
-        m.bonus.atk += Math.floor(atk / 2); m.bonus.def += Math.floor(df / 2);
+        m.bonus.atk += Math.floor(atk * ratio); m.bonus.def += Math.floor(df * ratio);
         m.ext = m.ext || [];
         m.extFrom = m.extFrom || {};
         for (const g of give) if (!m.ext.includes(g) && !(mdef(m).ab || []).includes(g)) { m.ext.push(g); m.extFrom[g] = td.name; }
-        log(st, p, `${nm} obtiene +${Math.floor(atk / 2)} ATK y +${Math.floor(df / 2)} DEF${give.length ? ' y su habilidad' : ''}`);
+        log(st, p, `${nm} obtiene +${Math.floor(atk * ratio)} ATK y +${Math.floor(df * ratio)} DEF${give.length ? ' y su habilidad' : ''}`);
         break;
       }
       case 'furia':
@@ -2927,6 +2945,14 @@
         tm.god = { p, uid: m.c.uid };
         log(st, p, `${nm} usa Poder de Dios: atrapa a ${tm.down ? 'un personaje boca abajo' : mdef(tm).name} en su campo de energía divina`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
+      case 'cellperf': {
+        const r = m.abs, O = st.players[r.owner];
+        O.grave.push(r.c); for (const l of (r.link || [])) O.grave.push(l);      // el absorbido va al cementerio de su dueño: no se conserva ni queda vinculado
+        m.abs = null;
+        log(st, p, `${def(r.c).name} va al cementerio de su dueño`);
+        transformInto(st, p, a.zone, a.hand, null);
         break;
       }
       case 'chidori':

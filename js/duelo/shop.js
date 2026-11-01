@@ -118,7 +118,12 @@
     ['si_minato_relampago', 'c_minato', 'Relámpago amarillo', 'minato_relampago'],
     ['si_popeye_espinaca', 'c_popeye', 'Popeye a comer espinaca', 'popeye_espinaca'],
     ['si_shen_original', 'c_shen', 'Shen original', 'shen_original'],
-    ['si_venom_asesino', 'c_venom', 'Venom asesino', 'venom_asesino']
+    ['si_venom_asesino', 'c_venom', 'Venom asesino', 'venom_asesino'],
+    ['si_cell_turbo', 'c_cell_perfecto', 'Turboperfección', 'cell_turbo'],
+    ['si_goku_ui_skin', 'c_goku_ui', 'Ultra Instinto', 'goku_ui_skin'],
+    ['si_meliodas_sate', 'c_meliodas', 'Meliodas Sate Sate', 'meliodas_sate'],
+    ['si_toge_paz', 'c_toge', 'Toge Paz', 'toge_paz'],
+    ['si_warwick_invierno', 'c_warwick', 'Warwick favor del invierno', 'warwick_invierno']
   ];
   for (const [id, card, name, file] of SKINS) ITEMS.push({ id, cat: 'si', name, rar: 'u', price: 0, box: 1, card, img: 'assets/skins/' + file + '.webp' });
   // (31/10/2026) Con las cajas se fue su contenido: de la Tienda sólo quedan lo gratis de serie y las skins (Cofre de skins; los efectos de color sólo los conservan quienes ya los tienen).

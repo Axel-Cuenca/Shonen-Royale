@@ -75,6 +75,10 @@
     sharingan: ['Sharingan', 'Evade una habilidad de personaje, una carta mágica o una trampa que lo elija como objetivo (sólo ese efecto se cancela). Una vez por turno, hasta 3 veces por invocación.'],
     chidori: ['Chidori', '+400 ATK durante un solo ataque; después el ATK vuelve al valor anterior. Una vez por turno.'],
     marcamal: ['Marca de maldición', 'Tras vencer a un personaje en combate, puede despertar la marca: +500 ATK y DEF, o transformarse (quedando vinculado) en Sasuke Chico Marca Despertada si la tiene en la mano. Una vez por invocación.'],
+    absorbp: ['Absorción perfecta', 'Una vez por invocación: absorbe a un personaje del campo de hasta 10★; gana el 70% de su ATK y DEF y todas sus habilidades. Si Cell muere, el absorbido vuelve a su dueño.'],
+    saiyan6: ['Sangre Saiyan', 'Si regresa de una resurrección desde el cementerio, gana +600 ATK y +600 DEF.'],
+    superv: ['Supervivencia Saiyan', 'Si es destruido y va al cementerio, revive una vez por carta con +600 ATK y +600 DEF. No funciona si es desterrado.'],
+    regenn: ['Regeneración Namekusein', 'Los efectos negativos que reducen sus estadísticas se revierten al empezar su siguiente turno (no si lo destruyen).'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño el resto del turno.'],
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
@@ -617,6 +621,11 @@
       text: 'Magia continua. Se queda 5 turnos en tu campo y guarda el efecto de cada magia que un rival use sobre un personaje. Una vez por turno puedes liberar uno de los efectos guardados. Es una gema: Thanos y el Guantelete del Infinito interactúan con ella.'
     }),
     mon({
+      id: 'c_cell_perfecto', name: 'Cell Perfecto', type: 'dbz', level: 10, atk: 2100, def: 2100, img: I('cell_perfecto'), ab: ['absorbp', 'saiyan6', 'superv', 'regenn'],
+      text: 'Entra transformando a Cell Semi Perfecto cuando éste absorbió a un personaje de 5 o 6★ (el absorbido va al cementerio de su dueño). Absorción perfecta: 70% de ATK/DEF y todas las habilidades de un personaje de hasta 10★. Sangre Saiyan: +600/+600 al resucitar. Supervivencia Saiyan: revive una vez si va al cementerio. Regeneración Namekusein.',
+      sfx: { transform: V('cell_perfecto-transform') }
+    }),
+    mon({
       id: 'c_toge', name: 'Toge Inumaki', type: 'jjk', level: 4, atk: 1200, def: 1200, img: I('toge'), ab: ['toge'],
       text: 'Discurso Maldito: tres órdenes, cada una una vez por invocación y una sola orden por turno. ¡Quieto!: cambia la posición de un personaje rival o voltea uno boca abajo (o, al ser atacados él o un aliado, cambia la posición del atacante y cancela el ataque). ' +
         '¡Debilítate!: −500 ATK y DEF a un rival. ¡Muere!: destruye a un personaje rival de 4★ o menos.',
@@ -729,7 +738,7 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto']
   };
   const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4];
   const TANDA_OF = {};
