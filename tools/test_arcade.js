@@ -46,14 +46,16 @@ module.exports = function (T) {
   eq([SH.arcade().cur, SH.arcade().best, SH.arcade().clears], [1, 0, 0], 'empieza en el peldaño 1');
   const c0 = SH.coins();
   let r = SH.arcadeEnd(1, true);
-  eq([r.next, r.pts, SH.coins() - c0, SH.arcade().best], [2, 6, 6, 1], 'ganar el 1 da ✦ 6 y pasa al 2');
+  eq([r.next, r.pts, SH.coins() - c0, SH.arcade().best], [2, 0, 0, 1], 'ganar el 1 pasa al 2 pero NO da ✦');
   SH.arcadeBegin(2); SH.arcadeEnd(2, true); SH.arcadeBegin(3);
   eq(SH.arcade().cur, 1, 'cerrar la página a medias de un combate cuenta como derrota: vuelve al peldaño 1');
   eq(SH.arcade().best, 2, 'el mejor peldaño se conserva');
   for (let s = 1; s <= 10; s++) { SH.arcadeBegin(s); r = SH.arcadeEnd(s, true); }
   eq(SH.arcade().cur, 11, 'tras el 10 sube el jefe');
+  eq(SH.coins() - c0, 0, 'subir los 10 peldaños no da ✦');
   r = SH.arcadeEnd(11, true);
   ok(r.done && SH.arcade().cur === 1 && SH.arcade().clears === 1, 'ganar al jefe completa la escalera y se reinicia');
+  eq([r.pts, SH.coins() - c0], [A.PRIZE, 210], 'al derrotar al jefe se cobra todo el premio (✦ 210)');
   ok(SH.arcade().got <= SH.ARC_CAP, 'respeta el tope diario de ✦ (' + SH.arcade().got + '/' + SH.ARC_CAP + ')');
   const before = SH.coins(); SH.arcadeEnd(1, true);
   eq(SH.coins(), before, 'con el tope diario agotado ya no da ✦');

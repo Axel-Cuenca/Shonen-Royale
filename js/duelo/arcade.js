@@ -102,6 +102,9 @@
     return out.slice(0, 30);
   }
 
-  D.Arcade = { RUNGS, BOSS, rung, deck, GOOD_ST };
+  /** Premio único: se cobra sólo al derrotar al jefe final (suma de todos los peldaños: 6+8+…+24 + 60 = 210 ✦). */
+  const PRIZE = RUNGS.reduce((n, r) => n + r.pts, 0);
+
+  D.Arcade = { RUNGS, PRIZE, BOSS, rung, deck, GOOD_ST };
   if (!isBrowser) module.exports = D.Arcade;
 })();

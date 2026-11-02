@@ -338,9 +338,10 @@
     if (draw) { saveStore(); return { pts: 0, next: step, done: false, draw: true }; }      // un empate se repite
     if (!won) { a.cur = 1; saveStore(); return { pts: 0, next: 1, done: false, lost: true }; }
     if (a.day !== today()) { a.day = today(); a.got = 0; }
-    const n = Math.max(0, Math.min(arcRung(step).pts, ARC_CAP - a.got)); a.got += n; p.coins += n;
     a.best = Math.max(a.best, step);
     const done = step >= (D.Arcade ? D.Arcade.BOSS : 11);
+    // el premio es UNO solo y se cobra únicamente al derrotar al jefe final (no hay ✦ por peldaño)
+    const n = done ? Math.max(0, Math.min(D.Arcade ? D.Arcade.PRIZE : 210, ARC_CAP - a.got)) : 0; a.got += n; p.coins += n;
     if (done) { a.clears++; a.cur = 1; } else a.cur = step + 1;
     saveStore();
     return { pts: n, next: a.cur, done };

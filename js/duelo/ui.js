@@ -468,7 +468,7 @@
     const items = [
       lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
       : { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
-      { t: 'Arcade', d: 'Sube una escalera de 10 peldaños y un jefe final: cada rival trae un mazo mejor armado y una IA más lista. Si pierdes, vuelves al peldaño 1', f: arcadeScreen, off },
+      { t: 'Arcade', d: 'Sube una escalera de 10 peldaños y un jefe final: cada rival trae un mazo mejor armado y una IA más lista. El premio (✦ 210) se cobra entero solo si derrotas al jefe final; si pierdes, vuelves al peldaño 1', f: arcadeScreen, off },
       { t: 'Campo de práctica', d: 'Prueba cartas y combinaciones: tú juegas los dos lados, con cualquier carta y acción', f: practiceStart, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
@@ -649,7 +649,7 @@
           meter('Calidad del mazo', Math.round(r.q * 100), Math.round(r.q * 100) + ' %'),
           meter('Nivel de la IA', AI_N[r.ai] * 25, AI_N[r.ai] + '/4'),
           h('div', null, h('div', { class: 'akick', style: 'margin-bottom:8px' }, 'Algunas cartas de su mazo'), h('div', { class: 'acards' }, top.map(c => h('div', { class: 'acd' }, cardEl(c), h('small', null, c.name))))),
-          h('div', { class: 'astats' }, h('div', { class: 'ast' }, h('span', null, 'Premio'), h('b', null, '✦ ' + r.pts)), h('div', { class: 'ast' }, h('span', null, 'Hoy en el Arcade'), h('b', null, '✦ ' + ar.got + ' / ' + ar.cap)),
+          h('div', { class: 'astats' }, h('div', { class: 'ast' }, h('span', null, 'Premio del jefe final'), h('b', null, '✦ ' + A.PRIZE)), h('div', { class: 'ast' }, h('span', null, 'Hoy en el Arcade'), h('b', null, '✦ ' + ar.got + ' / ' + ar.cap)),
             h('div', { class: 'ast' }, h('span', null, 'Mejor peldaño'), h('b', null, ar.best ? (ar.best >= A.BOSS ? 'Jefe' : ar.best) : '—')), h('div', { class: 'ast' }, h('span', null, 'Escaleras completas'), h('b', null, ar.clears))),
           bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null,
           h('div', { class: 'row' }, goBtn, btn('Volver', menu, 'ghost big'))))));
@@ -2272,7 +2272,7 @@
       if (opts.arcade && arcRes) {
         const ar = D.Shop.arcade();
         ptsLine = earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos', h('small', null, ` · hoy ${ar.got}/${ar.cap} en el Arcade`))
-          : !arcRes.lost && !arcRes.draw && ar.got >= ar.cap ? h('p', { class: 'earned cap' }, 'Llegaste al máximo de hoy en el Arcade (' + ar.cap + ' ✦).') : null;
+          : arcRes.done && ar.got >= ar.cap ? h('p', { class: 'earned cap' }, 'Llegaste al máximo de hoy en el Arcade (' + ar.cap + ' ✦).') : null;
       } else if (!C.test && vsAI) {
         const t = D.Shop.aiToday();
         ptsLine = earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos', h('small', null, ` · hoy ${t.got}/${t.cap} contra la computadora`))
@@ -2288,7 +2288,7 @@
       let arcLine = null, endBtns;
       if (opts.arcade && arcRes) {
         const A = D.Arcade, q = A.rung(opts.arcade);
-        arcLine = h('p', { class: 'hintr' }, arcRes.draw ? 'Empate en el peldaño ' + opts.arcade + ': se repite el combate.' : arcRes.lost ? 'Caíste en el peldaño ' + opts.arcade + ' (' + q.es + '). Vuelves al peldaño 1; tu mejor marca queda guardada.' : arcRes.done ? '¡Derrotaste al jefe final! Arcade completo.' : 'Peldaño ' + opts.arcade + ' (' + q.es + ') superado. Sigue el ' + arcRes.next + ': ' + A.rung(arcRes.next).es + ' (IA ' + AI_ES[A.rung(arcRes.next).ai].toLowerCase() + ').');
+        arcLine = h('p', { class: 'hintr' }, arcRes.draw ? 'Empate en el peldaño ' + opts.arcade + ': se repite el combate.' : arcRes.lost ? 'Caíste en el peldaño ' + opts.arcade + ' (' + q.es + '). Vuelves al peldaño 1; tu mejor marca queda guardada.' : arcRes.done ? '¡Derrotaste al jefe final! Arcade completo' + (earned ? ': te llevas los ✦ ' + earned + ' del premio.' : '.') : 'Peldaño ' + opts.arcade + ' (' + q.es + ') superado. Sigue el ' + arcRes.next + ': ' + A.rung(arcRes.next).es + ' (IA ' + AI_ES[A.rung(arcRes.next).ai].toLowerCase() + ').');
         endBtns = arcRes.lost || arcRes.done ? [btn(arcRes.done ? 'Escalera' : 'Volver a empezar', () => { closeModal(); arcadeScreen(); }, 'gold big'), btn('Menú', menu, 'ghost big')]
           : [btn(arcRes.draw ? 'Repetir combate' : 'Siguiente combate', () => { closeModal(); arcadeFight(arcRes.next); }, 'gold big'), btn('Escalera', () => { closeModal(); arcadeScreen(); }, 'ghost big')];
       } else endBtns = [opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big')];
