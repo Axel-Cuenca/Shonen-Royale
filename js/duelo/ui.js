@@ -2853,6 +2853,18 @@
   const cardName = id => (C.get(id) || {}).name || id;
   /** Porcentaje legible: 20 → «20», 33,333… → «33,33». */
   const fmtPct = n => (Math.round(n * 100) / 100).toLocaleString('es', { maximumFractionDigits: 2 });
+  /** Sobres con personalidad (1-nov-2026): cada tanda tiene su paleta, emblema y nombre. Se dibujan con SVG/CSS (sin imágenes). */
+  const PK_EM = {
+    2: '<svg class="em" viewBox="0 0 100 100" fill="none"><g stroke="#ffd9a0" stroke-width="3" stroke-linecap="round"><path d="M50 6v14M50 80v14M6 50h14M80 50h14M19 19l10 10M71 71l10 10M81 19L71 29M29 71L19 81"/></g><circle cx="50" cy="50" r="20" fill="#ffb15a" stroke="#fff3d0" stroke-width="3"/><path d="M50 22l5 28-5 30-5-30z" fill="#3a0a14" opacity=".85"/><path d="M36 58h28" stroke="#3a0a14" stroke-width="5" stroke-linecap="round"/></svg>',
+    3: '<svg class="em" viewBox="0 0 100 100" fill="none"><path d="M50 8l36 22v40L50 92 14 70V30z" fill="#6d46ff" stroke="#e1d6ff" stroke-width="3" stroke-linejoin="round"/><path d="M50 8v84M14 30l36 22 36-22M14 70l36-18 36 18" stroke="#e1d6ffaa" stroke-width="2" stroke-linejoin="round"/><path d="M50 8l36 22-36 22-36-22z" fill="#b89bff" opacity=".7"/><circle cx="50" cy="52" r="7" fill="#fff"/></svg>',
+    4: '<svg class="em" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="40" stroke="#d6f6ff" stroke-width="3" opacity=".6"/><circle cx="50" cy="50" r="28" stroke="#6fdcff" stroke-width="3"/><path d="M56 14L30 54h18l-6 32 28-42H52z" fill="#e8fbff" stroke="#6fdcff" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+    5: '<svg class="em" viewBox="0 0 100 100" fill="none"><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#fff" stroke-width="3" transform="rotate(-30 50 50)"/><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#3a1060" stroke-width="3" transform="rotate(30 50 50)"/><circle cx="50" cy="50" r="15" fill="#3a1060" stroke="#fff" stroke-width="3"/><path d="M50 40l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="#ffd84a"/></svg>'
+  };
+  const PK_NAME = { 2: ['Sol y Maldición', 'Demonios, hechiceros y espadas del sol'], 3: ['Titanes y Gemas', 'Titanes, simbiontes y el Guantelete'], 4: ['Más allá del límite', 'Instinto, Colosal y el poder de Thanos'], 5: ['Mundos cruzados', 'Looney, Yu-Gi-Oh, Harry Potter y más'] };
+  const PK_COLOR = { 2: '#ff7b3a', 3: '#9b6bff', 4: '#6fdcff', 5: '#ff5fd0' };
+  (function () { const p = [], n = 14; for (let i = 0; i <= n; i++) p.push((i / n * 100).toFixed(2) + '% ' + (i % 2 ? '0%' : '2.6%')); for (let i = n; i >= 0; i--) p.push((i / n * 100).toFixed(2) + '% ' + (i % 2 ? '100%' : '97.4%')); document.documentElement.style.setProperty('--pkclip', 'polygon(' + p.join(',') + ')'); })();
+  const packFoil = t => { const e = h('span', { class: 'foil' }); e.innerHTML = '<span class="lines"></span><span class="top">Sobre</span>' + (PK_EM[t] || '') + '<span class="num">' + t + '</span><span class="ttl">Tanda</span>'; return e; };
+  const packName = t => (PK_NAME[t] || ['Tanda ' + t, ''])[0];
   let boxBusy = false;      // una apertura a la vez: evita abrir dos veces con clics rápidos
   /** Lista de cajas: cuadrícula de tarjetas; al tocar una se ve el detalle con todos sus premios. */
   function boxScreen() {
@@ -2862,8 +2874,9 @@
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' monedas'), h('span', { class: 'sub' }, `Sobres de ${SH.PACK_SIZE} cartas por ✦ ${SH.PACK_PRICE}. Todas las cartas menos las de la tanda 1 se desbloquean aquí.`)),
       h('div', { class: 'row' }, btn('🔄 Intercambios de repetidas', () => tradeScreen(), 'gold sm')),
       h('h2', null, '🃏 Sobres por tanda'),
-      h('div', { class: 'bxgrid' }, C.PACK_TANDAS.map(t => { const pg = SH.tandaProgress(t); return h('button', { class: 'bxcard pkcard' + (SH.coins() >= SH.PACK_PRICE ? '' : ' poor'), style: '--bc:#7aa8ff', onclick: () => packScreen(t) },
-        h('div', { class: 'bxic' }, '🃏'), h('b', null, 'Sobre · Tanda ' + t), h('small', null, `${pg.got} / ${pg.total} cartas`), h('span', { class: 'bxpr' }, '✦ ' + SH.PACK_PRICE)); })),
+      h('div', { class: 'packs' }, C.PACK_TANDAS.map(t => { const pg = SH.tandaProgress(t); return h('button', { class: 'pk t' + t + (SH.coins() >= SH.PACK_PRICE ? '' : ' poor'), type: 'button', onclick: () => packScreen(t) },
+        packFoil(t), h('span', { class: 'meta' }, h('b', null, packName(t)), h('small', null, (PK_NAME[t] || [0, ''])[1]), h('small', null, `${pg.got} / ${pg.total} cartas`),
+          h('span', { class: 'bar' }, h('i', { style: 'width:' + Math.round(pg.got / Math.max(1, pg.total) * 100) + '%' })), h('span', { class: 'price' }, '✦ ' + SH.PACK_PRICE))); })),
       h('h2', null, '🎴 Cofre de skins'),
       h('div', { class: 'bxgrid' }, [SH.SKIN_BOX].concat(SH.BOXES).map(b => h('button', { class: 'bxcard' + (SH.coins() >= b.price ? '' : ' poor') + (b.kind === 'skins' ? ' skc' : ''), style: `--bc:${b.color}`, onclick: () => boxPrizes(b) },
         h('div', { class: 'bxic' }, b.icon), h('b', null, b.name), h('small', null, b.kind === 'skins' ? SH.poolOf(b).length + ' skins · ' + fmtPct(SH.skinChance()) + ' % cada una' : SH.poolOf(b).length + ' premios'), h('span', { class: 'bxpr' }, '✦ ' + b.price))))));
@@ -2912,10 +2925,10 @@
     const have = new Set(C.RAR_ORDER.map(r => r).filter(r => list.some(c => C.rarityOf(c.id) === r)));
     const odds = C.RAR_ORDER.filter(r => have.has(r)), tot = odds.reduce((n, r) => n + SH.PACK_ODDS[r], 0);
     const pg = SH.tandaProgress(t), msg = h('div', { class: 'shmsg msg err' });
-    mount(h('div', { class: 'scr bxdet', style: '--bc:#7aa8ff' }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'),
-      h('h1', null, 'Sobre · Tanda ' + t), h('div', { class: 'bxsub' }, `${SH.PACK_SIZE} cartas al azar de la tanda ${t}`),
+    mount(h('div', { class: 'scr bxdet', style: '--bc:' + (PK_COLOR[t] || '#7aa8ff') }, h('button', { class: 'back', onclick: boxScreen }, '← Cajas'),
+      h('h1', null, 'Sobre · Tanda ' + t + ' · ' + packName(t)), h('div', { class: 'bxsub' }, `${SH.PACK_SIZE} cartas al azar de la tanda ${t}`),
       h('div', { class: 'ptsbar' }, h('span', { class: 'pts' }, '✦ ', h('b', null, String(SH.coins())), ' monedas'), h('span', { class: 'sub' }, odds.map(r => `${C.RAR_ES[r]} ${(SH.PACK_ODDS[r] / tot * 100).toFixed(0)}%`).join(' · '))),
-      h('div', { class: 'bxstage' }, h('div', { class: 'bxbig' }, '🃏')), msg,
+      h('div', { class: 'bxstage pkstage t' + t }, h('span', { class: 'pk t' + t }, packFoil(t))), msg,
       h('div', { class: 'row bxact' }, btn('Abrir ✦ ' + SH.PACK_PRICE, () => { const r = SH.buyPack(t); if (!r.ok) { S.play('error'); msg.textContent = r.error; return; } S.play('confirm'); packReveal(r, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Cancelar', boxScreen, 'ghost')),
       h('div', { class: 'bxhead' }, `Cartas de esta tanda (${pg.got} / ${pg.total} desbloqueadas)`),
       h('div', { class: 'bxlist' }, list.map(c => { const own = SH.hasCard(c.id), n = SH.cardCount(c.id), rar = C.rarityOf(c.id);
@@ -2924,7 +2937,7 @@
   /** Las 3 cartas del sobre se dan vuelta una a una. */
   function packReveal(r, t) {
     const SH = D.Shop;
-    const ov = h('div', { class: 'boxov pkov open', style: '--bc:#7aa8ff' }, h('div', { class: 'bx-rays' }), h('h2', null, 'Tu sobre · Tanda ' + t),
+    const ov = h('div', { class: 'boxov pkov open', style: '--bc:' + (PK_COLOR[t] || '#7aa8ff') }, h('div', { class: 'bx-rays' }), h('h2', null, 'Tu sobre · Tanda ' + t + ' · ' + packName(t)),
       h('div', { class: 'pkrow' }, r.cards.map((x, i) => { const c = C.get(x.id);
         return h('div', { class: 'pkc pkr-' + x.rar, style: `--d:${(0.35 + i * 0.55).toFixed(2)}s` }, h('div', { class: 'pkimg' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[x.rar]),
           h('span', { class: 'pkn' + (x.isNew ? ' new' : '') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)); })),
