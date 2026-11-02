@@ -125,8 +125,10 @@
           if (a.tributes.length && gain < 300) return -1;
           const strongEnough = !info.count || d.atk >= info.maxAtk * 0.95;
           const canWall = d.def >= info.maxAtk;
-          if (a.t === 'summon') return strongEnough ? 40 + gain / 100 : (canWall ? -1 : 38 + gain / 200);
-          return strongEnough ? 30 + gain / 200 : (canWall ? 42 + d.def / 200 : 35 + d.def / 300);
+          // Si no vence al mejor atacante rival, lo baja en defensa (boca abajo) en vez de regalar un ataque perdido
+          const close = d.atk >= info.maxAtk * 0.8;           // casi iguala: arriesga el ataque
+          if (a.t === 'summon') return strongEnough ? 40 + gain / 100 : (canWall ? -1 : close ? 36 + gain / 200 : 20);
+          return strongEnough ? 30 + gain / 200 : (canWall ? 42 + d.def / 200 : close ? 33 : 38 + d.def / 300);
         }
         case 'setst': {
           const d = cardOf(me.hand[a.hand]);

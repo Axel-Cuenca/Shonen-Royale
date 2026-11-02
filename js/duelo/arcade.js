@@ -57,14 +57,16 @@
       let t = rnd() * tot; for (let i = 0; i < list.length; i++) { t -= ws[i]; if (t <= 0) return list[i]; }
       return list[list.length - 1];
     };
-    const nMon = Math.round(14 + 4 * q);                       // 14 monstruos al principio, 18 al final
+    const nMon = Math.round(15 + 3 * q);                       // 15 monstruos al principio, 18 al final
     // tema del mazo: el tipo con más valor entre los 3 mejores (sorteado); sólo importa desde cierta calidad
     const byType = {};
     for (const c of mons) byType[c.type] = (byType[c.type] || 0) + rate(c);
     const themes = Object.keys(byType).sort((a, b) => byType[b] - byType[a]).slice(0, 3);
     const theme = themes[Math.floor(rnd() * themes.length)];
-    const goal = r.boss ? [7, 4, 4, 3] : q >= 0.9 ? [8, 5, 3, 2] : q >= 0.6 ? [8, 5, 4, 1] : [8, 5, 3, 1];      // cuántos monstruos de ≤4★, 5-6★, 7-9★ y 10★+ (curva sana)
-    const want = goal.slice(); want[0] += nMon - goal.reduce((a, b) => a + b, 0);
+    // La computadora necesita tributos para invocar de 5★ en adelante: el equilibrio es MUCHOS de ≤4★ y pocos altos
+    // (≤4★, 5-6★, 7-9★, 10★+). La dificultad la da la sinergia (tema, calidad, copias), no la altura.
+    const goal = r.boss ? [10, 5, 2, 1] : [0, Math.round(2 + 3 * q), Math.round(2 * q), q >= 0.9 ? 1 : 0];
+    const want = goal.slice(); want[0] = nMon - (want[1] + want[2] + want[3]);
     const have = [0, 0, 0, 0], monsIn = () => have[0] + have[1] + have[2] + have[3];
     const guide = Math.min(1, 0.1 + 0.9 * q);                   // probabilidad de que una carta se elija con criterio
     let guard = 0;
@@ -79,9 +81,10 @@
         const mx = Math.max(...cand.map(rate)), mn = Math.min(...cand.map(rate));
         c = pickW(cand, x => Math.exp((r.boss ? 9 : 5) * q * ((rate(x) - mn) / ((mx - mn) || 1))) * (q >= 0.3 && (x.type === theme) ? 1 + 2.5 * q : 1));
       } else {
-        const cand = mons.filter(x => (count[x.id] || 0) < 2);                       // al azar entre todas
+        const cand = mons.filter(x => (count[x.id] || 0) < 2 && have[bucketOf(x.level)] < want[bucketOf(x.level)]);   // al azar, sin pasarse de cada nivel
         c = cand[Math.floor(rnd() * cand.length)];
       }
+      if (!c) { const cand = mons.filter(x => (count[x.id] || 0) < 2 && bucketOf(x.level) === 0); c = cand[Math.floor(rnd() * cand.length)]; }
       if (!c) break;
       const b = bucketOf(c.level), two = q >= 0.45 && b <= 1 && monsIn() + 2 <= nMon, before = out.length;
       add(c.id, two ? 2 : 1);

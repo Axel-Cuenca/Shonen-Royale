@@ -24,7 +24,7 @@ module.exports = function (T) {
   eq(bad, 0, 'todos los mazos del Arcade son válidos (30 cartas, máx. 2 copias)');
   ok(stat[10].atk > stat[0].atk + 150, 'el jefe usa monstruos más fuertes que el peldaño 1');
   ok(stat[9].good > stat[0].good + 3, 'los peldaños altos llevan mejores magias y trampas');
-  ok(stat[10].low >= 7 && stat[0].low < stat[10].low + 3, 'los altos tienen una curva con suficientes cartas de pocas estrellas para sacrificar');
+  ok(stat[10].low >= 9 && stat[10].low <= stat[0].low, 'los altos tienen una curva con suficientes cartas de pocas estrellas para sacrificar');
   eq(A.deck(5, 7), A.deck(5, 7), 'con la misma semilla el mazo es el mismo');
   ok(JSON.stringify(A.deck(5, 7)) !== JSON.stringify(A.deck(5, 8)), 'con otra semilla cambia');
   // las partidas con estos mazos y los niveles nuevos terminan sin colgarse
