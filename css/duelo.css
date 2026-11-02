@@ -1860,3 +1860,22 @@ canvas.po-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-
 .po-card.charge { animation: poCharge .12s linear infinite; } @keyframes poCharge { 0% { transform: translate(-2px, 1px); } 50% { transform: translate(2px, -1px); } 100% { transform: translate(-1px, -2px); } }
 .po-end { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 14; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; } .po-end[hidden] { display: none; }
 html.rm .po-pk, html.rm .po-slot.next .po-card, html.rm .po-rays, html.rm .po-hint { animation: none; }
+
+/* ---------- Cabecera: que nada se monte en pantallas medianas (2-nov-2026) ---------- */
+.hnav { overflow: hidden; }
+@media (min-width: 861px) and (max-width: 1700px) {
+  .htop { gap: 18px; padding-left: 22px; }
+  .hnav { margin-left: 6px; gap: 2px; } .hnav button { font-size: 16px; letter-spacing: 1.5px; padding: 21px 11px 19px; }
+  .hright { gap: 10px; } .hright .ptsbar { gap: 10px; }
+}
+@media (min-width: 861px) and (max-width: 1500px) {
+  .gtop .brand { font-size: 0; letter-spacing: 0; gap: 0; } .gtop .brand .emb { width: 40px; height: 40px; }      /* sólo el emblema */
+  .hright .acct .ttl { display: none; }
+}
+@media (min-width: 861px) and (max-width: 1280px) {
+  .hnav button { font-size: 14px; letter-spacing: 1px; padding: 21px 8px 19px; } .hright { font-size: 15px; } .hright .ptsbar .pts, .hright .ptsbar .pts b { font-size: 15px; }
+  .hright .rkchip { font-size: 13px; padding: 3px 8px; }
+}
+@media (min-width: 861px) and (max-width: 1180px) {
+  .hright .rkchip, .hright .acct .who { display: none; } .hnav button { padding: 21px 6px 19px; letter-spacing: .5px; }
+}
