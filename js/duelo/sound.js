@@ -123,6 +123,14 @@
       noise({ f: 1500, q: 1, d: 0.15, g: 0.3, t: 0.22 }); [523, 1109, 1567, 2217].forEach((f, i) => tone({ f, a: 0.003, d: 0.9 - i * 0.12, g: 0.1, t: 0.22 })); },
     negate: () => { tone({ type: 'sawtooth', f: 440, f2: 105, d: 0.36, g: 0.18, lp: 1200 }); noise({ f: 3000, f2: 600, d: 0.3, g: 0.2 });
       tone({ f: 1976, d: 0.35, g: 0.08 }); tone({ f: 1318, d: 0.3, g: 0.06, t: 0.04 }); },
+    pk_tear: () => { noise({ f: 1200, f2: 5000, q: 1.2, a: .08, d: .5, g: .25 }); tone({ f: 120, f2: 60, d: .5, g: .4, t: .3 }); },
+    pk_rare: () => { SYN.flip(); [880, 1320, 1760].forEach((f, i) => tone({ f, d: .5, g: .1, t: .06 + i * .06 })); },
+    pk_echarge: () => { noise({ f: 300, f2: 3500, q: 2, a: .85, d: .08, g: .25 }); tone({ type: 'sawtooth', f: 90, f2: 380, a: .85, d: .08, g: .08 }); },
+    pk_eboom: () => { tone({ f: 80, f2: 34, d: .9, g: .7 }); noise({ type: 'lowpass', f: 700, f2: 90, d: .8, g: .35 }); [330, 440, 660].forEach(f => tone({ type: 'triangle', f, a: .1, d: 1.2, g: .08 })); [1320, 1760, 2640].forEach((f, i) => tone({ f, d: .7, g: .08, t: .1 + i * .08 })); },
+    pk_lcharge: () => { noise({ f: 200, f2: 6000, q: 2, a: 1.9, d: .1, g: .3 }); tone({ type: 'sawtooth', f: 60, f2: 520, a: 1.9, d: .1, g: .1 }); [220, 277, 330, 440].forEach((f, i) => tone({ type: 'triangle', f, a: 1.5, d: .5, g: .07, t: .2 + i * .1 })); },
+    pk_lboom: () => { tone({ f: 70, f2: 28, d: 1.6, g: .9 }); noise({ type: 'lowpass', f: 900, f2: 70, d: 1.4, g: .5 }); noise({ type: 'highpass', f: 6000, f2: 2000, a: .02, d: 1.2, g: .15 });
+      [262, 330, 392, 523, 659].forEach((f, i) => tone({ type: 'triangle', f, a: .15, d: 2.2, g: .09, t: .05 + i * .03 }));
+      [1568, 2093, 2637, 3136, 2637, 3951, 3136, 4186].forEach((f, i) => tone({ f, a: .01, d: .8, g: .07, t: .2 + i * .09 })); },
     turn: () => { [784, 1175].forEach((f, i) => { tone({ f, a: 0.006, d: 0.7, g: 0.2, t: i * 0.13 }); tone({ f: f * 2.76, a: 0.004, d: 0.3, g: 0.04, t: i * 0.13 }); }); }
   };
   // nombre lógico del juego -> [sonido sintetizado, bus]
@@ -131,7 +139,8 @@
     attack: ['attack', 'combat'], atk_phys: ['attack', 'combat'], atk_fire: ['attack', 'combat'], atk_water: ['attack', 'combat'], atk_electric: ['attack', 'combat'],
     atk_ice: ['attack', 'combat'], atk_nature: ['attack', 'combat'], atk_mystic: ['attack', 'combat'],
     hit: ['hit', 'combat'], hurt: ['hit', 'combat'], hit_heavy: ['heavy', 'combat'], destroy: ['destroy', 'combat'], lp: ['lp', 'combat'], heal: ['heal', 'combat'],
-    spell: ['spell', 'combat'], trap: ['trap', 'combat'], negate: ['negate', 'combat'], turn: ['turn', 'notify']
+    spell: ['spell', 'combat'], trap: ['trap', 'combat'], negate: ['negate', 'combat'], turn: ['turn', 'notify'],
+    pk_tear: ['pk_tear', 'ui'], pk_rare: ['pk_rare', 'ui'], pk_echarge: ['pk_echarge', 'combat'], pk_eboom: ['pk_eboom', 'combat'], pk_lcharge: ['pk_lcharge', 'combat'], pk_lboom: ['pk_lboom', 'combat']
   };
   function synth(name) {
     const m = SYNMAP[name]; if (!m || !ctx || ctx.state !== 'running' || active > 40) return;

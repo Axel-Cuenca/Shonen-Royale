@@ -2934,15 +2934,82 @@
       h('div', { class: 'bxlist' }, list.map(c => { const own = SH.hasCard(c.id), n = SH.cardCount(c.id), rar = C.rarityOf(c.id);
         return h('div', { class: 'pkt pkr-' + rar + (own ? ' got' : ' lockd') }, h('div', { class: 'pkimg' }, pkArt(c), own ? null : h('span', { class: 'pklk' }, '🔒')), h('b', null, c.name), h('small', null, C.RAR_ES[rar] + (own ? (n > 1 ? ` · ×${n}` : ' ✓') : ''))); }))));
   }
-  /** Las 3 cartas del sobre se dan vuelta una a una. */
+  /** Apertura del sobre (2-nov-2026): se toca el sobre y luego cada carta, de una en una. Común/poco común giran sin más; rara con destello;
+   *  épica carga energía y estalla en violeta; legendaria oscurece la pantalla, levanta un pilar de luz, flota al centro y revienta en dorado. */
   function packReveal(r, t) {
-    const SH = D.Shop;
-    const ov = h('div', { class: 'boxov pkov open', style: '--bc:' + (PK_COLOR[t] || '#7aa8ff') }, h('div', { class: 'bx-rays' }), h('h2', null, 'Tu sobre · Tanda ' + t + ' · ' + packName(t)),
-      h('div', { class: 'pkrow' }, r.cards.map((x, i) => { const c = C.get(x.id);
-        return h('div', { class: 'pkc pkr-' + x.rar, style: `--d:${(0.35 + i * 0.55).toFixed(2)}s` }, h('div', { class: 'pkimg' }, pkArt(c)), h('b', null, c.name), h('small', null, C.RAR_ES[x.rar]),
-          h('span', { class: 'pkn' + (x.isNew ? ' new' : '') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)); })),
-      h('div', { class: 'row' }, btn('Otro sobre ✦ ' + SH.PACK_PRICE, () => { ov.remove(); const r2 = SH.buyPack(t); if (!r2.ok) { S.play('error'); packScreen(t); return; } S.play('confirm'); packReveal(r2, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Listo', () => { ov.remove(); packScreen(t); }, 'ghost')));
+    const SH = D.Shop, RM = document.documentElement.classList.contains('rm');
+    const wait = ms => new Promise(res => setTimeout(res, RM ? Math.min(ms, 120) : ms));
+    let idx = 0, busy = false, phase = 'pack', closed = false;
+    const dim = h('div', { class: 'po-dim' }), rays = h('div', { class: 'po-rays' }), pillar = h('div', { class: 'po-pillar' }), flash = h('div', { class: 'po-flash' });
+    const cv = h('canvas', { class: 'po-fx' }), banner = h('div', { class: 'po-banner' }), count = h('div', { class: 'po-count' }), hint = h('div', { class: 'po-hint' }, 'Toca el sobre para abrirlo');
+    const pk = h('button', { class: 'pk t' + t + ' po-pk', type: 'button', 'aria-label': 'Abrir sobre' }, packFoil(t));
+    const slots = r.cards.map((x, i) => { const c = C.get(x.id);
+      return h('div', { class: 'po-slot', 'data-i': i }, h('div', { class: 'po-card' }, h('div', { class: 'po-face po-back' }, h('i', null, '✦')),
+        h('div', { class: 'po-face po-front pkr-' + x.rar }, h('div', { class: 'po-art' }, pkArt(c)), h('b', null, c.name), h('small', null, (c.level ? '★ ' + c.level + ' · ' : '') + C.RAR_ES[x.rar]),
+          h('span', { class: 'po-nw' + (x.isNew ? '' : ' rep') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)))); });
+    const row = h('div', { class: 'po-row' }, slots);
+    const end = h('div', { class: 'po-end' }); end.hidden = true;
+    const ov = h('div', { class: 'boxov pko open', style: '--bc:' + (PK_COLOR[t] || '#7aa8ff') }, dim, rays, pillar, cv, flash, banner, count, pk, row, hint, end);
     document.body.append(ov);
+    // ---- partículas ----
+    const g2 = cv.getContext('2d'); let P = [], raf = 0, W = 0, H = 0;
+    const size = () => { const d = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; g2.setTransform(d, 0, 0, d, 0, 0); };
+    size(); const onRs = () => size(); window.addEventListener('resize', onRs);
+    const tick = () => { g2.clearRect(0, 0, W, H); g2.globalCompositeOperation = 'lighter';
+      P = P.filter(p => { p.life -= p.ring ? .022 : p.dec; if (p.life <= 0) return false;
+        if (p.ring) { p.rad += (p.max - p.rad) * .09; g2.globalAlpha = p.life; g2.strokeStyle = p.c; g2.lineWidth = 5 * p.life + 1; g2.beginPath(); g2.arc(p.x, p.y, p.rad, 0, 6.283); g2.stroke(); return true; }
+        p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= .985; g2.globalAlpha = Math.max(0, p.life); g2.fillStyle = p.c; g2.beginPath(); g2.arc(p.x, p.y, p.r * p.life + .4, 0, 6.283); g2.fill(); return true; });
+      g2.globalAlpha = 1; g2.globalCompositeOperation = 'source-over'; raf = P.length && !closed ? requestAnimationFrame(tick) : 0; if (!P.length) g2.clearRect(0, 0, W, H); };
+    const burst = (x, y, col, n, o) => { if (RM) return; o = o || {}; for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, sp = (o.sp || 4) * (.3 + Math.random());
+      P.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (o.up || 0), life: 1, dec: .006 + Math.random() * (o.dec || .014), r: 1.5 + Math.random() * (o.r || 3), c: Array.isArray(col) ? col[Math.floor(Math.random() * col.length)] : col, g: o.g == null ? .08 : o.g }); }
+      if (!raf) raf = requestAnimationFrame(tick); };
+    const ring = (x, y, col, max) => { if (RM) return; P.push({ ring: 1, x, y, rad: 8, max, life: 1, c: col }); if (!raf) raf = requestAnimationFrame(tick); };
+    const centerOf = el => { const q = el.getBoundingClientRect(); return { x: q.left + q.width / 2, y: q.top + q.height / 2 }; };
+    const doFlash = (ms, peak) => { try { flash.animate([{ opacity: peak || .9 }, { opacity: 0 }], { duration: RM ? 80 : ms, easing: 'ease-out' }); } catch (e) { /* nada */ } };
+    const shake = () => { if (RM) return; ov.classList.remove('shake'); void ov.offsetWidth; ov.classList.add('shake'); };
+    const close = () => { closed = true; window.removeEventListener('resize', onRs); ov.remove(); };
+    const markNext = () => { slots.forEach((s, i) => s.classList.toggle('next', i === idx && phase === 'cards')); count.textContent = idx < r.cards.length ? `CARTA ${idx + 1} / ${r.cards.length}` : ''; };
+    const gone = () => closed || !ov.isConnected;
+    const openPack = async () => {
+      if (phase !== 'pack' || busy) return; busy = true; hint.hidden = true; S.play('pk_tear'); pk.classList.add('open');
+      await wait(900); if (gone()) return; doFlash(500, .8); const c = centerOf(pk); burst(c.x, c.y, ['#fff', PK_COLOR[t] || '#9bb', '#ffd84a'], 46, { sp: 7 }); ring(c.x, c.y, PK_COLOR[t] || '#fff', 180);
+      await wait(250); if (gone()) return; pk.hidden = true;
+      for (const s of slots) { s.classList.add('in'); await wait(160); if (gone()) return; }
+      await wait(500); phase = 'cards'; busy = false; markNext(); hint.hidden = false; hint.textContent = 'Toca la carta para revelarla';
+    };
+    const reveal = async () => {
+      if (phase !== 'cards' || busy || idx >= r.cards.length) return; busy = true; hint.hidden = true;
+      const x = r.cards[idx], slot = slots[idx], card = slot.firstChild, rar = x.rar; slot.classList.remove('next');
+      if (rar === 'c' || rar === 'u') { S.play('flip'); card.classList.add('flip'); await wait(800); }
+      else if (rar === 'r') { S.play('pk_rare'); card.classList.add('flip'); await wait(350); const p = centerOf(slot); ring(p.x, p.y, '#6fb0ff', 130); burst(p.x, p.y, ['#6fb0ff', '#cfe3ff'], 22, { sp: 4 }); card.classList.add('glow-r'); await wait(600); }
+      else if (rar === 'e') {
+        slot.classList.add('up'); dim.style.opacity = .55; S.play('pk_echarge'); card.classList.add('charge'); const p1 = centerOf(slot);
+        const iv = setInterval(() => burst(p1.x + (Math.random() - .5) * 120, p1.y + 90, ['#b04bff', '#e0b8ff'], 3, { sp: 1.2, up: 2.5, g: -.02, r: 2 }), 60);
+        await wait(950); clearInterval(iv); card.classList.remove('charge'); if (gone()) return;
+        doFlash(450, .7); S.play('pk_eboom'); card.classList.add('flip', 'glow-e'); shake(); ring(p1.x, p1.y, '#d9a8ff', 260); ring(p1.x, p1.y, '#b04bff', 170); burst(p1.x, p1.y, ['#b04bff', '#e0b8ff', '#fff'], 70, { sp: 9 });
+        banner.textContent = 'ÉPICA'; banner.className = 'po-banner epic'; void banner.offsetWidth; banner.classList.add('show'); await wait(1200); dim.style.opacity = 0; slot.classList.remove('up'); await wait(500);
+      } else {
+        slot.classList.add('up'); dim.style.opacity = .88; rays.style.opacity = 1; pillar.style.opacity = 1; pillar.style.height = '95%'; S.play('pk_lcharge');
+        const p2 = centerOf(slot), cx = W / 2, cy = H * .46;
+        slot.style.transition = 'transform 1.8s cubic-bezier(.3,.1,.2,1)'; slot.style.transform = `translate(${cx - p2.x}px,${cy - p2.y}px) scale(1.55)`; card.classList.add('charge');
+        const iv2 = setInterval(() => burst(cx + (Math.random() - .5) * 200, H * .85, ['#ffd84a', '#fff1a0', '#ffb62e'], 4, { sp: 1.5, up: 3.5, g: -.03, r: 2.4 }), 45);
+        await wait(2000); clearInterval(iv2); card.classList.remove('charge'); if (gone()) return;
+        doFlash(900, 1); S.play('pk_lboom'); card.classList.add('flip', 'glow-l'); shake(); ring(cx, cy, '#fff3b0', 420); ring(cx, cy, '#ffd84a', 300); ring(cx, cy, '#ffb62e', 200);
+        burst(cx, cy, ['#ffd84a', '#fff1a0', '#ffb62e', '#fff'], 140, { sp: 11, dec: .01 });
+        banner.textContent = 'LEGENDARIA'; banner.className = 'po-banner'; void banner.offsetWidth; banner.classList.add('show');
+        const iv3 = setInterval(() => burst(Math.random() * W, -10, ['#ffd84a', '#fff1a0', '#ff9a3c', '#ff5fd0', '#6fdcff'], 3, { sp: 1.2, g: .06, r: 3, dec: .006 }), 55);
+        await wait(2400); clearInterval(iv3);
+        slot.style.transform = ''; dim.style.opacity = 0; rays.style.opacity = 0; pillar.style.opacity = 0; pillar.style.height = 0; await wait(1000); slot.style.transition = ''; slot.classList.remove('up');
+      }
+      if (gone()) return; idx++; busy = false;
+      if (idx >= r.cards.length) { phase = 'done'; markNext(); end.hidden = false; hint.hidden = true; } else { markNext(); hint.hidden = false; hint.textContent = 'Toca la siguiente carta'; }
+    };
+    end.append(btn('Otro sobre ✦ ' + SH.PACK_PRICE, () => { close(); const r2 = SH.buyPack(t); if (!r2.ok) { S.play('error'); packScreen(t); return; } S.play('confirm'); packReveal(r2, t); }, SH.coins() >= SH.PACK_PRICE ? 'gold' : 'ghost'), btn('Listo', () => { close(); packScreen(t); }, 'ghost'));
+    pk.addEventListener('click', openPack);
+    slots.forEach((s, i) => s.addEventListener('click', () => { if (i === idx) reveal(); }));
+    ov.addEventListener('click', e => { if (e.target.closest('.po-slot') || e.target.closest('.po-pk') || e.target.closest('.po-end')) return; if (phase === 'cards') reveal(); });
+    ov.tabIndex = -1; ov.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { if (e.target.closest && e.target.closest('.po-end')) return; e.preventDefault(); if (phase === 'pack') openPack(); else reveal(); } });
+    pk.focus();
   }
   /** Detalle de una caja: la caja grande, sus probabilidades y todos los premios posibles (de común a legendario). */
   function boxPrizes(b) {
