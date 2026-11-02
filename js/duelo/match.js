@@ -70,7 +70,7 @@
   // ---------------- contra la computadora ----------------
   function local(o) {
     const seed = o.seed != null ? o.seed : randSeed();
-    const delay = o.delay != null ? o.delay : 750;
+    const delay = o.delay != null ? o.delay : 1700;      // pausa entre jugadas de la computadora (1-nov-2026: más lento para seguirla)
     const n = o.n || 2, mode = o.mode || 'ffa';
     const decks = [o.deck], names = [o.name || 'Tú'];
     if (o.aiDecks) o.aiDecks.forEach((d, i) => { decks.push(d); names.push((o.aiNames && o.aiNames[i]) || 'Computadora'); });
@@ -149,7 +149,7 @@
   function host(o) {
     const views = emitter(), status = emitter(), chats = emitter();
     let n = o.n || 2, mode = o.mode || 'ffa';
-    const delay = o.delay != null ? o.delay : 750;
+    const delay = o.delay != null ? o.delay : 1700;      // pausa entre jugadas de la computadora (1-nov-2026: más lento para seguirla)
     let st = null, closed = false, timer = 0, ais = [];
     const slots = [];      // un invitado por canal: { tr, name, deck, pref, seat, left }
     const m = { seat: 0, names: [o.name || 'Anfitrión'].concat(Array.from({ length: n - 1 }, () => 'Rival')), kind: 'host', cos: [cleanCos(o.cos)], rk: [cleanRk(o.rk)], hum: [], onView: views.on, onStatus: status.on, onChat: chats.on };
