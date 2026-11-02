@@ -1060,6 +1060,7 @@ require('./test_rank.js')({ ok, eq, section });
 require('./test_temporada.js')({ ok, eq, section });
 require('./test_skins.js')({ ok, eq, section });
 require('./test_cofre.js')({ ok, eq, section, Cards });
+require('./test_arcade.js')({ E, ok, eq, section, Cards });
 require('./test_sobres.js')({ ok, eq, section, Cards });
 const amigosTests = require('./test_amigos.js')({ ok, eq, section });
 const lobbyTests = require('./test_lobby.js')({ ok, eq, section, Match, Cards, until });

@@ -178,6 +178,8 @@
     p.day = typeof p.day === 'string' ? p.day : '';
     p.aiDay = typeof p.aiDay === 'string' ? p.aiDay : '';
     p.aiGot = Math.max(0, Math.floor(Number(p.aiGot) || 0));
+    { const a = p.arc && typeof p.arc === 'object' ? p.arc : {}, n = (v, mx) => Math.max(0, Math.min(mx, Math.floor(Number(v) || 0)));
+      p.arc = { best: n(a.best, 11), cur: Math.max(1, n(a.cur, 11)), clears: n(a.clears, 99999), fight: n(a.fight, 11), day: typeof a.day === 'string' ? a.day : '', got: n(a.got, 99999) }; }      // Arcade
     p.owned = Array.isArray(p.owned) ? p.owned.filter(id => !!byId(id)) : [];
     p.skOwn = p.skOwn && typeof p.skOwn === 'object' && !Array.isArray(p.skOwn) ? p.skOwn : {};
     p.eq = p.eq && typeof p.eq === 'object' ? p.eq : {};
@@ -316,6 +318,31 @@
     }
     if (n > 0) { p.coins += n; saveStore(); }
     return n;
+  }
+  // ---------------- Arcade (1-nov-2026) ----------------
+  const ARC_CAP = 210;      // ✦ máximos por día en el Arcade (una escalera completa: 6+8+…+24 + 60 = 210)
+  const arcRung = n => (D.Arcade ? D.Arcade.rung(n) : { pts: 0 });
+  /** Estado del Arcade: peldaño siguiente, mejor peldaño, escaleras completadas y ✦ de hoy. Un combate que quedó a medias cuenta como derrota. */
+  function arcade() {
+    const p = pts(); if (!p) return { cur: 1, best: 0, clears: 0, got: 0, cap: ARC_CAP };
+    const a = p.arc;
+    if (a.fight) { a.fight = 0; a.cur = 1; saveStore(); }
+    return { cur: a.cur, best: a.best, clears: a.clears, got: a.day === today() ? a.got : 0, cap: ARC_CAP };
+  }
+  /** Empieza el combate del peldaño actual (si la página se cierra a medias, al volver cuenta como derrota). */
+  function arcadeBegin(step) { const p = pts(); if (!p) return; p.arc.fight = step; saveStore(); }
+  /** Fin de un combate del Arcade: devuelve { pts, next, done } (done = escalera completa) o null. */
+  function arcadeEnd(step, won) {
+    const p = pts(); if (!p) return null;
+    const a = p.arc; a.fight = 0;
+    if (!won) { a.cur = 1; saveStore(); return { pts: 0, next: 1, done: false, lost: true }; }
+    if (a.day !== today()) { a.day = today(); a.got = 0; }
+    const n = Math.max(0, Math.min(arcRung(step).pts, ARC_CAP - a.got)); a.got += n; p.coins += n;
+    a.best = Math.max(a.best, step);
+    const done = step >= (D.Arcade ? D.Arcade.BOSS : 11);
+    if (done) { a.clears++; a.cur = 1; } else a.cur = step + 1;
+    saveStore();
+    return { pts: n, next: a.cur, done };
   }
   /** Lo ganado hoy contra la computadora y el tope diario. */
   function aiToday() { const p = pts(); if (!p) return { got: 0, cap: AI_DAILY_CAP }; return { got: p.aiDay === today() ? p.aiGot || 0 : 0, cap: AI_DAILY_CAP }; }
@@ -473,5 +500,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { TRADE_N, sparesOf, tradeUp, PACK_PRICE, PACK_SIZE, PACK_ODDS, hasCard, cardCount, spareOf, tandaProgress, rollCard, buyPack, SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { TRADE_N, sparesOf, tradeUp, PACK_PRICE, PACK_SIZE, PACK_ODDS, hasCard, cardCount, spareOf, tandaProgress, rollCard, buyPack, SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, arcade, arcadeBegin, arcadeEnd, ARC_CAP, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

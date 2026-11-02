@@ -3,6 +3,7 @@
  * su campo, lo visible del rival, nunca las cartas ocultas.
  *   level 'easy'   : puntúa con ruido y a veces hace una jugada al azar
  *   level 'normal' : puntúa las acciones y hace la mejor
+ *   level 'hard' / 'master' (Arcade): igual pero sin ruido, siempre la mejor jugada (desempatan por la primera)
  * choose(st, p) / chooseView(vista) devuelven una de las acciones legales.
  */
 (function () {
@@ -26,7 +27,7 @@
   function create(level, seed) {
     const rnd = mulberry((seed == null ? Date.now() : seed) | 0);
     const easy = level === 'easy';
-    const noise = easy ? 18 : 2;
+    const noise = easy ? 18 : (level === 'hard' || level === 'master') ? 0 : 2;
 
     function pickPending(v) {
       const pd = v.pending, L = v.legal;
