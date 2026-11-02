@@ -1227,7 +1227,7 @@
     const zoneMem = new Map(), enterMem = new Map(), hitMem = new Set(), moveQ = [], summonQ = [];
     let lastCur = null;
     let gameEl = null, zrowsEl = null, lcol = null;
-    let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, atkFx = [], atkTg = [], pops = [];
+    let cutQ = [], cutBusy = false, fx = [], cut = [], needShake = false, fresh = false, lowTrack = false, lastFam = null, ownSnd = false, atkFx = [], atkTg = [], pops = [];
     const seatNames = () => match.names;
     const nameOf = q => seatNames()[q] || ('Jugador ' + (q + 1));
     const shortOf = q => { const m = /^Computadora(?: (\d))?/.exec(nameOf(q)); return m ? 'Compu' + (m[1] ? ' ' + m[1] : '') : nameOf(q); };
@@ -1235,7 +1235,7 @@
     const isAlly = q => q !== v.seat && v.team[q] === v.team[v.seat];
     const place = q => v.n - v.rank.indexOf(q);
 
-    const fileSfx = src => { if (src) S.voice({ voice: { src } }); };
+    const fileSfx = src => { if (src) { ownSnd = true; S.voice({ voice: { src } }); } };      // ownSnd: la carta ya trae su propio sonido (el impacto genérico no suena)
     const abn = k => (C.AB && C.AB[k] ? C.AB[k][0] : k);
     const nameId = id => (C.get(id) || {}).name || id;
     /** Nombre de cada poder (los de la tanda 2 no coinciden con el id de la habilidad). */
@@ -2084,7 +2084,8 @@
         const dlt = p.lp - prevLps[seat];
         if (!dlt || (prevLps[seat] === 0 && !p.alive)) return;
         lpDelta[seat] = dlt;
-        S.play(dlt > 0 ? 'heal' : dlt <= -2000 ? 'hit_heavy' : seat === v.seat ? 'hurt' : 'hit', 250);
+        if (dlt > 0) S.play('heal', 250);
+        else { if (!ownSnd) S.play(dlt <= -2000 ? 'hit_heavy' : seat === v.seat ? 'hurt' : 'hit', 250); S.play('lp', 480); }      // el impacto genérico solo suena si la carta no tiene sonido propio
         if (dlt < 0 && lastFam) fx.push({ pc: seat, type: 'pc', fam: lastFam });
         if (dlt <= -1000) needShake = true;
       });
@@ -2342,14 +2343,14 @@
       const fresh2 = v.log.filter(l => l.n > lastLogN);
       if (v.log.length) lastLogN = Math.max(lastLogN, v.log[v.log.length - 1].n);
       if (firstView) return;
-      let i = 0; lastFam = null;
+      let i = 0; lastFam = null; ownSnd = false;
       for (const l of fresh2) {
         const t = l.t; let snd = null;
         const cin = (d, text, o) => { if (d && d.kind === 'monster') cutAdd(Object.assign({ k: 'char', d, text, mine: l.p === v.seat }, o || {})); };
         if (D.BgFX) { const pwr = / lanza (Rojo|Azul|Púrpura):/.exec(t) || (/ lanza la Genkidama/.test(t) ? [0, 'Genkidama'] : null); if (pwr) D.BgFX.power(pwr[1]); }
         if (/^Turno/.test(t)) snd = (!multi() || l.p === v.seat) ? 'turn' : null;
         else if (/^queda fuera/.test(t)) { snd = 'destroy'; needShake = true; pops.push({ t: l.p === v.seat ? 'Quedaste fuera' : nameOf(l.p) + ' queda fuera', cls: 'weak' }); }
-        else if (/^invoca a|(?<!se )invoca especialmente a /.test(t)) { const m = /invoca (?:especialmente )?a (.+?)(?: \(ATK.*)?$/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; if (d) fileSfx(d.sfx && d.sfx.summon); if (d && !multi()) cin(d, '', { short: true }); }
+        else if (/^invoca a|(?<!se )invoca especialmente a /.test(t)) { const m = /invoca (?:especialmente )?a (.+?)(?: \(ATK.*)?$/.exec(t), d = m && byName[m[1]]; snd = d && d.level >= 7 ? 'epic' : 'summon'; if (d && d.sfx && d.sfx.summon) snd = null;      /* sonido propio: el genérico no suena */ if (d) fileSfx(d.sfx && d.sfx.summon); if (d && !multi()) cin(d, '', { short: true }); }
         else if (/^revive a/.test(t)) snd = 'summon';
         else if (/come espinaca/.test(t)) { snd = 'epic'; spinachFx(); S.voice(byName['Popeye El Marinero']); cin(byName['Popeye El Marinero'], '¡A comer espinaca!'); }
         else if (/ explota!/.test(t)) { snd = 'explosion'; needShake = true; S.voice(byName['Creeper']); cin(byName['Creeper'], '¡BOOM!'); }

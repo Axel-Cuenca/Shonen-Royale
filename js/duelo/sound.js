@@ -30,7 +30,7 @@
     hit: T('hit', 'combat', .7, 100), hit_heavy: T('hit_heavy', 'combat', .8, 150), crit: T('crit', 'combat', .8, 200), hurt: T('hurt', 'combat', .65, 150),
     shield: T('shield', 'combat', .6, 150), destroy: T('destroy', 'combat', .7, 120), explosion: T('explosion', 'combat', .8, 250),
     heal: T('heal', 'combat', .6, 200, 0), spell: T('spell', 'combat', .6, 150), trap: T('trap', 'combat', .7, 150), negate: T('negate', 'combat', .6, 150),
-    eff: T('eff', 'combat', .5, 150, 0), noteff: T('noteff', 'combat', .5, 150, 0)
+    lp: T('lp', 'combat', .5, 400, 0), eff: T('eff', 'combat', .5, 150, 0), noteff: T('noteff', 'combat', .5, 150, 0)
   };
   SFX.attack = SFX.atk_phys;
   // nombres del juego principal que se usan como respaldo si falta el archivo
@@ -74,6 +74,71 @@
     return bufs.get(file);
   }
 
+
+  // ---- efectos de batalla sintetizados (1-nov-2026, inspirados en el estilo de Duel Links; originales, sin archivos) ----
+  // Nunca tocan los sonidos propios de los personajes (`sfx`/`voice` de cards.js): esos siguen siendo sus .mp3.
+  let nbuf = null, T0 = 0, OUT = null;
+  const R = (a, b) => a + Math.random() * (b - a);
+  const ev = (g, t, a, d, peak) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  function tone(o) {
+    const t = T0 + (o.t || 0), a = o.a || 0.004, d = o.d || 0.2, os = ctx.createOscillator(), g = ctx.createGain(); let n = os;
+    os.type = o.type || 'sine'; os.frequency.setValueAtTime(o.f, t);
+    if (o.f2) os.frequency.exponentialRampToValueAtTime(o.f2, t + a + d);
+    if (o.lp) { const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = o.lp; os.connect(lp); n = lp; }
+    ev(g, t, a, d, o.g == null ? 0.2 : o.g); n.connect(g); g.connect(OUT); active++; os.onended = () => { active--; os.disconnect(); g.disconnect(); };
+    os.start(t); os.stop(t + a + d + 0.05);
+  }
+  function noise(o) {
+    const t = T0 + (o.t || 0), a = o.a || 0.004, d = o.d || 0.15, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = nbuf; s.loop = true; f.type = o.type || 'bandpass'; f.Q.value = o.q || 0.8; f.frequency.setValueAtTime(o.f, t);
+    if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + a + d);
+    ev(g, t, a, d, o.g == null ? 0.2 : o.g); s.connect(f); f.connect(g); g.connect(OUT); active++; s.onended = () => { active--; s.disconnect(); f.disconnect(); g.disconnect(); };
+    s.start(t, Math.random()); s.stop(t + a + d + 0.05);
+  }
+  const SYN = {
+    draw: () => { noise({ f: 3800, f2: 1800, d: 0.07, g: 0.2 }); tone({ type: 'triangle', f: 1400, d: 0.04, g: 0.05, t: 0.05 }); },
+    place: () => { noise({ f: 1900, f2: 600, q: 1.2, d: 0.06, g: 0.4 }); tone({ f: 150, f2: 62, d: 0.14, g: 0.55 }); tone({ type: 'triangle', f: 2600, d: 0.09, g: 0.04, t: 0.01 }); },
+    set: () => { noise({ type: 'highpass', f: 3200, f2: 800, a: 0.03, d: 0.18, g: 0.16 }); tone({ f: 115, f2: 60, d: 0.12, g: 0.4, t: 0.15 }); noise({ f: 900, d: 0.04, g: 0.2, t: 0.15 }); },
+    flip: () => { noise({ f: 4200, f2: 1500, d: 0.09, g: 0.2 }); tone({ f: 1568, d: 0.4, g: 0.13, t: 0.07 }); tone({ f: 2349, d: 0.3, g: 0.05, t: 0.07 }); },
+    pos: () => { noise({ f: 900, f2: 2600, q: 1.4, a: 0.03, d: 0.12, g: 0.22 }); tone({ type: 'triangle', f: 520, d: 0.05, g: 0.1, t: 0.13 }); },
+    summon: () => { [660, 880, 1320, 1760].forEach((f, i) => tone({ type: i % 2 ? 'triangle' : 'sine', f, a: 0.01, d: 0.5, g: 0.13, t: i * 0.055 }));
+      noise({ type: 'highpass', f: 6500, f2: 3000, a: 0.05, d: 0.4, g: 0.05 }); tone({ f: 95, f2: 55, d: 0.25, g: 0.45 }); },
+    epic: () => { tone({ f: 72, f2: 34, d: 1.0, g: 0.75 }); noise({ type: 'lowpass', f: 500, f2: 90, q: 0.5, d: 0.9, g: 0.35 });
+      [220, 330, 440, 660].forEach(f => tone({ type: 'triangle', f, a: 0.28, d: 1.2, g: 0.09, lp: 2400 }));
+      [1320, 1760, 2640, 3520, 2640, 3960].forEach((f, i) => tone({ f, a: 0.01, d: 0.6, g: 0.08, t: 0.32 + i * 0.07 }));
+      noise({ type: 'highpass', f: 7000, f2: 2500, a: 0.2, d: 0.9, g: 0.07, t: 0.2 }); },
+    attack: () => { noise({ f: 400, f2: 3600, q: 1.5, a: 0.3, d: 0.08, g: 0.32 }); tone({ type: 'sawtooth', f: 120, f2: 560, a: 0.3, d: 0.08, g: 0.1, lp: 1800 });
+      tone({ type: 'square', f: 900, f2: 300, d: 0.05, g: 0.12, t: 0.38 }); },
+    hit: () => { noise({ f: 2600, f2: 500, q: 0.9, d: 0.13, g: 0.6 }); tone({ f: 190, f2: 48, d: 0.24, g: 0.75 }); tone({ type: 'square', f: 900, f2: 200, d: 0.05, g: 0.14 }); },
+    heavy: () => { noise({ f: 2800, f2: 350, q: 0.8, d: 0.2, g: 0.7 }); tone({ f: 170, f2: 40, d: 0.45, g: 0.85 }); tone({ f: 85, f2: 28, d: 0.9, g: 0.8, t: 0.03 });
+      noise({ type: 'lowpass', f: 900, f2: 90, q: 0.5, d: 0.7, g: 0.4, t: 0.02 }); noise({ f: 1800, f2: 400, d: 0.2, g: 0.25, t: 0.11 }); },
+    destroy: () => { noise({ type: 'highpass', f: 5200, f2: 1800, a: 0.01, d: 0.5, g: 0.2 }); tone({ f: 130, f2: 50, d: 0.25, g: 0.5 });
+      for (let i = 0; i < 9; i++) { const f = R(2200, 6200); tone({ f, f2: f * 0.55, a: 0.003, d: R(0.12, 0.38), g: 0.07, t: R(0, 0.28) }); } },
+    lp: () => { for (let i = 0; i < 11; i++) tone({ type: 'triangle', f: 980 + i * 22, a: 0.002, d: 0.05, g: 0.14, t: i * 0.045 }); tone({ f: 640, d: 0.3, g: 0.17, t: 0.55 }); tone({ f: 960, d: 0.25, g: 0.06, t: 0.55 }); },
+    heal: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => { tone({ f, a: 0.01, d: 0.55, g: 0.12, t: i * 0.07 }); tone({ f: f * 2, a: 0.01, d: 0.3, g: 0.03, t: i * 0.07 }); });
+      noise({ type: 'highpass', f: 7000, a: 0.1, d: 0.5, g: 0.03, t: 0.1 }); },
+    spell: () => { noise({ f: 500, f2: 5200, q: 4, a: 0.42, d: 0.1, g: 0.22 }); tone({ f: 400, f2: 1700, a: 0.42, d: 0.1, g: 0.1 });
+      tone({ f: 1760, a: 0.01, d: 0.7, g: 0.15, t: 0.46 }); tone({ f: 2637, a: 0.01, d: 0.6, g: 0.08, t: 0.5 }); noise({ type: 'highpass', f: 6000, d: 0.4, g: 0.05, t: 0.46 }); },
+    trap: () => { noise({ f: 300, f2: 2200, q: 1.5, a: 0.2, d: 0.03, g: 0.22 }); tone({ type: 'square', f: 110, f2: 55, d: 0.4, g: 0.3, t: 0.22, lp: 900 });
+      noise({ f: 1500, q: 1, d: 0.15, g: 0.3, t: 0.22 }); [523, 1109, 1567, 2217].forEach((f, i) => tone({ f, a: 0.003, d: 0.9 - i * 0.12, g: 0.1, t: 0.22 })); },
+    negate: () => { tone({ type: 'sawtooth', f: 440, f2: 105, d: 0.36, g: 0.18, lp: 1200 }); noise({ f: 3000, f2: 600, d: 0.3, g: 0.2 });
+      tone({ f: 1976, d: 0.35, g: 0.08 }); tone({ f: 1318, d: 0.3, g: 0.06, t: 0.04 }); },
+    turn: () => { [784, 1175].forEach((f, i) => { tone({ f, a: 0.006, d: 0.7, g: 0.2, t: i * 0.13 }); tone({ f: f * 2.76, a: 0.004, d: 0.3, g: 0.04, t: i * 0.13 }); }); }
+  };
+  // nombre lógico del juego -> [sonido sintetizado, bus]
+  const SYNMAP = {
+    draw: ['draw', 'ui'], place: ['place', 'ui'], set: ['set', 'ui'], flip: ['flip', 'ui'], pos: ['pos', 'ui'], summon: ['summon', 'combat'], epic: ['epic', 'combat'],
+    attack: ['attack', 'combat'], atk_phys: ['attack', 'combat'], atk_fire: ['attack', 'combat'], atk_water: ['attack', 'combat'], atk_electric: ['attack', 'combat'],
+    atk_ice: ['attack', 'combat'], atk_nature: ['attack', 'combat'], atk_mystic: ['attack', 'combat'],
+    hit: ['hit', 'combat'], hurt: ['hit', 'combat'], hit_heavy: ['heavy', 'combat'], destroy: ['destroy', 'combat'], lp: ['lp', 'combat'], heal: ['heal', 'combat'],
+    spell: ['spell', 'combat'], trap: ['trap', 'combat'], negate: ['negate', 'combat'], turn: ['turn', 'notify']
+  };
+  function synth(name) {
+    const m = SYNMAP[name]; if (!m || !ctx || ctx.state !== 'running' || active > 40) return;
+    if (!nbuf) { nbuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    T0 = ctx.currentTime + 0.02; OUT = buses[m[1]]; try { SYN[m[0]](); } catch (e) { /* nada */ }
+  }
+
   function legacy(name) {
     const a = A(); if (!a || !LEGACY[name]) return;
     LEGACY[name].forEach((n, i) => setTimeout(() => { try { a.sfx(n); } catch (e) { /* nada */ } }, i * 90));
@@ -86,8 +151,9 @@
       const now = performance.now();
       if (now - (last[name] || 0) < (d ? d.cd : 40)) return;     // un evento = un sonido
       last[name] = now;
-      if (!d) return legacy(name);
+      if (!d && !SYNMAP[name]) return legacy(name);
       if (!ctx || ctx.state !== 'running') return;
+      if (SYNMAP[name]) return synth(name);          // efectos de batalla sintetizados
       if (active > 28) return;
       buffer('sfx_' + d.f).then(b => {
         if (!b) return legacy(name);
