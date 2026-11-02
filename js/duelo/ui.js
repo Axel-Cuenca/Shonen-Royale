@@ -2945,7 +2945,7 @@
     const pk = h('button', { class: 'pk t' + t + ' po-pk', type: 'button', 'aria-label': 'Abrir sobre' }, packFoil(t));
     const slots = r.cards.map((x, i) => { const c = C.get(x.id);
       return h('div', { class: 'po-slot', 'data-i': i }, h('div', { class: 'po-card' }, h('div', { class: 'po-face po-back' }, h('i', null, '✦')),
-        h('div', { class: 'po-face po-front pkr-' + x.rar }, h('div', { class: 'po-art' }, pkArt(c)), h('b', null, c.name), h('small', null, (c.level ? '★ ' + c.level + ' · ' : '') + C.RAR_ES[x.rar]),
+        h('div', { class: 'po-face po-front pkr-' + x.rar }, h('div', { class: 'po-art' }, h('div', { class: 'pkimg' }, pkArt(c))), h('b', null, c.name), h('small', null, (c.level ? '★ ' + c.level + ' · ' : '') + C.RAR_ES[x.rar]),
           h('span', { class: 'po-nw' + (x.isNew ? '' : ' rep') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)))); });
     const row = h('div', { class: 'po-row' }, slots);
     const end = h('div', { class: 'po-end' }); end.hidden = true;
@@ -2970,14 +2970,16 @@
     const close = () => { closed = true; window.removeEventListener('resize', onRs); ov.remove(); };
     const markNext = () => { slots.forEach((s, i) => s.classList.toggle('next', i === idx && phase === 'cards')); count.textContent = idx < r.cards.length ? `CARTA ${idx + 1} / ${r.cards.length}` : ''; };
     const gone = () => closed || !ov.isConnected;
-    const openPack = async () => {
+    const openPack = async () => { try { await openPack0(); } catch (e) { busy = false; phase = 'cards'; pk.hidden = true; slots.forEach(s => s.classList.add('in')); markNext(); } };
+    const openPack0 = async () => {
       if (phase !== 'pack' || busy) return; busy = true; hint.hidden = true; S.play('pk_tear'); pk.classList.add('open');
       await wait(900); if (gone()) return; doFlash(500, .8); const c = centerOf(pk); burst(c.x, c.y, ['#fff', PK_COLOR[t] || '#9bb', '#ffd84a'], 46, { sp: 7 }); ring(c.x, c.y, PK_COLOR[t] || '#fff', 180);
       await wait(250); if (gone()) return; pk.hidden = true;
       for (const s of slots) { s.classList.add('in'); await wait(160); if (gone()) return; }
       await wait(500); phase = 'cards'; busy = false; markNext(); hint.hidden = false; hint.textContent = 'Toca la carta para revelarla';
     };
-    const reveal = async () => {
+    const reveal = async () => { try { await reveal0(); } catch (e) { busy = false; slots.forEach((s, i) => { if (i === idx) s.firstChild.classList.add('flip'); s.style.transform = ''; }); idx++; phase = idx >= r.cards.length ? 'done' : 'cards'; end.hidden = idx < r.cards.length; markNext(); } };
+    const reveal0 = async () => {
       if (phase !== 'cards' || busy || idx >= r.cards.length) return; busy = true; hint.hidden = true;
       const x = r.cards[idx], slot = slots[idx], card = slot.firstChild, rar = x.rar; slot.classList.remove('next');
       if (rar === 'c' || rar === 'u') { S.play('flip'); card.classList.add('flip'); await wait(800); }
