@@ -468,6 +468,7 @@
     const items = [
       lobbyAlive() ? { t: 'Volver a la sala de espera', d: 'Tu sala sigue abierta con tus amigos: sigue navegando donde quieras y vuelve cuando quieras', f: () => lobbyBack() }
       : { t: 'Sala de espera', d: 'Juega contra la computadora o invita hasta a 3 amigos y tú decides cuándo empezar', f: lobby, off },
+      { t: 'Arcade', d: 'Sube una escalera de 10 peldaños y un jefe final: cada rival trae un mazo mejor armado y una IA más lista. Si pierdes, vuelves al peldaño 1', f: arcadeScreen, off },
       { t: 'Campo de práctica', d: 'Prueba cartas y combinaciones: tú juegas los dos lados, con cualquier carta y acción', f: practiceStart, off },
       { t: 'Mis mazos', d: '30 cartas, máximo 2 copias de cada una', f: deckBuilder },
       { t: 'Tienda', d: 'Gasta tus puntos en cosméticos: hologramas, reversos, tableros…', f: () => shopScreen() },
@@ -611,6 +612,48 @@
         btn('¡A duelear!', () => startAI({ level: lvl.value, rival: rt.value, fmt: f.sel.value }), 'gold'))));
   }
   /** Campo de práctica: un solo jugador mueve los dos lados (sin ranking, premios ni reloj). */
+  // ---------------- Arcade ----------------
+  const AI_ES = { easy: 'Fácil', normal: 'Normal', hard: 'Difícil', master: 'Maestro' }, AI_N = { easy: 1, normal: 2, hard: 3, master: 4 };
+  let arcSeed = 0;
+  function arcadeFight(step) {
+    if (lobbyAlive() && !confirm('Tu sala de espera se cerrará. ¿Empezar el Arcade?')) return;
+    const A = D.Arcade, r = A.rung(step);
+    if (!arcSeed) arcSeed = Math.floor(Math.random() * 1e9) + 1;
+    const seed = arcSeed; arcSeed = 0;
+    D.Shop.arcadeBegin(step);
+    const m = D.Match.local({ deck: activeDeck().ids.slice(), aiDeck: A.deck(step, seed), aiLevel: r.ai, name: 'Tú', aiName: 'Arcade · ' + r.es });
+    game(m, { arcade: step });
+  }
+  function arcadeScreen() {
+    scr('arcade'); leaveScreen(); showBg(true); S.setTrack('menu');
+    const A = D.Arcade, SH = D.Shop, ar = SH.arcade(), cur = Math.min(ar.cur, A.BOSS), r = A.rung(cur);
+    if (!arcSeed) arcSeed = Math.floor(Math.random() * 1e9) + 1;
+    const ids = A.deck(cur, arcSeed), seen = new Set();
+    const top = ids.map(id => C.get(id)).filter(c => c && c.kind === 'monster' && !seen.has(c.id) && seen.add(c.id));
+    if (r.q >= 0.5) top.sort((a, b) => b.atk - a.atk);      // los peldaños altos enseñan lo más fuerte; los bajos, lo que salga
+    top.length = Math.min(4, top.length);
+    const trap = ids.map(id => C.get(id)).find(c => c && c.kind === 'trap');
+    if (trap) top.push(trap);
+    const bad = deckBad(activeDeck().ids);
+    const rung = n => { const q = A.rung(n), st = n < cur ? 'done' : n === cur ? 'cur' : 'lock';
+      return h('div', { class: 'arung ' + st + (q.boss ? ' boss' : ''), role: 'listitem', 'aria-current': n === cur ? 'step' : null },
+        h('span', { class: 'an' }, q.boss ? '★' : String(n)), h('span', { class: 'anm' }, q.es), h('span', { class: 'alv' }, st === 'done' ? '✓' : n === cur ? 'ahora' : AI_ES[q.ai].toLowerCase())); };
+    const meter = (lbl, pct, val) => h('div', { class: 'ameter' }, h('span', null, lbl), h('div', { class: 'abar' }, h('i', { style: 'width:' + pct + '%' })), h('b', null, val));
+    const goBtn = btn(cur === 1 ? 'Combatir' : 'Combatir el peldaño ' + cur, () => arcadeFight(cur), 'gold big'); goBtn.disabled = !!bad;
+    const rungs = []; for (let n = A.BOSS; n >= 1; n--) rungs.push(rung(n));
+    mount(h('div', { class: 'scr arcade' }, h('button', { class: 'back', onclick: menu }, '← Menú'), h('h1', null, 'Arcade'),
+      h('div', { class: 'arc' },
+        h('div', { class: 'aladder', role: 'list' }, rungs),
+        h('div', { class: 'arival' },
+          h('div', { class: 'atop' }, h('div', null, h('div', { class: 'akick' }, r.boss ? 'Combate final' : 'Peldaño ' + cur + ' de 10'), h('h2', null, r.es)), h('span', { class: 'apill' }, 'Computadora · ' + AI_ES[r.ai])),
+          meter('Calidad del mazo', Math.round(r.q * 100), Math.round(r.q * 100) + ' %'),
+          meter('Nivel de la IA', AI_N[r.ai] * 25, AI_N[r.ai] + '/4'),
+          h('div', null, h('div', { class: 'akick', style: 'margin-bottom:8px' }, 'Algunas cartas de su mazo'), h('div', { class: 'acards' }, top.map(c => h('div', { class: 'acd' }, cardEl(c), h('small', null, c.name))))),
+          h('div', { class: 'astats' }, h('div', { class: 'ast' }, h('span', null, 'Premio'), h('b', null, '✦ ' + r.pts)), h('div', { class: 'ast' }, h('span', null, 'Hoy en el Arcade'), h('b', null, '✦ ' + ar.got + ' / ' + ar.cap)),
+            h('div', { class: 'ast' }, h('span', null, 'Mejor peldaño'), h('b', null, ar.best ? (ar.best >= A.BOSS ? 'Jefe' : ar.best) : '—')), h('div', { class: 'ast' }, h('span', null, 'Escaleras completas'), h('b', null, ar.clears))),
+          bad ? h('div', { class: 'msg err' }, bad + ' Arréglalo en «Mis mazos».') : null,
+          h('div', { class: 'row' }, goBtn, btn('Volver', menu, 'ghost big'))))));
+  }
   function practiceStart() {
     if (lobbyAlive() && !confirm('Tu sala de espera se cerrará. ¿Entrar al campo de práctica?')) return;
     const ids = activeDeck().ids.slice();
@@ -1117,7 +1160,7 @@
     endCurrent();
     const cur = current = { match, cleanup: opts.cleanup, started: false };
     // ---- ranking: sólo partidas online con al menos 2 personas y cuenta con nombre ----
-    let rankDone = false, rankRes = null;
+    let rankDone = false, rankRes = null, arcRes = null;
     const rankable = () => (match.kind === 'host' || match.kind === 'guest') && !C.test && D.Account.user && !D.Account.user.guest && (match.hum || []).filter(Boolean).length >= 2;
     let armed = false;
     /** Marca la partida como «en curso» para el ranking: si este jugador la abandona sin avisar, se le cuenta como derrota al volver. */
@@ -2202,7 +2245,7 @@
       }
       let earned = 0;
       const vsAI = !!(current && current.match && current.match.kind === 'ia');
-      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (!C.test && match.kind !== 'practice') earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
+      if (!endSounded) { endSounded = true; S.setTrack(null); S.setAmbient(false); S.jingle(won ? 'win' : 'lose'); if (opts.arcade) { arcRes = D.Shop.arcadeEnd(opts.arcade, won, draw); earned = arcRes ? arcRes.pts : 0; } else if (!C.test && match.kind !== 'practice') earned = D.Shop.reward(!vsAI, won); rankFinish(false); endEarned = earned; }
       else earned = endEarned;
       const parts = [];
       for (let i = 0; i < (won ? 46 : 26); i++) parts.push(h('i', { style: `left:${(Math.random() * 100).toFixed(1)}%;--d:${(Math.random() * 3).toFixed(2)}s;--t:${(3 + Math.random() * 4).toFixed(2)}s;--x:${((Math.random() - .5) * 120) | 0}px;--c:${(Math.random() * 360) | 0};--z:${(.5 + Math.random()).toFixed(2)}` }));
@@ -2226,7 +2269,11 @@
       }
       // puntos ganados y tope diario contra la computadora
       let ptsLine = null;
-      if (!C.test && vsAI) {
+      if (opts.arcade && arcRes) {
+        const ar = D.Shop.arcade();
+        ptsLine = earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos', h('small', null, ` · hoy ${ar.got}/${ar.cap} en el Arcade`))
+          : !arcRes.lost && !arcRes.draw && ar.got >= ar.cap ? h('p', { class: 'earned cap' }, 'Llegaste al máximo de hoy en el Arcade (' + ar.cap + ' ✦).') : null;
+      } else if (!C.test && vsAI) {
         const t = D.Shop.aiToday();
         ptsLine = earned ? h('p', { class: 'earned' }, '✦ +' + earned + ' puntos', h('small', null, ` · hoy ${t.got}/${t.cap} contra la computadora`))
           : t.got >= t.cap ? h('p', { class: 'earned cap' }, 'Llegaste al máximo de hoy contra la computadora (' + t.cap + '/' + t.cap + ' ✦).', h('small', null, 'Mañana vuelve a sumar. Online y la recompensa diaria no tienen este tope.')) : null;
@@ -2238,11 +2285,18 @@
         const cell = (a, b) => h('div', null, h('b', null, b), h('small', null, a));
         recap = h('div', { class: 'recap' }, cell('Turnos', v.round != null ? v.round : v.turn), cell('Tus PV', lp(v.me)), cell('PV rival', lp(foe)), cell('Tu cementerio', kills(v.me)), cell('Cementerio rival', kills(foe)));
       }
+      let arcLine = null, endBtns;
+      if (opts.arcade && arcRes) {
+        const A = D.Arcade, q = A.rung(opts.arcade);
+        arcLine = h('p', { class: 'hintr' }, arcRes.draw ? 'Empate en el peldaño ' + opts.arcade + ': se repite el combate.' : arcRes.lost ? 'Caíste en el peldaño ' + opts.arcade + ' (' + q.es + '). Vuelves al peldaño 1; tu mejor marca queda guardada.' : arcRes.done ? '¡Derrotaste al jefe final! Arcade completo.' : 'Peldaño ' + opts.arcade + ' (' + q.es + ') superado. Sigue el ' + arcRes.next + ': ' + A.rung(arcRes.next).es + ' (IA ' + AI_ES[A.rung(arcRes.next).ai].toLowerCase() + ').');
+        endBtns = arcRes.lost || arcRes.done ? [btn(arcRes.done ? 'Escalera' : 'Volver a empezar', () => { closeModal(); arcadeScreen(); }, 'gold big'), btn('Menú', menu, 'ghost big')]
+          : [btn(arcRes.draw ? 'Repetir combate' : 'Siguiente combate', () => { closeModal(); arcadeFight(arcRes.next); }, 'gold big'), btn('Escalera', () => { closeModal(); arcadeScreen(); }, 'ghost big')];
+      } else endBtns = [opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big')];
       const box = h('div', { class: 'endscr ' + (draw ? 'draw' : won ? 'win' : 'lose') },
         h('div', { class: 'rays' }), h('div', { class: 'parts' }, parts),
         h('div', { class: 'endbox' }, h('div', { class: 'endkick' }, draw ? 'Fin del duelo' : won ? 'Duelo ganado' : 'Duelo perdido'),
-          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), hint ? h('p', { class: 'hintr' }, hint) : null, recap, ptsLine, rankRes ? rankLine(rankRes) : null, list,
-          h('div', { class: 'row' }, opts.rematch ? btn('Revancha', () => { closeModal(); opts.rematch(); }, 'gold big') : null, btn('Menú', menu, opts.rematch ? 'ghost big' : 'gold big'))));
+          h('h2', null, draw ? 'EMPATE' : won ? '¡VICTORIA!' : 'DERROTA'), h('p', { class: 'sub' }, sub), hint ? h('p', { class: 'hintr' }, hint) : null, arcLine, recap, ptsLine, rankRes ? rankLine(rankRes) : null, list,
+          h('div', { class: 'row' }, ...endBtns)));
       modal(box, false); modalEl.dataset.end = 1; modalEl.classList.add('endmodal');
     }
 

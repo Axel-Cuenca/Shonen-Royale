@@ -332,9 +332,10 @@
   /** Empieza el combate del peldaño actual (si la página se cierra a medias, al volver cuenta como derrota). */
   function arcadeBegin(step) { const p = pts(); if (!p) return; p.arc.fight = step; saveStore(); }
   /** Fin de un combate del Arcade: devuelve { pts, next, done } (done = escalera completa) o null. */
-  function arcadeEnd(step, won) {
+  function arcadeEnd(step, won, draw) {
     const p = pts(); if (!p) return null;
     const a = p.arc; a.fight = 0;
+    if (draw) { saveStore(); return { pts: 0, next: step, done: false, draw: true }; }      // un empate se repite
     if (!won) { a.cur = 1; saveStore(); return { pts: 0, next: 1, done: false, lost: true }; }
     if (a.day !== today()) { a.day = today(); a.got = 0; }
     const n = Math.max(0, Math.min(arcRung(step).pts, ARC_CAP - a.got)); a.got += n; p.coins += n;
