@@ -257,14 +257,25 @@
       // la caché va por imagen (no por carta): así cada skin de ilustración tiene su propio recorte
       prepare() {
         for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.img) want(c.img);      // personajes, y también las magias/trampas de los sobres
-        if (D.Shop && D.Shop.skinPool) for (const it of D.Shop.skinPool()) want(it.img);
+        // las skins no se preparan de antemano: su recorte se hace la primera vez que se muestran (Holo.src)
       },
       /** Recorte listo de esa carta (con la skin `img` si se da) o null mientras se prepara. */
-      src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k); return cache.get(k) || null; }
+      src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k, true); return cache.get(k) || null; }
     };
-    function want(k) { if (!cache.has(k)) { cache.set(k, null); cutout(k).then(u => (u && D.CardFX ? D.CardFX.checkFull(u).then(() => u, () => u) : u)).then(u => cache.set(k, u)); } }   // antes de darla por lista se mira si es ilustración completa (así no se monta la malla animada sobre ella)
+    // Los recortes se hacen de uno en uno y cediendo el hilo entre medias (así el menú no se congela); los que se piden ya van primero.
+    const queue = []; let busy = false;
+    function pump() {
+      if (busy || !queue.length) return;
+      busy = true; const k = queue.shift();
+      cutout(k).then(u => (u && D.CardFX ? D.CardFX.checkFull(u).then(() => u, () => u) : u)).then(u => cache.set(k, u), () => cache.set(k, null))
+        .then(() => { busy = false; setTimeout(pump, 16); });
+    }
+    function want(k, urgent) {
+      if (!cache.has(k)) { cache.set(k, null); urgent ? queue.unshift(k) : queue.push(k); pump(); }
+      else if (urgent) { const i = queue.indexOf(k); if (i > 0) { queue.splice(i, 1); queue.unshift(k); } }
+    }   // antes de darla por lista se mira si es ilustración completa (así no se monta la malla animada sobre ella)
   })();
-  setTimeout(() => Holo.prepare(), 0);
+  setTimeout(() => Holo.prepare(), 1200);
 
   /** Imagen de la skin de ilustración que YO le puse a esa carta, o null (imagen original). */
   const myArt = id => { const it = D.Shop && D.Shop.artOf && D.Shop.artOf(id); return it ? it.img : null; };

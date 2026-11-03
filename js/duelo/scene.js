@@ -327,7 +327,7 @@
     setTimeout(() => {
       D.Floor.init(TREES.map(t => [t[0], t[1], t[2], 0]).concat(ROCKS.map(r => [r[0], r[1], r[2], 1])));
       if (D.Floor.ok && floorWant) D.Floor.attach(floorWant);
-    }, 350);
+    }, 1500);
   }
 
   let bgSlab = null;

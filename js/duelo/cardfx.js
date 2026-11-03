@@ -273,5 +273,5 @@
   };
   D.CardFX = api;
   mark(); initTilt(); loadManifest();
-  setTimeout(() => { try { scanFull((D.Cards.all() || []).map(c => c.img)); } catch (e) { /* nada */ } }, 300);
+  setTimeout(() => { try { scanFull((D.Cards.all() || []).map(c => c.img)); } catch (e) { /* nada */ } }, 6000);
 })();
