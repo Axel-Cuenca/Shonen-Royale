@@ -253,6 +253,7 @@
         im.src = src;
       });
     }
+    const queue = []; let busy = false;      // (antes del return: si no, quedan sin inicializar)
     return {
       // la caché va por imagen (no por carta): así cada skin de ilustración tiene su propio recorte
       prepare() {
@@ -263,7 +264,6 @@
       src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k, true); return cache.get(k) || null; }
     };
     // Los recortes se hacen de uno en uno y cediendo el hilo entre medias (así el menú no se congela); los que se piden ya van primero.
-    const queue = []; let busy = false;
     function pump() {
       if (busy || !queue.length) return;
       busy = true; const k = queue.shift();
