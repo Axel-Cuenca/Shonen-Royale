@@ -275,8 +275,21 @@
     for (let z = 0; z < ZONES; z++) {
       const s = P.st[z];
       if (s) {
-        if (s.prison) { const O = st.players[s.prison.owner]; O.grave.push(s.prison.m.c); for (const l of (s.prison.m.link || [])) st.players[l.by != null ? l.by : s.prison.owner].grave.push(l);
-          const ab = s.prison.m.abs; if (ab) { const AO = st.players[ab.owner]; AO.grave.push(ab.c); for (const l of (ab.link || [])) AO.grave.push(l); }      // lo que tenía absorbido el personaje sellado vuelve a su dueño
+        if (s.prison) {
+          const pr = s.prison, O = st.players[pr.owner], pm = pr.m, nm = mdef(pm).name;
+          const fz = O.alive ? spot(O, mdef(pm)) : -1;
+          if (fz >= 0) {                                   // su dueño sigue vivo y tiene sitio: el personaje sellado vuelve a su campo
+            O.mz[fz] = pm;
+            for (const q of O.st) if (q && q.held === pm.c.uid) { q.equipTo = fz; delete q.held; }
+            log(st, pr.owner, `${nm} sale de Gokumonkyo y vuelve al campo de su dueño`);
+          } else {                                         // sin sitio (o su dueño también está fuera): va al cementerio de su dueño
+            O.grave.push(pm.c); for (const l of (pm.link || [])) st.players[l.by != null ? l.by : pr.owner].grave.push(l);
+            const ab = pm.abs; if (ab) { const AO = st.players[ab.owner]; AO.grave.push(ab.c); for (const l of (ab.link || [])) AO.grave.push(l); }      // lo que tenía absorbido el personaje sellado vuelve a su dueño
+            if (O.alive) {
+              O.st.forEach((q, qi) => { if (q && q.held === pm.c.uid) removeST(st, pr.owner, qi); });      // su equipo en espera lo acompaña
+              log(st, pr.owner, `${nm} sale de Gokumonkyo, pero no hay sitio en el campo de su dueño: va al cementerio`);
+            }
+          }
         }
         P.grave.push(s.c); P.st[z] = null;
       }

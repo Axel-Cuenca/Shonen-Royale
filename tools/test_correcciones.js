@@ -187,4 +187,34 @@ module.exports = function (T) {
     ready(st, 0, st.turn + 2);
     ok(!!pw(st, 0, 'kform'), 'en su siguiente turno Kayn sí puede transformarse (decisión del dueño: sólo pierde ese turno)');
   }
+
+  section('correcciones 04-11: Gokumonkyo cuando se elimina a quien lo puso');
+  {
+    const mk = () => { const d = Cards.presetDeck('fire'), st = E.newGame([d, d, d], { seed: 5, mode: 'ffa', first: 0 }); ready(st, 0); return st; };
+    const seal = (st, p, z, owner, m) => { const slot = putST(st, p, z, 'c_gokumonkyo'); slot.prison = { owner, m, t0: st.turn }; return slot; };
+    const before = st => E.countCards(st, 1);
+    // con sitio: vuelve al campo de su dueño
+    let st = mk(); for (const P of st.players) P.mz = [null, null, null];
+    const g = { c: { uid: st.nextUid++, id: 'c_goku' }, pos: 'atk', down: false, summonedTurn: 0, attacked: false, moved: false, atkMod: 0 };
+    seal(st, 0, 0, 1, g); put(st, 1, 0, 'c_zenitsu');
+    const eq1 = putST(st, 1, 0, 'c_armadura'); eq1.held = g.c.uid;
+    const n0 = before(st);
+    E.resign(st, 0);
+    ok(!st.players[0].alive, 'el jugador que puso el Gokumonkyo queda fuera');
+    ok(st.players[1].mz.some(m => m === g), 'el personaje sellado vuelve al campo de su dueño');
+    ok(st.players[1].st[0] && st.players[1].st[0].equipTo === st.players[1].mz.indexOf(g) && !st.players[1].st[0].held, 'su equipo en espera vuelve a equiparse');
+    ok(!st.players[1].grave.some(c => c.id === 'c_goku'), 'no va al cementerio');
+    eq(before(st), n0, 'el dueño sigue teniendo sus 30 cartas');
+    // sin sitio: va al cementerio de su dueño, con su equipo
+    st = mk(); for (const P of st.players) P.mz = [null, null, null];
+    const g2 = { c: { uid: st.nextUid++, id: 'c_goku' }, pos: 'atk', down: false, summonedTurn: 0, attacked: false, moved: false, atkMod: 0 };
+    seal(st, 0, 0, 1, g2); put(st, 1, 0, 'c_zenitsu'); put(st, 1, 1, 'c_kayn'); put(st, 1, 2, 'c_minato');
+    const eq2 = putST(st, 1, 0, 'c_armadura'); eq2.held = g2.c.uid;
+    const n1 = before(st);
+    E.resign(st, 0);
+    ok(st.players[1].grave.some(c => c.id === 'c_goku'), 'sin sitio, el personaje sellado va al cementerio de su dueño');
+    ok(!st.players[1].st[0] && st.players[1].grave.some(c => c.id === 'c_armadura'), 'y su equipo en espera también');
+    ok(st.players[0].grave.some(c => c.id === 'c_gokumonkyo') && !st.players[0].grave.some(c => c.id === 'c_goku'), 'el Gokumonkyo va al cementerio de quien lo puso');
+    eq(before(st), n1, 'el dueño sigue teniendo sus 30 cartas');
+  }
 };
