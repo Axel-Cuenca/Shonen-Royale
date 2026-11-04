@@ -382,15 +382,22 @@
     const att = st.players[cb.p] && st.players[cb.p].mz[cb.z], dfn = st.players[cb.vs] && st.players[cb.vs].mz[cb.target];
     return att === m ? (dfn || null) : dfn === m ? (att || null) : null;
   }
+  let wdIn = false;      // evita la recursión entre dos Instintos depredadores
   function atkOf(st, P, z) {
     const m = P.mz[z];
     if (m.exh) return 0;                                                  // Kaioken x10: agotado
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
     const b = baseOf(m);
     const v = Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
-    if (!m.down && abil(st, m).includes('wardep')) {                      // Warwick: Instinto depredador (+500 ATK si lo ataca alguien con más ATK)
+    if (!m.down && !wdIn && abil(st, m).includes('wardep')) {             // Warwick: Instinto depredador (+500 ATK si combate, atacando o atacado, contra alguien con más ATK)
       const cb = st.atk || st.cmb, o = combatFoe(st, m);
-      if (o && cb && st.players[cb.vs].mz[cb.target] === m && atkOf(st, st.players[cb.p], cb.z) > v) return v + 500;
+      if (o && cb) {
+        const att = st.players[cb.p].mz[cb.z] === m, fp = att ? cb.vs : cb.p, fz = att ? cb.target : cb.z;
+        wdIn = true;
+        let fa;
+        try { fa = atkOf(st, st.players[fp], fz); } finally { wdIn = false; }
+        if (fa > v) return v + 500;
+      }
     }
     return v;
   }
@@ -1460,6 +1467,7 @@
     const U = st.players[user], m = U.mz[a.zone];
     if (!m) return;
     const nm = mdef(m).name, u = uOf(m);
+    blockPw(st, user, a);
     log(st, q, `Total Counter: la habilidad de ${nm} se devuelve contra su dueño`);
     if (multi(st)) st.log[st.log.length - 1].q = user;
     if (a.pw === 'azul') {
@@ -1513,7 +1521,7 @@
     }
     const gd = powerGuard(st, p, a, done);
     if (gd) { st.pending = gd; return; }
-    if (a.target && a.target.vs != null && a.target.z != null && st.team[a.target.vs] !== st.team[p] && !['desmantelar', 'agujero', 'avpred'].includes(a.pw) && a.target.area !== 'st' && sharinganEvade(st, a.target.vs, a.target.z, a.pw)) return;      // Sasuke Chico y Megumi (Conejos)
+    if (a.target && a.target.vs != null && a.target.z != null && st.team[a.target.vs] !== st.team[p] && !['desmantelar', 'agujero', 'avpred'].includes(a.pw) && a.target.area !== 'st' && sharinganEvade(st, a.target.vs, a.target.z, a.pw)) { blockPw(st, p, a); return; }      // Sasuke Chico y Megumi (Conejos)
     const m = st.players[p].mz[a.zone], nmU = m ? mdef(m).name : '', yutaU = isYuta(m);
     doPower(st, p, a);
     const idn = PW_AB[a.pw];
@@ -1991,9 +1999,17 @@
     const id = PW_ABID[a.pw];
     if (forever && id && !(m.spentAb || []).includes(id)) m.spentAb = (m.spentAb || []).concat([id]);
   }
+  /** Una habilidad evadida, cancelada o sustituida no se puede volver a intentar en el mismo turno. */
+  function blockPw(st, p, a) {
+    const m = st.players[p] && st.players[p].mz[a.zone];
+    if (!m) return;
+    m.cx = Object.assign({}, m.cx);
+    m.cx[a.pw] = st.turn;
+  }
   function spendPower(st, p, a) {
     const m = st.players[p].mz[a.zone];
     if (!m) return;
+    blockPw(st, p, a);
     consumePower(st, p, a, false);
     log(st, p, `${mdef(m).name} usa ${PWL[a.pw] || a.pw}: el efecto fue sustituido`);
   }
@@ -2001,6 +2017,7 @@
   function cancelPower(st, p, a) {
     const m = st.players[p].mz[a.zone];
     if (!m) return;
+    blockPw(st, p, a);
     const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw;
     consumePower(st, p, a, true);
     log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y queda consumida para siempre`);
@@ -2791,7 +2808,7 @@
           else if (gi.fx === 'tiempo' && canRewind(st, p)) push({ pw: 'tgtiempo', gem: gi.uid });
         }
       }
-      if (ab.includes('kurama') && !(m.mods || []).some(x => x.k === 'kurama')) push({ pw: 'kurama' });
+      if (ab.includes('kurama') && !u.kur && !(m.mods || []).some(x => x.k === 'kurama')) push({ pw: 'kurama' });      // una sola vez por invocación
       // ----- tanda 4 -----
       if (ab.includes('majinex') && canOnce(P, z, u, 'mj')) push({ pw: 'majinex' });
       if (ab.includes('armin') && !m.copy && canOnce(P, z, u, 'bite') && P.lp > 1000 && titanAnchor(P, z, [z], true) >= 0) P.hand.forEach((c, i) => { if (c.id === 'c_titan_colosal') push({ pw: 'armin', hand: i }); });
@@ -2802,7 +2819,7 @@
       if (ab.includes('rasengan') && canOnce(P, z, u, 'ras') && !(m.mods || []).some(x => x.k === 'ras')) push({ pw: 'rasengan' });
       if (m.ksp && !m.ksp.x && !m.exh && (m.mods || []).some(x => x.k === 'kaiospell')) push({ pw: 'kaiox10' });
     });
-    return out;
+    return out.filter(a => { const m = P.mz[a.zone]; return !(m && m.cx && m.cx[a.pw] === st.turn); });      // habilidad evadida o cancelada: no se repite este turno
   }
   const SEEDN = { rojo: 'Rojo', debil: '¡Debilítate!', ola: 'Ola de Fuego' };
   /** Semilla del Hermitaño: efectos negativos que se pueden quitar de un aliado (con doIt, los quita). Devuelve sus nombres. */
@@ -3552,6 +3569,7 @@
         break;
       }
       case 'kurama': {
+        uOf(m).kur = true;
         addMod(st, m, 'kurama', 600 * g, 600 * g, 2);
         log(st, p, `${nm} usa Chakra de Kurama: +${600 * g} ATK y DEF durante 2 turnos`);
         break;
@@ -3940,6 +3958,7 @@
         if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
         else if (k === 'trap') { if (st.atk && C().get(pd.tid).fx === 'destroyAttacker') st.atk.negated = true; respondRest(st, pd.rp); }
         else if (k === 'attack' && pd.a) atkDone(st, pd.a);
+        else if (k === 'power' && pd.pa) blockPw(st, pd.pp, pd.pa);
         return;
       }
       if (k === 'attack') { st.atk = Object.assign({}, pd.a, { noRika: true }); continueAttack(st); }

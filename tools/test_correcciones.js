@@ -131,4 +131,47 @@ module.exports = function (T) {
     ok(!st.players[1].mz[0] && st.players[1].banish.length === 1, 'el otro personaje sí se destierra');
     ok(st.log.some(l => /no puede ser desterrado: los Seis Ojos/.test(l.t || l.m || JSON.stringify(l))), 'el registro explica la protección');
   }
+
+  section('correcciones 03-11: Kurama, habilidades evadidas y Warwick');
+  {
+    // Minato: Chakra de Kurama una sola vez por invocación
+    const st = fresh(0); put(st, 0, 0, 'c_minato');
+    act(st, 0, pw(st, 0, 'kurama'));
+    ok(!pw(st, 0, 'kurama'), 'Kurama no se reactiva mientras dura');
+    pass(st, 8); ready(st, 0, st.turn + 2);
+    eq(stat(st, 0, 0), [1900, 1800], 'Kurama terminó');
+    ok(!pw(st, 0, 'kurama'), 'terminado, no se puede volver a usar en la misma invocación');
+    st.players[0].mz[0] = null; put(st, 0, 0, 'c_minato');
+    ok(!!pw(st, 0, 'kurama'), 'una invocación nueva de Minato puede volver a usarlo');
+
+    // Cell Semi Perfecto: si Megumi evade la Absorción, no puede volver a absorber ese turno
+    const s2 = fresh(0); put(s2, 0, 0, 'c_cell'); put(s2, 1, 0, 'c_megumi'); put(s2, 1, 1, 'c_zenitsu');
+    act(s2, 0, pw(s2, 0, 'absorb', a => a.target.vs === 1 && a.target.z === 0));
+    ok(!!s2.players[1].mz[0] && !s2.players[0].mz[0].abs, 'Megumi evade la Absorción con Conejos');
+    ok(!pw(s2, 0, 'absorb'), 'Cell no puede volver a absorber en el mismo turno (ni a otro objetivo)');
+    ready(s2, 0, s2.turn + 2);
+    ok(!!pw(s2, 0, 'absorb'), 'en su siguiente turno sí puede intentarlo de nuevo');
+
+    // Shang Tsung: transformación evadida, no se repite ese turno
+    const s3 = fresh(0); put(s3, 0, 0, 'c_shang'); put(s3, 1, 0, 'c_megumi'); put(s3, 1, 1, 'c_zenitsu');
+    act(s3, 0, pw(s3, 0, 'copy', a => a.target.vs === 1 && a.target.z === 0));
+    ok(!s3.players[0].mz[0].copy, 'Megumi evade la Transformación de Shang Tsung');
+    ok(!pw(s3, 0, 'copy'), 'Shang Tsung no puede volver a transformarse en ese turno');
+    ready(s3, 0, s3.turn + 2);
+    ok(!!pw(s3, 0, 'copy'), 'en su siguiente turno sí puede');
+
+    // Warwick atacando a uno con más ATK y más estrellas: +500 (Sed insaciable) +500 ATK (Instinto depredador) en ese mismo ataque
+    const view = (st, p, z) => { const m = E.view(st, p).players[p].mz[z]; return [m.atk, m.def]; };
+    const s4 = fresh(0); put(s4, 0, 0, 'c_warwick'); put(s4, 1, 0, 'c_odin');
+    s4.atk = { p: 0, z: 0, target: 0, vs: 1, negated: false };
+    eq(view(s4, 0, 0), [2300, 1800], 'Warwick ataca a Odin: +500/+500 por estrellas y +500 ATK por tener menos ATK');
+    s4.atk = null;
+    const s5 = fresh(0); put(s5, 0, 0, 'c_warwick'); put(s5, 1, 0, 'c_goku', { atkMod: 600 });
+    s5.atk = { p: 0, z: 0, target: 0, vs: 1, negated: false };
+    eq(view(s5, 0, 0), [1800, 1300], 'Warwick ataca a uno de igual estrella con más ATK: sólo +500 ATK');
+    s5.atk = null;
+    const s6 = fresh(0); put(s6, 0, 0, 'c_warwick'); put(s6, 1, 0, 'c_warwick', { atkMod: 100 });
+    s6.atk = { p: 0, z: 0, target: 0, vs: 1, negated: false };
+    eq(view(s6, 0, 0), [1800, 1300], 'Warwick contra Warwick: sin bucles, el de menos ATK gana +500');
+  }
 };

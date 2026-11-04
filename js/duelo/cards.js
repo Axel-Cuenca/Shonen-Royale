@@ -90,7 +90,7 @@
     kuribomo: ['Maldición del Mago Oscuro', 'Cuando es destruido, elige a un personaje enemigo: también es destruido (va al cementerio).'],
     agujero: ['Agujero bajo tierra', 'Una vez por turno: destruye una carta de magia/trampa del rival, incluso si está boca abajo.'],
     warsed: ['Sed insaciable', '+500 ATK y +500 DEF cuando ataca a un personaje con más estrellas o es atacado por uno.'],
-    wardep: ['Instinto depredador', '+500 ATK extra cuando lo ataca un personaje con más ATK que él.'],
+    wardep: ['Instinto depredador', '+500 ATK extra en el combate contra un personaje con más ATK que él, tanto si ataca Warwick como si lo atacan.'],
     warsangre: ['Sed de sangre', 'Cuando destruye a un enemigo en combate, su jugador recupera 500 PV.'],
     bigbang1: ['Big Bang', 'Una vez por invocación: destruye a un personaje rival con igual o menos estrellas.'],
     bigbang: ['Big Bang', 'Una vez por invocación: destruye a todos los personajes rivales con menos de 2000 ATK.'],
@@ -156,7 +156,7 @@
     hostprot: ['Protección del huésped', 'Mientras esté equipado, si el portador fuera a ser destruido, se destruye Venom en su lugar (no protege del destierro).'],
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
     sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
-    kurama: ['Chakra de Kurama', '+600 ATK y +600 DEF durante 2 turnos propios completos. No se puede reactivar mientras dure.'],
+    kurama: ['Chakra de Kurama', 'Una vez por invocación: +600 ATK y +600 DEF durante 2 turnos propios completos.'],
     hiraishin: ['Hiraishin — Marca del Dios del Trueno Volador', 'Cada ataque normal contra un personaje deja una marca en esa casilla (se queda aunque el personaje se vaya). Por cada ataque normal puedes lanzar UN ataque Hiraishin extra contra una casilla marcada ocupada por un rival: nadie puede responder a ese ataque.']
   };
   const CUSTOM = [
@@ -562,7 +562,7 @@
     }),
     mon({
       id: 'c_warwick', name: 'Warwick', type: 'lol', level: 4, atk: 1300, def: 1300, img: I('warwick'), ab: ['warsed', 'wardep', 'warsangre'],
-      text: 'Sed insaciable: +500 ATK y DEF cuando ataca a un personaje con más estrellas o es atacado por uno. Instinto depredador: +500 ATK extra cuando lo ataca un personaje con más ATK. ' +
+      text: 'Sed insaciable: +500 ATK y DEF cuando ataca a un personaje con más estrellas o es atacado por uno. Instinto depredador: +500 ATK extra al combatir (atacando o atacado) contra un personaje con más ATK. ' +
         'Sed de sangre: cuando destruye a un enemigo en combate, su jugador recupera 500 PV.',
       sfx: { attack: V('warwick-attack'), summon: V('warwick-summon') }
     }),
@@ -712,7 +712,7 @@
     }),
     mon({
       id: 'c_minato', name: 'Minato Namikaze', type: 'naruto', level: 7, atk: 1900, def: 1800, img: I('minato'), ab: ['kurama', 'hiraishin'],
-      text: 'Chakra de Kurama: +600 ATK y DEF durante 2 turnos propios completos. Hiraishin: cada ataque normal contra un personaje deja una marca en esa casilla; por cada ataque normal puedes lanzar un ataque Hiraishin extra contra una casilla marcada ocupada por un rival, y nadie puede responder a ese ataque.',
+      text: 'Chakra de Kurama (una vez por invocación): +600 ATK y DEF durante 2 turnos propios completos. Hiraishin: cada ataque normal contra un personaje deja una marca en esa casilla; por cada ataque normal puedes lanzar un ataque Hiraishin extra contra una casilla marcada ocupada por un rival, y nadie puede responder a ese ataque.',
       sfx: { attack: V('minato-attack') }
     }),
     spell({
