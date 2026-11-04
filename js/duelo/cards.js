@@ -669,7 +669,7 @@
     mon({
       id: 'c_megumi', name: 'Megumi Fushiguro', type: 'jjk', level: 3, atk: 1000, def: 1000, img: I('megumi'), ab: ['dsombras'],
       text: 'Diez Sombras: usa las técnicas de sus invocaciones. Lobos (+400 ATK/DEF ese turno), Nue (ve una magia/trampa boca abajo), Conejos (evade un ataque, habilidad o magia/trampa; no Púrpura), Elefante (destruye una magia/trampa), Sapo (roba una magia/trampa a tu mano), Serpiente (inmoviliza a un enemigo mientras Megumi siga en pie) y, tras 2 técnicas distintas, sacrificarse para invocar a General Mahoraga desde tu mano (recibes 1700 de daño).',
-      sfx: { ability: V('megumi-ability'), attack: V('megumi-attack') }
+      sfx: { mahoraga: V('megumi-ability'), attack: V('megumi-attack') }      // su voz de habilidad suena sólo al invocar a Mahoraga
     }),
     mon({
       id: 'c_carnage', name: 'Carnage', type: 'marvel', level: 6, atk: 1300, def: 1300, img: I('carnage'), ab: ['symb', 'regsim', 'sed'],

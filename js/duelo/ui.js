@@ -2385,6 +2385,7 @@
         else if (/^Yuta Okkotsu aprende /.test(t)) { snd = 'epic'; const d = byName['Yuta Okkotsu']; if (d) cin(d, 'COPIA DE TÉCNICAS'); }
         else if (/ muere en lugar de /.test(t)) { snd = 'destroy'; needShake = true; }
         else if (/sucumbe a la corrupción|La Marca de Cazador se cumple/.test(t)) { snd = 'destroy'; needShake = true; }
+        else if (/ se sacrifica para invocar al General Mahoraga/.test(t)) { snd = 'epic'; const d = byName[/^(.+?) se sacrifica /.exec(t)[1]]; if (d) { fileSfx(d.sfx && d.sfx.mahoraga); cin(d, 'GENERAL MAHORAGA'); } }      // Megumi: su voz sólo aquí
         else if (/^(.+?) (?:usa|absorbe) /.test(t) && !/ inmune/.test(t)) { const m = /^(.+?) (usa (.+?)(?: contra .*|: .*)?|absorbe a .*)$/.exec(t), d = m && byName[m[1]]; if (d) { snd = 'epic'; fileSfx(d.sfx && ((m[3] && d.sfx[m[3].toLowerCase()]) || d.sfx.ability)); cin(d, m[3] ? m[3].toUpperCase() : 'ABSORCIÓN'); } }
         else if (l.rv && /^se revela: /.test(t)) {          // el objetivo boca abajo se voltea: el aviso «versus» muestra ya su carta
           const q = atkTg.find(x => x.vs === l.rv.vs && x.tg === l.rv.z && x.ti == null);
