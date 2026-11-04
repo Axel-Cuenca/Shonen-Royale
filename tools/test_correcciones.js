@@ -250,4 +250,26 @@ module.exports = function (T) {
     st = setup('c_zenitsu'); release(st);
     eq(st.players[0].st[0].alma.eff, [], 'el efecto liberado se gasta de la Gema');
   }
+
+  section('correcciones 04-11: la X cancela la Explosión del Creeper');
+  {
+    const run = (st, useX) => { let n = 0; while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && !!x.activate === useX) || l.find(x => x.t === 'respond') || l[0]); } };
+    const g = (st, p, id) => st.players[p].grave.some(c => c.id === id), b = (st, p, id) => st.players[p].banish.some(c => c.id === id);
+    // el rival ataca al Creeper; quien ataca tiene la X
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_creeper', { pos: 'def' }); putST(st, 0, 0, 'c_x', { down: true, setTurn: 1 }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
+    ok(!!st.pending && st.pending.k === 'respond' && st.pending.player === 0, 'antes de explotar, el rival del Creeper puede responder con la X');
+    run(st, true);
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_goku' && !b(st, 0, 'c_goku'), 'con la X: Goku no es desterrado');
+    ok(g(st, 1, 'c_creeper') && !b(st, 1, 'c_creeper'), 'el combate se resuelve normal: el Creeper es destruido y va al cementerio');
+    ok(g(st, 0, 'c_x'), 'la X va al cementerio');
+    // el Creeper ataca; el defensor tiene la X
+    st = fresh(0); put(st, 0, 0, 'c_creeper'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_x', { down: true, setTurn: 1 }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0)); run(st, true);
+    ok(st.players[1].mz[0] && !b(st, 1, 'c_goku') && g(st, 0, 'c_creeper'), 'también cuando ataca el Creeper: no explota y pierde el combate');
+    // sin usar la X: explota como siempre
+    st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_creeper', { pos: 'def' }); putST(st, 0, 0, 'c_x', { down: true, setTurn: 1 }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0)); run(st, false);
+    ok(b(st, 0, 'c_goku') && b(st, 1, 'c_creeper'), 'si no se usa la X, los dos son desterrados como antes');
+  }
 };

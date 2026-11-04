@@ -173,7 +173,7 @@
       img: I('creeper'), ab: ['boom'],
       text: 'Explosión del Creeper: cuando combate contra otro monstruo del campo (ataque tuyo o del rival, en ataque o en defensa), ' +
         'el combate se calcula con normalidad y después Creeper y ese monstruo son desterrados (no van al cementerio). ' +
-        'Una vez por invocación; no se activa en ataques directos.',
+        'Una vez por invocación; no se activa en ataques directos. La trampa X puede cancelarla: entonces el combate se resuelve con normalidad.',
       voice: { src: V('creeper-attack'), say: '¡Ssssss… boom!' }
     }),
     mon({

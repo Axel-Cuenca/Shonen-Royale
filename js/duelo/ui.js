@@ -1858,7 +1858,7 @@
     // ----- ventanas de decisión (trampas, elegir carta, descarte) -----
     function trgText(pd) {
       const who = multi() && pd.by != null ? nameOf(pd.by) : 'El rival';
-      if (pd.trigger === 'reduce' && pd.info && pd.info.txt) return pd.info.txt;
+      if ((pd.trigger === 'reduce' || (pd.info && pd.info.boom)) && pd.info && pd.info.txt) return pd.info.txt;      // Explosión del Creeper: aviso propio
       return { attack: `${who} declara un ataque.`, spell: `${who} activa una magia.`, summon: `${who} invoca un monstruo.`, power: `${who} va a usar una habilidad de personaje.`, trap: `${who} va a activar una trampa.`,
         destroy: `Un efecto de ${who.toLowerCase()} va a destruir a uno de tus personajes.`, reduce: `Un efecto de ${who.toLowerCase()} va a reducir el ATK o la DEF de uno de tus personajes.` }[pd.trigger] || '';
     }

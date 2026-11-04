@@ -1919,7 +1919,7 @@
       }
       case 'xcancel':                     // X: Cancelación absoluta
         if (pd && pd.trigger === 'spell') { if (st.chain) { st.chain.negated = true; log(st, resp, 'X cancela la magia: queda destruida'); } }
-        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.pa && pd.cont.pa.pw === 'kform' ? 'X cancela la habilidad: no se puede volver a usar este turno' : 'X cancela la habilidad: queda consumida para siempre')); }
+        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.pa && pd.cont.pa.pw === 'kform' ? 'X cancela la habilidad: no se puede volver a usar este turno' : pd.cont.k === 'boom' ? 'X cancela la Explosión del Creeper' : 'X cancela la habilidad: queda consumida para siempre')); }
         break;
       case 'realidad': {                  // Gema de la Realidad
         const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
@@ -1964,6 +1964,11 @@
   }
   function afterRespond(st, cont) {
     if (cont.k === 'attack') continueAttack(st);
+    else if (cont.k === 'boom') {                      // X pudo cancelar la Explosión del Creeper: el combate sigue normal
+      const m = st.players[cont.cr.p].mz[cont.cr.z];
+      if (cont.cancel && m && m.c.uid === cont.uid) { m.c.spent = true; log(st, cont.cr.p, `La Explosión de ${mdef(m).name} es cancelada: el combate se resuelve con normalidad`); }
+      st.atk = cont.a; continueAttack(st);
+    }
     else if (cont.k === 'spell') continueSpell(st);
     else if (cont.k === 'summon') st.summon = null;
     else if (cont.k === 'trapAct') {                    // X pudo cancelar una trampa antes de que se resolviera
@@ -2249,6 +2254,11 @@
     if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
       const mm = meliFor(st, a.p, a.vs);
       if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'attack', player: mm.q, mz: mm.z, stage: 'ask', a, nm: mdef(at0).name }; return; }
+    }
+    if (!a.boomX && at0 && a.target !== 'direct') {      // Explosión del Creeper: la X del rival puede cancelarla antes del combate
+      const dm0 = st.players[a.vs].mz[a.target];
+      const cr = boomReady(st, at0) ? { p: a.p, z: a.z } : boomReady(st, dm0) ? { p: a.vs, z: a.target } : null;
+      if (cr) { a.boomX = 1; if (nextWindow(st, 'power', { k: 'boom', by: cr.p, a, cr, uid: st.players[cr.p].mz[cr.z].c.uid, info: { boom: 1, txt: `${mdef(st.players[cr.p].mz[cr.z]).name} va a explotar al terminar el combate: los dos personajes serían desterrados.` } }, foes(st, cr.p))) return; }
     }
     const deaths = combatDeaths(st, a);
     if (!a.noShen) {
