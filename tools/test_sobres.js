@@ -19,12 +19,12 @@ module.exports = function (T) {
   ok(C.inTanda(1).every(id => SH.hasCard(id)), 'la tanda 1 viene desbloqueada');
   ok([2, 3, 4].every(t => C.inTanda(t).every(id => !SH.hasCard(id))), 'las demás tandas empiezan bloqueadas');
   // sobres
-  eq([SH.PACK_PRICE, SH.PACK_SIZE], [50, 3], 'sobre de 3 cartas por 50 monedas');
+  eq([SH.PACK_PRICE, SH.PACK_SIZE], [50, 5], 'sobre de 5 cartas por 50 monedas');
   const p = SH.pts(); p.coins = 49; ok(!SH.buyPack(2).ok && SH.coins() === 49, 'sin monedas no abre y no cobra');
   ok(!SH.buyPack(1).ok && !SH.buyPack(9).ok, 'no hay sobre de la tanda 1 ni de tandas que no existen');
   p.coins = 1000; let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const r = SH.buyPack(3, rnd);
-  ok(r.ok && r.cards.length === 3 && SH.coins() === 950, 'abre: 3 cartas y cobra 50');
+  ok(r.ok && r.cards.length === 5 && SH.coins() === 950, 'abre: 5 cartas y cobra 50');
   ok(r.cards.every(x => C.tandaOf(x.id) === 3 && SH.hasCard(x.id)), 'las cartas son de esa tanda y quedan desbloqueadas');
   // repetidas guardadas y primera para siempre
   const id = r.cards[0].id; store.pts.cards[id] = 1; eq([SH.cardCount(id), SH.spareOf(id)], [1, 0], 'la primera copia la desbloquea y no es repetida');

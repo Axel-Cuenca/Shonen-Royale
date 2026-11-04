@@ -2958,7 +2958,7 @@
       return h('div', { class: 'po-slot', 'data-i': i }, h('div', { class: 'po-card' }, h('div', { class: 'po-face po-back' }, h('i', null, '✦')),
         h('div', { class: 'po-face po-front pkr-' + x.rar }, h('div', { class: 'po-art' }, h('div', { class: 'pkimg' }, pkArt(c))), h('b', null, c.name), h('small', null, (c.level ? '★ ' + c.level + ' · ' : '') + C.RAR_ES[x.rar]),
           h('span', { class: 'po-nw' + (x.isNew ? '' : ' rep') }, x.isNew ? '¡NUEVA!' : `Repetida · ×${x.n}`)))); });
-    const row = h('div', { class: 'po-row' }, slots);
+    const row = h('div', { class: 'po-row', style: '--n:' + slots.length }, slots);
     const end = h('div', { class: 'po-end' }); end.hidden = true;
     const ov = h('div', { class: 'boxov pko open', style: '--bc:' + (PK_COLOR[t] || '#7aa8ff') }, dim, rays, pillar, cv, flash, banner, count, pk, row, hint, end);
     document.body.append(ov);

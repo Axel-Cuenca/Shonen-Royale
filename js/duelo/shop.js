@@ -218,10 +218,10 @@
 
 
   // ---------------- colección de cartas y sobres (31-10-2026) ----------------
-  // Sólo la tanda 1 viene desbloqueada. El resto sale de los sobres de su tanda: 3 cartas por PACK_PRICE monedas.
+  // Sólo la tanda 1 viene desbloqueada. El resto sale de los sobres de su tanda: PACK_SIZE (5) cartas por PACK_PRICE monedas.
   // p.cards = { idCarta: veces que te ha tocado }: la primera te la da para siempre (se puede usar 2 veces en el mazo) y
   // las siguientes quedan guardadas como repetidas (para los futuros intercambios: 5 repetidas de una rareza -> 1 de la siguiente).
-  const PACK_PRICE = 50, PACK_SIZE = 3;
+  const PACK_PRICE = 50, PACK_SIZE = 5;
   const PACK_ODDS = { c: 55, u: 25, r: 12, e: 6, l: 2 };      // % de cada rareza al sacar una carta del sobre
   const cardsApi = () => D.Cards && D.Cards.tandaOf ? D.Cards : null;
   function cleanCards(o) {
