@@ -174,4 +174,14 @@ module.exports = function (T) {
     s6.atk = { p: 0, z: 0, target: 0, vs: 1, negated: false };
     eq(view(s6, 0, 0), [1800, 1300], 'Warwick contra Warwick: sin bucles, el de menos ATK gana +500');
   }
+
+  section('correcciones 04-11: Kayn y la X');
+  {
+    const st = fresh(0); put(st, 0, 0, 'c_kayn', { kn: { rh: true, sh: true } }); putST(st, 1, 0, 'c_x', { down: true, setTurn: 1 });
+    act(st, 0, pw(st, 0, 'kform', a => a.form === 'c_kayn_rhaast'));
+    let n = 0;
+    while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && x.activate) || l.find(x => x.t === 'respond') || l[0]); }
+    ok(!st.players[0].mz[0].form, 'la X cancela la transformación de Kayn');
+    ok(!pw(st, 0, 'kform'), 'Kayn no puede volver a transformarse en ese mismo turno (ninguna de las dos formas)');
+  }
 };
