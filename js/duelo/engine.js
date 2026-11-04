@@ -1371,6 +1371,8 @@
   }
   const HOSTILE = { destroyOne: 1, destroyST: 1, burn: 1 };
   const HOSTILE_SKIP = {};
+  /** Magias que eligen a un personaje ENEMIGO aunque el objetivo no diga de quién (en 1 contra 1 va sin `vs`). */
+  const FOE_TGT = Object.assign({ deathnote: 1 }, HOSTILE);
   /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
   const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1, infarto: 1 };
   /** Habilidades hostiles que Total Counter puede devolver. */
@@ -1798,7 +1800,7 @@
     {   // Goku Dios Super Saiyajin (Repulsión divina): destruye la magia rival que lo elija a él o a un aliado como objetivo
       const t = ch.target;
       if (t && t.z != null && d.fx !== 'destroyST' && !HOSTILE_SKIP[d.fx]) {
-        const tp = t.vs != null ? t.vs : (HOSTILE[d.fx] ? foeOf(st, ch.p, t) : ch.p);
+        const tp = t.vs != null ? t.vs : (FOE_TGT[d.fx] ? foeOf(st, ch.p, t) : ch.p);
         if (st.team[tp] !== st.team[ch.p] && st.players[tp].mz[t.z]) {
           for (let q = 0; q < st.n; q++) {
             if (!st.players[q].alive || st.team[q] !== st.team[tp]) continue;
@@ -1814,7 +1816,7 @@
     {   // Sasuke Chico (Sharingan): evade la magia que lo elige como objetivo
       const t = ch.target;
       if (t && t.z != null && d.fx !== 'destroyST') {
-        const tp = t.vs != null ? t.vs : (HOSTILE[d.fx] ? foeOf(st, ch.p, t) : ch.p);
+        const tp = t.vs != null ? t.vs : (FOE_TGT[d.fx] ? foeOf(st, ch.p, t) : ch.p);
         if (st.team[tp] !== st.team[ch.p] && sharinganEvade(st, tp, t.z)) { P.grave.push(ch.inst); lose(st, ch.p, d.self || 0); return; }
       }
     }
@@ -2523,6 +2525,7 @@
   }
   /** Deja limpios los vínculos que se rompieron (objetivo de la Gema o de Karma fuera del campo, dominio sin Sukuna). */
   function sweep(st) {
+    for (const P of st.players) for (const k of ['grave', 'banish', 'hand', 'deck']) if (P[k] && P[k].some(c => c && c.virt)) P[k] = P[k].filter(c => !(c && c.virt));      // efecto liberado por la Gema del Alma
     for (let p = 0; p < st.n; p++) {
       const P = st.players[p];
       for (let i = 0; i < ZONES; i++) {
@@ -3653,7 +3656,11 @@
       const id = s.alma.eff.splice(a.idx, 1)[0], cd = C().get(id);
       s.alma.usedTurn = st.turn;
       log(st, p, `usa ${nm}: libera el efecto de ${cd.name}`);
-      FX[cd.fx].resolve(st, p, cd, a.target || null);
+      // El efecto liberado se trata como si se usara esa magia: pasa por la X, Total Counter, Repulsión divina, Sharingan, Conejos, Rika, etc.
+      // La carta es virtual (no existe en ningún mazo): sweep la quita de cementerios y destierros.
+      st.chain = { p, inst: { uid: st.nextUid++, id, virt: true }, target: a.target || null, negated: false, unstop: !!cd.unstop, alma: true };
+      if (openWindow(st, 'spell', { k: 'spell', by: p })) return;
+      continueSpell(st);
       return;
     }
     if (a.pw === 'storm1' || a.pw === 'storm2') {

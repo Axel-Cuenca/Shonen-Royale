@@ -217,4 +217,37 @@ module.exports = function (T) {
     ok(st.players[0].grave.some(c => c.id === 'c_gokumonkyo') && !st.players[0].grave.some(c => c.id === 'c_goku'), 'el Gokumonkyo va al cementerio de quien lo puso');
     eq(before(st), n1, 'el dueño sigue teniendo sus 30 cartas');
   }
+
+  section('correcciones 04-11: Gema del Alma respeta las defensas');
+  {
+    const setup = (foe, extra) => {
+      const st = fresh(0); st.turn = 9;
+      putST(st, 0, 0, 'c_gema_alma', { alma: { t0: 8, eff: ['c_death_note'], usedTurn: -1 } });
+      put(st, 0, 0, 'c_zenitsu'); put(st, 1, 0, foe); if (extra) extra(st); return st;
+    };
+    const release = st => {
+      const a = L(st, 0).find(x => x.pw === 'almaus' && x.target && x.target.z === 0);
+      if (!a) return null;
+      act(st, 0, a);
+      let n = 0; while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && x.activate) || l.find(x => x.use === true) || l[0]); }
+      return st;
+    };
+    const marked = st => !!(st.players[1].mz[0] && st.players[1].mz[0].dn);
+    const noVirt = st => !st.players.some(P => P.grave.concat(P.banish, P.hand).some(c => c.virt));
+    let st = release(setup('c_zenitsu'));
+    ok(marked(st) && noVirt(st), 'sin defensas: el efecto liberado (Death Note) se aplica y no deja cartas fantasma');
+    eq(E.countCards(st, 0), E.countCards(setup('c_zenitsu'), 0), 'liberar no cambia el número de cartas del jugador');
+    for (const [foe, why, extra] of [
+      ['c_goku_dios', 'Repulsión divina de Goku Dios'], ['c_sasuke', 'el Sharingan de Sasuke'], ['c_megumi', 'los Conejos de Megumi'],
+      ['c_zenitsu', 'la X rival', s => putST(s, 1, 0, 'c_x', { down: true, setTurn: 1 })]]) {
+      st = release(setup(foe, extra));
+      ok(st && !marked(st) && noVirt(st), 'el efecto liberado lo detiene ' + why);
+    }
+    // la Death Note normal (no liberada) también la detienen en 1 contra 1
+    st = fresh(0); st.turn = 9; put(st, 1, 0, 'c_goku_dios'); st.players[0].hand = [{ uid: st.nextUid++, id: 'c_death_note' }];
+    act(st, 0, L(st, 0).find(x => x.t === 'activate' && x.target && x.target.z === 0));
+    ok(!marked(st), 'la Death Note normal también la detiene la Repulsión divina');
+    st = setup('c_zenitsu'); release(st);
+    eq(st.players[0].st[0].alma.eff, [], 'el efecto liberado se gasta de la Gema');
+  }
 };
