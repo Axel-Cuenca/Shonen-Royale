@@ -1904,7 +1904,7 @@
       }
       case 'xcancel':                     // X: Cancelación absoluta
         if (pd && pd.trigger === 'spell') { if (st.chain) { st.chain.negated = true; log(st, resp, 'X cancela la magia: queda destruida'); } }
-        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : 'X cancela la habilidad: queda consumida para siempre'); }
+        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.pa && pd.cont.pa.pw === 'kform' ? 'X cancela la habilidad: no se puede volver a usar este turno' : 'X cancela la habilidad: queda consumida para siempre')); }
         break;
       case 'realidad': {                  // Gema de la Realidad
         const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
@@ -2020,7 +2020,8 @@
     blockPw(st, p, a);
     const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw;
     consumePower(st, p, a, true);
-    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y queda consumida para siempre`);
+    const forever = !!(PW_FLAG[a.pw] || id);      // la transformación de Kayn sólo se pierde ese turno (decisión del dueño, 04-11-2026)
+    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y ${forever ? 'queda consumida para siempre' : 'no se puede volver a usar este turno'}`);
     st.log[st.log.length - 1].xc = 1;
   }
 

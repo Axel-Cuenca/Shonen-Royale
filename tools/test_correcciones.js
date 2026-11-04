@@ -183,5 +183,8 @@ module.exports = function (T) {
     while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && x.activate) || l.find(x => x.t === 'respond') || l[0]); }
     ok(!st.players[0].mz[0].form, 'la X cancela la transformación de Kayn');
     ok(!pw(st, 0, 'kform'), 'Kayn no puede volver a transformarse en ese mismo turno (ninguna de las dos formas)');
+    ok(!st.log.some(l => /Kayn.*para siempre/.test(JSON.stringify(l))), 'el registro no dice «para siempre» para Kayn');
+    ready(st, 0, st.turn + 2);
+    ok(!!pw(st, 0, 'kform'), 'en su siguiente turno Kayn sí puede transformarse (decisión del dueño: sólo pierde ese turno)');
   }
 };
