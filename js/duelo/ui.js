@@ -2011,7 +2011,7 @@
       const lpHit = area === 'mz' && lpDelta[seat] < 0;                                                         // su dueño acaba de perder PV
       const weary = area === 'mz' && D.CardFX && D.CardFX.tired(v.players[seat].lp, 8000);                      // pocos PV: postura de cansancio
       const cs = cosOf(seat);
-      const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : '') + (struck || lpHit ? ' struck' : '') + (weary ? ' tired' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
+      const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : '') + (struck || lpHit ? ' struck' : '') + (weary ? ' tired' : '') + (area === 'mz' && s && s.domain ? ' domsrc' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
       let cur = null, landing = false, art = null, asCard = false;
       if (s) {
@@ -2574,7 +2574,7 @@
       if (timer && !ttInt) ttInt = setInterval(ttTick, 250);
       const hudTop = h('div', { class: 'hud-top' + (multi() ? ' multi' : '') },
         multi() ? null : pcard(v.opp.seat),
-        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, h('div', { class: 'logline' }, logTxt), fan),
+        h('div', { class: 'turnbox' }, h('div', { class: 'turnpill' }, turnTxt), timer, v.domain ? h('div', { class: 'dombanner' }, h('span', { class: 'dlong' }, `👹 Dominio ${v.domain.nm} activo · ${v.domain.dn} · ${v.domain.left > 1 ? v.domain.left + ' turnos' : 'último turno'}`), h('span', { class: 'dshort' }, `👹 Dominio ${v.domain.nm} · ${v.domain.left > 1 ? v.domain.left + ' turnos' : 'último turno'}`)) : null, h('div', { class: 'logline' }, logTxt), fan),
         h('div', { class: 'tools' }, h('button', { class: 'ib', onclick: showLog, title: 'Registro' }, '📜'), (() => { const b = h('button', { class: 'ib feedb', title: 'Mostrar u ocultar los mensajes de acciones', 'aria-label': 'Mensajes de acciones' }, '💬'); const sync = () => { b.classList.toggle('off', !feedOn()); b.setAttribute('aria-pressed', feedOn() ? 'true' : 'false'); }; b.onclick = () => { feedSet(!feedOn()); sync(); }; sync(); return b; })(), h('button', { class: 'ib', onclick: soundPanel, title: 'Ajustes' }, '⚙️'),
           FS.wanted() ? h('button', { class: 'ib fsb', onclick: FS.toggle, title: 'Pantalla completa' }, FS.icon()) : null,
           PR() ? h('button', { class: 'ib', onclick: prPanel, title: 'Herramientas del campo de práctica' }, '🧪') : null,
@@ -2600,6 +2600,10 @@
         gameEl = h('div', { class: 'game' }, h('div', { class: 'stage' }, h('div', { class: 'persp' }, h('div', { class: 'board3d' }, slab))), lcol);
       }
       if (!gameEl.isConnected) app.replaceChildren(gameEl);
+      {      // dominio activo: el campo se oscurece (capa detrás del tablero, sin filtros que aplanen el 3D)
+        const dfx = gameEl.querySelector(':scope > .domfx');
+        if (v.domain && !dfx) gameEl.prepend(h('div', { class: 'domfx' })); else if (!v.domain && dfx) dfx.remove();
+      }
       if (D.BgFX && D.BgFX.attach(gameEl)) D.BgFX.setState({ danger: D.CardFX && D.CardFX.dangerOf(v.me.lp, 8000) > .3, rival: v.current !== v.seat });
       for (const k of Object.keys(lpDelta)) { const d = lpDelta[k], tk = (v.seq || v.turn) + ':n' + k; if (d && !hitMem.has(tk)) { hitMem.add(tk); bigNum(+k, d); } }
       if (D.CardFX) { D.CardFX.ambient.attach(gameEl); D.CardFX.ambient.setDanger(D.CardFX.dangerOf(v.me.lp, 8000)); }

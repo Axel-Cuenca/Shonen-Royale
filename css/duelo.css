@@ -1882,3 +1882,12 @@ html.rm .po-pk, html.rm .po-slot.next .po-card, html.rm .po-rays, html.rm .po-hi
 
 /* Sobres de 5 cartas (04-11-2026): en pantallas estrechas van en dos filas (3 + 2) para que se lean */
 @media (max-width: 600px) and (orientation: portrait) { .po-row { flex-wrap: wrap; row-gap: 14px; } .po-slot { --w: min(28vw, 150px); } }
+
+/* ===== Dominios (05-11-2026): el campo se oscurece mientras dura; brilla la casilla del dueño ===== */
+.game > .domfx { position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(ellipse at 50% 55%, rgba(30, 0, 8, .34), rgba(6, 0, 3, .66) 78%); animation: domIn .9s ease-out; }
+.game .zone.domsrc { box-shadow: 0 0 0 2px #e0304a, 0 0 28px 6px rgba(224, 48, 74, .75) !important; }
+.dombanner { margin-top: 6px; padding: 5px 16px; border-radius: 999px; background: rgba(20, 0, 6, .82); border: 1px solid #e0304a; color: #ffd7dd; font: 600 14px system-ui, sans-serif; letter-spacing: .03em; box-shadow: 0 0 18px rgba(224, 48, 74, .5); white-space: nowrap; animation: domIn .6s ease-out; }
+@keyframes domIn { from { opacity: 0 } to { opacity: 1 } }
+html.rm .game > .domfx, html.rm .dombanner { animation: none; }
+.dombanner .dshort { display: none; }
+@media (max-width: 860px) { .dombanner { position: fixed; top: 33vh; left: 50%; transform: translateX(-50%); z-index: 40; margin: 0; font-size: 12px; padding: 4px 12px; } .dombanner .dlong { display: none; } .dombanner .dshort { display: inline; } }

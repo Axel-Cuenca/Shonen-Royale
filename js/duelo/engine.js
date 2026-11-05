@@ -90,6 +90,26 @@
     return a.includes('gogres') ? a.concat('rikaprot') : a;      // Gogeta: Resistencia absoluta = inmune a las magias y trampas
   }
   const has = (st, m, id) => abil(st, m).includes(id);
+  /** Dominios de Jujutsu Kaisen (05-11-2026): se puede abrir uno si no hay ninguno, o si gana el choque al que ya está activo:
+   *  más estrellas, o las mismas (gana el segundo en activarse). Con menos estrellas no se ofrece. */
+  const DOM_AB = ['relicario', 'jogodom', 'yutadom'];
+  const DOM_NAME = { relicario: 'Relicario Demoníaco', dominio: 'Ataúd de la Montaña de Hierro', ydominio: 'Amor Mutuo y Verdadero' };
+  function domLv(st) {
+    if (!st.domain) return 0;
+    if (st.domain.lv != null) return st.domain.lv;
+    const f = findByUid(st, st.domain.uid), fm = f && (f.m || f);
+    return fm && fm.c ? lvl(fm) : 0;
+  }
+  function domainOk(st, m) { return !st.domain || (st.domain.uid !== m.c.uid && lvl(m) >= domLv(st)); }
+  /** Abre el dominio de m; si ya había otro, ése queda anulado. */
+  function openDomain(st, p, m, o, pw) {
+    const nm = mdef(m).name;
+    if (st.domain) {
+      const old = st.domain, f = findByUid(st, old.uid), om = f && (f.m || f), on = om && om.c ? mdef(om).name : 'el rival';
+      log(st, p, `Choque de dominios: ${nm} (${lvl(m)}★) ${lvl(m) > domLv(st) ? 'tiene más estrellas' : 'tiene las mismas estrellas y es el último en abrirlo'}; el dominio de ${on} queda anulado`);
+    }
+    st.domain = Object.assign({ p, uid: m.c.uid, t0: st.turn, lv: lvl(m), dn: DOM_NAME[pw] }, o);
+  }
   /** Dominio de Yuta: las magias y trampas que ya estaban en el campo quedan desactivadas mientras dure. */
   const stOff = st => !!(st.domain && st.domain.noST);
   /** Galio: Campo de silencio. Mientras haya un Galio boca arriba en el campo, nadie activa magias. */
@@ -2694,8 +2714,9 @@
       let ab = abil(st, m);
       const u = uOf(m), g = gx(P, z);
       if (isYuta(m) && st.domain && st.domain.uid === m.c.uid) ab = ab.concat(borrowable(st, m, ab));      // Amor Mutuo y Verdadero: las habilidades de los personajes boca arriba
+      if (st.domain && !m.price && domainOk(st, m)) for (const x of rawAbil(m)) if (DOM_AB.includes(x) && !ab.includes(x) && !(m.sealed || []).some(q => q.ab === x) && !(m.spentAb || []).includes(x)) ab = ab.concat(x);      // abrir un dominio que gana el choque no lo apaga el dominio activo
       const push = o => out.push(Object.assign({ t: 'power', zone: z }, o));
-      if (ab.includes('yutadom') && !u.ydom && !st.domain) push({ pw: 'ydominio' });      // una sola vez por invocación de Yuta (también con la Gema)
+      if (ab.includes('yutadom') && !u.ydom && domainOk(st, m)) push({ pw: 'ydominio' });      // una sola vez por invocación de Yuta (también con la Gema)
       if (ab.includes('canon') && !u.canon && canAttackNow(st)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && lvl(tm) <= 7 && canTarget(st, p, e, tz)) push({ pw: 'canon', target: { vs: e, z: tz } }); }
       if ((ab.includes('absorb') || ab.includes('absorbp')) && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
@@ -2706,7 +2727,7 @@
       }
       if (ab.includes('furia') && u.kills > 0 && canOnce(P, z, u, 'furia')) push({ pw: 'furia' });
       if (ab.includes('bigbang') && canOnce(P, z, u, 'bb')) push({ pw: 'bigbang' });
-      if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && !st.domain) push({ pw: 'relicario' });
+      if (ab.includes('relicario') && canOnce(P, z, u, 'relic') && domainOk(st, m)) push({ pw: 'relicario' });
       if (ab.includes('desmantelar') && canOnce(P, z, u, 'desm')) for (const t of foeSTs(st, p)) push({ pw: 'desmantelar', target: t });
       if (ab.includes('dexter') && (m.dex || 0) >= 2 && P.grave.some(c => def(c).kind === 'monster' && spot(P, def(c)) >= 0)) push({ pw: 'maquina' });
       if (ab.includes('dios') && canOnce(P, z, u, 'dios')) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.god && !rawAbil(tm).includes('vimm') && canTarget(st, p, e, tz)) push({ pw: 'dios', target: { vs: e, z: tz } }); }
@@ -2766,7 +2787,7 @@
       if (ab.includes('maestro') && u.tTurn !== st.turn) {
         for (const sk of ['kaioken', 'genki']) if (!u['t_' + sk]) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z) && !(st.players[t.vs].mz[t.z].learn || {})[sk]) push({ pw: 'teach', skill: sk, target: t });
       }
-      if (ab.includes('jogodom') && canOnce(P, z, u, 'dom') && !st.domain) push({ pw: 'dominio' });
+      if (ab.includes('jogodom') && canOnce(P, z, u, 'dom') && domainOk(st, m)) push({ pw: 'dominio' });
       if (ab.includes('llama') && (u.kills || 0) > 0 && canOnce(P, z, u, 'llama')) push({ pw: 'llama' });
       if (m.c.id === 'c_kayn' && !m.form && m.kn) {
         if (m.kn.rh) push({ pw: 'kform', form: 'c_kayn_rhaast' });
@@ -3187,8 +3208,9 @@
         break;
       }
       case 'relicario':
+        if (!domainOk(st, m)) break;
         markOnce(u, 'relic');
-        st.domain = { p, uid: m.c.uid, t0: st.turn, x: g };
+        openDomain(st, p, m, { x: g }, 'relicario');
         log(st, p, `${nm} activa Relicario Demoníaco: el campo es su dominio`);
         break;
       case 'desmantelar': {
@@ -3341,15 +3363,16 @@
         break;
       }
       case 'dominio': {
+        if (!domainOk(st, m)) break;
         markOnce(u, 'dom');
-        st.domain = { p, uid: m.c.uid, t0: st.turn, x: g, min: 7, nm: 'de Jogo' };
+        openDomain(st, p, m, { x: g, min: 7, nm: 'de Jogo' }, 'dominio');
         log(st, p, `${nm} activa el dominio Ataúd de la Montaña de Hierro`);
         break;
       }
       case 'ydominio': {
-        if (u.ydom || st.domain) break;      // revalidado al resolver: nunca dos veces por invocación
+        if (u.ydom || !domainOk(st, m)) break;      // revalidado al resolver: nunca dos veces por invocación
         u.ydom = true;
-        st.domain = { p, uid: m.c.uid, t0: st.turn, x: g, min: 11, nm: 'de Yuta', noST: true };
+        openDomain(st, p, m, { x: g, min: 11, nm: 'de Yuta', noST: true }, 'ydominio');
         log(st, p, `${nm} activa el dominio Amor Mutuo y Verdadero`);
         break;
       }
@@ -4274,7 +4297,7 @@
       winner: st.winner, reason: st.reason, actor: actor(st),
       me: players[seat], opp: players[oppSeat], players,
       pending,
-      domain: st.domain ? { seat: st.domain.p, left: Math.max(0, 2 - (elapsed(st, st.domain.t0))), nm: st.domain.nm || 'de Sukuna', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
+      domain: st.domain ? { seat: st.domain.p, left: Math.min(2, Math.max(0, 2 - (elapsed(st, st.domain.t0)))), nm: st.domain.nm || 'de Sukuna', dn: st.domain.dn || 'Relicario Demoníaco', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       marks: (st.marks || []).map(k => ({ by: k.by, vs: k.vs, z: k.z })),
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,

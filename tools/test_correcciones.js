@@ -272,4 +272,44 @@ module.exports = function (T) {
     act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0)); run(st, false);
     ok(b(st, 0, 'c_goku') && b(st, 1, 'c_creeper'), 'si no se usa la X, los dos son desterrados como antes');
   }
+
+  section('05-11: choque de dominios de Jujutsu Kaisen');
+  {
+    const two = (a, b) => { const st = fresh(0); put(st, 0, 0, a); put(st, 1, 0, b); return st; };
+    // Jogo (7★) abre; Sukuna 60% (10★) del rival lo anula en su turno
+    let st = two('c_jogo', 'c_sukuna60');
+    act(st, 0, pw(st, 0, 'dominio'));
+    eq(st.domain && st.domain.dn, 'Ataúd de la Montaña de Hierro', 'Jogo abre su dominio');
+    ready(st, 1, st.turn + 1);
+    const r = pw(st, 1, 'relicario');
+    ok(!!r, 'Sukuna (10★) puede abrir el suyo aunque haya un dominio activo');
+    act(st, 1, r);
+    ok(st.domain && st.domain.p === 1 && st.domain.dn === 'Relicario Demoníaco', 'gana el de más estrellas: el campo pasa a ser el dominio de Sukuna');
+    eq(stat(st, 0, 0)[0], 2100, 'el dominio de Jogo queda anulado: pierde el +500');
+    ok(st.log.some(l => /Choque de dominios/.test(JSON.stringify(l))), 'el registro cuenta el choque');
+    ready(st, 0, st.turn + 1);
+    ok(!pw(st, 0, 'dominio'), 'Jogo no puede volver a abrirlo (ya lo gastó)');
+    // con menos estrellas no aparece la opción
+    st = two('c_sukuna60', 'c_jogo');
+    act(st, 0, pw(st, 0, 'relicario'));
+    ready(st, 1, st.turn + 1);
+    ok(!pw(st, 1, 'dominio'), 'con un dominio de más estrellas activo, Jogo (7★) no tiene la opción');
+    // mismas estrellas: gana el segundo, aunque el dominio de Yuta apague a los de 10★
+    st = two('c_yuta', 'c_sukuna60');
+    act(st, 0, pw(st, 0, 'ydominio'));
+    ready(st, 1, st.turn + 1);
+    const r2 = pw(st, 1, 'relicario');
+    ok(!!r2, 'dentro del dominio de Yuta (10★), Sukuna (10★) puede abrir el suyo');
+    act(st, 1, r2);
+    ok(st.domain && st.domain.p === 1 && !st.domain.noST, 'mismas estrellas: gana el segundo en activarse');
+    // Sukuna 50% (9★) no puede contra Yuta (10★)
+    st = two('c_yuta', 'c_sukuna50');
+    act(st, 0, pw(st, 0, 'ydominio')); ready(st, 1, st.turn + 1);
+    ok(!pw(st, 1, 'relicario'), 'Sukuna 50% (9★) no puede anular el dominio de Yuta (10★)');
+    // el nuevo dominio dura sus 2 turnos desde que se abre
+    st = two('c_jogo', 'c_sukuna60');
+    act(st, 0, pw(st, 0, 'dominio')); ready(st, 1, st.turn + 1); act(st, 1, pw(st, 1, 'relicario'));
+    const t0 = st.domain.t0;
+    eq(t0, st.turn, 'el dominio ganador empieza a contar al abrirse');
+  }
 };
