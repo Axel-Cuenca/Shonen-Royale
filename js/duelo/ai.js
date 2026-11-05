@@ -46,6 +46,10 @@
           } else if (['power', 'trap', 'destroy', 'reduce'].includes(pd.trigger)) s = 75;
           else if (pd.trigger === 'spell') s = 70;
           else if (pd.trigger === 'summon') s = 70;
+          if (a.opt && a.opt.vs != null) {                                     // Full Counter / Kyoka / Realidad: mejor contra el rival más fuerte, nunca contra los míos
+            const tm = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z];
+            s += v.team[a.opt.vs] === v.team[v.seat] ? -100 : ((tm && tm.atk) || 0) / 500;
+          }
           if (s > bs) { bs = s; best = a; }
         }
         return bs >= 30 ? best : L.find(a => !a.activate);
@@ -55,8 +59,10 @@
         const myMons = v.me.mz.filter(Boolean).length;
         for (const a of L) {
           const c = pd.cands.find(x => x.uid === a.uid), d = cardOf(c);
-          const need = C().tributesFor(d.level);
-          const s = pd.zone === 'grave' ? d.atk : d.atk - Math.max(0, need - myMons) * 1500 + rnd() * 50;
+          let s;
+          if (pd.cont === 'bulmabot') s = -(d.kind === 'monster' ? d.atk : 800);                       // Genio científico: al fondo del mazo, la peor carta
+          else if (d.kind !== 'monster') s = rnd() * 50;
+          else { const need = C().tributesFor(d.level); s = pd.zone === 'grave' ? d.atk : d.atk - Math.max(0, need - myMons) * 1500 + rnd() * 50; }
           if (s > bs) { bs = s; best = a; }
         }
         return best;
@@ -221,6 +227,25 @@
             case 'manto': return a.opt === 'xform' ? 60 : 44;
             case 'rasengan': return v.phase === 'battle' ? 56 : (info.count ? 46 : -1);
             case 'kaiox10': return -1;
+            // ----- tanda 6 -----
+            case 'astaneg': case 'astauni': case 'sjmon': return 64;
+            case 'astacausa': return 50;
+            case 'sjarmy': { const gc = (v.players[a.g].grave || []).find(c => c.uid === a.u); return gc ? 50 + (cardOf(gc).atk || 0) / 100 : -1; }
+            case 'sjigris': case 'sjberu': case 'sjbellion': return 60;
+            case 'kameha': return v.phase === 'battle' ? 57 : (info.count ? 46 : -1);
+            case 'bulmagen': return 45;
+            case 'satanpub': return tm && !tm.down ? 30 + (tm.atk || 0) / 300 : -1;
+            case 'elizluz': return 48;
+            case 'galco': return v.phase === 'battle' ? 55 : -1;
+            case 'galcaza': return v.phase === 'battle' && info.count ? 54 : -1;
+            case 'higudom': return info.count >= 1 ? 50 : -1;
+            case 'tobidim': return tm && v.team[a.target.vs] !== v.team[v.seat] ? 52 + (tm.atk || 0) / 200 : -1;
+            case 'tinta': return a.opt === 'leon' ? (info.count ? 40 : 52) : tm ? 44 + (tm.atk || 0) / 300 : -1;
+            case 'shikasomb': return tm ? 46 + (tm.atk || 0) / 300 : -1;
+            case 'liukang': return v.phase === 'battle' ? 58 : -1;
+            case 'misaojos': return 35;
+            case 'misadn': return tm ? 50 + (tm.atk || 0) / 150 : -1;
+            case 'katana': return tm ? 40 + (tm.atk || 0) / 400 : -1;
           }
           return -1;
         }
@@ -294,6 +319,7 @@
             }
             case 'deathnote': { const t = opp.mz[a.target.z]; return t ? 48 + (t.down ? 8 : (t.atk || 0) / 150) : -1; }
             case 'ultratumba': return 47;
+            case 'mafuba': { const t = opp.mz[a.target.z]; return t ? 50 + (t.down ? 4 : (t.atk || 0) / 150) : -1; }
             case 'equip': {
               const m = me.mz[a.target.z];
               if (!m || m.down) return -1;
@@ -313,16 +339,17 @@
       const m = v.me.mz[a.zone], opp = targetOf(v, a);
       if (a.vs != null && a.vs === v.seat) return -4;                // Rika obligada a atacar a un aliado: último recurso
       if (a.target === 'direct') return (m.atk >= opp.lp ? 200 : 70) + m.atk / 100 + (8000 - opp.lp) / 400;
-      const t = opp.mz[a.target];
+      let t = opp.mz[a.target];
       if (t.down) return m.atk >= 1800 ? 38 : -1;
       const att = cardOf(m.c), tgt = cardOf(t.c);
+      if (a.strip) t = Object.assign({}, t, { atk: Math.min(t.atk, tgt.atk), def: Math.min(t.def, tgt.def) });      // Anulación de aumentos: se queda sin bonos
       const A = m.atk;
       if (t.pos === 'atk') {
-        if (A > t.atk) return 60 + (A - t.atk) / 100 + t.atk / 100;
+        if (A > t.atk) return 60 + (A - t.atk) / 100 + t.atk / 100 + (a.strip ? 3 : 0);
         if (A === t.atk) return tgt.atk > att.atk ? 40 : -1;
         return -1;
       }
-      return A > t.def ? 52 + t.def / 200 : -1;
+      return (A > t.def ? 52 + t.def / 200 : -1) + (a.strip ? 3 : 0);
     }
 
     /** Elige una acción a partir de la vista de su asiento (sirve igual para un asiento remoto). */

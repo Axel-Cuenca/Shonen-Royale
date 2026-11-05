@@ -1255,11 +1255,13 @@
       dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
       agujero: 'Agujero bajo tierra', brillo: 'Brillo', dtrig: 'Devil Trigger', avada: 'Avada Kedavra', chidori: 'Chidori', dios: 'Poder de Dios', maquina: 'Máquina del tiempo', cuerno: 'Ataque de Cuerno', canal: 'Canalización', supernova: 'Supernova', bigbang1: 'Big Bang', kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
       eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
-      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10' };
+      jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10',
+      katana: 'Katana de la Antimagia', higudom: 'Sentencia Mortal (dominio)' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
-      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Simbionte (Simbiosis)', sed: 'Sed de sangre', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan' };
+      punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Simbionte (Simbiosis)', sed: 'Sed de sangre', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan',
+      leal: 'Lealtad al Monarca', unico: 'El Único (este combate)', kame: 'Kamehameha (próximo ataque)', caza: 'Caza Implacable (próximo ataque)', cazap: 'Caza Implacable', serptinta: 'Serpiente de tinta' };
     /** Técnicas de los Seis Ojos (Guerrero del Infinito): efecto real de cada una, según doPower de engine.js. */
     const SIX_INFO = {
       rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
@@ -1324,6 +1326,22 @@
       if (s.promesa) o.push('Promesa de Poder: no puede atacar y cambiará de bando');
       if (s.owner != null) o.push('Corrompido: pertenece a ' + nameOf(s.owner));
       if (s.learn) o.push('Ha aprendido: ' + [s.learn.kaioken ? 'Kaio-ken' : null, s.learn.genki ? 'Genkidama' : null].filter(Boolean).join(' y '));
+      if (s.ink) o.push('Criatura de tinta: no es una carta, no puede ser atacada y desaparece al final del turno');
+      if (s.soldier) o.push('Soldado de las sombras' + (s.bySung ? ' (invocado por Sung Jin-Woo)' : ''));
+      if (s.sjc) o.push('Cargas del Ejército de las sombras: ' + s.sjc + '/2');
+      if (s.higu) o.push(s.higu.sword ? 'Espada del Verdugo: +2000 ATK mientras dure el dominio' : 'Juicio de la corte: los enemigos llevan ' + s.higu.k + ' de 4 asesinatos dentro del dominio');
+      if (s.petri) o.push('Petrificado (Mandamiento de la Verdad): no ataca ni usa habilidades el resto de su invocación');
+      if (s.binds) for (const b of s.binds) o.push((b.nm || 'Inmovilizado') + ': ' + (b.atk && b.ab ? 'no ataca ni usa habilidades' : b.atk ? 'no puede atacar' : 'no usa habilidades') + ' · ' + b.n + ' turno(s)');
+      if (s.pub) o.push('Publicidad engañosa: los enemigos no pueden elegirlo con habilidades hasta tu siguiente turno');
+      if (s.tobiNA) o.push('Maestro de la manipulación: no puede atacar a Tobi');
+      if (s.astaW) o.push('Puede transformarse en Asta Forma Negra (hasta el final de tu siguiente turno)');
+      if (s.astaK != null) o.push('Bajas aliadas con Forma Negra en el campo: ' + s.astaK + '/2 (Unión Demoníaca)');
+      if (s.astaPr) o.push('Protección de la forma negra ya usada');
+      if (s.defFix != null) o.push('Regenerado en las sombras: DEF fija en ' + s.defFix);
+      if (s.liu) o.push('Patadas Continuas: hasta 3 ataques este turno');
+      if (s.gco) o.push('Critical Over: ' + s.gco + ' carga(s)');
+      if (s.spentAb && s.spentAb.length) o.push('Habilidades destruidas por la Katana de la Antimagia: ' + s.spentAb.map(abn).join(', '));
+      if (s.ecU) o.push('Espada Destructora de Causas ya usada en esta invocación');
       if (s.mods && s.mods.length) for (const m of s.mods) if (m.k !== 'av-base') o.push(`${MODN[m.k] || m.k}: ${m.atk ? (m.atk > 0 ? '+' : '') + m.atk + ' ATK' : ''}${m.atk && m.def ? ' / ' : ''}${m.def ? (m.def > 0 ? '+' : '') + m.def + ' DEF' : ''}${m.left != null ? ' · ' + m.left + ' turno(s)' : ''}`);
       return o;
     }
@@ -1399,6 +1417,17 @@
       if (s.tony) b.push(['🤖' + s.tony.arm, 'Tony Stark: armaduras ' + s.tony.arm + ', materiales ' + s.tony.mat]);
       if (s.hira) b.push(['⚡' + s.hira, 'Hiraishin: ' + s.hira + ' ataque(s) extra disponibles']);
       if (s.price) b.push(['💎', 'Precio del poder: perdió la mitad de su poder y sus habilidades']);
+      if (s.ink) b.push(['🖌️', 'Criatura de tinta: no puede ser atacada y desaparece al final del turno']);
+      if (s.soldier) b.push(['🌑', 'Soldado de las sombras']);
+      if (s.sjc) b.push(['🌑' + s.sjc, 'Cargas del Ejército de las sombras: ' + s.sjc + '/2']);
+      if (s.higu) b.push(['⚖️' + (s.higu.sword ? '' : s.higu.k), s.higu.sword ? 'Espada del Verdugo: +2000 ATK' : 'Juicio de la corte: ' + s.higu.k + '/4 asesinatos enemigos']);
+      if (s.petri) b.push(['🗿', 'Petrificado: no ataca ni usa habilidades']);
+      if (s.binds) b.push(['🌀' + Math.max(...s.binds.map(x => x.n)), s.binds.map(x => (x.nm || 'Inmovilizado') + ' (' + x.n + ' turno(s))').join(' · ')]);
+      if (s.pub) b.push(['📣', 'Publicidad engañosa: no se le pueden lanzar habilidades enemigas']);
+      if (s.tobiNA) b.push(['🌀', 'No puede atacar a Tobi']);
+      if (s.astaW) b.push(['🖤', 'Puede transformarse en Forma Negra']);
+      if (s.liu) b.push(['🦶3', 'Patadas Continuas: 3 ataques este turno']);
+      if (s.gco) b.push(['💥' + s.gco, 'Critical Over: ' + s.gco + ' carga(s)']);
       return b.length ? h('span', { class: 'badges' }, b.map(x => h('i', { 'data-tip': x[1] }, x[0]))) : null;
     }
     function act(a) {
@@ -1661,8 +1690,14 @@
         const hira = L().filter(a => a.t === 'attack' && a.zone === z && a.hira);
         const vsOf = a => (a.vs != null ? a.vs : v.opp.seat);
         for (const a of all.filter(a => a.target === 'direct')) acts.push({ label: 'Atacar directamente' + (multi() ? ' a ' + shortOf(vsOf(a)) : ''), run: () => act(a) });
-        const onZone = all.filter(a => a.target !== 'direct');
-        if (onZone.length) acts.push({ label: 'Atacar…', run: () => pickTargets(onZone.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(onZone.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Elige a quién atacar') });
+        const onZone = all.filter(a => a.target !== 'direct' && !a.strip), strips = all.filter(a => a.strip);
+        const atkOn = t => {      // Asta / Espada Destructora de Demonios: puede quitarle antes los aumentos al rival
+          const a = onZone.find(a => vsOf(a) === t.seat && a.target === t.z), sa = strips.find(a => vsOf(a) === t.seat && a.target === t.z);
+          if (!sa) return act(a);
+          modal(h('div', { class: 'box' }, h('h2', null, '⚔️ ¿Anular sus aumentos?'), h('p', { class: 'sub' }, 'Antes del combate puedes quitarle al rival todos sus aumentos de ATK y DEF (no sus estadísticas base ni las reducciones). Lo quitado no vuelve.'),
+            h('div', { class: 'acts' }, btn('Atacar anulando los aumentos', () => { closeModal(); act(sa); }, 'gold'), btn('Atacar sin anular', () => { closeModal(); act(a); }, 'ghost'))));
+        };
+        if (onZone.length) acts.push({ label: 'Atacar…', run: () => pickTargets(onZone.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), atkOn, 'Elige a quién atacar') });
         if (drg.length) acts.push({ label: 'Puño del Dragón…', desc: 'Atraviesa y golpea 2 o 3 casillas rivales en el mismo ataque; tú eliges cuántas y cuáles. Una vez por invocación.', run: () => dragonPick(drg, vsOf) });
         if (hira.length) acts.push({ label: 'Hiraishin: ataque extra…', desc: 'Contra una casilla marcada ocupada por un rival. Nadie puede responder a este ataque. Uno por cada ataque normal.', run: () => pickTargets(hira.map(a => ({ seat: vsOf(a), area: 'mz', z: a.target })), t => act(hira.find(a => vsOf(a) === t.seat && a.target === t.z)), 'Hiraishin: elige la casilla marcada') });
         const fl = L().find(a => a.t === 'flip' && a.zone === z); if (fl) acts.push({ label: 'Voltear (pasa a ataque)', run: () => act(fl) });
@@ -1740,6 +1775,33 @@
           else if (k === 'bigbang1') acts.push({ label: 'Big Bang…', desc: 'Destruye a un personaje rival con igual o menos estrellas. Una vez por invocación.', run: () => choose(g, 'mz', 'Elige al personaje rival') });
           else if (k === 'desmantelar' || k === 'avpred' || k === 'agujero') acts.push({ label: pwName(k) + '…', run: () => choose(g, 'st', 'Elige la magia o trampa rival') });
           else if (k === 'corromper') acts.push({ label: (g[0].ring ? 'Promesa de Poder (Anillo Único)' : 'Promesa de Poder') + '…', run: () => choose(g, 'mz', 'Elige al personaje enemigo que quedará bajo tu poder') });
+          else if (k === 'astaneg' || k === 'astauni' || k === 'sjmon') acts.push({ label: 'Transformarse en ' + nameId(v.me.hand[g[0].hand].id), desc: { astaneg: 'Un aliado murió: Asta pasa a Forma Negra (desde tu mano, en su lugar).', astauni: 'Dos aliados más murieron con Forma Negra en el campo: pasa a Unión Demoníaca.', sjmon: 'Con 2 o más soldados de las sombras en el campo.' }[k], run: () => act(g[0]) });
+          else if (k === 'sjarmy') acts.push({ label: 'Ejército de las sombras…', desc: 'Gasta 2 cargas: levanta como soldado de las sombras a un personaje de cualquier cementerio. Sigue siendo de su dueño y, al salir del campo, vuelve a su cementerio.', run: () => modal(h('div', { class: 'box' }, h('h2', null, '🌑 ¿A quién levantas?'),
+            h('div', { class: 'cands' }, g.map(a => { const gc = (v.players[a.g].grave || []).find(c => c.uid === a.u); return gc ? h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); act(a); } }, cardEl(C.get(gc.id)), h('small', null, C.get(gc.id).name + (a.g === v.seat ? ' (tuyo)' : ' · ' + shortOf(a.g)))) : null; })), btn('Cancelar', closeModal, 'ghost'))) });
+          else if (k === 'sjigris' || k === 'sjberu' || k === 'sjbellion') for (const a of g) acts.push({ label: pwName(k) + ' (desde ' + ({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio' })[a.from] + ')', desc: (C.AB[k] || [])[1] || '', run: () => act(a) });
+          else if (k === 'elizluz') {
+            const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
+            acts.push({ label: 'Luz purificadora…', desc: 'Quita un efecto negativo de un aliado. Una vez por turno.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {
+              const opts = g.filter(a => a.target.vs === t.seat && a.target.z === t.z);
+              if (opts.length === 1) return act(opts[0]);
+              modal(h('div', { class: 'box' }, h('h2', null, '✨ ¿Qué efecto quitas?'), h('div', { class: 'acts' }, opts.map(a => btn('Quitar ' + (a.nm || a.k), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
+            }, 'Elige al aliado') });
+          }
+          else if (k === 'tinta') {
+            const leon = g.find(a => a.opt === 'leon'), ag = g.filter(a => a.opt === 'aguila'), sp = g.filter(a => a.opt === 'serp');
+            if (leon) acts.push({ label: '🦁 León de tinta (1000 ATK)', desc: 'Ataca este mismo turno; no se le puede atacar y desaparece al final del turno.', run: () => act(leon) });
+            if (ag.length) acts.push({ label: '🦅 Águila de tinta…', desc: 'Elige un enemigo: no puede atacar en su siguiente turno.', run: () => choose(ag, 'mz', 'Águila de tinta: elige al enemigo') });
+            if (sp.length) acts.push({ label: '🐍 Serpiente de tinta…', desc: 'Elige un enemigo: pierde 500 ATK durante 2 turnos.', run: () => choose(sp, 'mz', 'Serpiente de tinta: elige al enemigo') });
+          }
+          else if (k === 'katana') {
+            const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
+            acts.push({ label: 'Katana de la Antimagia…', desc: 'Destruye una habilidad de un personaje enemigo durante el resto de su invocación. Una vez por turno.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {
+              const opts = g.filter(a => a.target.vs === t.seat && a.target.z === t.z);
+              modal(h('div', { class: 'box' }, h('h2', null, '🗡️ ¿Qué habilidad destruyes?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
+            }, 'Elige al personaje enemigo') });
+          }
+          else if (k === 'misaojos') acts.push({ label: 'Ojos de Shinigami…', desc: 'Mira en privado a un personaje enemigo boca abajo.', run: () => choose(g, 'mz', 'Elige la carta boca abajo') });
+          else if (k === 'tobidim') acts.push({ label: 'Dimensión Kamui…', desc: 'Manda a un personaje (de cualquiera) a otra dimensión: vuelve al terminar el siguiente turno de su controlador.', run: () => choose(g, 'mz', 'Elige al personaje') });
           else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
           else acts.push({ label: pwName(k), run: () => act(g[0]) });
         }
@@ -1871,7 +1933,7 @@
             const d = C.get(v.me.st[z].c.id), os = L().filter(a => a.t === 'respond' && a.activate && a.zone === z && a.opt);
             if (!os.length) return h('button', { class: 'btn gold', onclick: () => act({ t: 'respond', activate: true, zone: z }) }, `${d.icon} ${d.name}`, h('div', { style: 'font-size:12px;font-weight:400' }, d.text));
             // Gema de la Realidad: hay que elegir a quién se redirige el ataque o a quién se destruye en su lugar
-            const lb = pd.trigger === 'attack' ? 'Redirigir el ataque a' : 'Destruir en su lugar a';
+            const lb = d.fx === 'fullcounter' ? (pd.trigger === 'attack' ? 'Devolver el ataque a' : 'Devolver el efecto a') : d.fx === 'kyoka' ? 'Que la habilidad caiga sobre' : pd.trigger === 'attack' ? 'Redirigir el ataque a' : 'Destruir en su lugar a';
             return h('div', { class: 'optbox' }, h('b', null, `${d.icon} ${d.name}`), h('div', { style: 'font-size:12px;margin:2px 0 6px' }, d.text),
               os.map(a => { const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
           })),
@@ -1975,6 +2037,32 @@
             h('button', { class: 'btn gold', onclick: () => act({ t: 'ability', pick: 'atk' }) }, '⚔️ Adaptación Ofensiva', h('div', { style: 'font-size:12px;font-weight:400' }, '+400 ATK y DEF por activación (una por turno, hasta 3).')),
             h('button', { class: 'btn gold', onclick: () => act({ t: 'ability', pick: 'mag' }) }, '🍽️ Depredador de Magia', h('div', { style: 'font-size:12px;font-weight:400' }, 'Destruye una magia o trampa rival (una por turno, hasta 3).'))));
         modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'antimag') {
+        const by = v.players[pd.player] && v.players[pd.player].mz[pd.zy], bn = by && by.c ? nameId(by.c.id) : 'Tu personaje';
+        const box = h('div', { class: 'box' }, h('h2', null, '⚔️ Espada de la antimagia'), h('p', { class: 'sub' }, `${pd.kind === 'spell' ? 'El rival activa la magia' : 'El rival usa la habilidad'} «${pd.nm || '…'}» contra ${pd.kind === 'spell' ? 'uno de los tuyos' : 'uno de los tuyos'}. ${bn} puede anularla${pd.stz != null ? ' con la espada que lleva equipada' : ''}: no se resuelve${pd.kind === 'spell' ? ' y la magia va al cementerio' : ' y no se puede volver a usar este turno'}. (Una vez por turno)`),
+          by && by.c ? h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get(by.c.id))) : null,
+          h('div', { class: 'acts' }, btn('Anular', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'shikaestr') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🧠 Shikamaru: Estratega brillante'), h('p', { class: 'sub' }, `${pd.nm || 'Un personaje enemigo'} va a usar una habilidad. Shikamaru puede anticiparse: pierde 400 ATK hasta el final del turno (la habilidad se usa igual). (Una vez por turno)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_shikamaru'))),
+          h('div', { class: 'acts' }, btn('−400 ATK', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'shadowred') {
+        const mz = v.me.mz, opts = L().filter(a => a.pick != null);
+        const box = h('div', { class: 'box' }, h('h2', null, '🌑 Sung Jin-Woo: las sombras lo protegen'), h('p', { class: 'sub' }, `${({ attack: 'Un ataque', spell: 'La magia', power: 'La habilidad' })[pd.kind] || 'Un efecto'} ${pd.kind === 'attack' ? 'va contra' : '«' + (pd.nm || '') + '» apunta a'} Sung Jin-Woo. Puedes cambiarlo de casilla con un soldado (Intercambio de sombras) o hacer que Igris lo reciba (Protector del Monarca).`),
+          h('div', { class: 'acts' }, opts.map(a => { const [k, i] = String(a.pick).split(':'), sl = mz[+i], nm = sl && sl.c ? nameId(sl.c.id) : 'un soldado'; return btn(k === 'swap' ? `Intercambiar con ${nm} (zona ${+i + 1})` : `${nm} lo recibe en su lugar`, () => act(a), 'gold'); }),
+            btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'bulma') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🔧 Bulma: Inventora de emergencia'), h('p', { class: 'sub' }, `${pd.nm || 'Un aliado'} va a morir por un ataque. Bulma puede sacrificarse para salvarlo: va al cementerio y el ataque se cancela. (Una sola vez)`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_bulma'))),
+          h('div', { class: 'acts' }, btn('Sacrificar a Bulma', () => act({ t: 'ability', use: true }), 'gold'), btn('No', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'tobimm') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🌀 Tobi: Maestro de la manipulación'), h('p', { class: 'sub' }, 'Elige a un personaje enemigo: no podrá atacar a Tobi en el siguiente turno de su controlador.'),
+          h('div', { class: 'acts' }, L().filter(a => a.z != null).map(a => { const m = v.players[a.vs] && v.players[a.vs].mz[a.z]; return btn(`${m && m.c ? nameId(m.c.id) : 'Carta boca abajo'} · ${nameOf(a.vs)} · zona ${a.z + 1}`, () => act(a), 'gold'); })));
+        modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'gem') {
         const box = h('div', { class: 'box' }, h('h2', null, '🔮 Gema de la Mente'), h('p', { class: 'sub' }, 'Un personaje enemigo controlado va a atacar. ¿Cancelas el ataque? (gasta un uso de la Gema)'),
           h('div', { class: 'acts' }, btn('Cancelar el ataque', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar atacar', () => act({ t: 'ability', use: false }), 'ghost')));
@@ -1989,7 +2077,11 @@
             h('div', { class: 'acts' }, btn('⚔️ Ataque', () => act({ t: 'ability', pos: 'atk' }), 'gold'), btn('🛡️ Defensa', () => act({ t: 'ability', pos: 'def' }), 'gold')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'pick') {
-        const box = h('div', { class: 'box' }, h('h2', null, pd.zone === 'grave' ? 'Elige un monstruo de tu cementerio' : 'Elige un monstruo de tu mazo'),
+        const ttl = pd.cont === 'eliz' ? '✨ Poder de la Diosa: elige un personaje de tu cementerio (hasta 6★) para volver a la mano'
+          : pd.cont === 'bulma' ? '🔧 Genio científico: elige una magia de tu mazo (el rival la verá)'
+            : pd.cont === 'bulmabot' ? '🔧 Genio científico: elige una carta de tu mano para ponerla al fondo del mazo'
+              : pd.zone === 'grave' ? 'Elige un monstruo de tu cementerio' : pd.zone === 'hand' ? 'Elige una carta de tu mano' : 'Elige un monstruo de tu mazo';
+        const box = h('div', { class: 'box' }, h('h2', null, ttl),
           h('div', { class: 'cands' }, pd.cands.map(c => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => act({ t: 'pick', uid: c.uid }) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))));
         modal(box, false); modalEl.dataset.pend = 1;
       }
@@ -2016,7 +2108,7 @@
       let cur = null, landing = false, art = null, asCard = false;
       if (s) {
         let c;
-        art = area === 'mz' && s.c && !s.down ? cosArt(cs, s.c.id) : null;      // skin de ilustración que le puso SU dueño
+        art = area === 'mz' && s.c && !s.down ? (s.art || cosArt(cs, s.c.id)) : null;      // forma de la partida (Igris de Sung, Higuruma con la espada) o skin que le puso SU dueño      // skin de ilustración que le puso SU dueño
         if (area === 'mz') c = s.c ? cardEl(C.get(s.c.id), { down: s.down, pos: s.pos, atk: s.atk, def: s.def, art }) : cardEl(null, { down: true, pos: 'def' });
         else c = s.c ? cardEl(C.get(s.c.id), { down: s.down }) : cardEl(null, { down: true });
         if (chosen) c.classList.add('sel');
@@ -2874,10 +2966,11 @@
     2: '<svg class="em" viewBox="0 0 100 100" fill="none"><g stroke="#ffd9a0" stroke-width="3" stroke-linecap="round"><path d="M50 6v14M50 80v14M6 50h14M80 50h14M19 19l10 10M71 71l10 10M81 19L71 29M29 71L19 81"/></g><circle cx="50" cy="50" r="20" fill="#ffb15a" stroke="#fff3d0" stroke-width="3"/><path d="M50 22l5 28-5 30-5-30z" fill="#3a0a14" opacity=".85"/><path d="M36 58h28" stroke="#3a0a14" stroke-width="5" stroke-linecap="round"/></svg>',
     3: '<svg class="em" viewBox="0 0 100 100" fill="none"><path d="M50 8l36 22v40L50 92 14 70V30z" fill="#6d46ff" stroke="#e1d6ff" stroke-width="3" stroke-linejoin="round"/><path d="M50 8v84M14 30l36 22 36-22M14 70l36-18 36 18" stroke="#e1d6ffaa" stroke-width="2" stroke-linejoin="round"/><path d="M50 8l36 22-36 22-36-22z" fill="#b89bff" opacity=".7"/><circle cx="50" cy="52" r="7" fill="#fff"/></svg>',
     4: '<svg class="em" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="40" stroke="#d6f6ff" stroke-width="3" opacity=".6"/><circle cx="50" cy="50" r="28" stroke="#6fdcff" stroke-width="3"/><path d="M56 14L30 54h18l-6 32 28-42H52z" fill="#e8fbff" stroke="#6fdcff" stroke-width="2.5" stroke-linejoin="round"/></svg>',
-    5: '<svg class="em" viewBox="0 0 100 100" fill="none"><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#fff" stroke-width="3" transform="rotate(-30 50 50)"/><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#3a1060" stroke-width="3" transform="rotate(30 50 50)"/><circle cx="50" cy="50" r="15" fill="#3a1060" stroke="#fff" stroke-width="3"/><path d="M50 40l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="#ffd84a"/></svg>'
+    5: '<svg class="em" viewBox="0 0 100 100" fill="none"><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#fff" stroke-width="3" transform="rotate(-30 50 50)"/><ellipse cx="50" cy="50" rx="38" ry="14" stroke="#3a1060" stroke-width="3" transform="rotate(30 50 50)"/><circle cx="50" cy="50" r="15" fill="#3a1060" stroke="#fff" stroke-width="3"/><path d="M50 40l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" fill="#ffd84a"/></svg>',
+    6: '<svg class="em" viewBox="0 0 100 100" fill="none"><g transform="translate(9 2) scale(.82)"><path d="M50 10c10 14 26 20 26 42 0 18-12 32-26 38-14-6-26-20-26-38 0-22 16-28 26-42z" fill="#2a0b3d" stroke="#b07bff" stroke-width="2.5"/><path d="M50 26c6 9 15 13 15 27 0 11-7 20-15 24-8-4-15-13-15-24 0-14 9-18 15-27z" fill="#6a2bd8" opacity=".55"/><path d="M47 8h6l3 58h-12z" fill="#15101c" stroke="#ff4060" stroke-width="2.4" stroke-linejoin="round"/><path d="M50 12v52" stroke="#ff8aa0" stroke-width="1.4" opacity=".8"/><path d="M34 66h32l-4 6H38z" fill="#15101c" stroke="#ff4060" stroke-width="2.4" stroke-linejoin="round"/><path d="M47 72h6v14h-6z" fill="#3a1520" stroke="#ff4060" stroke-width="2"/><circle cx="50" cy="90" r="4" fill="#ff4060"/><circle cx="50" cy="40" r="3.2" fill="#fff"/></g></svg>'
   };
-  const PK_NAME = { 2: ['Sol y Maldición', 'Demonios, hechiceros y espadas del sol'], 3: ['Titanes y Gemas', 'Titanes, simbiontes y el Guantelete'], 4: ['Más allá del límite', 'Instinto, Colosal y el poder de Thanos'], 5: ['Mundos cruzados', 'Looney, Yu-Gi-Oh, Harry Potter y más'] };
-  const PK_COLOR = { 2: '#ff7b3a', 3: '#9b6bff', 4: '#6fdcff', 5: '#ff5fd0' };
+  const PK_NAME = { 2: ['Sol y Maldición', 'Demonios, hechiceros y espadas del sol'], 3: ['Titanes y Gemas', 'Titanes, simbiontes y el Guantelete'], 4: ['Más allá del límite', 'Instinto, Colosal y el poder de Thanos'], 5: ['Mundos cruzados', 'Looney, Yu-Gi-Oh, Harry Potter y más'], 6: ['Sombras y Antimagia', 'Monarcas, antimagia y dioses de la muerte'] };
+  const PK_COLOR = { 2: '#ff7b3a', 3: '#9b6bff', 4: '#6fdcff', 5: '#ff5fd0', 6: '#ff3355' };
   (function () { const p = [], n = 14; for (let i = 0; i <= n; i++) p.push((i / n * 100).toFixed(2) + '% ' + (i % 2 ? '0%' : '2.6%')); for (let i = n; i >= 0; i--) p.push((i / n * 100).toFixed(2) + '% ' + (i % 2 ? '100%' : '97.4%')); document.documentElement.style.setProperty('--pkclip', 'polygon(' + p.join(',') + ')'); })();
   const packFoil = t => { const e = h('span', { class: 'foil' }); e.innerHTML = '<span class="lines"></span><span class="top">Sobre</span>' + (PK_EM[t] || '') + '<span class="num">' + t + '</span><span class="ttl">Tanda</span>'; return e; };
   const packName = t => (PK_NAME[t] || ['Tanda ' + t, ''])[0];

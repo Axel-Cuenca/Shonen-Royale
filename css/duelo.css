@@ -1815,6 +1815,10 @@ html.rm .pkc { animation-duration: .01s; }
 .t5 .foil { background: radial-gradient(ellipse at 50% 38%, #fff4 0%, transparent 60%), conic-gradient(from 210deg at 50% 60%, #ffd84a, #ff5fd0, #6fdcff, #5fe08a, #ffd84a); }
 .t5 .foil .lines { opacity: .35; background: repeating-linear-gradient(90deg, #0003 0 2px, transparent 2px 9px); }
 .t5 .top, .t5 .ttl { color: #2a0a40; } .t5 .num { color: #fff; text-shadow: 0 2px 0 #3a1060, 0 0 14px #ff5fd0; } .t5 .foil::before { border-color: #3a106099; }
+.t6 { --c1: #2b2036; --c2: #0b0710; --c3: #ffb8c6; --glow: #ff3355; }
+.t6 .foil { background: radial-gradient(ellipse at 50% 42%, #7a2bd855 0%, transparent 62%), radial-gradient(ellipse at 50% 110%, #ff335555 0%, transparent 55%), linear-gradient(160deg, #2b2036, #0b0710 70%); }
+.t6 .foil .lines { opacity: .28; background: repeating-linear-gradient(90deg, #b07bff22 0 2px, transparent 2px 9px); }
+.t6 .num { text-shadow: 0 2px 0 #3a0a18, 0 0 16px #ff3355; }
 .pkstage { position: relative; height: 330px; display: grid; place-items: center; }
 .pkstage .pk { pointer-events: none; } .pkstage .foil { width: 200px; animation: pkFloat 3.2s ease-in-out infinite; }
 @keyframes pkFloat { 50% { transform: translateY(-9px) rotate(.8deg); } }

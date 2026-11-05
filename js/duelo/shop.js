@@ -123,7 +123,12 @@
     ['si_goku_ui_skin', 'c_goku_ui', 'Ultra Instinto', 'goku_ui_skin'],
     ['si_meliodas_sate', 'c_meliodas', 'Meliodas Sate Sate', 'meliodas_sate'],
     ['si_toge_paz', 'c_toge', 'Toge Paz', 'toge_paz'],
-    ['si_warwick_invierno', 'c_warwick', 'Warwick favor del invierno', 'warwick_invierno']
+    ['si_warwick_invierno', 'c_warwick', 'Warwick favor del invierno', 'warwick_invierno'],
+    ['si_bellion_general', 'c_bellion', 'Bellion general de las sombras', 'bellion_general'],
+    ['si_elizabeth_averg', 'c_elizabeth', 'Elizabeth avergonzada', 'elizabeth_avergonzada'],
+    ['si_liu_kang_mk1', 'c_liu_kang', 'Liu Kang MK1', 'liu_kang_mk1'],
+    ['si_misa_jueza', 'c_misa', 'Misa jueza', 'misa_jueza'],
+    ['si_sai_dibujante', 'c_sai', 'Sai el dibujante', 'sai_dibujante']
   ];
   for (const [id, card, name, file] of SKINS) ITEMS.push({ id, cat: 'si', name, rar: 'u', price: 0, box: 1, card, img: 'assets/skins/' + file + '.webp' });
   // (31/10/2026) Con las cajas se fue su contenido: de la Tienda sólo quedan lo gratis de serie y las skins (Cofre de skins; los efectos de color sólo los conservan quienes ya los tienen).

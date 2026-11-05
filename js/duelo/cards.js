@@ -19,7 +19,8 @@
     dbz: 'Dragon Ball Z', gow: 'God of War', aot: 'Attack on Titan', jjk: 'Jujutsu Kaisen', mk: 'Mortal Kombat', zodiaco: 'Caballero del Zodiaco',
     marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos',
     adventuretime: 'Hora de Aventura', naruto: 'Naruto',
-    looney: 'Looney Tunes', yugioh: 'Yu-Gi-Oh!', cartoon: 'Cartoon Network', dmc: 'Devil May Cry', hp: 'Harry Potter'
+    looney: 'Looney Tunes', yugioh: 'Yu-Gi-Oh!', cartoon: 'Cartoon Network', dmc: 'Devil May Cry', hp: 'Harry Potter',
+    blackclover: 'Black Clover', sololeveling: 'Solo Leveling', deathnote: 'Death Note'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
@@ -29,7 +30,8 @@
     dbz: '#e8761a', gow: '#a3262a', aot: '#6b5a3c', jjk: '#6a3fb5', mk: '#b8312f', zodiaco: '#d4a72c',
     marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b',
     adventuretime: '#f5a623', naruto: '#f28c1e',
-    looney: '#e0a526', yugioh: '#5b3a8c', cartoon: '#2a8fd0', dmc: '#b3202a', hp: '#7a5c2e'
+    looney: '#e0a526', yugioh: '#5b3a8c', cartoon: '#2a8fd0', dmc: '#b3202a', hp: '#7a5c2e',
+    blackclover: '#2f3b2f', sololeveling: '#3b4fd8', deathnote: '#3a3a3a'
   };
 
   // ---------------- catálogo ----------------
@@ -157,7 +159,59 @@
     absorbv: ['Absorción de habilidades', 'Cuando Venom, o su portador, destruye a un enemigo puedes elegir UNA de sus habilidades para que Venom la aprenda para siempre.'],
     sylas: ['Robo de habilidades', 'Una vez por turno copia una habilidad (a elegir) de un personaje rival del campo. La conserva para siempre y puede acumular todas las que consiga. Si no hay nada que robar, no gasta el uso.'],
     kurama: ['Chakra de Kurama', 'Una vez por invocación: +600 ATK y +600 DEF durante 2 turnos propios completos.'],
-    hiraishin: ['Hiraishin — Marca del Dios del Trueno Volador', 'Cada ataque normal contra un personaje deja una marca en esa casilla (se queda aunque el personaje se vaya). Por cada ataque normal puedes lanzar UN ataque Hiraishin extra contra una casilla marcada ocupada por un rival: nadie puede responder a ese ataque.']
+    hiraishin: ['Hiraishin — Marca del Dios del Trueno Volador', 'Cada ataque normal contra un personaje deja una marca en esa casilla (se queda aunque el personaje se vaya). Por cada ataque normal puedes lanzar UN ataque Hiraishin extra contra una casilla marcada ocupada por un rival: nadie puede responder a ese ataque.'],
+    // ---------- tanda 6 (05-11-2026) ----------
+    antimagia: ['Espada de la antimagia', 'Una vez por turno, anula una magia o una habilidad de un personaje enemigo que tenga como objetivo a este personaje o a un aliado (no las trampas). Lo anulado no puede volver a usarse ese turno. Toda la familia Asta puede anular además el Gokumonkyo aunque no apunte a un aliado.'],
+    astastrip: ['Anulación de aumentos', 'Al atacar a un personaje enemigo puede quitarle todos sus aumentos de ATK y DEF antes del combate. Sus reducciones y sus estadísticas base no se tocan, y lo que pierde no vuelve.'],
+    astaneg: ['Forma Negra', 'Cuando muere o es desterrado un personaje aliado, Asta puede transformarse desde la mano en Asta Forma Negra, sin sacrificios, hasta el final de tu siguiente turno.'],
+    astauni: ['Unión Demoníaca', 'Cuando mueren o son desterrados 2 aliados más con Asta Forma Negra en el campo, puede transformarse desde la mano en Asta Unión Demoníaca, sin sacrificios.'],
+    astaprot: ['Protección de la forma negra', 'Una vez por invocación, evita que una habilidad enemiga lo destruya.'],
+    astacausa: ['Espada Destructora de Causas', 'Una vez por duelo, quita todos los efectos negativos de tus personajes (restricciones, debilitamientos y efectos continuos).'],
+    antiabs: ['Anti-Magia Absoluta', 'Mientras esté en el campo, los personajes enemigos no pueden usar las habilidades que se activan a mano. Las automáticas siguen funcionando, igual que las magias y las trampas.'],
+    sjarmy: ['Ejército de las sombras', 'Gana una carga cada vez que se destruye un personaje enemigo. Con 2 cargas puede gastarlas para invocar a tu campo un personaje del cementerio de cualquier jugador; entra como soldado de las sombras.'],
+    sjdom: ['Dominio de las sombras', 'Mientras esté en el campo, el rival no puede controlar, robar, absorber ni usar como material a tus soldados de las sombras.'],
+    sjsac: ['Sacrificio de las sombras', 'Si va a ser destruido, sacrifica a tu soldado de las sombras más débil y se salva.'],
+    sjswap: ['Intercambio de sombras', 'Una vez por turno, cuando un ataque, una habilidad o una magia enemiga lo elige como objetivo, puede cambiar de casilla con uno de tus soldados de las sombras, que recibe el efecto.'],
+    sjigris: ['Caballero de las sombras: Igris', 'Una vez por turno, invoca especialmente a Igris desde tu mano o tu mazo. Igris lo protege interceptando lo que lo elija como objetivo.'],
+    sjmon: ['Monarca de las Sombras', 'Con 2 o más soldados de las sombras en tu campo, puede transformarse desde la mano en Sung Jin-Woo Monarca, sin sacrificios.'],
+    sjpoder: ['Poder del Monarca', '+200 ATK por cada soldado de las sombras que controles. Con 2 o más, puede atacar una vez más por turno.'],
+    sjberu: ['Beru, el Rey Hormiga', 'Una vez por turno, invoca especialmente a Beru desde tu mano o tu cementerio. Si Sung Jin-Woo se va, Beru se queda.'],
+    sjbellion: ['Bellion, Gran Mariscal de las Sombras', 'Una vez por turno, invoca especialmente a Bellion desde tu mano o tu cementerio. Si Sung Jin-Woo se va, Bellion se queda.'],
+    igrisleal: ['Lealtad al Monarca', 'Si lo invocó Sung Jin-Woo: +400 ATK y +400 DEF permanentes.'],
+    igrisprot: ['Caballero Protector', 'Si lo invocó Sung Jin-Woo: una vez por turno, cuando un ataque, una habilidad o una magia enemiga elige a Sung Jin-Woo, Igris pasa a ser el objetivo.'],
+    igrishon: ['Honor del Caballero', 'Si lo invocó Sung Jin-Woo y es destruido con Sung Jin-Woo en el campo, vuelve a tu mano en vez de ir al cementerio. Una vez por duelo.'],
+    igrisesp: ['Espadachín de élite', '+500 ATK en el combate contra un personaje con más ATK que él.'],
+    beruleal: ['Lealtad al Monarca', 'Si lo invocó Sung Jin-Woo: +500 ATK permanente y un ataque extra ese turno.'],
+    beruregen: ['Regeneración de sombras', 'Si lo invocó Sung Jin-Woo: una vez por invocación, si un ataque o una habilidad enemiga fuera a destruirlo, sobrevive y queda con 500 de DEF.'],
+    belleal: ['Lealtad al Monarca', 'Si lo invocó Sung Jin-Woo: todos tus soldados de las sombras tienen +300 ATK y +300 DEF mientras Bellion siga en el campo.'],
+    belmar: ['Gran Mariscal', 'Una vez por turno, si un efecto enemigo que no sea de combate va a destruir a otro de tus soldados de las sombras, Bellion recibe esa destrucción en su lugar.'],
+    belorg: ['Espada Orgánica', 'Una vez por turno, si destruye a un personaje enemigo en combate, puede atacar a otro personaje enemigo.'],
+    kameha: ['Kamehameha', 'Una vez por invocación: +300 ATK en su próximo ataque. Si ese ataque destruye al personaje enemigo, también destruye la carta mágica de la casilla de detrás.'],
+    bulmagen: ['Genio científico', 'Una vez por turno, busca una magia en tu mazo, se la muestra al rival y la agrega a tu mano; después pones una carta de tu mano al fondo del mazo. Necesita otra carta en la mano.'],
+    bulmasav: ['Inventora de emergencia', 'Una vez por duelo, si un ataque enemigo va a destruir a otro aliado, Bulma se sacrifica y el ataque se cancela. No protege de magias, trampas ni habilidades.'],
+    satancamp: ['¡Soy el campeón mundial!', 'Los personajes enemigos de 7★ o más no pueden atacarlo.'],
+    satanpub: ['Publicidad engañosa', 'Una vez por turno, un aliado (también él) no puede ser objetivo de habilidades enemigas hasta tu siguiente turno.'],
+    satanplan: ['¡Esto estaba planeado!', 'Si un ataque enemigo va a destruirlo, tiene un 50% de posibilidades de volver a tu mano en vez de ir al cementerio.'],
+    satansalv: ['El gran salvador', 'Si sigue 3 turnos seguidos en el campo, recuperas 500 PV (una vez por cada estancia).'],
+    elizbar: ['Barrera de la Diosa', 'Una vez por turno, evita que una habilidad enemiga destruya a un aliado (el resto del efecto se aplica igual).'],
+    elizluz: ['Luz purificadora', 'Una vez por turno, quita un efecto negativo de un aliado: una reducción de estadísticas, una restricción o una inmovilización.'],
+    elizpod: ['Poder de la Diosa', 'Si es destruida, devuelve a tu mano un personaje de hasta 6★ de tu cementerio.'],
+    galverdad: ['Mandamiento de la Verdad', 'Si un personaje enemigo esquiva, cancela o niega un ataque de Galand, el esquive funciona pero queda petrificado: no ataca ni usa habilidades el resto de esa invocación.'],
+    galco: ['Critical Over', 'Gana una carga por cada personaje enemigo que destruye en combate. Con 2 cargas puede gastarlas para atacar otra vez ese turno.'],
+    galcaza: ['Caza Implacable', 'Una vez por turno: +400 ATK durante su próximo ataque. Si destruye al objetivo, el aumento se vuelve permanente.'],
+    higudom: ['Dominio: Sentencia Mortal', 'Dominio de 2 turnos (una vez por invocación): +500 ATK y DEF; sólo usan habilidades los personajes con más estrellas que él, nadie activa magias ni trampas y las magias equipadas no dan nada mientras dure. Si los personajes enemigos suman 4 asesinatos dentro del dominio, Higuruma recibe la Espada del Verdugo: +2000 ATK hasta que el dominio termine.'],
+    inopost: ['Postura de la Bestia', 'Como la Primera Postura del Rayo de Zenitsu: +200 ATK y +200 DEF cada vez que declara un ataque. Hasta 11 veces por duelo.'],
+    inotacto: ['Sentido del tacto', 'Mientras esté en el campo, ves en secreto qué son los personajes boca abajo del rival.'],
+    tobikamui: ['Kamui — Intangibilidad', 'Una vez por turno, esquiva un ataque o una habilidad enemiga que lo elija. Después no puede usarla durante su siguiente turno.'],
+    tobidim: ['Dimensión Kamui', 'Una vez por turno, saca del campo a un personaje (sin destruirlo). Vuelve al terminar el siguiente turno de su controlador, con todo lo que tenía; si no hay sitio, espera.'],
+    tobimm: ['Maestro de la manipulación', 'Al invocarlo, eliges un personaje enemigo: no podrá atacar a Tobi durante el siguiente turno de su controlador.'],
+    tinta: ['Súper Bestias de Tinta', 'Una vez por turno crea en una casilla libre una criatura de tinta, que desaparece al final del turno y no puede ser atacada: León (1000 ATK y puede atacar), Águila (un enemigo no ataca en su siguiente turno) o Serpiente (un enemigo pierde 500 ATK durante 2 turnos).'],
+    tintaf: ['Criatura de tinta', 'No puede ser atacada (los golpes no la afectan) y desaparece al final del turno en que se creó.'],
+    shikasomb: ['Posesión de sombras', 'Una vez por turno, un personaje enemigo no puede atacar ni usar habilidades durante el siguiente turno de su controlador.'],
+    shikaestr: ['Estratega brillante', 'Una vez por turno, cuando un personaje enemigo usa una habilidad, puedes hacer que pierda 400 ATK hasta el final del turno.'],
+    liukang: ['Patadas Continuas', 'Una vez por invocación: puede atacar hasta 3 veces ese turno.'],
+    misaojos: ['Ojos de Shinigami', 'Una vez por turno (dos si Light Yagami está en tu campo), mira en secreto qué es un personaje boca abajo del rival.'],
+    misadn: ['Portadora de la Death Note', 'Usa la Death Note sobre un personaje enemigo, igual que la carta mágica. Una vez cada 2 turnos, sin límite total.'],
   };
   const CUSTOM = [
     mon({
@@ -743,6 +797,140 @@
     {
       kind: 'trap', id: 'c_rayo_solar', name: 'Rayo de Luz Solar', icon: '☀️', img: I('rayo_solar'), trigger: 'attack', fx: 'destroyAttacker',
       text: 'Cuando un personaje enemigo declara un ataque: destrúyelo y cancela ese ataque.', sfx: { use: V('rayo_solar-use') }
+    },
+    // ---------- tanda 6 (05-11-2026) ----------
+    mon({
+      id: 'c_asta', name: 'Asta', fam: 'Asta', type: 'blackclover', level: 3, atk: 1300, def: 1500, img: I('asta'), ab: ['antimagia', 'astaneg'],
+      text: 'Espada de la antimagia: una vez por turno anula una magia o una habilidad enemiga que apunte a él o a un aliado (no las trampas). Forma Negra: cuando muere o es desterrado un aliado, puede transformarse desde la mano en Asta Forma Negra hasta el final de tu siguiente turno.',
+      sfx: { attack: V('asta-attack') }
+    }),
+    mon({
+      id: 'c_asta_negra', name: 'Asta Forma Negra', fam: 'Asta', type: 'blackclover', level: 6, atk: 1700, def: 1700, img: I('asta_negra'), ab: ['antimagia', 'astastrip', 'astauni'],
+      text: 'Se invoca normal (1 sacrificio) o transformando a Asta cuando muere o es desterrado un aliado. Espada de la antimagia. Anulación de aumentos: al atacar puede quitarle al rival todos sus aumentos de ATK y DEF antes del combate. Tras 2 muertes o destierros más de aliados, puede transformarse en Asta Unión Demoníaca.',
+      sfx: { attack: V('asta_negra-attack') }
+    }),
+    mon({
+      id: 'c_asta_union', name: 'Asta Unión Demoníaca', fam: 'Asta', type: 'blackclover', level: 10, atk: 2400, def: 2400, img: I('asta_union'), ab: ['antimagia', 'astastrip', 'astaprot', 'astacausa', 'antiabs'],
+      text: 'Se invoca normal (3 sacrificios) o transformando a Asta Forma Negra. Espada de la antimagia y Anulación de aumentos. Protección de la forma negra: una vez por invocación evita que una habilidad enemiga lo destruya. Espada Destructora de Causas: una vez por duelo limpia los efectos negativos de tus personajes. Anti-Magia Absoluta: los personajes enemigos no pueden usar habilidades a mano mientras esté en el campo.',
+      sfx: { attack: V('asta_union-attack') }
+    }),
+    mon({
+      id: 'c_sung', name: 'Sung Jin-Woo', fam: 'Sung Jin-Woo', type: 'sololeveling', level: 9, atk: 2200, def: 2200, img: I('sung'), ab: ['sjarmy', 'sjdom', 'sjsac', 'sjswap', 'sjigris', 'sjmon'],
+      text: 'Ejército de las sombras: una carga por cada enemigo destruido; con 2 invoca un personaje de cualquier cementerio como soldado de las sombras. Dominio, Sacrificio e Intercambio de sombras protegen a él y a sus soldados (Igris, Beru, Bellion y los que levante). Invoca a Igris desde la mano o el mazo. Con 2 soldados se transforma en Sung Jin-Woo Monarca.',
+      sfx: { attack: V('sung-attack') }
+    }),
+    mon({
+      id: 'c_sung_monarca', name: 'Sung Jin-Woo Monarca', fam: 'Sung Jin-Woo', type: 'sololeveling', level: 12, atk: 2700, def: 2500, img: I('sung_monarca'), ab: ['sjarmy', 'sjdom', 'sjsac', 'sjswap', 'sjigris', 'sjpoder', 'sjberu', 'sjbellion'],
+      text: 'Se transforma desde la mano cuando Sung Jin-Woo tiene 2 soldados de las sombras en el campo. Todo lo de Sung Jin-Woo, más: +200 ATK por soldado y un ataque extra con 2 o más; una vez por turno invoca a Beru y a Bellion desde la mano o el cementerio.',
+      sfx: { attack: V('sung_monarca-attack') }
+    }),
+    mon({
+      id: 'c_igris', name: 'Igris, Caballero de las Sombras', type: 'sololeveling', level: 6, atk: 1900, def: 1900, img: I('igris'), imgSung: I('igris_sung'), ab: ['igrisesp', 'igrisleal', 'igrisprot', 'igrishon'],
+      text: 'Soldado de las sombras. Espadachín de élite: +500 ATK contra quien tenga más ATK. Si lo invocó Sung Jin-Woo: +400/+400 permanente, intercepta una vez por turno lo que elija a Sung Jin-Woo, y una vez por duelo vuelve a la mano si lo destruyen con Sung Jin-Woo en el campo.'
+    }),
+    mon({
+      id: 'c_beru', name: 'Beru, Rey Hormiga', type: 'sololeveling', level: 7, atk: 2200, def: 1800, img: I('beru'), imgSung: I('beru_sung'), ab: ['beruleal', 'beruregen'],
+      text: 'Soldado de las sombras. Si lo invocó Sung Jin-Woo: +500 ATK permanente y un ataque extra ese turno; y una vez por invocación, si un ataque o una habilidad enemiga fuera a destruirlo, sobrevive con 500 de DEF.'
+    }),
+    mon({
+      id: 'c_bellion', name: 'Bellion, Gran Mariscal de las Sombras', type: 'sololeveling', level: 10, atk: 2500, def: 2600, img: I('bellion'), ab: ['belleal', 'belmar', 'belorg'],
+      text: 'Soldado de las sombras. Si lo invocó Sung Jin-Woo, tus soldados tienen +300/+300. Gran Mariscal: una vez por turno recibe en lugar de otro soldado la destrucción de un efecto enemigo. Espada Orgánica: una vez por turno, si destruye a un enemigo en combate, ataca a otro personaje enemigo.'
+    }),
+    mon({
+      id: 'c_goku_ssj', name: 'Goku Super Saiyajin', fam: 'Goku', type: 'dbz', level: 5, atk: 1500, def: 1200, img: I('goku_ssj'), ab: ['kameha'], xform: { family: 'Goku' },
+      text: 'Familia Goku (se transforma con las demás formas de Goku). Kamehameha: una vez por invocación, +300 ATK en su próximo ataque; si destruye al personaje, también destruye la magia de la casilla de detrás.',
+      sfx: { kamehameha: V('goku_ssj-kamehameha'), transform: V('goku_ssj-transform') }
+    }),
+    mon({
+      id: 'c_bulma', name: 'Bulma', type: 'dbz', level: 1, atk: 100, def: 100, img: I('bulma'), ab: ['bulmagen', 'bulmasav'],
+      text: 'Genio científico: una vez por turno busca una magia en tu mazo (se muestra) y pones una carta de tu mano al fondo del mazo. Inventora de emergencia: una vez por duelo, se sacrifica para que un ataque enemigo no destruya a un aliado.'
+    }),
+    mon({
+      id: 'c_mr_satan', name: 'Mr. Satan', type: 'dbz', level: 2, atk: 200, def: 500, img: I('mr_satan'), ab: ['satancamp', 'satanpub', 'satanplan', 'satansalv'],
+      text: 'Los enemigos de 7★ o más no pueden atacarlo. Una vez por turno protege a un aliado de las habilidades enemigas hasta tu siguiente turno. 50% de volver a la mano si un ataque lo va a destruir. Tras 3 turnos seguidos en el campo recuperas 500 PV.'
+    }),
+    mon({
+      id: 'c_elizabeth', name: 'Elizabeth Liones', type: 'pecados', level: 3, atk: 900, def: 1200, img: I('elizabeth'), ab: ['elizbar', 'elizluz', 'elizpod'],
+      text: 'Barrera de la Diosa: una vez por turno evita que una habilidad enemiga destruya a un aliado. Luz purificadora: una vez por turno quita un efecto negativo de un aliado. Poder de la Diosa: si la destruyen, devuelve a tu mano un personaje de hasta 6★ de tu cementerio.'
+    }),
+    mon({
+      id: 'c_galand', name: 'Galand', type: 'pecados', level: 7, atk: 2200, def: 2000, img: I('galand'), ab: ['galverdad', 'galco', 'galcaza'],
+      text: 'Mandamiento de la Verdad: quien esquive, cancele o niegue su ataque queda petrificado el resto de su invocación. Critical Over: con 2 cargas (una por enemigo destruido en combate) ataca otra vez. Caza Implacable: una vez por turno +400 ATK en su ataque, permanente si destruye al objetivo.'
+    }),
+    mon({
+      id: 'c_higuruma', name: 'Hiromi Higuruma', type: 'jjk', level: 6, atk: 1600, def: 1600, img: I('higuruma'), imgDom: I('higuruma_espada'), ab: ['higudom'],
+      text: 'Dominio Sentencia Mortal (2 turnos): +500 ATK y DEF; sólo usan habilidades los personajes con más estrellas que él, nadie activa magias ni trampas y las magias equipadas quedan anuladas. Si los enemigos suman 4 asesinatos dentro del dominio, gana la Espada del Verdugo: +2000 ATK. Entra en el choque de dominios con sus 6★.'
+    }),
+    mon({
+      id: 'c_inosuke', name: 'Inosuke Hashibira', type: 'demonslayer', level: 4, atk: 1300, def: 1400, img: I('inosuke'), ab: ['zenitsu2', 'inopost', 'inotacto'],
+      text: 'Respiración de Concentración Total (como Zenitsu). Postura de la Bestia: +200 ATK y DEF cada vez que ataca, hasta 11 veces por duelo. Sentido del tacto: ve en secreto los personajes boca abajo del rival.'
+    }),
+    mon({
+      id: 'c_tobi', name: 'Tobi', type: 'naruto', level: 5, atk: 1600, def: 1700, img: I('tobi'), ab: ['tobikamui', 'tobidim', 'tobimm'],
+      text: 'Kamui: una vez por turno esquiva un ataque o una habilidad enemiga (luego descansa un turno suyo). Dimensión Kamui: una vez por turno saca del campo a un personaje hasta el final del siguiente turno de su controlador. Al invocarlo, un enemigo no podrá atacarlo en su siguiente turno.',
+      sfx: { ability: V('tobi-ability') }
+    }),
+    mon({
+      id: 'c_sai', name: 'Sai', type: 'naruto', level: 3, atk: 900, def: 1000, img: I('sai'), ab: ['tinta'],
+      text: 'Súper Bestias de Tinta: una vez por turno crea en una casilla libre un León (1000 ATK, ataca), un Águila (un enemigo no ataca en su siguiente turno) o una Serpiente (un enemigo −500 ATK durante 2 turnos). Las criaturas no pueden ser atacadas y desaparecen al final del turno.'
+    }),
+    mon({ id: 'c_tinta_leon', name: 'León de tinta', type: 'naruto', level: 1, atk: 1000, def: 0, img: I('tinta_leon'), ab: ['tintaf'], hidden: true, ink: true, text: 'Criatura de tinta de Sai: puede atacar el turno en que se crea, no puede ser atacada y desaparece al final del turno.' }),
+    mon({ id: 'c_tinta_aguila', name: 'Águila de tinta', type: 'naruto', level: 1, atk: 0, def: 0, img: I('tinta_aguila'), ab: ['tintaf'], hidden: true, ink: true, noAtk: true, text: 'Criatura de tinta de Sai: no ataca, no puede ser atacada y desaparece al final del turno.' }),
+    mon({ id: 'c_tinta_serpiente', name: 'Serpiente de tinta', type: 'naruto', level: 1, atk: 0, def: 0, img: I('tinta_serpiente'), ab: ['tintaf'], hidden: true, ink: true, noAtk: true, text: 'Criatura de tinta de Sai: no ataca, no puede ser atacada y desaparece al final del turno.' }),
+    mon({
+      id: 'c_shikamaru', name: 'Shikamaru Chico', type: 'naruto', level: 3, atk: 1000, def: 1200, img: I('shikamaru'), ab: ['shikasomb', 'shikaestr'],
+      text: 'Posesión de sombras: una vez por turno, un enemigo no ataca ni usa habilidades en el siguiente turno de su controlador. Estratega brillante: una vez por turno, cuando un enemigo usa una habilidad, ese personaje pierde 400 ATK hasta el final del turno.'
+    }),
+    mon({
+      id: 'c_liu_kang', name: 'Liu Kang', type: 'mk', level: 4, atk: 1200, def: 1100, img: I('liu_kang'), ab: ['liukang'],
+      text: 'Patadas Continuas: una vez por invocación puede atacar hasta 3 veces ese turno.'
+    }),
+    mon({
+      id: 'c_misa', name: 'Misa Amane', type: 'deathnote', level: 2, atk: 100, def: 100, img: I('misa'), ab: ['misaojos', 'misadn'],
+      text: 'Ojos de Shinigami: una vez por turno (dos con Light Yagami en tu campo) mira en secreto un personaje boca abajo del rival. Portadora de la Death Note: usa la Death Note sobre un enemigo, igual que la carta, una vez cada 2 turnos.'
+    }),
+    spell({
+      id: 'c_espada_antimagia', name: 'Espada de la Antimagia', icon: '🗡️', img: I('espada_antimagia'), fx: 'equip', sub: 'equip', antimag: true,
+      text: 'Equípala a un personaje tuyo. Una vez por turno, el personaje equipado puede anular una magia o una habilidad enemiga que lo elija a él como objetivo; lo anulado no puede volver a usarse ese turno.'
+    }),
+    spell({
+      id: 'c_katana_antimagia', name: 'Katana de la Antimagia', icon: '⚔️', img: I('katana_antimagia'), fx: 'equip', sub: 'equip', katana: true,
+      text: 'Equípala a un personaje tuyo. Una vez por turno, el personaje equipado puede destruir una habilidad de un personaje enemigo: no podrá usarla durante el resto de su invocación.'
+    }),
+    spell({
+      id: 'c_espada_causas', name: 'Espada Destructora de Causas', icon: '🗡️', img: I('espada_causas'), fx: 'equip', sub: 'equip', causas: true,
+      text: 'Equípala a un personaje tuyo. Al empezar la fase de combate de tu turno, quita todos los efectos negativos de tus personajes (restricciones, debilitamientos y efectos continuos), sin tocar las cartas que los causaron.'
+    }),
+    spell({
+      id: 'c_espada_demonios', name: 'Espada Destructora de Demonios', icon: '🗡️', img: I('espada_demonios'), fx: 'equip', sub: 'equip', demonios: true,
+      text: 'Equípala a un personaje tuyo. Cuando ataque a un personaje enemigo, puede quitarle todos sus aumentos de ATK y DEF antes del combate (sus reducciones y sus estadísticas base no cambian, y lo que pierde no vuelve).'
+    }),
+    spell({
+      id: 'c_mafuba', name: 'Mafuba', icon: '🏺', img: I('mafuba'), fx: 'mafuba',
+      text: 'Encierra a un personaje enemigo en un recipiente: sale del campo durante 2 turnos (no se destruye, conserva todo) y después vuelve a una casilla libre de su controlador. Si no hay sitio, espera.'
+    }),
+    {
+      kind: 'trap', id: 'c_el_unico', name: 'El Único', icon: '👑', img: I('el_unico'), trigger: 'attack', fx: 'unico',
+      text: 'Cuando un enemigo ataca a uno de tus personajes: durante ese combate, tu personaje queda con exactamente 100 más que el ATK del atacante (en ataque, su ATK; en defensa, su DEF).'
+    },
+    {
+      kind: 'trap', id: 'c_full_counter', name: 'Full Counter', icon: '🔄', img: I('full_counter'), triggers: ['attack', 'spell', 'power', 'trap'], fx: 'fullcounter',
+      text: 'Cuando un ataque, una magia, una trampa o una habilidad enemiga va a afectar a uno de tus personajes, devuélvelo: se resuelve sobre un personaje del campo rival que elijas (si el efecto puede afectarlo).',
+      sfx: { use: V('full_counter-use') }
+    },
+    {
+      kind: 'trap', id: 'c_kamui', name: 'Kamui', icon: '🌀', img: I('kamui'), triggers: ['destroy'], fx: 'kamui',
+      text: 'Cuando un ataque, una habilidad o un efecto enemigo va a destruir a uno de tus personajes, mándalo a otra dimensión: sale del campo sin ser destruido y vuelve al empezar tu siguiente turno, con todo lo que tenía.',
+      sfx: { use: V('kamui-use') }
+    },
+    {
+      kind: 'trap', id: 'c_kyoka', name: 'Kyoka Suigetsu', icon: '🌸', img: I('kyoka'), triggers: ['power'], fx: 'kyoka',
+      text: 'Cuando una habilidad enemiga elige a uno de tus personajes, cambia su objetivo por otro personaje del campo, de cualquier jugador, que pueda recibirla.'
+    },
+    {
+      kind: 'trap', id: 'c_tsukuyomi', name: 'Tsukuyomi', icon: '👁️', img: I('tsukuyomi'), trigger: 'attack', fx: 'tsukuyomi',
+      text: 'Cuando un enemigo declara un ataque: lo cancela y ese personaje no puede atacar durante sus 2 turnos siguientes.',
+      sfx: { use: V('tsukuyomi-use') }
     }
   ];
   for (const c of CUSTOM) BY_ID.set(c.id, c);
@@ -789,9 +977,11 @@
     2: ['zenitsu', 'patriarca', 'gyomei', 'yoriichi', 'goku', 'super_vegeta', 'kaiosama', 'jogo', 'kayn', 'meliodas', 'spiderman', 'sauron', 'mahoraga', 'shen', 'la_muerte', 'antivenom', 'yuta', 'rika', 'gema_poder', 'susano', 'despertar_bestia', 'anillo_promesa', 'anillo_unico', 'pothala', 'esferas', 'cana_gon', 'uno_dos', 'voto', 'gokumonkyo', 'guerrero', 'rayo_solar'],
     3: ['deadpool', 'eren', 'titan_ataque', 'toge', 'karim', 'tony', 'jake', 'venom', 'sylas', 'minato', 'guantelete', 'ola_fuego', 'infarto', 'gema_realidad', 'x', 'gema_tiempo', 'odin'],
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
-    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi']
+    5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
+    6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
+      'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi']
   };
-  const TANDAS = [1, 2, 3, 4, 5], PACK_TANDAS = [2, 3, 4, 5];
+  const TANDAS = [1, 2, 3, 4, 5, 6], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};
   for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
   /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */
