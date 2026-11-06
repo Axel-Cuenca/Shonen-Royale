@@ -32,20 +32,27 @@
   const genCode = () => Array.from({ length: 5 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
 
   /** Adaptador entre G.Net y la interfaz de transporte de Duelo.Match. */
+  const GRACE = 45000;      // ms que se espera a que un canal caído vuelva antes de dar al jugador por desconectado
   function makeTransport(peerUid) {
-    const msgFns = [], closeFns = [];
-    let closed = false, seen = false;
+    const msgFns = [], closeFns = [], openFns = [];
+    let closed = false, seen = false, timer = 0, lost = false;
     const tr = {
       send: m => { if (!closed) G.Net.send(peerUid(), m); },
       onMessage: fn => msgFns.push(fn),
       onClose: fn => closeFns.push(fn),
+      onReopen: fn => openFns.push(fn),
       _msg: (from, m) => { if (from === peerUid()) msgFns.forEach(fn => fn(m)); },
       _peer: (u, st) => {
-        if (u !== peerUid()) return;
-        if (st === 'direct') seen = true;
-        if (seen && (st === 'closed' || st === 'failed' || st === 'connecting')) tr._close();
+        if (u !== peerUid() || closed) return;
+        if (st === 'direct') {
+          seen = true; clearTimeout(timer); timer = 0;
+          if (lost) { lost = false; openFns.forEach(fn => fn()); }      // volvió el canal: se reenvía el estado
+        } else if (seen && (st === 'closed' || st === 'failed' || st === 'connecting')) {
+          if (st === 'closed') tr._close();                              // cierre real
+          else if (!timer) { lost = true; timer = setTimeout(() => { timer = 0; tr._close(); }, GRACE); }   // un corte breve (red móvil, reintento) no echa al jugador
+        }
       },
-      _close: () => { if (closed) return; closed = true; closeFns.forEach(fn => fn()); }
+      _close: () => { if (closed) return; closed = true; clearTimeout(timer); closeFns.forEach(fn => fn()); }
     };
     return tr;
   }

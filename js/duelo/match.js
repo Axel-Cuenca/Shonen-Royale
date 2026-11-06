@@ -208,6 +208,7 @@
       const g = { tr, name: 'Rival', deck: null, pref: slots.filter(x => !x.left).length === 0 ? 'ally' : 'foe', seat: null, left: false };
       slots.push(g);
       const idx = slots.length - 1;
+      if (tr.onReopen) tr.onReopen(() => { if (!closed && !g.left && st && g.seat != null) tr.send({ k: 'view', v: wireView(E().view(st, g.seat)), names: m.names, cos: m.cos, rk: m.rk, hum: m.hum }); });
       tr.onMessage(msg => {
         if (closed || !msg || g.left) return;
         if (msg.k === 'hello') {
