@@ -201,7 +201,7 @@
     galcaza: ['Caza Implacable', 'Una vez por turno: +400 ATK durante su próximo ataque. Si destruye al objetivo, el aumento se vuelve permanente.'],
     higudom: ['Dominio: Sentencia Mortal', 'Dominio de 2 turnos (una vez por invocación): +500 ATK y DEF; sólo usan habilidades los personajes con más estrellas que él, nadie activa magias ni trampas y las magias equipadas no dan nada mientras dure. Si los personajes enemigos suman 4 asesinatos dentro del dominio, Higuruma recibe la Espada del Verdugo: +2000 ATK hasta que el dominio termine.'],
     inopost: ['Postura de la Bestia', 'Como la Primera Postura del Rayo de Zenitsu: +200 ATK y +200 DEF cada vez que declara un ataque. Hasta 11 veces por duelo.'],
-    inotacto: ['Sentido del tacto', 'Mientras esté en el campo, ves en secreto qué son los personajes boca abajo del rival.'],
+    inotacto: ['Sentido del tacto', 'Mientras esté en el campo, ves en secreto qué son los personajes y las magias y trampas boca abajo del rival.'],
     tobikamui: ['Kamui — Intangibilidad', 'Una vez por turno, esquiva un ataque o una habilidad enemiga que lo elija. Después no puede usarla durante su siguiente turno.'],
     tobidim: ['Dimensión Kamui', 'Una vez por turno, saca del campo a un personaje (sin destruirlo). Vuelve al terminar el siguiente turno de su controlador, con todo lo que tenía; si no hay sitio, espera.'],
     tobimm: ['Maestro de la manipulación', 'Al invocarlo, eliges un personaje enemigo: no podrá atacar a Tobi durante el siguiente turno de su controlador.'],

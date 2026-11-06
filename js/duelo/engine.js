@@ -5067,6 +5067,7 @@
       for (let q = 0; q < st.n; q++) {
         if (q === seat || st.team[q] === st.team[seat]) continue;
         st.players[q].mz.forEach((m, z) => { if (m && m.down && (tacto || eyes.some(e => e.uid === m.c.uid)) && players[q].mz[z] && !players[q].mz[z].c) players[q].mz[z] = Object.assign(slotView(st, st.players[q], m, z, true), { peeked: true }); });
+        if (tacto) st.players[q].st.forEach((s, z) => { if (s && s.down && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // Inosuke también ve magias y trampas boca abajo
       }
     }
     const fl = foes(st, seat);

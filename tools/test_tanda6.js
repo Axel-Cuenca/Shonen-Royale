@@ -232,7 +232,10 @@ module.exports = function (T) {
     // Inosuke: Sentido del tacto
     st = fresh(0); put(st, 0, 0, 'c_inosuke'); put(st, 1, 0, 'c_goku', { down: true, pos: 'def' });
     ok(E.view(st, 0).players[1].mz[0].c && E.view(st, 0).players[1].mz[0].peeked, 'Inosuke ve al personaje boca abajo');
-    ok(!E.view(st, 1).players[0].mz[0] || true, '');
+    putST(st, 1, 0, 'c_kamui', { down: true, setTurn: 1 });
+    ok(E.view(st, 0).players[1].st[0].c && E.view(st, 0).players[1].st[0].peeked, 'y también las magias y trampas boca abajo');
+    st.players[0].mz[0] = null;
+    ok(!E.view(st, 0).players[1].st[0].c, 'sin Inosuke no se ven');
   }
   function uOf0(m) { const k = m.copy || m.form || m.c.id, b = m.uBy || (m.uBy = {}); return b[k] || (b[k] = {}); }
 
