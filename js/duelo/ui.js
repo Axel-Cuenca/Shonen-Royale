@@ -1258,7 +1258,7 @@
       jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10',
       katana: 'Katana de la Antimagia', higudom: 'Sentencia Mortal (dominio)' };
     const pwName = k => PWN[k] || abn(k);
-    const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
+    const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', bestia: 'Postura de la Bestia', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
       punos: 'Endurecimiento de los puños (próximo ataque)', debil: '¡Debilítate!', armadura: 'Armadura de Iron Man', jake: 'Jake el Perro', venom: 'Simbionte (Simbiosis)', sed: 'Sed de sangre', kurama: 'Chakra de Kurama', kaiospell: 'Kaioken', kaiox10: 'Kaioken x10', manto: 'Manto de Kyuubi', ras: 'Rasengan',
       leal: 'Lealtad al Monarca', unico: 'El Único (este combate)', kame: 'Kamehameha (próximo ataque)', caza: 'Caza Implacable (próximo ataque)', cazap: 'Caza Implacable', serptinta: 'Serpiente de tinta' };

@@ -2552,6 +2552,10 @@
     if (multi(st)) st.log[st.log.length - 1].q = vs;
     const entry = st.log[st.log.length - 1];
     if (target !== 'direct' && st.players[vs].mz[target]) onDeclare(st, p, z, vs, target);
+    if (has(st, m, 'inopost')) {      // Inosuke: Postura de la Bestia, +200/+200 por cada ataque que declara (también directo), hasta 11 veces por duelo
+      const k = st.ino || (st.ino = {}), n = k[m.c.uid] | 0;
+      if (n < 11) { const g = gx(st.players[p], z); k[m.c.uid] = n + 1; addMod(st, m, 'bestia', 200 * g, 200 * g, 0); log(st, p, `${mdef(m).name}: Postura de la Bestia ${n + 1}/11 (+${200 * g} ATK y DEF)`); }
+    }
     {   // datos públicos del ataque para el aviso «versus» de la pantalla (un objetivo boca abajo no se revela)
       const dm0 = target === 'direct' ? null : st.players[vs].mz[target], up = dm0 && !dm0.down;
       entry.a = { z, tg: target, vs, ci: m.c.id, at: atkOf(st, st.players[p], z),
@@ -3075,7 +3079,7 @@
   /** ¿Puede un efecto del jugador byP elegir como objetivo al monstruo (q, z)? Los Seis Ojos no se pueden elegir; Spider-Man no, si lo elige un rival. */
   function canTarget(st, byP, q, z, o) {
     const m = st.players[q].mz[z];
-    if (!m) return false;
+    if (!m || isInk(m)) return false;      // las bestias de tinta de Sai no se eligen con nada (no son cartas: no se absorben, roban ni encierran)
     if (m.six && !(o && o.ignoreSix)) return false;
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
     if (m.god && st.team[byP] !== st.team[m.god.p]) return false;      // Poder de Dios: sólo interactúa el equipo de Vegeta Dios

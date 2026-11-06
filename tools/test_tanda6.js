@@ -229,6 +229,16 @@ module.exports = function (T) {
     act(st, 0, pw(st, 0, 'liukang'));
     let k = 0; while (L(st, 0).some(a => a.t === 'attack' && a.zone === 0)) { act(st, 0, L(st, 0).find(a => a.t === 'attack' && a.zone === 0)); no(st); if (++k > 5) break; }
     eq(k, 3, 'Patadas Continuas: 3 ataques');
+    // Inosuke: Postura de la Bestia
+    st = fresh(0); put(st, 0, 0, 'c_inosuke'); battle(st);
+    act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
+    eq(stat(st, 0, 0), [1500, 1600], 'Postura de la Bestia: +200/+200 al atacar');
+    st.ino[st.players[0].mz[0].c.uid] = 10; st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
+    act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
+    eq(stat(st, 0, 0), [1700, 1800], 'la 11.ª vez también suma');
+    st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
+    act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
+    eq(stat(st, 0, 0), [1700, 1800], 'a partir de la 12.ª ya no');
     // Inosuke: Sentido del tacto
     st = fresh(0); put(st, 0, 0, 'c_inosuke'); put(st, 1, 0, 'c_goku', { down: true, pos: 'def' });
     ok(E.view(st, 0).players[1].mz[0].c && E.view(st, 0).players[1].mz[0].peeked, 'Inosuke ve al personaje boca abajo');
