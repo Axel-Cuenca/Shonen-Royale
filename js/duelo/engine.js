@@ -2552,7 +2552,7 @@
     if (multi(st)) st.log[st.log.length - 1].q = vs;
     const entry = st.log[st.log.length - 1];
     if (target !== 'direct' && st.players[vs].mz[target]) onDeclare(st, p, z, vs, target);
-    if (has(st, m, 'inopost')) {      // Inosuke: Postura de la Bestia, +200/+200 por cada ataque que declara (también directo), hasta 11 veces por duelo
+    if (target !== 'direct' && has(st, m, 'inopost')) {      // Inosuke: Postura de la Bestia, +200/+200 por cada ataque que declara contra un personaje (no directo), hasta 11 veces por duelo
       const k = st.ino || (st.ino = {}), n = k[m.c.uid] | 0;
       if (n < 11) { const g = gx(st.players[p], z); k[m.c.uid] = n + 1; addMod(st, m, 'bestia', 200 * g, 200 * g, 0); log(st, p, `${mdef(m).name}: Postura de la Bestia ${n + 1}/11 (+${200 * g} ATK y DEF)`); }
     }

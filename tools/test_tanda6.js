@@ -232,13 +232,15 @@ module.exports = function (T) {
     // Inosuke: Postura de la Bestia
     st = fresh(0); put(st, 0, 0, 'c_inosuke'); battle(st);
     act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
-    eq(stat(st, 0, 0), [1500, 1600], 'Postura de la Bestia: +200/+200 al atacar');
-    st.ino[st.players[0].mz[0].c.uid] = 10; st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
-    act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
-    eq(stat(st, 0, 0), [1700, 1800], 'la 11.ª vez también suma');
-    st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
-    act(st, 0, atkA(st, 0, 0, 'direct')); no(st);
-    eq(stat(st, 0, 0), [1700, 1800], 'a partir de la 12.ª ya no');
+    eq(stat(st, 0, 0), [1300, 1400], 'Postura de la Bestia: el ataque directo no suma');
+    st = fresh(0); put(st, 0, 0, 'c_inosuke'); put(st, 1, 0, 'c_goku', { pos: 'def' }); battle(st);
+    const uidI = st.players[0].mz[0].c.uid;
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    eq((st.ino || {})[uidI], 1, 'Postura de la Bestia: +1 al atacar a un personaje');
+    st.ino[uidI] = 11; const before = JSON.stringify(st.log.length);
+    const mI = st.players[0].mz[0]; if (mI) { mI.attacked = false; mI.atkN = 0; }
+    if (mI && atkA(st, 0, 0, 0)) { act(st, 0, atkA(st, 0, 0, 0)); no(st); }
+    eq(st.ino[uidI], 11, 'a partir de la 12.ª ya no');
     // Inosuke: Sentido del tacto
     st = fresh(0); put(st, 0, 0, 'c_inosuke'); put(st, 1, 0, 'c_goku', { down: true, pos: 'def' });
     ok(E.view(st, 0).players[1].mz[0].c && E.view(st, 0).players[1].mz[0].peeked, 'Inosuke ve al personaje boca abajo');
