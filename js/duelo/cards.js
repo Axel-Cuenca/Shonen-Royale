@@ -210,7 +210,7 @@
     shikasomb: ['Posesión de sombras', 'Una vez por turno, un personaje enemigo no puede atacar ni usar habilidades durante el siguiente turno de su controlador.'],
     shikaestr: ['Estratega brillante', 'Una vez por turno, cuando un personaje enemigo usa una habilidad, puedes hacer que pierda 400 ATK hasta el final del turno.'],
     liukang: ['Patadas Continuas', 'Una vez por invocación: puede atacar hasta 3 veces ese turno.'],
-    misaojos: ['Ojos de Shinigami', 'Una vez por turno (dos si Light Yagami está en tu campo), mira en secreto qué es un personaje boca abajo del rival.'],
+    misaojos: ['Ojos de Shinigami', 'Una vez por turno (dos si Light Yagami está en tu campo), mira en secreto una carta boca abajo del rival (personaje, magia o trampa).'],
     misadn: ['Portadora de la Death Note', 'Usa la Death Note sobre un personaje enemigo, igual que la carta mágica. Una vez cada 2 turnos, sin límite total.'],
   };
   const CUSTOM = [

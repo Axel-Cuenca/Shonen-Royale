@@ -313,7 +313,12 @@ module.exports = function (T) {
     eq(stat(st, 1, 0)[0], Cards.get('c_bardock_ssj').atk + 800 - 400, 'el que la usó pierde 400 ATK (Bardock solo tiene +800)');
     // Misa
     st = fresh(0); put(st, 0, 0, 'c_misa'); put(st, 1, 0, 'c_goku', { down: true, pos: 'def' }); put(st, 1, 1, 'c_odin');
-    act(st, 0, pw(st, 0, 'misaojos'));
+    putST(st, 1, 0, 'c_kamui', { down: true, setTurn: 1 });
+    ok(!!pw(st, 0, 'misaojos', a => a.target.area === 'st'), 'Ojos de Shinigami: también puede mirar una magia/trampa boca abajo');
+    act(st, 0, pw(st, 0, 'misaojos', a => a.target.area === 'st'));
+    ok(E.view(st, 0).players[1].st[0].c && E.view(st, 0).players[1].st[0].peeked && !E.view(st, 1).players[1].st[0].peeked, 've la trampa en secreto');
+    st.players[0].mz[0].uBy = {};
+    act(st, 0, pw(st, 0, 'misaojos', a => !a.target.area));
     ok(E.view(st, 0).players[1].mz[0].peeked && !E.view(st, 1).players[1].mz[0].peeked, 'Ojos de Shinigami: lo ve sólo Misa');
     act(st, 0, pw(st, 0, 'misadn', a => a.target.z === 1));
     ok(!!st.players[1].mz[1].dn, 'Portadora de la Death Note');

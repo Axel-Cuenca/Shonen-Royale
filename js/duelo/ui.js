@@ -1800,7 +1800,7 @@
               modal(h('div', { class: 'box' }, h('h2', null, '🗡️ ¿Qué habilidad destruyes?'), h('div', { class: 'acts' }, opts.map(a => btn(abn(a.ab) + ' — ' + ((C.AB[a.ab] || [])[1] || '').slice(0, 70), () => { closeModal(); act(a); }, 'gold'))), btn('Cancelar', closeModal, 'ghost')));
             }, 'Elige al personaje enemigo') });
           }
-          else if (k === 'misaojos') acts.push({ label: 'Ojos de Shinigami…', desc: 'Mira en privado a un personaje enemigo boca abajo.', run: () => choose(g, 'mz', 'Elige la carta boca abajo') });
+          else if (k === 'misaojos') acts.push({ label: 'Ojos de Shinigami…', desc: 'Mira en privado una carta enemiga boca abajo (personaje, magia o trampa).', run: () => choose(g, null, 'Elige la carta boca abajo') });
           else if (k === 'tobidim') acts.push({ label: 'Dimensión Kamui…', desc: 'Manda a un personaje (de cualquiera) a otra dimensión: vuelve al terminar el siguiente turno de su controlador.', run: () => choose(g, 'mz', 'Elige al personaje') });
           else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
           else acts.push({ label: pwName(k), run: () => act(g[0]) });

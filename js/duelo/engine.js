@@ -3366,6 +3366,7 @@
       if (ab.includes('misaojos')) {
         const cap = P.mz.some(x => x && !x.down && /^Light Yagami/.test(mdef(x).name)) ? 2 : 1, used = u.moT === st.turn ? (u.moN || 0) : 0;
         if (used < cap) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (tm.down && !(P.eyes || []).some(x => x.uid === tm.c.uid)) push({ pw: 'misaojos', target: { vs: e, z: tz } }); }
+        if (used < cap) for (const e of fl) st.players[e].st.forEach((sx, sz) => { if (sx && sx.down && !(P.eyes || []).some(x => x.uid === sx.c.uid)) push({ pw: 'misaojos', target: { vs: e, z: sz, area: 'st' } }); });      // también magias y trampas boca abajo
       }
       if (ab.includes('misadn') && (u.mdR == null || curRound(st) - u.mdR >= 2)) for (const t of foeChars(st, p)) if (!st.players[t.vs].mz[t.z].dn) push({ pw: 'misadn', target: t });
       for (const s of eqWith(st, P, z, 'katana')) if (s.ktT !== st.turn) for (const t of foeChars(st, p)) {      // Katana de la Antimagia
@@ -4271,7 +4272,7 @@
         break;
       case 'misaojos': {
         u.moN = u.moT === st.turn ? (u.moN || 0) + 1 : 1; u.moT = st.turn;
-        const tm = st.players[a.target.vs].mz[a.target.z];
+        const tm = st.players[a.target.vs][a.target.area === 'st' ? 'st' : 'mz'][a.target.z];
         log(st, p, `${nm} usa los Ojos de Shinigami`);
         if (tm && tm.down) P.eyes = (P.eyes || []).filter(x => x.uid !== tm.c.uid).concat([{ uid: tm.c.uid, vs: a.target.vs }]);
         break;
@@ -5067,7 +5068,7 @@
       for (let q = 0; q < st.n; q++) {
         if (q === seat || st.team[q] === st.team[seat]) continue;
         st.players[q].mz.forEach((m, z) => { if (m && m.down && (tacto || eyes.some(e => e.uid === m.c.uid)) && players[q].mz[z] && !players[q].mz[z].c) players[q].mz[z] = Object.assign(slotView(st, st.players[q], m, z, true), { peeked: true }); });
-        if (tacto) st.players[q].st.forEach((s, z) => { if (s && s.down && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // Inosuke también ve magias y trampas boca abajo
+        st.players[q].st.forEach((s, z) => { if (s && s.down && (tacto || eyes.some(e => e.uid === s.c.uid)) && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // también magias y trampas boca abajo (Inosuke siempre; Misa, las que miró)
       }
     }
     const fl = foes(st, seat);
