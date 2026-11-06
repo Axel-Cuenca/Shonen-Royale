@@ -271,7 +271,16 @@
 
 
   // Intercambios: TRADE_N repetidas de una misma rareza -> 1 carta (al azar) de la rareza siguiente, de cualquier tanda con sobres.
-  const TRADE_N = 5;
+  const TRADE_N = 5, TRADE_L = 3;      // 5 repetidas -> 1 de la rareza siguiente; 3 legendarias repetidas -> 1 legendaria que no tengas (5-nov-2026)
+  const tradeNeed = rar => rar === 'l' ? TRADE_L : TRADE_N;
+  /** Cartas que puede dar un intercambio desde esa rareza: la rareza siguiente, o las legendarias que aún no tienes. */
+  function tradePool(rar) {
+    const C = cardsApi(), p = pts(); if (!C) return [];
+    const to = rar === 'l' ? 'l' : C.RAR_ORDER[C.RAR_ORDER.indexOf(rar) + 1];
+    if (!to) return [];
+    const pool = C.PACK_TANDAS.flatMap(t => C.inTanda(t)).filter(id => C.rarityOf(id) === to);
+    return rar === 'l' ? pool.filter(id => !((p && p.cards && p.cards[id]) | 0)) : pool;
+  }
   /** Repetidas guardadas de esa rareza: [{ id, n }] (sólo las que sobran después de la primera copia). */
   function sparesOf(rar) {
     const C = cardsApi(), p = pts(); if (!C || !p) return [];
@@ -283,14 +292,14 @@
     if (!p || !C || !picks || typeof picks !== 'object') return { ok: false, error: 'Intercambio no válido.' };
     const ids = Object.keys(picks).filter(id => (picks[id] | 0) > 0);
     const total = ids.reduce((n, id) => n + (picks[id] | 0), 0);
-    if (total !== TRADE_N) return { ok: false, error: `Tienes que dar exactamente ${TRADE_N} repetidas.` };
-    if (ids.some(id => !C.get(id) || (picks[id] | 0) > spareOf(id))) return { ok: false, error: 'No tienes tantas repetidas.' };
-    const from = C.rarityOf(ids[0]);
-    if (ids.some(id => C.rarityOf(id) !== from)) return { ok: false, error: 'Las cinco tienen que ser de la misma rareza.' };
-    const to = C.RAR_ORDER[C.RAR_ORDER.indexOf(from) + 1];
-    if (!to) return { ok: false, error: 'Las legendarias no se pueden cambiar por otra rareza.' };
-    const pool = C.PACK_TANDAS.flatMap(t => C.inTanda(t)).filter(id => C.rarityOf(id) === to);
-    if (!pool.length) return { ok: false, error: 'No hay cartas de esa rareza.' };
+    if (!ids.length || ids.some(id => !C.get(id))) return { ok: false, error: 'Intercambio no válido.' };
+    const from = C.rarityOf(ids[0]), need = tradeNeed(from);
+    if (ids.some(id => C.rarityOf(id) !== from)) return { ok: false, error: 'Todas tienen que ser de la misma rareza.' };
+    if (total !== need) return { ok: false, error: `Tienes que dar exactamente ${need} repetidas.` };
+    if (ids.some(id => (picks[id] | 0) > spareOf(id))) return { ok: false, error: 'No tienes tantas repetidas.' };
+    const to = from === 'l' ? 'l' : C.RAR_ORDER[C.RAR_ORDER.indexOf(from) + 1];
+    const pool = tradePool(from);
+    if (!pool.length) return { ok: false, error: from === 'l' ? 'Ya tienes todas las legendarias.' : 'No hay cartas de esa rareza.' };
     for (const id of ids) p.cards[id] -= picks[id] | 0;
     const id = pool[Math.min(pool.length - 1, Math.floor(rnd() * pool.length))];
     const isNew = (p.cards[id] | 0) === 0; p.cards[id] = Math.min(999, (p.cards[id] | 0) + 1);
@@ -507,5 +516,5 @@
     for (const c of CATS) { const it = equipped(c.id); r.setAttribute('data-' + c.id, it ? it.id.slice(c.id.length + 1) : ''); }
   }
 
-  D.Shop = { TRADE_N, sparesOf, tradeUp, PACK_PRICE, PACK_SIZE, PACK_ODDS, hasCard, cardCount, spareOf, tandaProgress, rollCard, buyPack, SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, arcade, arcadeBegin, arcadeEnd, ARC_CAP, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
+  D.Shop = { TRADE_N, TRADE_L, tradeNeed, tradePool, sparesOf, tradeUp, PACK_PRICE, PACK_SIZE, PACK_ODDS, hasCard, cardCount, spareOf, tandaProgress, rollCard, buyPack, SKIN_BOX, skinPool, skinChance, artOf, setArt, artsFor, mine, clean, slug, BOXES, boxOf, poolOf, dupRefund, openBox, offers, priceOf, OFFER_OFF, PRICE, CATS, ITEMS, RARITY, DAILY, DEFAULT_EQ, init, pts, coins, owns, ownsSk, skinsFor, equipped, equip, buy, dailyInfo, claimDaily, reward, aiToday, arcade, arcadeBegin, arcadeEnd, ARC_CAP, apply, grant, exclusive, skinOf, setSkin, mySkins, catName, get: byId, AI_DAILY_CAP, PLAY_ONLINE, WIN_ONLINE, PLAY_AI, WIN_AI };
 })();

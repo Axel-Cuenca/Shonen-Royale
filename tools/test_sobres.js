@@ -50,7 +50,15 @@ module.exports = function (T) {
     eq([SH.spareOf(cm[0]), SH.spareOf(cm[1])], [0, 0], 'las 5 repetidas se gastan y se queda la primera copia');
     ok(SH.hasCard(cm[0]) && SH.hasCard(cm[1]) && SH.hasCard(tr.card.id), 'las cartas desbloqueadas siguen siendo tuyas');
     const lg = C2.inTanda(2).find(id => C2.rarityOf(id) === 'l'); pp.cards[lg] = 6;
-    ok(!SH.tradeUp({ [lg]: 5 }).ok, 'las legendarias no se cambian'); }
+    ok(!SH.tradeUp({ [lg]: 5 }).ok, 'con legendarias son 3, no 5');
+    const legs = C2.PACK_TANDAS.flatMap(t => C2.inTanda(t)).filter(id => C2.rarityOf(id) === 'l');
+    for (const x of legs) if (x !== lg) pp.cards[x] = 0;
+    const tl = SH.tradeUp({ [lg]: 3 }, rnd);
+    ok(tl.ok && tl.card.rar === 'l' && tl.card.isNew && tl.card.id !== lg, '3 legendarias repetidas -> 1 legendaria que no tenías');
+    eq(SH.spareOf(lg), 2, 'se gastan sólo 3');
+    for (const x of legs) pp.cards[x] = Math.max(1, pp.cards[x] | 0);
+    pp.cards[lg] = 4;
+    ok(!SH.tradeUp({ [lg]: 3 }, rnd).ok && SH.spareOf(lg) === 3, 'con todas las legendarias no se puede (y no se gasta nada)'); }
   // economía más generosa
   eq([SH.PLAY_ONLINE + SH.WIN_ONLINE, SH.AI_DAILY_CAP >= 150], [80, true], 'más monedas por partida online y tope diario contra la computadora de 150');
 };
