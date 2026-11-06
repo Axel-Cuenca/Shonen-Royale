@@ -202,7 +202,7 @@
     higudom: ['Dominio: Sentencia Mortal', 'Dominio de 2 turnos (una vez por invocación): +500 ATK y DEF; sólo usan habilidades los personajes con más estrellas que él, nadie activa magias ni trampas y las magias equipadas no dan nada mientras dure. Si los personajes enemigos suman 4 asesinatos dentro del dominio, Higuruma recibe la Espada del Verdugo: +2000 ATK hasta que el dominio termine.'],
     inopost: ['Postura de la Bestia', '+200 ATK y +200 DEF cada vez que ataca a un personaje (no cuenta el ataque directo), mientras siga en el campo. Hasta 11 veces por duelo.'],
     inotacto: ['Sentido del tacto', 'Mientras esté en el campo, ves en secreto qué son los personajes y las magias y trampas boca abajo del rival.'],
-    tobikamui: ['Kamui — Intangibilidad', 'Una vez por turno, esquiva un ataque o una habilidad enemiga que lo elija. Después no puede usarla durante su siguiente turno.'],
+    tobikamui: ['Kamui — Intangibilidad', 'Una vez cada 2 turnos, esquiva un ataque o una habilidad enemiga que lo elija.'],
     tobidim: ['Dimensión Kamui', 'Una vez por turno, saca del campo a un personaje (sin destruirlo). Vuelve al terminar el siguiente turno de su controlador, con todo lo que tenía; si no hay sitio, espera.'],
     tobimm: ['Maestro de la manipulación', 'Al invocarlo, eliges un personaje enemigo: no podrá atacar a Tobi durante el siguiente turno de su controlador.'],
     tinta: ['Súper Bestias de Tinta', 'Una vez por turno crea en una casilla libre una criatura de tinta, que desaparece al final del turno y no puede ser atacada: León (1000 ATK y puede atacar), Águila (un enemigo no ataca en su siguiente turno) o Serpiente (un enemigo pierde 500 ATK durante 2 turnos).'],
@@ -867,7 +867,7 @@
     }),
     mon({
       id: 'c_tobi', name: 'Tobi', type: 'naruto', level: 5, atk: 1600, def: 1700, img: I('tobi'), ab: ['tobikamui', 'tobidim', 'tobimm'],
-      text: 'Kamui: una vez por turno esquiva un ataque o una habilidad enemiga (luego descansa un turno suyo). Dimensión Kamui: una vez por turno saca del campo a un personaje hasta el final del siguiente turno de su controlador. Al invocarlo, un enemigo no podrá atacarlo en su siguiente turno.',
+      text: 'Kamui: una vez cada 2 turnos esquiva un ataque o una habilidad enemiga. Dimensión Kamui: una vez por turno saca del campo a un personaje hasta el final del siguiente turno de su controlador. Al invocarlo, un enemigo no podrá atacarlo en su siguiente turno.',
       sfx: { ability: V('tobi-ability') }
     }),
     mon({

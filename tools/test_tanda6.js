@@ -280,6 +280,13 @@ module.exports = function (T) {
     put(st, 1, 1, 'c_odin');
     act(st, 1, atkA(st, 1, 1, 0)); no(st);
     ok(!st.players[0].mz[0], 'una vez por turno');
+    // Kamui: una vez cada 2 turnos (rondas)
+    for (const [turn, evade] of [[6, false], [8, false], [10, true]]) {
+      st = fresh(1); put(st, 0, 0, 'c_tobi'); put(st, 1, 0, 'c_odin'); battle(st);
+      { const mt = st.players[0].mz[0]; (mt.uBy || (mt.uBy = {}))[mt.c.id] = { tobT0: 6 }; } ready(st, 1, turn); battle(st);
+      act(st, 1, atkA(st, 1, 0, 0)); no(st);
+      eq(!!st.players[0].mz[0], evade, 'Kamui usado en el turno 6: en el turno ' + turn + (evade ? ' vuelve a esquivar' : ' no esquiva'));
+    }
     // Dimensión Kamui
     st = fresh(0); put(st, 0, 0, 'c_tobi'); put(st, 1, 0, 'c_odin');
     const c0 = cnt(st);

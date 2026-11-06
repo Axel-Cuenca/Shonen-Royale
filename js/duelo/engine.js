@@ -209,13 +209,13 @@
     log(st, q, `${mdef(m).name} usa Sharingan: evade el efecto (${u.shN}/3)`);
     return true;
   }
-  /** Tobi (Kamui — Intangibilidad): esquiva automáticamente un ataque o una habilidad enemiga; luego descansa durante su siguiente turno. */
+  /** Tobi (Kamui — Intangibilidad): esquiva automáticamente un ataque o una habilidad enemiga; una vez cada 2 turnos (rondas). */
   function tobiEvade(st, q, z) {
     const m = st.players[q] && st.players[q].mz[z];
     if (!m || m.down || !has(st, m, 'tobikamui') || blocked(m, 'ab')) return false;
     const u = uOf(m);
-    if (u.tobT === st.turn || u.tobCd === st.turn || (u.tobCd === 'next' && st.current === q)) return false;
-    u.tobT = st.turn; u.tobCd = 'next';
+    if (u.tobT0 != null && elapsed(st, u.tobT0) < 1) return false;      // la usó en esta ronda o en la anterior (una vez cada 2 rondas)
+    u.tobT0 = st.turn;
     log(st, q, `${mdef(m).name} usa Kamui: se vuelve intangible y esquiva el efecto`);
     return true;
   }
@@ -2838,7 +2838,6 @@
         if (!s.binds.length) delete s.binds;
       }
       if (s.tobiNA && st.turn > s.tobiNA.t) delete s.tobiNA;
-      if (s.uBy) for (const k of Object.keys(s.uBy)) { const uu = s.uBy[k]; if (uu.tobCd === 'next' && st.turn > uu.tobT) delete uu.tobCd; }      // Kamui de Tobi: ya descansó
     }
     limboTick(st, 'end');
     st.current = nextAlive(st, st.current);
