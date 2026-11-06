@@ -1598,7 +1598,7 @@
           } }, cardEl(C.get(x.c.id)), h('small', null, C.get(x.c.id).name + (x.g !== v.seat ? ' · de ' + nameOf(x.g) : ''))))),
           btn('Cancelar', closeModal, 'ghost')));
       }
-      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon' || d.fx === 'deathnote', area = d.fx === 'destroyST' ? 'st' : 'mz';
+      const toFoe = d.fx === 'destroyOne' || d.fx === 'destroyST' || d.fx === 'gem' || d.fx === 'gokumon' || d.fx === 'deathnote' || d.fx === 'mafuba', area = d.fx === 'destroyST' ? 'st' : 'mz';
       const seatOfA = a => (toFoe ? (a.target.vs != null ? a.target.vs : v.opp.seat) : v.seat);
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
     }
