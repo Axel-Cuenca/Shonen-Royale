@@ -494,7 +494,7 @@
     }),
     spell({
       id: 'c_guerrero', name: 'Guerrero del Infinito', icon: '👁️', img: I('guerrero_infinito'), fx: 'guerrero', sub: 'cont', cost: 2000,
-      text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable (tampoco puede ser desterrado), y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
+      text: 'Paga 2000 PV. El próximo personaje que entre en tu campo recibe los Seis Ojos durante 3 turnos: intocable (tampoco puede ser desterrado, salvo por la Púrpura de otro portador), y puede lanzar Rojo, Azul o Púrpura (sólo uno de ellos por vez).'
     }),
     // ---------------- tanda 3 (27-10-2026) ----------------
     mon({

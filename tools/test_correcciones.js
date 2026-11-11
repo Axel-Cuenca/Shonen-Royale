@@ -117,6 +117,12 @@ module.exports = function (T) {
   }
 
   section('correcciones 27-10: Guerrero del Infinito protege contra el destierro');
+  {   // 11-11: la Púrpura sí destierra al portador de los Seis Ojos
+    const st = fresh(0); const me = put(st, 0, 0, 'c_goku'); me.six = { t0: st.turn }; const foe = put(st, 1, 0, 'c_lara'); foe.six = { t0: st.turn };
+    const pu = L(st, 0).find(x => x.t === 'power' && x.pw === 'purpura' && x.target && x.target.vs === 1 && x.target.area === 'mz' && x.target.z === 0);
+    ok(!!pu, 'la Púrpura se ofrece contra un portador de los Seis Ojos');
+    if (pu) { act(st, 0, pu); ok(!st.players[1].mz[0] && st.players[1].banish.length === 1, 'la Púrpura destierra al portador de los Seis Ojos'); }
+  }
   {
     // sin los Seis Ojos, la explosión del Creeper destierra a ambos
     let st = fresh(0); const a0 = put(st, 0, 0, 'c_lara'); put(st, 1, 0, 'c_creeper', { pos: 'def' }); st.phase = 'battle';

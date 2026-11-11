@@ -1276,7 +1276,7 @@
     const SIX_INFO = {
       rojo: ['Rojo', 'Elige a un personaje enemigo que puedas tomar como objetivo: pierde 1000 ATK y 1000 DEF hasta que salga del campo.'],
       azul: ['Azul', 'Sin objetivo: destruye todas las magias y trampas del rival (salvo una Gokumonkyo que tenga a alguien sellado).'],
-      purpura: ['Púrpura', 'Elige un personaje del rival o una de sus magias/trampas (salvo una Gokumonkyo que tenga a alguien sellado): queda desterrado, no va al cementerio.']
+      purpura: ['Púrpura', 'Elige un personaje del rival o una de sus magias/trampas (salvo una Gokumonkyo que tenga a alguien sellado): queda desterrado, no va al cementerio. Alcanza incluso a quien tiene los Seis Ojos.']
     };
     const SIX_RULE = 'Cada técnica una vez por invocación; Rojo y Azul se pueden usar las dos, Púrpura sólo si aún no usaste ninguna y después bloquea las otras.';
     /** Botón de acción de la ficha; con descripción debajo si la tiene, y deshabilitado si está gastado o bloqueado. */
