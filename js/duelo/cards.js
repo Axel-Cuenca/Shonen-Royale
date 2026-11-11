@@ -490,7 +490,7 @@
     }),
     spell({
       id: 'c_gokumonkyo', name: 'Gokumonkyo', icon: '📕', img: I('gokumonkyo'), fx: 'gokumon', sub: 'cont', unstop: true,
-      text: 'Sella a un personaje enemigo (nada lo impide, ni siquiera los Seis Ojos) durante 5 turnos completos; vuelve después. No se puede anular. Si quien lo activó queda fuera del duelo, el personaje vuelve al campo de su dueño (o a su cementerio si no hay sitio).'
+      text: 'Sella a un personaje enemigo (nada lo impide, ni siquiera los Seis Ojos) durante 5 turnos completos; vuelve después. No se puede anular (sólo la trampa X puede cancelar su activación). Si quien lo activó queda fuera del duelo, el personaje vuelve al campo de su dueño (o a su cementerio si no hay sitio).'
     }),
     spell({
       id: 'c_guerrero', name: 'Guerrero del Infinito', icon: '👁️', img: I('guerrero_infinito'), fx: 'guerrero', sub: 'cont', cost: 2000,

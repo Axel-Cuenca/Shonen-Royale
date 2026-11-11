@@ -2140,7 +2140,7 @@
       if (!s || !s.down || s.setTurn >= st.turn) return;
       const d = def(s.c);
       if (d.kind !== 'trap' || !(d.trigger === trigger || (d.triggers && d.triggers.includes(trigger)))) return;
-      if (trigger === 'spell' && st.chain && st.chain.unstop) return;      // Gokumonkyo no se puede anular
+      if (trigger === 'spell' && st.chain && st.chain.unstop && d.fx !== 'xcancel') return;      // Gokumonkyo no se puede anular… salvo con la X
       if (trigger === 'attack' && !st.atk) return;
       if (trigger === 'spell' && !st.chain) return;
       if (trigger === 'summon' && !(st.summon && st.players[st.summon.p].mz[st.summon.z])) return;

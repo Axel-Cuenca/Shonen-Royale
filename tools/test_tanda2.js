@@ -494,6 +494,14 @@ module.exports = function (T) {
     const st2 = fresh(); put(st2, 1, 0, 'c_goku'); putST(st2, 1, 0, 't_negate', { down: true, setTurn: 0 });
     cast(st2, 0, 'c_gokumonkyo', { z: 0 });
     ok(!st2.players[1].mz[0] && !st2.pending, 'Gokumonkyo no se puede anular');
+    // …salvo con la X, que sí cancela su activación
+    const st4 = fresh(); put(st4, 1, 0, 'c_goku'); putST(st4, 1, 0, 'c_x', { down: true, setTurn: 0 });
+    cast(st4, 0, 'c_gokumonkyo', { z: 0 });
+    ok(!!st4.pending && st4.pending.player === 1 && L(st4, 1).some(x => x.t === 'respond' && x.activate), 'la X puede responder a Gokumonkyo');
+    act(st4, 1, L(st4, 1).find(x => x.t === 'respond' && x.activate));
+    let nn = 0; while (st4.pending && nn++ < 10) { const q = E.actor(st4); act(st4, q, L(st4, q)[0]); }
+    ok(st4.players[1].mz[0] && st4.players[1].mz[0].c.id === 'c_goku' && !E.view(st4, 0).players[0].st[0], 'la X cancela Gokumonkyo: el objetivo sigue en el campo y no está sellado');
+    ok(grave(st4, 0, 'c_gokumonkyo'), 'Gokumonkyo cancelado va al cementerio');
     // sólo enemigos: un personaje propio nunca es objetivo, ni siquiera forzando la acción
     const st3 = fresh(); put(st3, 0, 0, 'c_goku'); give(st3, 0, ['c_gokumonkyo']);
     ok(!find(st3, 0, x => x.t === 'activate'), 'Gokumonkyo no se puede activar si sólo hay personajes aliados');
