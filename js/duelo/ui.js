@@ -1406,6 +1406,7 @@
       if (s.promesa) b.push(['⛓️', 'Promesa de Poder: no puede atacar y cambiará de bando']);
       if (s.owner != null) b.push(['🎭', 'Corrompido']);
       if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0))) b.push(['⬆️', 'Bonificaciones: ' + s.mods.filter(m => m.k !== 'av-base' && (m.atk > 0 || m.def > 0)).map(m => MODN[m.k] || m.k).join(', ')]);
+      if (s.mods && s.mods.some(m => m.k !== 'av-base' && (m.atk < 0 || m.def < 0))) b.push(['⬇️', 'Reducciones: ' + s.mods.filter(m => m.k !== 'av-base' && (m.atk < 0 || m.def < 0)).map(m => (MODN[m.k] || m.k) + ' (' + (m.atk < 0 ? m.atk + ' ATK' : '') + (m.atk < 0 && m.def < 0 ? ' / ' : '') + (m.def < 0 ? m.def + ' DEF' : '') + ')').join(', ')]);
       if (s.link && s.link.length) b.push(['🔗', 'Vinculado: ' + s.link.map(nameId).join(', ')]);
       if ((s.ext && s.ext.length) || s.absorbed) b.push(['🌀', 'Habilidades extra: ' + (s.ext || []).map(abn).join(', ')]);
       if (s.fury) b.push(['🔥', 'Furia de Esparta activa']);
@@ -1422,7 +1423,7 @@
         const CN = { rock: ['🪨', 'Postura de la Roca'], sun: ['☀️', 'Postura solar'], rayo: ['🌩️', 'Primera Postura del Rayo (ataques)'], dk: ['🗡️', 'Cazador de demonios: asesinatos (3 para Devil Trigger)'],
           shN: ['👁️‍🗨️', 'Sharingan: usos'], gp: ['🛡️', 'Protección heroica: usos'], pat: ['🌟', 'Despertar del Poder Oculto: usos'], web: ['🕷️', 'Telarañas: usos'], pn: ['👊', 'Endurecimiento de los puños: usos'],
           ino: ['🐗', 'Postura de la Bestia'], vidas: ['❤️', 'Resistencia titánica: vidas que le quedan'],
-          ds: ['🐺', 'Técnicas de las Diez Sombras usadas'], dsT: ['🔟', 'Técnicas usadas este turno (máximo 2)'] };
+          kam: ['⏳', 'Kamui en espera: lo podrá usar de nuevo en su próximo turno'], ds: ['🐺', 'Técnicas de las Diez Sombras usadas'], dsT: ['🔟', 'Técnicas usadas este turno (máximo 2)'] };
         for (const k of Object.keys(s.cn)) { const [n, mx] = s.cn[k], d = CN[k]; if (d) b.push([d[0] + n, d[1] + ': ' + n + (mx != null ? '/' + mx : '')]); }
       }
       if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
@@ -2142,7 +2143,7 @@
         else if (hsrc) c.classList.add('holohide');
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); if (s.huge) el.classList.add('hugeA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
-        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : '👁️'));
+        if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : s.guerrero && s.guerrero.waiting ? '⏳' : '👁️'));
         cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');

@@ -287,6 +287,9 @@ module.exports = function (T) {
       act(st, 1, atkA(st, 1, 0, 0)); no(st);
       eq(!!st.players[0].mz[0], evade, 'Kamui usado en el turno 6: en el turno ' + turn + (evade ? ' vuelve a esquivar' : ' no esquiva'));
     }
+    // cartelito de enfriamiento del Kamui
+    { const sk = fresh(1); const mt = put(sk, 0, 0, 'c_tobi'); (mt.uBy || (mt.uBy = {}))[mt.c.id] = { tobT0: sk.turn };
+      const cv = E.view(sk, 0).players[0].mz[0].cn; ok(cv && cv.kam && cv.kam[0] === 1, 'Kamui gastado: cartelito de espera'); }
     // Dimensión Kamui
     st = fresh(0); put(st, 0, 0, 'c_tobi'); put(st, 1, 0, 'c_odin');
     const c0 = cnt(st);
