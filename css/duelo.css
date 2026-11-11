@@ -1900,3 +1900,13 @@ html.rm .game > .domfx, html.rm .dombanner { animation: none; }
 .card, .card .cpanel, .card .cs, .card .cn { text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; }
 .card .cpanel .cs b { font-weight: 900; }
 .card .cimg, .card .cch, .hin > img, .hrig { image-rendering: -webkit-optimize-contrast; image-rendering: auto; }
+
+/* Cartas del tablero nítidas (11-11-2026): el navegador dibuja las capas inclinadas en 3D a baja resolución y las deforma, y el texto sale borroso.
+   La carta se maqueta al DOBLE (font-size 20px: todas sus medidas en em se duplican) y se reduce a la mitad con scale(.5): mismo tamaño en pantalla,
+   pero se dibuja con el doble de píxeles. Sólo 1 contra 1, personajes boca arriba en ataque y con efectos 3D (sin «Efectos reducidos»); el resto queda como estaba.
+   Los valores de translateZ van a la mitad (em doble) y las animaciones con em/translate se compensan (--os = 2). */
+html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz .card.m.layered.onboard:not(.def):not(.landing) { --os: 2; font-size: 20px; transform-origin: 50% 100%; transform: translateZ(.2em) rotateX(-34deg) scale(.5); }
+html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz:hover .card.m.layered.onboard:not(.def):not(.landing) { transform: translateZ(.4em) rotateX(-34deg) scale(.53); }
+html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz .card.m.layered.onboard.tilting:not(.def):not(.landing) { transform: translateZ(.5em) rotateX(calc(-34deg + var(--rx, 0deg) * .8)) rotateY(calc(var(--ry, 0deg) * 1.1)) scale(.535); }
+@keyframes cfxHitCardOs { 0% { translate: 0 0; } 8% { translate: -.45em 0; } 17% { translate: .4em 0; } 27% { translate: -.3em 0; } 38% { translate: .22em 0; } 52% { translate: -.14em 0; } 70% { translate: .07em 0; } 100% { translate: 0 0; } }
+html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.struck .card.m.layered.onboard:not(.def):not(.landing) { animation-name: cfxHitCardOs; }

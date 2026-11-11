@@ -2565,7 +2565,8 @@
       if (!tr || !zel.offsetWidth) return;
       const rx = r.width / zel.offsetWidth, ry = r.height / zel.offsetHeight || rx;
       const dx = (tr.left + tr.width / 2) - (r.left + r.width / 2), dy = (tr.top + tr.height / 2) - (r.top + r.height / 2);
-      const lx = dx / rx * .8, ly = dy / ry * .8;
+      const os = who.classList.contains('card') ? 1 : (parseFloat(getComputedStyle(who).getPropertyValue('--os')) || 1);      // carta maquetada al doble y reducida (css «nítidas»): el translate de la propia carta no se escala, el de algo DENTRO de ella sí
+      const lx = dx / rx * .8 * os, ly = dy / ry * .8 * os;
       zel.classList.add('lunging'); setTimeout(() => zel.classList.remove('lunging'), 1000);
       who.animate([{ translate: '0 0', scale: '1' }, { translate: lx + 'px ' + ly + 'px', scale: '1.12', offset: .34, easing: 'cubic-bezier(.5, 0, .3, 1)' }, { translate: '0 0', scale: '1' }],
         { duration: 1000, easing: 'cubic-bezier(.16, 1, .3, 1)' });
