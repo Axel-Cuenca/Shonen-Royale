@@ -103,6 +103,13 @@ module.exports = function (T) {
     s3.turn++; E.lose && 0;
   }
 
+  section('Kuriboh y los costes propios');
+  {   // Kuriboh protege del daño recibido, no de los costes propios (Guerrero del Infinito: 2000 PV)
+    const sc = fresh(0); sc.players[0].lp = 5000; sc.players[0].imm = sc.turn; hand(sc, 0, ['c_guerrero']);
+    act(sc, 0, L(sc, 0).find(x => x.t === 'activate'));
+    ok(sc.players[0].lp === 3000, 'Kuriboh no evita pagar el coste de una magia (5000 → 3000)');
+  }
+
   section('Kuriboh Mago Oscuro');
   {
     const st = fresh(1); put(st, 0, 0, 'c_kuriboh_mo'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_odin');

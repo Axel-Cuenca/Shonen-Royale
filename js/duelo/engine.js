@@ -404,11 +404,12 @@
     if (!live.length) { st.reason = st.n === 2 ? 'Los dos llegaron a 0 PV.' : 'Todos quedaron fuera a la vez.'; setWinner(st, 'draw', st.reason); }
     else if (live.every(p => st.team[p] === st.team[live[0]])) setWinner(st, st.team[live[0]], st.reason);
   }
-  function lose(st, p, n) {
+  /** Pierde PV. cost = true: es un coste o un daño que el propio jugador se hace (no lo frenan Kuriboh ni el Minion: no es daño recibido). */
+  function lose(st, p, n, cost) {
     const P = st.players[p];
     if (!P.alive) return;
-    if (st.minShield === p && n > 0) { st.minShield = null; log(st, p, 'El Minion absorbe todo el daño del combate'); return; }
-    if (P.imm === st.turn && n > 0) { log(st, p, 'Kuriboh lo protege: no recibe daño este turno'); return; }      // Kuriboh: inmune a todo daño el resto del turno
+    if (!cost && st.minShield === p && n > 0) { st.minShield = null; log(st, p, 'El Minion absorbe todo el daño del combate'); return; }
+    if (!cost && P.imm === st.turn && n > 0) { log(st, p, 'Kuriboh lo protege: no recibe daño este turno'); return; }      // Kuriboh: inmune a todo daño el resto del turno
     P.lp = Math.max(0, P.lp - Math.max(0, n));
     checkWin(st);
   }
@@ -1297,7 +1298,7 @@
         log(st, p, `destruye a ${mdef(o.mz[t.z]).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
         destroyMonster(st, e, t.z, { src: 'spell', bp: p });
-        lose(st, p, d.self);
+        lose(st, p, d.self, true);
       }
     },
     destroyAll: {
@@ -1719,7 +1720,7 @@
       log(st, q, `Total Counter: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
       if (multi(st)) st.log[st.log.length - 1].q = vs;
       if (m) destroyMonster(st, vs, z, { src: 'spell', bp: q });
-      lose(st, ch.p, d.self);
+      lose(st, ch.p, d.self, true);
     } else if (d.fx === 'destroyST') {
       log(st, q, `Total Counter: ${d.name} se devuelve y destruye una carta de magia/trampa de su dueño`);
       if (multi(st)) st.log[st.log.length - 1].q = vs;
@@ -1964,7 +1965,7 @@
     else { inst = P.st[idx].c; P.st[idx] = null; }
     st.chain = { p, inst, target, negated: false, unstop: !!def(inst).unstop };
     log(st, p, `activa ${def(inst).name}`);
-    if (def(inst).cost) { lose(st, p, def(inst).cost); if (st.winner !== null) return; }      // Guerrero del Infinito: los PV no se recuperan aunque la anulen
+    if (def(inst).cost) { lose(st, p, def(inst).cost, true); if (st.winner !== null) return; }      // Guerrero del Infinito: los PV no se recuperan aunque la anulen
     if (gloveOffer(st, p)) return;
     if (openWindow(st, 'spell', { k: 'spell', by: p })) return;
     continueSpell(st);
@@ -2089,7 +2090,7 @@
             const gm = st.players[q].mz.find(m => m && !m.down && has(st, m, 'repulsion'));
             if (!gm) continue;
             log(st, q, `${mdef(gm).name} usa Repulsión divina: destruye ${d.name} y su efecto no se resuelve`);
-            P.grave.push(ch.inst); lose(st, ch.p, d.self || 0);
+            P.grave.push(ch.inst); lose(st, ch.p, d.self || 0, true);
             return;
           }
         }
@@ -2099,7 +2100,7 @@
       const t = ch.target;
       if (t && t.z != null && d.fx !== 'destroyST') {
         const tp = t.vs != null ? t.vs : (FOE_TGT[d.fx] ? foeOf(st, ch.p, t) : ch.p);
-        if (st.team[tp] !== st.team[ch.p] && sharinganEvade(st, tp, t.z)) { P.grave.push(ch.inst); lose(st, ch.p, d.self || 0); return; }
+        if (st.team[tp] !== st.team[ch.p] && sharinganEvade(st, tp, t.z)) { P.grave.push(ch.inst); lose(st, ch.p, d.self || 0, true); return; }
       }
     }
     if (!(ch.done || []).includes('anti')) {                                            // Espada de la antimagia (Asta)
@@ -3768,7 +3769,7 @@
         const ti = a.hand, anchor = titanAnchor(P, a.zone, [a.zone]);
         markOnce(u, 'bite');
         log(st, p, `${nm} se muerde la mano y pierde 500 PV`);
-        lose(st, p, 500);
+        lose(st, p, 500, true);
         if (st.winner !== null || !P.alive) break;
         transformInto(st, p, a.zone, ti, anchor);
         break;
@@ -4008,7 +4009,7 @@
         if (!inst || inst.id !== 'c_titan_colosal' || anchor < 0 || P.lp <= 1000) break;
         markOnce(u, 'bite');
         log(st, p, `${nm} paga 1000 PV por el poder del Titán Colosal`);
-        lose(st, p, 1000);
+        lose(st, p, 1000, true);
         if (st.winner !== null || !P.alive) break;
         transformInto(st, p, a.zone, a.hand, anchor);
         colosalBlast(st, p, anchor);
@@ -4042,7 +4043,7 @@
         if (!inst || inst.id !== 'c_titan_ataque' || anchor < 0 || P.lp <= 500) break;
         markOnce(u, 'bite');
         log(st, p, `${nm} se muerde la mano y pierde 500 PV`);
-        lose(st, p, 500);
+        lose(st, p, 500, true);
         if (st.winner !== null || !P.alive) break;
         transformInto(st, p, a.zone, a.hand, anchor);      // Eren queda vinculado al Titán de Ataque (como Lara con el Titán Martillo)
         break;
@@ -4537,7 +4538,7 @@
       const am = P.mz[pd.zy], s = pd.stz != null ? P.st[pd.stz] : null;
       if (a.use && am && (s || has(st, am, 'antimagia'))) {
         if (s) s.amT = st.turn; else uOf(am).amT = st.turn;
-        if (pd.kind === 'spell') { const ch = pd.ch; st.players[ch.p].grave.push(ch.inst); lose(st, ch.p, def(ch.inst).self || 0); log(st, p, `${mdef(am).name} usa la Espada de la antimagia: anula ${pd.nm}`); }
+        if (pd.kind === 'spell') { const ch = pd.ch; st.players[ch.p].grave.push(ch.inst); lose(st, ch.p, def(ch.inst).self || 0, true); log(st, p, `${mdef(am).name} usa la Espada de la antimagia: anula ${pd.nm}`); }
         else { blockPw(st, pd.pp, pd.pa); log(st, p, `${mdef(am).name} usa la Espada de la antimagia: anula ${pd.nm}; no se puede volver a usar este turno`); }
         return;
       }
@@ -4618,7 +4619,7 @@
       if (a.use && gm && has(st, gm, 'uidef')) {
         uOf(gm).udT = st.turn;
         log(st, p, `${mdef(gm).name} usa Defensa instintiva: destruye ${k === 'spell' ? 'la magia' : 'la trampa'} que iba a destruir a ${pd.nm}`);
-        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
+        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0, true); }
         else respondRest(st, pd.rp);
         return;
       }
@@ -4764,7 +4765,7 @@
       if (a.use && ym && has(st, ym, 'rikaint') && vm) {
         const fxs = k === 'attack' ? 'el ataque' : k === 'spell' ? 'la magia' : k === 'trap' ? 'la trampa' : 'la habilidad';
         rikaSpend(st, p, pd.zy, pd.nm, fxs);
-        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0); }
+        if (k === 'spell') { st.players[pd.ch.p].grave.push(pd.ch.inst); lose(st, pd.ch.p, def(pd.ch.inst).self || 0, true); }
         else if (k === 'trap') { if (st.atk && C().get(pd.tid).fx === 'destroyAttacker') st.atk.negated = true; respondRest(st, pd.rp); }
         else if (k === 'attack' && pd.a) { galandHit(st, pd.a, p, pd.zy); atkDone(st, pd.a); }
         else if (k === 'power' && pd.pa) blockPw(st, pd.pp, pd.pa);
