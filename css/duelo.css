@@ -1912,3 +1912,7 @@ html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz .card.m.layered.onbo
 html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.struck .card.m.layered.onboard:not(.def):not(.landing) { animation-name: cfxHitCardOs; }
 /* Cartelitos de contadores: el icono y el número siempre en una línea */
 .zone .badges i { white-space: nowrap; }
+
+/* Mientras el personaje recortado aún no está listo, la ilustración se ve DENTRO del marco de la carta (antes se veía en una caja blanca más alta que la carta) */
+.card.m.layered.onboard:not(:has(> .cch)) > .art { position: absolute; inset: 0; margin: 0; border: 0; border-radius: inherit; background: transparent; z-index: 1; }
+.card.m.layered.onboard:not(:has(> .cch)) > .art .cimg { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }

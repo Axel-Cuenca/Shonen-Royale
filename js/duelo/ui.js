@@ -267,7 +267,8 @@
       // la caché va por imagen (no por carta): así cada skin de ilustración tiene su propio recorte
       prepare() {
         for (const c of C.all().concat(C.custom.filter(x => x.hidden))) if (c.img) want(c.img);      // personajes, y también las magias/trampas de los sobres
-        // las skins no se preparan de antemano: su recorte se hace la primera vez que se muestran (Holo.src)
+        // las skins de ilustración también se preparan de antemano (detrás de las cartas): si no, la primera vez que un rival enseña una se ve cruda hasta que acaba su recorte
+        try { for (const it of (D.Shop && D.Shop.ITEMS) || []) if (it.cat === 'si' && it.img) want(it.img); } catch (e) { /* nada */ }
       },
       /** Recorte listo de esa carta (con la skin `img` si se da) o null mientras se prepara. */
       src: (id, img) => { const k = img || (C.get(id) || {}).img; if (!k) return null; want(k, true); return cache.get(k) || null; }
