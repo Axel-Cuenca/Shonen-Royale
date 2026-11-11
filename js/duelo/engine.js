@@ -1647,7 +1647,7 @@
   /** Trampas que se pueden devolver con Total Counter / interceptar con Rika. */
   const HOSTILE_TRAP = { destroyAttacker: 1, destroySummoned: 1, mirror: 1, infarto: 1 };
   /** Habilidades hostiles que Total Counter puede devolver. */
-  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki'];      // Púrpura NO se puede devolver (27-10-2026)
+  const REFL_POW = ['canon', 'desmantelar', 'telar', 'rojo', 'azul', 'avpred', 'genki', 'supernova'];      // Púrpura NO se puede devolver (27-10-2026)
   /** Habilidad (id) que corresponde a cada poder, para que Yuta pueda aprenderlas. */
   const PW_AB = { canon: 'canon', absorb: 'absorb', furia: 'furia', bigbang: 'bigbang', relicario: 'relicario', desmantelar: 'desmantelar', agujero: 'agujero', bigbang1: 'bigbang1', cuerno: 'cuerno', maquina: 'dexter', brillo: 'brillo', dtrig: 'cazador', dios: 'dios', avada: 'avada', chidori: 'chidori', canal: 'canal', supernova: 'canal', conc: 'zenitsu2', conc2: 'gyomei2', marca: 'gyomei3', desp: 'patriarca', kaioken: 'kaioken', teach: 'maestro', dominio: 'jogodom', llama: 'llama', telar: 'telar', corromper: 'corrupt' };
   const POWER_IDS = Array.from(new Set(Object.values(PW_AB)));
@@ -1760,6 +1760,13 @@
       u.azul = true;
       log(st, user, 'Azul se vuelve contra su dueño: sus magias y trampas son destruidas');
       for (let i = 0; i < st.n; i++) if (st.team[i] === st.team[user]) for (const z of zonesWith(st.players[i].st)) if (!st.players[i].st[z].prison) removeST(st, i, z);
+    } else if (a.pw === 'supernova') {
+      u.canal = null; m.canal = null;
+      log(st, user, 'La Supernova se vuelve contra su dueño: destruye a sus personajes de hasta 7★ y todas sus magias y trampas');
+      for (let i = 0; i < st.n; i++) if (st.team[i] === st.team[user]) {
+        for (let tz = 0; tz < ZONES; tz++) { const tm = st.players[i].mz[tz]; if (tm && lvl(tm) <= 7) destroyMonster(st, i, tz, { src: 'power', by: { p: user, uid: m.c.uid }, bp: q }); }
+        for (let sz = 0; sz < ZONES; sz++) removeST(st, i, sz);
+      }
     } else if (a.pw === 'genki') {
       markOnce(u, 'gen');
       log(st, user, `${nm} es alcanzado por su propia Genkidama`);
@@ -1888,7 +1895,7 @@
       return cands;
     }
     if (k === 'power') {
-      if (pd.pa.pw === 'azul' || pd.pa.pw === 'genki') return null;
+      if (pd.pa.pw === 'azul' || pd.pa.pw === 'genki' || pd.pa.pw === 'supernova') return null;
       return powerReflectCands(st, q, pd.pp, pd.pa);
     }
     if (k === 'attack') {

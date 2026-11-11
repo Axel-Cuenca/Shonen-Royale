@@ -222,6 +222,18 @@ module.exports = function (T) {
       ok(!hv.includes('c_goku') && !hv.includes('c_toge') && hv.includes('c_odin'), 'Supernova: caen los de ≤7★ y sobrevive Odin (10★)');
       ok(ids(st, 0)[0] === 'c_freezer', 'Supernova: no toca el campo propio');
     }
+    // Total Counter de Meliodas devuelve la Supernova contra el equipo de Freezer
+    {
+      const sm = fresh(); put(sm, 0, 0, 'c_freezer'); put(sm, 0, 1, 'c_goku'); putST(sm, 0, 0, 'c_kaioken'); put(sm, 1, 0, 'c_meliodas'); put(sm, 1, 1, 'c_toge');
+      act(sm, 0, pw(sm, 0, 'canal')); act(sm, 0, { t: 'toBattle' });
+      let k = 0; while (E.actor(sm) === 0 && k++ < 6) act(sm, 0, L(sm, 0).find(a => a.t === 'endTurn') || L(sm, 0).find(a => a.t === 'discard'));
+      k = 0; while (E.actor(sm) !== 0 && k++ < 6) { const q = E.actor(sm); act(sm, q, L(sm, q).find(a => a.t === 'endTurn') || L(sm, q).find(a => a.t === 'discard')); }
+      act(sm, 0, pw(sm, 0, 'supernova'));
+      ok(sm.pending && sm.pending.ab === 'meliodas' && sm.pending.player === 1, 'Meliodas puede devolver la Supernova');
+      act(sm, 1, { t: 'ability', use: true }); settle(sm);
+      ok(ids(sm, 1).includes('c_toge') && ids(sm, 1).includes('c_meliodas'), 'Supernova devuelta: el rival no pierde nada');
+      ok(!ids(sm, 0).includes('c_goku') && !ids(sm, 0).includes('c_freezer') && sm.players[0].st.every(x => !x), 'Supernova devuelta: cae sobre Freezer, sus aliados y sus magias');
+    }
     const s2 = fresh(); put(s2, 0, 0, 'c_freezer2'); put(s2, 1, 0, 'c_goku'); put(s2, 1, 1, 'c_odin');
     eq(L(s2, 0).filter(a => a.t === 'power' && a.pw === 'cuerno').map(a => a.target.z), [0], 'Ataque de Cuerno: sólo personajes de 4★ o menos');
     act(s2, 0, pw(s2, 0, 'cuerno')); settle(s2);
