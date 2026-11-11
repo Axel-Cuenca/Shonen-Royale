@@ -964,7 +964,7 @@
     }
     if (ctx.src === 'combat' && kab.includes('cazador')) {      // Dante: Cazador de demonios
       const ud = uOf(km); ud.dk = (ud.dk || 0) + 1;
-      const own = rawAbil(km), opts = ['atk', 'def'].concat(Array.from(new Set((victim.abs || []).filter(x => STEALABLE.includes(x) && !own.includes(x)))));
+      const own = rawAbil(km), opts = ['atk', 'def'].concat((km.c.id === 'c_dante_dt' ? Array.from(new Set((victim.abs || []).filter(x => STEALABLE.includes(x) && !own.includes(x)))) : []));      // sólo Devil Trigger absorbe habilidades
       st.trig.push({ k: 'dante', p: killer.p, uid: km.c.uid, from: victim.name, opts });
     }
     if (ctx.src === 'combat' && kab.includes('marcamal') && !uOf(km).marca2) st.trig.push({ k: 'marcamal', p: killer.p, uid: km.c.uid });

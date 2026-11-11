@@ -500,6 +500,12 @@ module.exports = function (T) {
       act(st, 0, { t: 'toBattle' }); act(st, 0, atkA(st, 0, 0, 0));
       let k = 0; while (st.pending && st.pending.ab !== 'dante' && k++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
     };
+    {   // sólo Devil Trigger absorbe habilidades
+      const sa = fresh(); put(sa, 0, 0, 'c_dante'); kill(sa, 'c_popeye');
+      ok(sa.pending && sa.pending.ab === 'dante' && sa.pending.opts.join() === 'atk,def', 'Dante normal: sólo +ATK / +DEF, sin habilidades');
+      const sb = fresh(); put(sb, 0, 0, 'c_dante_dt'); kill(sb, 'c_popeye');
+      ok(sb.pending && sb.pending.ab === 'dante' && sb.pending.opts.includes('spinach'), 'Devil Trigger: también puede absorber la habilidad del muerto');
+    }
     const st = fresh(); put(st, 0, 0, 'c_dante'); hand(st, 0, ['c_dante_dt']);
     kill(st, 'c_kuriboh');
     ok(st.pending && st.pending.ab === 'dante' && st.pending.opts.includes('atk') && st.pending.opts.includes('def'), 'Cazador: ofrece fuerza / resistencia tras el asesinato');

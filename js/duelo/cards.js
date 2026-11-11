@@ -85,7 +85,7 @@
     inmort: ['Inmortalidad', 'Si es destruido, regresa al campo en el próximo turno de su jugador. Puede regresar hasta 2 veces; después ya no vuelve.'],
     detect: ['Detección de mentiras', 'Mientras esté en el campo, todas las cartas boca abajo de todos los jugadores se ven, pero solo para quien lo controla.'],
     vimm: ['Resistencia a efectos negativos', 'Los efectos negativos (como reducir ATK o DEF) no le afectan. La excepción son los efectos que lo destruyen, que sí pueden eliminarlo.'],
-    cazador: ['Cazador de demonios', 'Cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +ATK, +DEF o la habilidad del muerto (se acumulan). Con 3 asesinatos puede transformarse en Dante Devil Trigger desde tu mano, pasándole todo.'],
+    cazador: ['Cazador de demonios', 'Cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +ATK o +DEF (se acumulan). Solo la forma Dante Devil Trigger puede además quedarse con una habilidad del muerto, y usarla cuando quiera. Con 3 asesinatos Dante puede transformarse en Dante Devil Trigger desde tu mano, pasándole todo.'],
     brillo: ['Brillo', 'Una vez por invocación: se introduce en un personaje enemigo de 11★ o menos. En el turno de su controlador explota y destruye a ese personaje y a los de las casillas contiguas.'],
     gogres: ['Resistencia absoluta', 'Es inmune a los efectos de magias y trampas. En combate solo puede derrotarlo el ataque de un personaje enemigo con más de 2800 ATK.'],
     kuriboh: ['Kuriboh', 'Cuando es destruido, su jugador es inmune a todo daño de PV durante el resto de ese turno, venga de un ataque, una magia o una trampa.'],
@@ -702,7 +702,7 @@
     }),
     mon({
       id: 'c_dante', name: 'Dante', type: 'dmc', level: 5, atk: 1700, def: 1700, img: I('dante'), ab: ['cazador'],
-      text: 'Cazador de demonios: cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +300 ATK, +300 DEF o la habilidad del muerto (todo se acumula; usa las habilidades cuando quieras). Con 3 asesinatos y Dante Devil Trigger en la mano puede transformarse en él (vinculados; pasa mejoras y habilidades).',
+      text: 'Cazador de demonios: cada vez que mata a un personaje enemigo en combate elige UNA recompensa: +300 ATK o +300 DEF (se acumulan). Solo su forma Devil Trigger puede absorber habilidades. Con 3 asesinatos y Dante Devil Trigger en la mano puede transformarse en él (vinculados; pasa mejoras y habilidades).',
       sfx: { attack: V('dante-attack'), transform: V('dante-transform') }
     }),
     mon({
