@@ -52,6 +52,7 @@
           else if (!timer) { lost = true; timer = setTimeout(() => { timer = 0; tr._close(); }, GRACE); }   // un corte breve (red móvil, reintento) no echa al jugador
         }
       },
+      hasSeen: () => seen,
       _close: () => { if (closed) return; closed = true; clearTimeout(timer); closeFns.forEach(fn => fn()); }
     };
     return tr;
@@ -88,6 +89,7 @@
       const m = s.val() || {}, uids = Object.keys(m);
       for (const [u, g] of [...guests]) {
         if (m[u]) continue;
+        if (locked && g.tr.hasSeen()) continue;      // ya empezó: la ficha de la sala (Realtime Database) puede caerse un instante sin que el jugador se haya ido; manda el canal directo (con sus 45 s de gracia)
         g.tr._close(); g.unwire(); guests.delete(u);
         if (cb.onLeave) cb.onLeave(u, g.name);
       }
@@ -129,12 +131,12 @@
     G.Net.open(code, false, hostUid);
     const tr = makeTransport(() => hostUid);
     const unwire = wire(tr, (u, st) => { if (u === hostUid && cb && cb.onState) cb.onState(st); });
-    rr.child('host').on('value', s => { if (!s.exists()) { tr._close(); if (cb && cb.onClosed) cb.onClosed(); } });
+    rr.child('host').on('value', s => { if (!s.exists()) { if (tr.hasSeen()) return; tr._close(); if (cb && cb.onClosed) cb.onClosed(); } });
     // si el anfitrión nos saca (llegamos tarde y no había sitio), lo avisamos
     let seenMe = false;
     mine.on('value', s => {
       if (s.exists()) { seenMe = true; return; }
-      if (seenMe) { seenMe = false; rr.child('host').once('value').then(h => { if (h.exists()) { tr._close(); if (cb && cb.onKicked) cb.onKicked(); } }).catch(() => {}); }
+      if (seenMe) { seenMe = false; if (tr.hasSeen()) return; rr.child('host').once('value').then(h => { if (h.exists()) { tr._close(); if (cb && cb.onKicked) cb.onKicked(); } }).catch(() => {}); }
     });
     return {
       code, name, transport: tr,
