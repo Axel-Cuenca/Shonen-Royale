@@ -1895,3 +1895,8 @@ html.rm .po-pk, html.rm .po-slot.next .po-card, html.rm .po-rays, html.rm .po-hi
 html.rm .game > .domfx, html.rm .dombanner { animation: none; }
 .dombanner .dshort { display: none; }
 @media (max-width: 860px) { .dombanner { position: fixed; top: 33vh; left: 50%; transform: translateX(-50%); z-index: 40; margin: 0; font-size: 12px; padding: 4px 12px; } .dombanner .dlong { display: none; } .dombanner .dshort { display: inline; } }
+
+/* Nitidez (11-11-2026): texto de las cartas con contorno limpio, sobre todo las del tablero en 3D */
+.card, .card .cpanel, .card .cs, .card .cn { text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; }
+.card .cpanel .cs b { font-weight: 900; }
+.card .cimg, .card .cch, .hin > img, .hrig { image-rendering: -webkit-optimize-contrast; image-rendering: auto; }

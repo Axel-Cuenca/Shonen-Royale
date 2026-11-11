@@ -246,6 +246,15 @@
                 if (p[i * 4] > 190 && p[i * 4 + 1] > 190 && p[i * 4 + 2] > 190) p[i * 4 + 3] = 0;
               }
             }
+            // bordes suaves: el recorte es de todo o nada y queda escalonado; en los píxeles de la orilla se promedia la transparencia (antialias)
+            const A = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) A[i] = p[i * 4 + 3];
+            for (let yy = 1; yy < H - 1; yy++) for (let xx = 1; xx < W - 1; xx++) {
+              const i = yy * W + xx, a0 = A[i];
+              if (a0 !== 0 && a0 !== 255) continue;
+              let sum = 0, mix = false;
+              for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const v = A[i + dy * W + dx]; sum += v; if ((v === 0) !== (a0 === 0)) mix = true; }
+              if (mix) p[i * 4 + 3] = Math.round(sum / 9);
+            }
             x.putImageData(d, 0, 0);
             res(c.toDataURL('image/png'));
           } catch (e) { res(null); }          // p. ej. abierto como archivo local: se queda la carta plana
