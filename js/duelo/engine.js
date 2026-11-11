@@ -638,7 +638,8 @@
   function onDeath(st, p, m, how) {
     const nm = mdef(m).name, type = mdef(m).type;
     const dab = m.c ? rawAbil(m) : [];
-    if (dab.includes('kuriboh')) {                  // Kuriboh: su jugador es inmune a todo daño el resto del turno
+    const domOff = !!(m.c && st.domain && lvl(m) < (st.domain.min || 10) && st.domain.uid !== m.c.uid);      // un dominio activo apaga sus habilidades (también al morir)
+    if (dab.includes('kuriboh') && !domOff) {                  // Kuriboh: su jugador es inmune a todo daño el resto del turno
       st.players[p].imm = st.turn;
       log(st, p, `${nm} protege a su jugador: no recibirá daño el resto del turno`);
     }
@@ -648,7 +649,7 @@
       log(st, p, `${nm} volverá en el próximo turno de su jugador (${m.c.imm}/2)`);
     }
     if (dab.includes('superv') && how === 'grave' && m.c && !m.c.rev) st.trig.push({ k: 'superv', p: m.owner != null ? m.owner : p, uid: m.c.uid });      // Cell Perfecto: Supervivencia Saiyan
-    if (dab.includes('kuribomo')) st.trig.push({ k: 'kuribomo', p, nm });
+    if (dab.includes('kuribomo') && !domOff) st.trig.push({ k: 'kuribomo', p, nm });
     for (let q = 0; q < st.n; q++) {
       const Q = st.players[q];
       if (!Q.alive) continue;

@@ -109,6 +109,15 @@ module.exports = function (T) {
     }
   }
 
+  {   // con un dominio activo (apaga las habilidades de los personajes de pocas estrellas) no se activa al morir
+    const st = fresh(1); put(st, 0, 0, 'c_kuriboh_mo'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_odin');
+    st.domain = { p: 1, uid: st.players[1].mz[1].c.uid, t0: st.turn, lv: 10, min: 10 };
+    act(st, 1, { t: 'toBattle' }); act(st, 1, atkA(st, 1, 0, 0));
+    let n = 0; while (st.pending && n++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && !x.activate) || l[0]); }
+    ok(!(st.pending && st.pending.ab === 'kuribomo'), 'Mago Oscuro: con un dominio activo no usa su habilidad al morir');
+    ok(!!ids(st, 1)[1], 'Mago Oscuro: con un dominio activo no se lleva a nadie');
+  }
+
   section('Bugs Bunny');
   {
     const st = fresh(); put(st, 0, 0, 'c_bugs_bunny'); putST(st, 1, 0, 'c_botiquin', { down: true }); putST(st, 1, 1, 'c_kaioken');
