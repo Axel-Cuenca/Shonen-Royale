@@ -676,7 +676,7 @@ module.exports = function (T) {
     // Lobos
     act(s, 0, pw(s, 0, 'dslobos'));
     ok((s.players[0].mz[0].mods || []).some(x => x.k === 'lobos' && x.atk === 400 && x.def === 400), 'Lobos: +400/+400');
-    ok(!pw(s, 0, 'dslobos'), 'Lobos: una vez por turno');
+    ok(!pw(s, 0, 'dslobos'), 'Lobos: una vez por invocación');
     ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: con 1 técnica todavía no');
     // Nue: ve en privado
     act(s, 0, pw(s, 0, 'dsnue'));
@@ -688,6 +688,7 @@ module.exports = function (T) {
     ok(!pw(s, 0, 'dsserp') && !pw(s, 0, 'dselef') && !pw(s, 0, 'dssapo'), 'Megumi: máximo 2 técnicas por turno');
     ready(s, 0, 8); s.players[0].mz[0].attacked = false;
     ok(!!pw(s, 0, 'dsserp'), 'Megumi: al turno siguiente puede usar otra');
+    ok(!pw(s, 0, 'dslobos') && !pw(s, 0, 'dsnue'), 'Lobos y Nue no se repiten en turnos siguientes (una vez por invocación)');
     // Serpiente
     act(s, 0, pw(s, 0, 'dsserp'));
     ok(s.players[1].mz[0].snake, 'Serpiente: Goku inmovilizado');

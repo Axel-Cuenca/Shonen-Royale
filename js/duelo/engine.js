@@ -3241,8 +3241,8 @@
       // ----- Megumi: Diez Sombras -----
       if (ab.includes('dsombras')) {
         const dsOk = u.dsTT !== st.turn || (u.dsTn || 0) < 2;      // máximo 2 técnicas por turno
-        if (dsOk && u.dsLT !== st.turn) push({ pw: 'dslobos' });
-        if (dsOk && u.dsNT !== st.turn) for (const e of fl) zonesWith(st.players[e].st).forEach(tz => { const sx = st.players[e].st[tz]; if (sx.down && !sx.prison && !(P.nue || []).some(n => n.uid === sx.c.uid)) push({ pw: 'dsnue', target: { vs: e, z: tz, area: 'st' } }); });
+        if (dsOk && !u.dsLo) push({ pw: 'dslobos' });
+        if (dsOk && !u.dsNu) for (const e of fl) zonesWith(st.players[e].st).forEach(tz => { const sx = st.players[e].st[tz]; if (sx.down && !sx.prison && !(P.nue || []).some(n => n.uid === sx.c.uid)) push({ pw: 'dsnue', target: { vs: e, z: tz, area: 'st' } }); });
         if (dsOk && !u.dsEle) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dselef', target: { vs: e, z: tz, area: 'st' } });
         if (dsOk && !u.dsSap) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dssapo', target: { vs: e, z: tz, area: 'st' } });
         if (dsOk && !u.dsSer) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].snake && canTarget(st, p, e, tz)) push({ pw: 'dsserp', target: { vs: e, z: tz } });
@@ -3805,13 +3805,13 @@
         break;
       }
       case 'dslobos': {
-        u.dsLT = st.turn; dsUse(m, 'lobos'); dsTick(st, u);
+        u.dsLo = true; dsUse(m, 'lobos'); dsTick(st, u);
         addMod(st, m, 'lobos', 400 * g, 400 * g, 0);
         log(st, p, `${nm} usa Lobos: +${400 * g} ATK y +${400 * g} DEF este turno`);
         break;
       }
       case 'dsnue': {
-        u.dsNT = st.turn; dsUse(m, 'nue'); dsTick(st, u);
+        u.dsNu = true; dsUse(m, 'nue'); dsTick(st, u);
         const e = a.target.vs, sx = st.players[e].st[a.target.z];
         log(st, p, `${nm} usa Nue`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
