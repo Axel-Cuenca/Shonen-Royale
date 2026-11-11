@@ -1910,3 +1910,5 @@ html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz:hover .card.m.layere
 html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.mz .card.m.layered.onboard.tilting:not(.def):not(.landing) { transform: translateZ(.5em) rotateX(calc(-34deg + var(--rx, 0deg) * .8)) rotateY(calc(var(--ry, 0deg) * 1.1)) scale(.535); }
 @keyframes cfxHitCardOs { 0% { translate: 0 0; } 8% { translate: -.45em 0; } 17% { translate: .4em 0; } 27% { translate: -.3em 0; } 38% { translate: .22em 0; } 52% { translate: -.14em 0; } 70% { translate: .07em 0; } 100% { translate: 0 0; } }
 html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.struck .card.m.layered.onboard:not(.def):not(.landing) { animation-name: cfxHitCardOs; }
+/* Cartelitos de contadores: el icono y el número siempre en una línea */
+.zone .badges i { white-space: nowrap; }

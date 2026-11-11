@@ -4984,6 +4984,14 @@
       if (u6.gco) v.gco = u6.gco;
       if (u6.astaPr) v.astaPr = true;
       if (s.c.ecU) v.ecU = true; }
+    {   // contadores visibles en la ficha (cartelitos): [valor, máximo | null]. Sólo salen los que ya valen algo.
+      const g9 = gx(P, z), cn = {}, rec = (k, n, max) => { if (n) cn[k] = [n, max]; };
+      rec('rock', u.rock, 4); rec('sun', u.sun, 13); rec('rayo', u.rayo, null); rec('dk', u.dk, 3);
+      rec('shN', u.shN, 3); rec('gp', u.gp, 2 * g9); rec('pat', u.pat, 3 * g9); rec('web', u.web, 2 * g9); rec('pn', u.pn, 2 * g9);
+      rec('ino', st.ino && st.ino[s.c.uid], 11);
+      if (rawAbil(s).includes('resis')) cn.vidas = [u.vidas == null ? 2 : Math.max(0, u.vidas), 2];      // vidas que le quedan (cuenta hacia atrás, también el 0)
+      if (Object.keys(cn).length) v.cn = cn;
+    }
     if (u.kills) v.kills = u.kills;
     if (u.rock) v.rock = u.rock;
     if (u.sun) v.sun = u.sun;

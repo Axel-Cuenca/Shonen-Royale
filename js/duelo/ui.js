@@ -1417,6 +1417,12 @@
       if (s.rika) b.push([s.rika.happy ? '😊' : '😡', s.rika.happy ? 'Rika contenta' : 'Maldición Incontrolable']);
       if (s.muted) b.push(['🔇', 'Habilidades silenciadas por el dominio']);
       if (s.kills) b.push(['☠️' + s.kills, 'Bajas: ' + s.kills]);
+      if (s.cn) {      // contadores (posturas, usos…): el cartelito sale siempre que valgan algo
+        const CN = { rock: ['🪨', 'Postura de la Roca'], sun: ['☀️', 'Postura solar'], rayo: ['🌩️', 'Primera Postura del Rayo (ataques)'], dk: ['🗡️', 'Cazador de demonios: asesinatos (3 para Devil Trigger)'],
+          shN: ['👁️‍🗨️', 'Sharingan: usos'], gp: ['🛡️', 'Protección heroica: usos'], pat: ['🌟', 'Despertar del Poder Oculto: usos'], web: ['🕷️', 'Telarañas: usos'], pn: ['👊', 'Endurecimiento de los puños: usos'],
+          ino: ['🐗', 'Postura de la Bestia'], vidas: ['❤️', 'Resistencia titánica: vidas que le quedan'] };
+        for (const k of Object.keys(s.cn)) { const [n, mx] = s.cn[k], d = CN[k]; if (d) b.push([d[0] + n, d[1] + ': ' + n + (mx != null ? '/' + mx : '')]); }
+      }
       if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
       if (s.gem) b.push(['🔮', 'Mente controlada']);
       if (s.jk) b.push([s.jk.mode === 'sword' ? '🗡️' : '🛡️', 'Jake el Perro equipado como ' + (s.jk.mode === 'sword' ? 'espada (+600 ATK)' : 'escudo (+500 DEF)')]);

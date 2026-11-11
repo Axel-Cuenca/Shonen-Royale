@@ -118,6 +118,15 @@ module.exports = function (T) {
     ok(!!ids(st, 1)[1], 'Mago Oscuro: con un dominio activo no se lleva a nadie');
   }
 
+  {   // contadores visibles en la ficha (cartelitos)
+    const st = fresh(0); const m1 = put(st, 0, 0, 'c_gyomei'); put(st, 0, 1, 'c_inosuke');
+    m1.uBy = { c_gyomei: { rock: 2, kills: 1 } }; st.ino = { [st.players[0].mz[1].c.uid]: 3 };
+    const v = E.view(st, 0).players[0];
+    eq(v.mz[0].cn && v.mz[0].cn.rock, [2, 4], 'cartelito: Postura de la Roca 2/4');
+    eq(v.mz[1].cn && v.mz[1].cn.ino, [3, 11], 'cartelito: Postura de la Bestia 3/11');
+    ok(!v.mz[0].cn.sun, 'sin contador no hay cartelito');
+  }
+
   section('Bugs Bunny');
   {
     const st = fresh(); put(st, 0, 0, 'c_bugs_bunny'); putST(st, 1, 0, 'c_botiquin', { down: true }); putST(st, 1, 1, 'c_kaioken');
