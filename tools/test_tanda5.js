@@ -125,6 +125,9 @@ module.exports = function (T) {
     eq(v.mz[0].cn && v.mz[0].cn.rock, [2, 4], 'cartelito: Postura de la Roca 2/4');
     eq(v.mz[1].cn && v.mz[1].cn.ino, [3, 11], 'cartelito: Postura de la Bestia 3/11');
     ok(!v.mz[0].cn.sun, 'sin contador no hay cartelito');
+    const mg = put(st, 0, 2, 'c_megumi'); mg.uBy = { c_megumi: { dsU: ['lobos', 'nue'], dsTT: st.turn, dsTn: 2 } };
+    const v2 = E.view(st, 0).players[0].mz[2].cn;
+    eq(v2 && v2.ds, [2, 6], 'cartelito: Megumi, técnicas usadas'); eq(v2 && v2.dsT, [2, 2], 'cartelito: Megumi, técnicas de este turno');
   }
 
   section('Bugs Bunny');

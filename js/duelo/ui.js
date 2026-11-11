@@ -1420,7 +1420,8 @@
       if (s.cn) {      // contadores (posturas, usos…): el cartelito sale siempre que valgan algo
         const CN = { rock: ['🪨', 'Postura de la Roca'], sun: ['☀️', 'Postura solar'], rayo: ['🌩️', 'Primera Postura del Rayo (ataques)'], dk: ['🗡️', 'Cazador de demonios: asesinatos (3 para Devil Trigger)'],
           shN: ['👁️‍🗨️', 'Sharingan: usos'], gp: ['🛡️', 'Protección heroica: usos'], pat: ['🌟', 'Despertar del Poder Oculto: usos'], web: ['🕷️', 'Telarañas: usos'], pn: ['👊', 'Endurecimiento de los puños: usos'],
-          ino: ['🐗', 'Postura de la Bestia'], vidas: ['❤️', 'Resistencia titánica: vidas que le quedan'] };
+          ino: ['🐗', 'Postura de la Bestia'], vidas: ['❤️', 'Resistencia titánica: vidas que le quedan'],
+          ds: ['🐺', 'Técnicas de las Diez Sombras usadas'], dsT: ['🔟', 'Técnicas usadas este turno (máximo 2)'] };
         for (const k of Object.keys(s.cn)) { const [n, mx] = s.cn[k], d = CN[k]; if (d) b.push([d[0] + n, d[1] + ': ' + n + (mx != null ? '/' + mx : '')]); }
       }
       if (s.karma) b.push(['☯️' + s.karma.left, 'Karma: muere en ' + s.karma.left + ' turno(s)']);
