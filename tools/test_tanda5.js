@@ -52,6 +52,13 @@ module.exports = function (T) {
       ok(si.pending && si.pending.k === 'pick' && si.pending.cands.length === 2, 'Invitación: ofrece sólo a los personajes de ≤4★ del mazo');
       if (si.pending && si.pending.k === 'pick') { const u = si.pending.cands[0]; act(si, 0, { t: 'pick', uid: u }); settle(si); ok(ids(si, 0).some(Boolean) && !si.players[0].normalUsed, 'Invitación: entra al campo sin gastar la invocación normal'); }
     }
+    {   // Invitación también deja elegir la defensa
+      const sd = fresh(); hand(sd, 0, ['c_invitacion']); deck(sd, 0, ['c_goku', 'c_toge']);
+      act(sd, 0, cast(sd, 0, 0)); settle1(sd);
+      const ph = L(sd, 0).filter(x => x.t === 'pick'); ok(ph.some(x => x.pos === 'def') && ph.some(x => !x.pos), 'Invitación: se ofrece en ataque y en defensa');
+      act(sd, 0, ph.find(x => x.pos === 'def')); settle(sd);
+      ok(sd.players[0].mz.some(m => m && m.pos === 'def'), 'Invitación: el personaje entra en defensa');
+    }
     const sm = fresh(); hand(sm, 0, ['c_seleccion_magia']); deck(sm, 0, ['c_odin', 'c_botiquin', 'c_kaioken']);
     const am = cast(sm, 0, 0);
     ok(!!am, 'Selección de magia: se puede activar si hay magias en el mazo');

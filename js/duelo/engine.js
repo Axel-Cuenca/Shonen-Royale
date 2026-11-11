@@ -3486,7 +3486,7 @@
           for (const o of os) out.push(o ? { t: 'respond', activate: true, zone: z, opt: o } : { t: 'respond', activate: true, zone: z });
         }
       } else if (pd.k === 'pick') {
-        for (const u of pd.cands) out.push({ t: 'pick', uid: u });
+        for (const u of pd.cands) { out.push({ t: 'pick', uid: u }); if (pd.cont === 'invite') out.push({ t: 'pick', uid: u, pos: 'def' }); }      // Invitación: en ataque o en defensa
       } else if (pd.k === 'ability') {
         if (pd.ab === 'steal' || pd.ab === 'vlearn' || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
@@ -4496,7 +4496,7 @@
           if (i >= 0) { const c = P.deck.splice(i, 1)[0]; P.hand.push(c); shuffle(st, P.deck); log(st, p, 'agrega una magia de su mazo a la mano'); }
         } else if (pd.cont === 'invite') {
           const i = P.deck.findIndex(c => c.uid === a.uid);
-          if (i >= 0 && spot(P, def(P.deck[i])) >= 0) { const c = P.deck.splice(i, 1)[0]; shuffle(st, P.deck); specialSummon(st, p, c, 'atk'); }
+          if (i >= 0 && spot(P, def(P.deck[i])) >= 0) { const c = P.deck.splice(i, 1)[0]; shuffle(st, P.deck); specialSummon(st, p, c, a.pos === 'def' ? 'def' : 'atk'); }
         } else if (pd.cont === 'eliz') {
           const i = P.grave.findIndex(c => c.uid === a.uid);
           if (i >= 0) { const c = P.grave.splice(i, 1)[0]; c.spent = false; P.hand.push(c); log(st, p, `Poder de la Diosa: ${def(c).name} vuelve del cementerio a la mano`); }
