@@ -517,6 +517,12 @@ module.exports = function (T) {
     ok(!!pw(st, 0, 'rojo'), 'con los Seis Ojos puede lanzar Rojo');
     pass(st, 9); ok(!E.view(st, 0).players[0].mz[0].six, 'los Seis Ojos se apagan a los 3 turnos (rondas)');
   }
+  {   // Guerrero con Megumi (que ya tiene cartelitos de técnicas): los Seis Ojos salen al instante y siguen todo el efecto
+    const st = fresh(); st.players[0].lp = 5000; give(st, 0, ['c_guerrero']); act(st, 0, find(st, 0, x => x.t === 'activate'));
+    give(st, 0, ['c_megumi']); act(st, 0, find(st, 0, x => x.t === 'summon'));
+    const v0 = E.view(st, 0).players[0].mz[0]; ok(v0 && v0.six === 3, 'Megumi recibe los Seis Ojos al entrar (3)');
+    pass(st, 2); ok(E.view(st, 0).players[0].mz[0].six === 3, 'los Seis Ojos siguen tras una ronda');
+  }
   {
     // Rayo de Luz Solar
     const st = fresh(); putST(st, 0, 0, 'c_rayo_solar', { down: true, setTurn: 0 }); put(st, 1, 0, 'c_titan');
