@@ -280,6 +280,14 @@ module.exports = function (T) {
   }
 
   section('11-11: la X cancela la activación de trampas');
+  for (const tid of ['c_ola_fuego', 'c_rayo_solar', 'c_el_unico', 'c_tsukuyomi', 'c_full_counter', 'c_gema_realidad']) {
+    const st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_odin'); put(st, 1, 0, 'c_popeye', { pos: 'def' }); putST(st, 1, 0, tid, { down: true, setTurn: 1 }); putST(st, 0, 0, 'c_x', { down: true, setTurn: 1 }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
+    const r = L(st, 1).find(x => x.t === 'respond' && x.activate);
+    ok(!!r, tid + ': el rival puede activar la trampa'); if (!r) continue;
+    act(st, 1, r);
+    ok(st.pending && st.pending.trigger === 'trap' && E.actor(st) === 0 && L(st, 0).some(x => x.t === 'respond' && x.activate), tid + ': la X puede cancelar la activación');
+  }
   {
     const gr = (st, p, id) => st.players[p].grave.some(c => c.id === id);
     const run = (st, pick) => { let n = 0; while (st.pending && n++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, pick(st, q, l) || l.find(x => x.t === 'respond' && !x.activate) || l[0]); } };
@@ -291,6 +299,18 @@ module.exports = function (T) {
     ok(sawX, 'la X ofrece cancelar la activación de la trampa rival');
     ok(gr(st, 1, 'c_rayo_solar') && gr(st, 0, 'c_x'), 'las dos cartas van al cementerio');
     ok(!!st.players[0].mz[0], 'con la X, la trampa no destruye al atacante');
+  }
+
+  for (const tid of ['c_infarto']) {
+    const st = fresh(0); st.phase = 'main'; putST(st, 1, 0, tid, { down: true, setTurn: 1 }); putST(st, 0, 0, 'c_x', { down: true, setTurn: 1 });
+    st.players[0].hand.push({ uid: st.nextUid++, id: 'c_popeye' });
+    const sm = L(st, 0).find(x => x.t === 'summon' && st.players[0].hand[x.hand] && st.players[0].hand[x.hand].id === 'c_popeye');
+    ok(!!sm, tid + ': se puede invocar'); if (!sm) continue;
+    act(st, 0, sm);
+    const r = L(st, E.actor(st)).find(x => x.t === 'respond' && x.activate);
+    ok(!!r, tid + ': se puede activar al invocar'); if (!r) continue;
+    act(st, E.actor(st), r);
+    ok(st.pending && st.pending.trigger === 'trap' && E.actor(st) === 0 && L(st, 0).some(x => x.t === 'respond' && x.activate), tid + ': la X puede cancelar la activación');
   }
 
   section('05-11: choque de dominios de Jujutsu Kaisen');
