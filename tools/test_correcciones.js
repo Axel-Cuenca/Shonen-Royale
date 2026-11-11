@@ -273,6 +273,20 @@ module.exports = function (T) {
     ok(b(st, 0, 'c_goku') && b(st, 1, 'c_creeper'), 'si no se usa la X, los dos son desterrados como antes');
   }
 
+  section('11-11: la X cancela la activación de trampas');
+  {
+    const gr = (st, p, id) => st.players[p].grave.some(c => c.id === id);
+    const run = (st, pick) => { let n = 0; while (st.pending && n++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, pick(st, q, l) || l.find(x => x.t === 'respond' && !x.activate) || l[0]); } };
+    // p0 ataca; p1 activa Rayo de Luz Solar; p0 tiene la X y la usa: la trampa se cancela y el atacante no es destruido
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_popeye', { pos: 'def' }); putST(st, 1, 0, 'c_rayo_solar', { down: true, setTurn: 1 }); putST(st, 0, 0, 'c_x', { down: true, setTurn: 1 }); st.phase = 'battle';
+    act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 0 && x.target === 0));
+    let sawX = false;
+    run(st, (s, q, l) => { const r = l.find(x => x.t === 'respond' && x.activate); if (r) { const t = s.players[q].st[r.zone]; if (t && t.c.id === 'c_x') { sawX = true; } return r; } return null; });
+    ok(sawX, 'la X ofrece cancelar la activación de la trampa rival');
+    ok(gr(st, 1, 'c_rayo_solar') && gr(st, 0, 'c_x'), 'las dos cartas van al cementerio');
+    ok(!!st.players[0].mz[0], 'con la X, la trampa no destruye al atacante');
+  }
+
   section('05-11: choque de dominios de Jujutsu Kaisen');
   {
     const two = (a, b) => { const st = fresh(0); put(st, 0, 0, a); put(st, 1, 0, b); return st; };
