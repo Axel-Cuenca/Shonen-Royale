@@ -621,7 +621,7 @@
       sfx: { attack: V('warwick-attack'), summon: V('warwick-summon') }
     }),
     mon({
-      id: 'c_vegeta_ssj', name: 'Vegeta Super Saiyajin', fam: 'Vegeta', type: 'dbz', level: 5, atk: 1500, def: 1200, img: I('vegeta_ssj'), ab: ['bigbang1'], xform: { family: 'Vegeta' },
+      id: 'c_vegeta_ssj', name: 'Vegeta Super Saiyajin', fam: 'Vegeta', type: 'dbz', level: 5, atk: 1600, def: 1200, img: I('vegeta_ssj'), ab: ['bigbang1'], xform: { family: 'Vegeta' },
       text: 'Big Bang: una vez por invocación, destruye a un personaje rival con igual o menos estrellas que él. Familia Vegeta: puede transformarse en otra carta de la familia desde tu mano.',
       sfx: { attack: V('vegeta_ssj-attack'), transform: V('vegeta_ssj-transform') }
     }),

@@ -34,7 +34,7 @@ module.exports = function (T) {
     }
     ok(fs.existsSync(path.join(root, Cards.get('c_kaioken').sfx.use)), 'Kaioken usa el sonido de Goku Dios');
     const w = Cards.get('c_warwick'), v = Cards.get('c_vegeta_ssj'), b = Cards.get('c_bugs_bunny');
-    eq([w.level, w.atk, w.def, v.level, v.atk, v.def, v.fam, b.level, b.atk, b.def], [4, 1300, 1300, 5, 1500, 1200, 'Vegeta', 2, 600, 300], 'estadísticas de Warwick, Vegeta SSJ y Bugs Bunny');
+    eq([w.level, w.atk, w.def, v.level, v.atk, v.def, v.fam, b.level, b.atk, b.def], [4, 1300, 1300, 5, 1600, 1200, 'Vegeta', 2, 600, 300], 'estadísticas de Warwick, Vegeta SSJ y Bugs Bunny');
   }
 
   section('Pokeball, Invitación y Selección de magia');

@@ -570,6 +570,7 @@
     dest.push(m.c);
     for (const l of (m.link || [])) { const LO = l.by != null ? st.players[l.by] : O; (how === 'banish' ? LO.banish : LO.grave).push(l); }      // lo equipado vuelve a quien lo puso
     if (m.abs) releaseAbsorbed(st, m);
+    if (m.fused && m.fused.b && m.fused.b.abs) releaseAbsorbed(st, m.fused.b);      // la entidad fusionada se va con un Cell que llevaba algo absorbido: se libera
     if ((how === 'grave' || (o && o.death)) && P.alive) onDeath(st, p, m, how || 'grave');
     return m;
   }
