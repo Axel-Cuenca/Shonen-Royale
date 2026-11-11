@@ -657,6 +657,9 @@ module.exports = function (T) {
     ok(v1.players[1].st[0].c && !v1.players[1].st[0].peeked, 'el rival ve la suya (es suya)');
     const v0b = E.view(s, 0); ok(!v0b.players[1].st[1].peeked, 'sólo la elegida');
     ok(pw(s, 0, 'dsmaho'), 'Mahoraga: tras 2 técnicas se puede invocar');
+    ok(!pw(s, 0, 'dsserp') && !pw(s, 0, 'dselef') && !pw(s, 0, 'dssapo'), 'Megumi: máximo 2 técnicas por turno');
+    ready(s, 0, 8); s.players[0].mz[0].attacked = false;
+    ok(!!pw(s, 0, 'dsserp'), 'Megumi: al turno siguiente puede usar otra');
     // Serpiente
     act(s, 0, pw(s, 0, 'dsserp'));
     ok(s.players[1].mz[0].snake, 'Serpiente: Goku inmovilizado');

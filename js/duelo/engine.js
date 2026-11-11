@@ -254,6 +254,8 @@
     return null;
   }
   /** Megumi: anota qué técnicas de Diez Sombras ha usado en esta invocación (distintas). */
+  /** Megumi: máximo 2 técnicas activas por turno (los Conejos son automáticos y no cuentan). */
+  function dsTick(st, u) { if (u.dsTT !== st.turn) { u.dsTT = st.turn; u.dsTn = 0; } u.dsTn++; }
   function dsUse(m, k) { const u = uOf(m); u.dsU = u.dsU || []; if (!u.dsU.includes(k)) u.dsU.push(k); }
   /** Dónde entra la forma transformada: los gigantes ocupan 2/3 zonas; Hulk entra en la casilla de Bruce. */
   function formAnchor(P, z, tid) { const hd = def({ id: tid }); return (hd.wide || hd.huge) ? titanAnchor(P, z, undefined, hd.huge) : (!P.mz[z] ? z : spot(P, hd)); }
@@ -3237,11 +3239,12 @@
       if (ab.includes('patriarca') && (u.pat || 0) < 3 * g && (u.patT !== st.turn || (u.patTn || 0) < g)) for (const t of allyChars(st, p)) if (!(t.vs === p && t.z === z)) push({ pw: 'desp', target: t });      // nunca sobre sí mismo
       // ----- Megumi: Diez Sombras -----
       if (ab.includes('dsombras')) {
-        if (u.dsLT !== st.turn) push({ pw: 'dslobos' });
-        if (u.dsNT !== st.turn) for (const e of fl) zonesWith(st.players[e].st).forEach(tz => { const sx = st.players[e].st[tz]; if (sx.down && !sx.prison && !(P.nue || []).some(n => n.uid === sx.c.uid)) push({ pw: 'dsnue', target: { vs: e, z: tz, area: 'st' } }); });
-        if (!u.dsEle) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dselef', target: { vs: e, z: tz, area: 'st' } });
-        if (!u.dsSap) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dssapo', target: { vs: e, z: tz, area: 'st' } });
-        if (!u.dsSer) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].snake && canTarget(st, p, e, tz)) push({ pw: 'dsserp', target: { vs: e, z: tz } });
+        const dsOk = u.dsTT !== st.turn || (u.dsTn || 0) < 2;      // máximo 2 técnicas por turno
+        if (dsOk && u.dsLT !== st.turn) push({ pw: 'dslobos' });
+        if (dsOk && u.dsNT !== st.turn) for (const e of fl) zonesWith(st.players[e].st).forEach(tz => { const sx = st.players[e].st[tz]; if (sx.down && !sx.prison && !(P.nue || []).some(n => n.uid === sx.c.uid)) push({ pw: 'dsnue', target: { vs: e, z: tz, area: 'st' } }); });
+        if (dsOk && !u.dsEle) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dselef', target: { vs: e, z: tz, area: 'st' } });
+        if (dsOk && !u.dsSap) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dssapo', target: { vs: e, z: tz, area: 'st' } });
+        if (dsOk && !u.dsSer) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].snake && canTarget(st, p, e, tz)) push({ pw: 'dsserp', target: { vs: e, z: tz } });
         if ((u.dsU || []).length >= 2 && P.hand.some(c => c.id === 'c_mahoraga')) push({ pw: 'dsmaho' });
       }
       // ----- Odin -----
@@ -3801,13 +3804,13 @@
         break;
       }
       case 'dslobos': {
-        u.dsLT = st.turn; dsUse(m, 'lobos');
+        u.dsLT = st.turn; dsUse(m, 'lobos'); dsTick(st, u);
         addMod(st, m, 'lobos', 400 * g, 400 * g, 0);
         log(st, p, `${nm} usa Lobos: +${400 * g} ATK y +${400 * g} DEF este turno`);
         break;
       }
       case 'dsnue': {
-        u.dsNT = st.turn; dsUse(m, 'nue');
+        u.dsNT = st.turn; dsUse(m, 'nue'); dsTick(st, u);
         const e = a.target.vs, sx = st.players[e].st[a.target.z];
         log(st, p, `${nm} usa Nue`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
@@ -3815,7 +3818,7 @@
         break;
       }
       case 'dselef': {
-        u.dsEle = true; dsUse(m, 'elefante');
+        u.dsEle = true; dsUse(m, 'elefante'); dsTick(st, u);
         const e = a.target.vs, sx = st.players[e].st[a.target.z];
         log(st, p, `${nm} lanza al Elefante contra ${sx && !sx.down ? def(sx.c).name : 'una carta de magia/trampa'}`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
@@ -3823,7 +3826,7 @@
         break;
       }
       case 'dssapo': {
-        u.dsSap = true; dsUse(m, 'sapo');
+        u.dsSap = true; dsUse(m, 'sapo'); dsTick(st, u);
         const e = a.target.vs, sx = st.players[e].st[a.target.z];
         log(st, p, `${nm} usa Sapo`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
@@ -3836,7 +3839,7 @@
         break;
       }
       case 'dsserp': {
-        u.dsSer = true; dsUse(m, 'serpiente');
+        u.dsSer = true; dsUse(m, 'serpiente'); dsTick(st, u);
         const e = a.target.vs, tm = st.players[e].mz[a.target.z];
         log(st, p, `${nm} usa Serpiente`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
