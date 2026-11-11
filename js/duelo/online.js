@@ -89,7 +89,10 @@
       const m = s.val() || {}, uids = Object.keys(m);
       for (const [u, g] of [...guests]) {
         if (m[u]) continue;
-        if (locked && g.tr.hasSeen()) continue;      // ya empezó: la ficha de la sala (Realtime Database) puede caerse un instante sin que el jugador se haya ido; manda el canal directo (con sus 45 s de gracia)
+        if (locked && g.tr.hasSeen()) {      // ya empezó: la ficha de la sala (Realtime Database) puede caerse un instante sin que el jugador se haya ido; manda el canal directo (con sus 45 s de gracia)
+          ref.child('m/' + u).set({ n: g.name }).catch(() => {});      // y se repone, porque las reglas exigen estar en la sala para poder señalizar la reconexión
+          continue;
+        }
         g.tr._close(); g.unwire(); guests.delete(u);
         if (cb.onLeave) cb.onLeave(u, g.name);
       }
@@ -104,13 +107,27 @@
       G.Net.syncMembers([uid].concat([...guests.keys()]));
       publishOpen();
     });
+    // Si el anfitrión pierde la conexión con la base de datos y vuelve, la sala puede haberse borrado sola: se repone con sus miembros.
+    let wasOn = true;
+    const connRef = rtdb.ref('.info/connected');
+    connRef.on('value', snap => {
+      const on = snap.val() === true;
+      if (on && !wasOn && !gone) {
+        ref.child('host').once('value').then(h => {
+          if (h.exists() || gone) return;
+          const m = { [uid]: { n: name } }; for (const [u, g] of guests) m[u] = { n: g.name };
+          return ref.set({ host: uid, open: !locked && guests.size < seats - 1, seats, t: Date.now(), m }).then(() => { if (!locked) ref.onDisconnect().remove(); });
+        }).catch(() => {});
+      }
+      wasOn = on;
+    });
     session = { code, ref };
     return {
       code, name, seats,
       /** Cierra la sala a nuevos invitados (ya empezó el duelo). */
-      lock() { locked = true; publishOpen(); },
+      lock() { locked = true; try { ref.onDisconnect().cancel(); } catch (e) { /* nada */ } publishOpen(); },      // empezada la partida, un corte de red del anfitrión ya no borra la sala (la necesitan todos para reconectarse)
       guestCount() { return guests.size; },
-      close() { gone = true; try { ref.child('m').off(); ref.remove(); } catch (e) { /* nada */ } G.Net.close(); for (const g of guests.values()) g.unwire(); guests.clear(); session = null; }
+      close() { gone = true; try { connRef.off(); ref.child('m').off(); ref.remove(); } catch (e) { /* nada */ } G.Net.close(); for (const g of guests.values()) g.unwire(); guests.clear(); session = null; }
     };
   }
 
