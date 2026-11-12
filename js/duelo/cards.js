@@ -20,7 +20,8 @@
     marvel: 'Marvel', demonslayer: 'Demon Slayer', lol: 'League of Legends', shrek: 'Shrek', pecados: '7 Pecados Capitales', anillos: 'El Señor de los Anillos',
     adventuretime: 'Hora de Aventura', naruto: 'Naruto',
     looney: 'Looney Tunes', yugioh: 'Yu-Gi-Oh!', cartoon: 'Cartoon Network', dmc: 'Devil May Cry', hp: 'Harry Potter',
-    blackclover: 'Black Clover', sololeveling: 'Solo Leveling', deathnote: 'Death Note'
+    blackclover: 'Black Clover', sololeveling: 'Solo Leveling', deathnote: 'Death Note',
+    bleach: 'Bleach', pokemon: 'Pokémon', villano: 'Mi Villano Favorito', hxh: 'Hunter x Hunter'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
@@ -31,7 +32,8 @@
     marvel: '#d12a2f', demonslayer: '#1f9d8b', lol: '#c8a24a', shrek: '#6aa84f', pecados: '#c0392b', anillos: '#b8860b',
     adventuretime: '#f5a623', naruto: '#f28c1e',
     looney: '#e0a526', yugioh: '#5b3a8c', cartoon: '#2a8fd0', dmc: '#b3202a', hp: '#7a5c2e',
-    blackclover: '#2f3b2f', sololeveling: '#3b4fd8', deathnote: '#3a3a3a'
+    blackclover: '#2f3b2f', sololeveling: '#3b4fd8', deathnote: '#3a3a3a',
+    bleach: '#e8892b', pokemon: '#e3350d', villano: '#e8c02a', hxh: '#2e8b57'
   };
 
   // ---------------- catálogo ----------------
@@ -940,6 +942,20 @@
       sfx: { use: V('tsukuyomi-use') }
     }
   ];
+  // Tipo (serie) de las magias y trampas: sólo informativo (2026-11-12), no cambia ninguna regla. Las que no son de una serie del juego son «normal».
+  const ST_TYPE = {
+    dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia'],
+    jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero'],
+    marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
+    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma'],
+    deathnote: ['c_death_note'],
+    blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
+    pecados: ['c_full_counter', 'c_el_unico'],
+    zodiaco: ['c_armadura'], anillos: ['c_anillo_unico'], hp: ['c_capa'], lol: ['c_espada'],
+    pokemon: ['c_pokeball', 'c_superball'], villano: ['c_minions'], hxh: ['c_cana_gon'], bleach: ['c_kyoka'],
+    normal: ['c_ola_fuego', 'c_infarto', 'c_seleccion_magia', 'c_tormenta', 'c_uno_dos', 'c_ultratumba', 'c_invitacion', 'c_x', 'c_rayo_solar', 'c_botiquin']
+  };
+  for (const t in ST_TYPE) for (const id of ST_TYPE[t]) { const c = CUSTOM.find(x => x.id === id); if (c) { c.type = t; c.types = [t]; } }
   for (const c of CUSTOM) BY_ID.set(c.id, c);
 
   // ---------------- modo de prueba ----------------

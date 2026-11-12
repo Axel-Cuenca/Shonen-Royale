@@ -28,6 +28,13 @@ module.exports = function (T) {
   };
   const answer = (st, p, a) => act(st, p, Object.assign({ t: 'ability' }, a));
 
+  section('tipo de magias y trampas');
+  {
+    const st = Cards.custom.filter(c => c.kind !== 'monster');
+    ok(st.length >= 40, 'hay magias y trampas propias');
+    for (const c of st) ok(c.type && Cards.TYPE_ES[c.type] && Cards.TYPE_COLOR[c.type] && c.types[0] === c.type, c.name + ' tiene tipo (serie) con nombre y color');
+    ok(Cards.get('c_kyoka').type === 'bleach' && Cards.get('c_minions').type === 'villano' && Cards.get('c_x').type === 'normal' && Cards.get('c_karma').type === 'naruto', 'tipos asignados según el dueño');
+  }
   section('descripciones narrativas de habilidades');
   {
     ok(Cards.LORE && Object.keys(Cards.LORE).length >= 3, 'hay frases narrativas cargadas');
