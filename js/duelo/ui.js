@@ -343,7 +343,12 @@
     if (d.kind === 'monster') {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
         h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`),
-        d.text ? h('div', { class: 'abil' }, h('b', null, 'Habilidad'), h('div', null, d.text)) : null,
+        (d.ab || []).some(k => C.LORE && C.LORE[k])
+          ? h('div', { class: 'abil lore' }, (d.ab || []).filter(k => C.AB[k]).map(k => h('div', { class: 'ab1' },
+              h('b', null, C.AB[k][0]),
+              C.LORE[k] ? h('div', { class: 'nar' }, '“' + C.LORE[k] + '”') : null,
+              h('div', { class: 'fun' }, h('span', { class: 'fi' }, '⚙'), C.AB[k][1]))))
+          : d.text ? h('div', { class: 'abil' }, h('b', null, 'Habilidad'), h('div', null, d.text)) : null,
         h('div', { class: 'sub' }, C.tributesFor(d.level) ? `Para invocarlo hay que sacrificar ${C.tributesFor(d.level)} monstruo(s) tuyo(s).` : 'Se invoca sin sacrificios.'),
         h('div', { class: 'sub' }, 'No hay ventajas de tipo: el combate sólo compara ATK y DEF.'));
     } else {

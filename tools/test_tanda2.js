@@ -28,6 +28,12 @@ module.exports = function (T) {
   };
   const answer = (st, p, a) => act(st, p, Object.assign({ t: 'ability' }, a));
 
+  section('descripciones narrativas de habilidades');
+  {
+    ok(Cards.LORE && Object.keys(Cards.LORE).length >= 3, 'hay frases narrativas cargadas');
+    for (const k in Cards.LORE) ok(Cards.AB[k] && Cards.LORE[k].length > 10, 'la frase narrativa de ' + k + ' pertenece a una habilidad existente');
+    ok(Cards.get('c_mr_satan').ab.includes('satancamp') && Cards.get('c_galand').ab.includes('galverdad') && Cards.get('c_tobi').ab.includes('tobikamui'), 'Satan, Galand y Tobi llevan sus habilidades con historia');
+  }
   section('tanda 2: catálogo');
   {
     const want = {

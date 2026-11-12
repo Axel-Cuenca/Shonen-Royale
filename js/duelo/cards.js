@@ -48,6 +48,13 @@
   const V = f => 'assets/voices/' + f + '.mp3', I = f => 'assets/cards/' + f + '.webp';
   const mon = o => Object.assign({ kind: 'monster', dex: 0, rarity: 'rare', leg: false, gen: 0, bst: 0 }, o, { types: [o.type] });
   const spell = o => Object.assign({ kind: 'spell' }, o);
+  // Descripción narrativa de las habilidades (la esencia del personaje en el anime/manga), por id de habilidad. Se muestra junto a la explicación
+  // funcional (AB). Sólo van las frases que da el dueño: no se inventan. Si una habilidad no está aquí, sólo se muestra la funcional.
+  const LORE = {
+    satancamp: 'Los enemigos poderosos no quieren perder el tiempo con él.',
+    galverdad: 'Nadie puede escapar de un ataque de Galand sin sufrir las consecuencias.',
+    tobikamui: 'Su cuerpo atraviesa los ataques como si no existiera en esta dimensión.'
+  };
   // Habilidades: nombre y explicación (para la ventana de la carta y para lo que roban Kratos o Cell)
   const AB = {
     spinach: ['¡A comer espinaca!', 'Una sola vez: cuando este personaje es destruido y va al cementerio, la espinaca lo revive en tu campo con 1500 ATK y 1500 DEF. Solo funciona si va al cementerio (si lo destierran no vuelve) y, una vez usada, no se repite.'],
@@ -196,13 +203,13 @@
     elizbar: ['Barrera de la Diosa', 'Una vez por turno, evita que una habilidad enemiga destruya a un aliado. El resto del efecto de esa habilidad se aplica igual.'],
     elizluz: ['Luz purificadora', 'Una vez por turno, quita un efecto negativo de un aliado: una reducción de estadísticas, una restricción o una inmovilización.'],
     elizpod: ['Poder de la Diosa', 'Si es destruida, devuelve a tu mano un personaje de hasta 6 estrellas de tu cementerio.'],
-    galverdad: ['Mandamiento de la Verdad', 'Si un personaje enemigo esquiva, cancela o niega un ataque de Galand, el esquive funciona pero queda petrificado: no ataca ni usa habilidades el resto de esa invocación.'],
+    galverdad: ['Mandamiento de la Verdad', 'Si un personaje enemigo esquiva, cancela o niega un ataque de Galand, el esquive funciona pero ese personaje queda petrificado: no puede atacar ni activar habilidades (las pasivas y automáticas siguen funcionando) hasta que salga del campo. Un efecto que limpie estados negativos (Espada Destructora de Causas, Luz purificadora) lo libera.'],
     galco: ['Critical Over', 'Gana una carga por cada personaje enemigo que destruye en combate. Con 2 cargas puede gastarlas para atacar otra vez ese turno.'],
     galcaza: ['Caza Implacable', 'Una vez por turno: +400 ATK durante su siguiente ataque. Si ese ataque destruye al objetivo, el aumento se vuelve permanente.'],
     higudom: ['Dominio: Sentencia Mortal', 'Dominio de 2 turnos (una vez por invocación): +500 ATK y DEF; sólo usan habilidades los personajes con más estrellas que él, nadie activa magias ni trampas y las magias equipadas no dan nada mientras dure. Si los personajes enemigos suman 4 asesinatos dentro del dominio, Higuruma recibe la Espada del Verdugo: +2000 ATK hasta que el dominio termine.'],
     inopost: ['Postura de la Bestia', '+200 ATK y +200 DEF cada vez que ataca a un personaje (no cuenta el ataque directo), mientras siga en el campo. Hasta 11 veces por duelo.'],
     inotacto: ['Sentido del tacto', 'Mientras esté en el campo, ves en secreto qué son los personajes y las magias y trampas boca abajo del rival.'],
-    tobikamui: ['Kamui — Intangibilidad', 'Una vez cada 2 turnos, esquiva automáticamente un ataque o una habilidad enemiga que lo elija. Si lo usa en una ronda, no puede usarlo en la siguiente; vuelve a estar disponible en la ronda posterior.'],
+    tobikamui: ['Kamui — Intangibilidad', 'Cuando un ataque o una habilidad enemiga lo elige, lo esquiva automáticamente (sólo ese efecto). Tras usarlo queda en espera: no puede volver a usarlo en la ronda siguiente y vuelve a estar disponible en la ronda posterior (una vez cada 2 turnos). No funciona boca abajo, ni petrificado o bloqueado.'],
     tobidim: ['Dimensión Kamui', 'Una vez por turno, saca del campo a un personaje (sin destruirlo). Vuelve al terminar el siguiente turno de su controlador, con todo lo que tenía; si no hay sitio, espera.'],
     tobimm: ['Maestro de la manipulación', 'Al invocarlo, eliges un personaje enemigo: no podrá atacar a Tobi durante el siguiente turno de su controlador.'],
     tinta: ['Súper Bestias de Tinta', 'Una vez por turno crea en una casilla libre una criatura de tinta, que desaparece al final del turno y no puede ser atacada: León (1000 ATK y puede atacar), Águila (un enemigo no ataca en su siguiente turno) o Serpiente (un enemigo pierde 500 ATK durante 2 turnos).'],
@@ -1057,7 +1064,7 @@
   D.Cards = {
     get: id => BY_ID.get(id),
     monsters: MONSTERS, spells: SPELLS, traps: TRAPS,
-    custom: CUSTOM, AB,
+    custom: CUSTOM, AB, LORE,
     all: () => MONSTERS.concat(CUSTOM, TESTCARDS, SPELLS, TRAPS, TESTST).filter(c => !c.hidden),
     TYPE_ES, TYPE_COLOR, PRESET_TYPES, DECK_SIZE, MAX_COPIES,
     presetDeck, checkDeck, register, canPlay, testDeck, test: TEST,

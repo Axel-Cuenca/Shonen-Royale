@@ -1919,3 +1919,10 @@ html.fxbg.fx3d:not(.rm) .board3d .slab:not(.multi) .zone.struck .card.m.layered.
 
 /* El marcador de equipo/efecto de las casillas de magia/trampa (⏳ 👁️ 💍 …) también queda delante de la carta, no escondido detrás de ella */
 html.fxbg .board3d .zone .eqm { transform: translateZ(2.4em); font-size: 1.3em; filter: drop-shadow(0 0 .2em #000); }
+
+/* Habilidades con descripción narrativa (2026-11-11): frase de personaje arriba, explicación funcional abajo */
+.abil.lore .ab1 { margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.abil.lore .ab1:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.abil.lore .nar { font-style: italic; color: #e8cf8f; margin: 2px 0 5px; }
+.abil.lore .fun { font-size: .95em; opacity: .92; }
+.abil.lore .fi { margin-right: 6px; opacity: .7; }
