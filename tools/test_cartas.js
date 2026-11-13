@@ -127,8 +127,8 @@ module.exports = function (T) {
   section('Superball');
   {
     const st = fresh(); give(st, 0, ['c_superball', 'c_cell', 'c_sukuna60', 'c_lara']);
-    const acts = L(st, 0).filter(x => x.t === 'activate');
-    ok(acts.length === 2, 'sólo personajes de 6★ o menos (Cell y Lara), no Sukuna 60%');
+    const acts = L(st, 0).filter(x => x.t === 'activate' && !x.target.down);
+    ok(acts.length === 2 && L(st, 0).filter(x => x.t === 'activate' && x.target.down).length === 2, 'sólo personajes de 6★ o menos (Cell y Lara), no Sukuna 60%; cada uno en ataque o boca abajo');
     act(st, 0, acts[0]);
     ok(st.players[0].mz.some(m => m && m.c.id === 'c_cell'), 'Cell entra al campo (sin tributo, es de 6★)');
     ok(!st.players[0].normalUsed, 'no gasta la invocación normal');

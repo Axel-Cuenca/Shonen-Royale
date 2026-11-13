@@ -1635,7 +1635,13 @@
         const vsList = list.map(a => a.target.vs);
         return vsList.length === 1 ? act(list[0]) : pickFoe(vsList, q => act(list.find(a => a.target.vs === q)), '¿A quién le haces daño?');
       }
-      if (d.fx === 'special') return chooseHand(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje de tu mano');
+      if (d.fx === 'special') return chooseHand([...new Set(list.map(a => a.target.u))], u => {
+        const up = list.find(a => a.target.u === u && !a.target.down), dn = list.find(a => a.target.u === u && a.target.down);
+        if (!dn) return act(up);
+        modal(h('div', { class: 'box' }, h('h2', null, '¿Cómo entra ' + nameId(v.me.hand.find(c => c && c.uid === u).id) + '?'),
+          h('div', { class: 'acts' }, btn('⚔️ En ataque (boca arriba)', () => { closeModal(); act(up); }, 'gold'), btn('🂠 Boca abajo', () => { closeModal(); act(dn); }, 'gold')),
+          btn('Cancelar', closeModal, 'ghost')));
+      }, 'Elige el personaje de tu mano');
       if (d.fx === 'esferas') return wishMenu(list);
       if (d.fx === 'pothala') {              // elegir los dos personajes aliados que se fusionan
         const mine = z => ({ seat: v.seat, area: 'mz', z });
@@ -2307,7 +2313,7 @@
             h('div', { class: 'acts' }, btn('⚔️ Ataque', () => act({ t: 'ability', pos: 'atk' }), 'gold'), btn('🛡️ Defensa', () => act({ t: 'ability', pos: 'def' }), 'gold')));
         modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'pick') {
-        const ttl = pd.cont === 'invite' ? '💌 Invitación: elige un personaje de tu mazo (4★ o menos) y en qué posición entra'
+        const ttl = pd.cont === 'invite' ? '💌 Invitación: elige un personaje de tu mazo (4★ o menos) y en qué posición entra (ataque, defensa o boca abajo)'
           : pd.cont === 'eliz' ? '✨ Poder de la Diosa: elige un personaje de tu cementerio (hasta 6★) para volver a la mano'
           : pd.cont === 'bulma' ? '🔧 Genio científico: elige una magia de tu mazo (el rival la verá)'
             : pd.cont === 'bulmabot' ? '🔧 Genio científico: elige una carta de tu mano para ponerla al fondo del mazo'
@@ -2315,7 +2321,7 @@
         const box = h('div', { class: 'box' }, h('h2', null, ttl),
           h('div', { class: 'cands' }, pd.cands.map(c => pd.cont === 'invite'
             ? h('div', { style: 'text-align:center;font-size:13px' }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name),
-              h('div', { class: 'acts', style: 'margin-top:4px;justify-content:center' }, btn('⚔️ Ataque', () => act({ t: 'pick', uid: c.uid }), 'gold'), btn('🛡️ Defensa', () => act({ t: 'pick', uid: c.uid, pos: 'def' }), 'gold')))
+              h('div', { class: 'acts', style: 'margin-top:4px;justify-content:center' }, btn('⚔️ Ataque', () => act({ t: 'pick', uid: c.uid }), 'gold'), btn('🛡️ Defensa', () => act({ t: 'pick', uid: c.uid, pos: 'def' }), 'gold'), btn('🂠 Boca abajo', () => act({ t: 'pick', uid: c.uid, down: true }), 'gold')))
             : h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => act({ t: 'pick', uid: c.uid }) }, cardEl(C.get(c.id)), h('small', null, C.get(c.id).name)))));
         modal(box, false); modalEl.dataset.pend = 1;
       }

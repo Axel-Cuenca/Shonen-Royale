@@ -58,6 +58,7 @@
         let best = L[0], bs = -1e9;
         const myMons = v.me.mz.filter(Boolean).length;
         for (const a of L) {
+          if (a.down) continue;                         // boca abajo: la IA invoca en ataque
           const c = pd.cands.find(x => x.uid === a.uid), d = cardOf(c);
           let s;
           if (pd.cont === 'bulmabot') s = -(d.kind === 'monster' ? d.atk : 800);                       // Genio científico: al fondo del mazo, la peor carta
@@ -290,6 +291,7 @@
               return !info.count ? 24 : -1;
             }
             case 'special': {                              // Superball: personaje de 6★ o menos sin gastar invocación
+              if (a.target && a.target.down) return -1;      // la IA invoca en ataque
               const hc = a.target && a.target.u != null ? me.hand.find(c => c && c.uid === a.target.u) : null;
               return hc ? 46 + cardOf(hc).atk / 100 : -1;
             }

@@ -1802,7 +1802,7 @@
     special: {
       targets: (st, p, d) => {
         const P = st.players[p];
-        return P.hand.filter(i => { const c = def(i); return c.kind === 'monster' && !c.sp && c.level <= d.max && spot(P, c) >= 0; }).map(i => ({ u: i.uid }));
+        return P.hand.filter(i => { const c = def(i); return c.kind === 'monster' && !c.sp && c.level <= d.max && spot(P, c) >= 0; }).flatMap(i => [{ u: i.uid }, { u: i.uid, down: true }]);      // en ataque (boca arriba) o boca abajo
       },
       resolve: (st, p, d, t) => {
         const P = st.players[p], i = P.hand.findIndex(c => c.uid === (t && t.u));
@@ -1810,14 +1810,19 @@
         const c = def(P.hand[i]);
         if (c.level > d.max || spot(P, c) < 0) { log(st, p, 'no hay espacio'); return; }
         const inst = P.hand.splice(i, 1)[0];
-        specialSummon(st, p, inst, 'atk');
+        specialSummon(st, p, inst, 'atk', !!(t && t.down));
       }
     }
   };
   /** Invocación especial desde la mano: no gasta la invocación normal y abre la ventana de las trampas de invocación. */
-  function specialSummon(st, p, inst, pos) {
+  function specialSummon(st, p, inst, pos, down) {
     const P = st.players[p], d = def(inst), z = spot(P, d);
     inst.spent = false;
+    if (down) {                                          // boca abajo (en defensa): como un personaje colocado, sin efectos de invocación
+      P.mz[z] = mkSlot(st, inst, { pos: 'def', down: true, wide: !!d.wide });
+      log(st, p, 'coloca un monstruo boca abajo');
+      return z;
+    }
     P.mz[z] = mkSlot(st, inst, { pos: pos || 'atk', wide: !!d.wide });
     log(st, p, `invoca especialmente a ${d.name} (ATK ${atkOf(st, P, z)})`);
     entered(st, p, z);
@@ -4281,7 +4286,7 @@
           for (const o of os) out.push(o ? { t: 'respond', activate: true, zone: z, opt: o } : { t: 'respond', activate: true, zone: z });
         }
       } else if (pd.k === 'pick') {
-        for (const u of pd.cands) { out.push({ t: 'pick', uid: u }); if (pd.cont === 'invite') out.push({ t: 'pick', uid: u, pos: 'def' }); }      // Invitación: en ataque o en defensa
+        for (const u of pd.cands) { out.push({ t: 'pick', uid: u }); if (pd.cont === 'invite') { out.push({ t: 'pick', uid: u, pos: 'def' }); out.push({ t: 'pick', uid: u, down: true }); } }      // Invitación: en ataque, en defensa o boca abajo
       } else if (pd.k === 'ability') {
         if (pd.ab === 'steal' || pd.ab === 'vlearn' || (pd.ab === 'near' && pd.stage === 'ask') || pd.ab === 'gravrew' || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); if (pd.dof) out.push({ t: 'ability', use: false }); }
@@ -5621,7 +5626,7 @@
           if (i >= 0) { const c = P.deck.splice(i, 1)[0]; P.hand.push(c); shuffle(st, P.deck); log(st, p, 'agrega una magia de su mazo a la mano'); }
         } else if (pd.cont === 'invite') {
           const i = P.deck.findIndex(c => c.uid === a.uid);
-          if (i >= 0 && spot(P, def(P.deck[i])) >= 0) { const c = P.deck.splice(i, 1)[0]; shuffle(st, P.deck); specialSummon(st, p, c, a.pos === 'def' ? 'def' : 'atk'); }
+          if (i >= 0 && spot(P, def(P.deck[i])) >= 0) { const c = P.deck.splice(i, 1)[0]; shuffle(st, P.deck); specialSummon(st, p, c, a.pos === 'def' ? 'def' : 'atk', !!a.down); }
         } else if (pd.cont === 'eliz') {
           const i = P.grave.findIndex(c => c.uid === a.uid);
           if (i >= 0) { const c = P.grave.splice(i, 1)[0]; c.spent = false; P.hand.push(c); log(st, p, `Poder de la Diosa: ${def(c).name} vuelve del cementerio a la mano`); }

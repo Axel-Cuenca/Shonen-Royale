@@ -1086,6 +1086,33 @@ module.exports = function (T) {
     ok(!L(st, 0).filter(a => a.t === 'summon').every(a => a.z != null), 'la forma normal sigue disponible');
   }
 
+  section('Pokeball e Invitación: en ataque o boca abajo (13-11-2026)');
+  {
+    let st = fresh(0); hand(st, 0, ['c_pokeball', 'c_goku']);
+    const opts = L(st, 0).filter(a => a.t === 'activate' && a.hand === 0);
+    ok(opts.length >= 2 && opts.some(a => a.target.down) && opts.some(a => !a.target.down), 'Pokeball ofrece ataque y boca abajo');
+    const c0 = cnt(st);
+    act(st, 0, opts.find(a => a.target.down && st.players[0].hand[1] && a.target.u === st.players[0].hand[1].uid) || opts.find(a => a.target.down)); no(st);
+    const m = st.players[0].mz.find(Boolean);
+    ok(m && m.down && m.pos === 'def', 'queda boca abajo, en defensa');
+    ok(!st.players[0].normalUsed, 'no gasta la invocación normal');
+    eq(cnt(st), c0, 'sin pérdida de cartas');
+    st = fresh(0); hand(st, 0, ['c_pokeball', 'c_goku']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.hand === 0 && !a.target.down)); no(st);
+    const m2 = st.players[0].mz.find(Boolean);
+    ok(m2 && !m2.down && m2.pos === 'atk', 'sin elegir boca abajo entra en ataque, boca arriba');
+    // Invitación
+    st = fresh(0); hand(st, 0, ['c_invitacion']); st.players[0].deck.push({ uid: st.nextUid++, id: 'c_popeye' });
+    act(st, 0, L(st, 0).find(a => a.t === 'activate'));
+    const pk = L(st, 0).filter(a => a.t === 'pick');
+    ok(pk.some(a => a.down) && pk.some(a => a.pos === 'def') && pk.some(a => !a.down && !a.pos), 'Invitación: ataque, defensa o boca abajo');
+    const c1 = cnt(st);
+    act(st, 0, pk.find(a => a.down)); no(st);
+    const m3 = st.players[0].mz.find(Boolean);
+    ok(m3 && m3.down && m3.pos === 'def', 'Invitación: boca abajo');
+    eq(cnt(st), c1, 'sin pérdida de cartas');
+  }
+
   section('tanda 7: partidas al azar con todas las cartas nuevas');
   {
     const NEW = Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id)).filter(i => Cards.get(i) && !Cards.get(i).hidden);
