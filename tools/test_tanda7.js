@@ -543,4 +543,42 @@ module.exports = function (T) {
     ok(!L(st, 0).some(a => a.t === 'activate' && a.target && a.target.mode === 3), 'no se pueden copiar sus habilidades con Voto Vinculante');
     ok(L(st, 0).some(a => a.t === 'activate' && a.target && a.target.mode === 1), 'pero sí se le puede elegir por estadísticas');
   }
+  section('Doflamingo');
+  {
+    // Parasite: redirige el ataque a un aliado del atacante
+    let st = fresh(0); put(st, 0, 0, 'c_doflamingo'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_vegeta');
+    act(st, 0, pw(st, 0, 'dofhilo', a => a.target.vs === 1 && a.target.z === 0));
+    ok(!pw(st, 0, 'dofhilo'), 'una vez por turno');
+    eq(E.view(st, 0).hilos.length, 1, 'el dueño ve los hilos');
+    ok(!(E.view(st, 1).hilos || []).length, 'el rival no los ve');
+    st.current = 1; st.turn = 7; st.phase = 'battle';
+    act(st, 1, atkA(st, 1, 0, 0));
+    ok(st.pending && st.pending.ab === 'dofhilo' && st.pending.player === 0, 'Doflamingo puede tomar el control');
+    act(st, 0, { t: 'ability', use: true });
+    const opts = L(st, 0).filter(a => a.t === 'ability' && a.z != null);
+    ok(opts.some(a => a.vs === 1 && a.z === 1), 'puede elegir un aliado del atacante');
+    act(st, 0, opts.find(a => a.vs === 1 && a.z === 1)); no(st);
+    ok(!st.players[1].mz[0] || !st.players[1].mz[0].hilos, 'los hilos se consumen');
+    // Jaula de Pájaros
+    st = fresh(0); put(st, 0, 0, 'c_doflamingo'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_kratos'); hand(st, 1, ['c_vegeta_blue']);
+    act(st, 0, pw(st, 0, 'dofjaula'));
+    ok(!pw(st, 0, 'dofjaula'), 'una vez por duelo');
+    st.current = 1; st.turn = 7; st.phase = 'main'; st.players[1].normalUsed = false;
+    ok(!L(st, 1).some(a => a.t === 'summon' && a.tributes && a.tributes.length), 'los enemigos no pueden sacrificarse');
+    // Despertar: trampa de hilos
+    st = fresh(0); put(st, 0, 0, 'c_doflamingo', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' });
+    st.phase = 'battle';
+    act(st, 0, atkA(st, 0, 0, 0));
+    while (st.pending && st.pending.k === 'respond') act(st, E.actor(st), L(st, E.actor(st)).find(x => x.t === 'respond' && !x.activate));
+    ok(st.pending && st.pending.ab === 'chmark' && st.pending.dof, 'Doflamingo puede dejar una trampa de hilos');
+    act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.z === 2 && a.vs === 1));
+    eq(E.view(st, 0).cmarks.length, 1, 'el dueño la ve');
+    ok(!(E.view(st, 1).cmarks || []).length, 'el rival no');
+    st.current = 1; st.turn = 7; st.phase = 'main'; st.pending = null; st.players[1].normalUsed = false; hand(st, 1, ['c_popeye']); st.players[1].mz = [null, null, null]; put(st, 1, 0, 'c_kratos'); put(st, 1, 1, 'c_vegeta');
+    const sm = L(st, 1).filter(a => a.t === 'summon' && a.tributes.length === 0);
+    act(st, 1, sm.find(a => a.zone === 2) || sm[sm.length - 1]);
+    const entered = st.players[1].mz.find(m => m && m.c.id === 'c_popeye');
+    ok(entered && entered.binds && entered.binds.length, 'el primero que entra queda inmovilizado');
+    eq((st.cmarks || []).length, 0, 'la trampa se consume');
+  }
 };

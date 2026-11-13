@@ -170,7 +170,7 @@
     if (rawAbil(m).includes('sjpoder')) { const f = findByUid(st, m.c.uid); if (f && soldiersOf(st.players[f.p]) >= 2) n++; }      // Poder del Monarca
     return n;
   };
-  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !m.god && !m.snake && !m.gr && !(m.canal && m.canal.t === st.turn) && !blocked(m, 'atk') && !mdef(m).noAtk;      // Freezer: mientras canaliza no ataca
+  const canAttackSlot = (st, m) => !!m && !m.down && m.pos === 'atk' && atkCount(m) < maxAttacks(st, m) && !m.promesa && !m.god && !m.snake && !m.gr && !(m.canal && m.canal.t === st.turn) && !blocked(m, 'atk') && !mdef(m).noAtk && !mdef(m).clone;      // Freezer: mientras canaliza no ataca
   const slotByUid = (st, p, uid) => { const P = st.players[p]; for (let z = 0; z < ZONES; z++) if (P.mz[z] && P.mz[z].c.uid === uid) return { p, z, m: P.mz[z] }; return null; };
   function findByUid(st, uid) { for (let p = 0; p < st.n; p++) { const r = slotByUid(st, p, uid); if (r) return r; } return null; }
 
@@ -596,6 +596,7 @@
   }
   /** Un personaje vuelve a la mano de su dueño (Mr. Satan, Igris): lo equipado o vinculado va al cementerio de quien lo puso. */
   function toHandM(st, p, z) {
+    if (caged(st, p) && P0(st, p, z)) return false;      // Jaula de Pájaros
     const m = takeOff(st, p, z, 'hand');
     if (!m) return null;
     const O = st.players[m.owner != null ? m.owner : p];
@@ -620,6 +621,7 @@
   /** Saca al personaje del campo sin destruirlo: conserva todo y sus equipos esperan (como en Gokumonkyo).
    *  kind: 'rounds' (vuelve cuando pasan n rondas), 'end' (al terminar el siguiente turno de su controlador), 'start' (al empezar su siguiente turno). */
   function toLimbo(st, p, z, kind, n, why) {
+    if (caged(st, p) && kind !== 'cap' && P0(st, p, z)) return false;      // Jaula de Pájaros: no pueden salir del campo
     const P = st.players[p], m0 = P.mz[z];
     if (!m0) return false;
     if (m0.fused) unfuse(st, p, z);
@@ -1040,6 +1042,11 @@
   /** Efectos de «asesinar»: Kayn desbloquea y crece, Anti-Venom ofrece evolucionar. */
   function onKill(st, killer, victim, ctx) {
     const km = killer.m, P = st.players[killer.p], kab = abil(st, km), kn = km.kn;
+    if (kab.includes('dofdesp') && !km.c.virt) {      // Doflamingo: Despertar de la Ito Ito no Mi
+      const cands = [];
+      for (const e of foes(st, killer.p)) st.players[e].mz.forEach((x, i) => { if (!x && !(st.cmarks || []).some(k => k.vs === e && k.z === i)) cands.push({ vs: e, z: i }); });
+      if (cands.length) st.trig.push({ k: 'chmark', p: killer.p, uid: km.c.uid, cands, dof: true });
+    }
     if (ctx.src === 'combat' && kab.includes('sed') && st.cmb && st.cmb.p === killer.p && st.players[killer.p].mz[st.cmb.z] === km && !km.sed) {      // Carnage: Sed de sangre
       const gS = gx(P, st.cmb.z);
       addMod(st, km, 'sed', 400 * gS, 0, 0);
@@ -1137,7 +1144,7 @@
         if (!hv || hv.m.down || lvl(hv.m) < 10 || hi < 0 || spot(P, def(P.hand[hi])) < 0) continue;
         st.pending = { k: 'ability', ab: 'mahoraga', player: t.p, uid: P.hand[hi].uid, stage: 'ask', nm: mdef(hv.m).name };
       } else if (t.k === 'chmark') {                    // Chamber: elige dónde deja la marca oculta
-        st.pending = { k: 'ability', ab: 'chmark', player: t.p, uid: t.uid, stage: 'target', cands: t.cands, nm: 'Marca Registrada' };
+        st.pending = { k: 'ability', ab: 'chmark', player: t.p, uid: t.uid, stage: 'target', cands: t.cands, nm: t.dof ? 'Despertar de la Ito Ito no Mi' : 'Marca Registrada', dof: !!t.dof };
       } else if (t.k === 'gravrew') {                   // Cámara de Gravedad: elige la recompensa
         const g = slotByUid(st, t.p, t.uid);
         if (!g || !g.m.gr || g.m.gr.n < 2) continue;
@@ -1250,7 +1257,8 @@
       if (i >= 0) {
         const k = st.cmarks.splice(i, 1)[0];
         (m.binds = m.binds || []).push({ atk: true, ab: true, pos: true, n: 1, t0: st.turn, nm: 'la Marca Registrada' });
-        log(st, k.by, `¡La Marca Registrada de Chamber se activa! ${mdef(m).name} no puede cambiar de posición, atacar ni usar habilidades hasta el final de su próximo turno`);
+        if (k.dof) log(st, k.by, `¡La trampa de hilos de Doflamingo se activa! ${mdef(m).name} no puede cambiar de posición, atacar ni usar habilidades hasta el final de su próximo turno`);
+        else log(st, k.by, `¡La Marca Registrada de Chamber se activa! ${mdef(m).name} no puede cambiar de posición, atacar ni usar habilidades hasta el final de su próximo turno`);
         if (multi(st)) st.log[st.log.length - 1].q = p;
       }
     }
@@ -2202,6 +2210,9 @@
   }
   /** Ofrece el robo antes de que la gema se resuelva. true = hay que esperar la respuesta. */
   /** Merlin: Investigación Mágica. Cuando un rival activa una magia, mira su mano y bloquea una carta hasta el final de su próximo turno. */
+  /** Doflamingo: Jaula de Pájaros. Los personajes del equipo contrario al de quien la desplegó no pueden dejar el campo (sacrificios, transformaciones, invocaciones, etc.). */
+  const P0 = (st, p, z) => !!st.players[p].mz[z];
+  const caged = (st, q) => !!st.cage && st.team[q] !== st.team[st.cage.by] && elapsed(st, st.cage.t0) < 2;
   /** Merlin: una carta de la mano bloqueada hasta el final del siguiente turno de quien la bloqueó (= 2 rondas desde que se puso, contando el turno actual). */
   function handLocked(st, p, card) {
     const P = st.players[p];
@@ -2650,9 +2661,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', mcubo: 'Cubo Perfecto', mrompe: 'Romper el cubo', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', dofhilo: 'Parasite: Hilos de Control', dofjaula: 'Jaula de Pájaros', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', mcubo: 'Cubo Perfecto', mrompe: 'Romper el cubo', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', mcubo: 'merlincubo', mrompe: 'merlincubo', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', dofhilo: 'dofhilo', dofjaula: 'dofjaula', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', mcubo: 'merlincubo', mrompe: 'merlincubo', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -2907,6 +2918,23 @@
     return null;
   }
   function attackWindows(st, p) {
+    {   // Doflamingo: Parasite, controla el ataque de un personaje con hilos
+      const a = st.atk, at = a && st.players[a.p].mz[a.z];
+      if (at && at.hilos && !a.dfD && a.target !== 'direct') {
+        a.dfD = true;
+        const dof = slotByUid(st, at.hilos.by, at.hilos.uid);
+        if (dof && !dof.m.down && !blocked(dof.m, 'ab') && has(st, dof.m, 'dofhilo')) {
+          const cands = [];
+          for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (const tz of zonesWith(st.players[q].mz)) {
+            if ((q === a.vs && tz === a.target) || (q === a.p && tz === a.z)) continue;
+            const x = st.players[q].mz[tz];
+            if (isInk(x) && !isClone(x)) continue;
+            if (st.team[q] === st.team[a.p] ? true : atkOk(st, at, q, tz)) cands.push({ vs: q, z: tz });
+          }
+          if (cands.length) { st.pending = { k: 'ability', ab: 'dofhilo', player: at.hilos.by, stage: 'ask', uid: at.hilos.uid, nm: mdef(at).name, cands, cont: { k: 'attack', by: p } }; return; }
+        }
+      }
+    }
     {   // Chamber (Rendez-vous) y Yoru (Cambio Dimensional): reaccionan al ataque contra ellos
       const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' ? st.players[a.vs].mz[a.target] : null;
       if (at && dm && !dm.down && st.team[a.vs] !== st.team[a.p] && !blocked(dm, 'ab')) {
@@ -3161,6 +3189,8 @@
       } }
     for (let z = 0; z < ZONES; z++) { const cm = st.players[st.current].mz[z]; if (cm && isClone(cm) && cm.born !== st.turn) { removeMonster(st, st.current, z, 'ink'); log(st, st.current, 'El clon de Yoru se desvanece'); } }
     for (const hm of st.players[st.current].mz) if (hm && hm.hoz && hm.hoz.some(k => elapsed(st, k.t0) >= 1)) { addMod(st, hm, 'hozv', -500, -500, 0); log(st, st.current, `${mdef(hm).name}: la sangre venenosa le quita 500 ATK y 500 DEF`); }
+    if (st.cmarks) st.cmarks = st.cmarks.filter(k => !k.dof || elapsed(st, k.t0) < 2);
+    if (st.cage && elapsed(st, st.cage.t0) >= 2) { st.cage = null; log(st, st.current, 'La Jaula de Pájaros se desvanece'); }
     for (const Q of st.players) if (Q.hlock) for (const l of Q.hlock) if (l.q === st.current && st.turn > l.t0 && !l.on) l.on = st.turn;
     for (const Q of st.players) for (const cm of Q.mz) if (cm && cm.cube && elapsed(st, cm.cube.t0) >= 2) { delete cm.cube; log(st, st.current, `El Cubo Perfecto sobre ${mdef(cm).name} se disuelve`); }
     for (const gm of st.players[st.current].mz) {      // Cámara de Gravedad / Sala del Espíritu
@@ -3501,9 +3531,10 @@
     return out;
   }
   /** Poderes de los monstruos del jugador: [{ t:'power', zone, pw, ... }]. */
+  const CAGE_PW = ['cellperf', 'eren', 'armin', 'bite', 'manto', 'kform', 'dtrig', 'astaneg', 'astauni', 'sjmon', 'xform', 'yoviaje', 'rhaast', 'sombra'];      // Jaula de Pájaros: transformaciones y escapes
   function powerActs(st, p) {
     abMode = true;
-    try { return powerActs0(st, p); } finally { abMode = false; }
+    try { const r = powerActs0(st, p); return caged(st, p) ? r.filter(x => !CAGE_PW.includes(x.pw)) : r; } finally { abMode = false; }
   }
   function powerActs0(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
@@ -3688,6 +3719,8 @@
         if (u.mcT !== st.turn) for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (const tz of zonesWith(st.players[q].mz)) { const tm = st.players[q].mz[tz]; if (!tm.cube && !tm.down && !isInk(tm) && canTarget(st, p, q, tz)) push({ pw: 'mcubo', target: { vs: q, z: tz } }); }
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) { const tm = st.players[q].mz[tz]; if (tm.cube && tm.cube.by === p) push({ pw: 'mrompe', target: { vs: q, z: tz } }); }
       }
+      if (ab.includes('dofhilo') && u.dhT !== st.turn) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && !tm.hilos && !isInk(tm) && canTarget(st, p, e, tz)) push({ pw: 'dofhilo', target: { vs: e, z: tz } }); }
+      if (ab.includes('dofjaula') && !m.c.dfJ) push({ pw: 'dofjaula' });
       if (ab.includes('gyuhoz') && u.ghT !== st.turn) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].down && canTarget(st, p, e, tz) && !isInk(st.players[e].mz[tz])) push({ pw: 'gyuhoz', target: { vs: e, z: tz } });
       if (ab.includes('gyudanza') && u.gdT !== st.turn && canAttackNow(st) && atkCount(m) < maxAttacks(st, m) && !blocked(m, 'atk') && m.pos === 'atk' && hozCount(st, m) > 0) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[tz]) && canTarget(st, p, e, tz)) push({ pw: 'gyudanza', target: { vs: e, z: tz } });
       if (ab.includes('dakibelt')) {
@@ -3862,7 +3895,7 @@
         for (const u of pd.cands) { out.push({ t: 'pick', uid: u }); if (pd.cont === 'invite') out.push({ t: 'pick', uid: u, pos: 'def' }); }      // Invitación: en ataque o en defensa
       } else if (pd.k === 'ability') {
         if (pd.ab === 'steal' || pd.ab === 'vlearn' || (pd.ab === 'near' && pd.stage === 'ask') || pd.ab === 'gravrew' || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
-        else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
+        else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); if (pd.dof) out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'merlin' && pd.stage === 'pick') { for (const h of pd.hand) if (h.ok) out.push({ t: 'ability', pick: h.i }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
@@ -3873,7 +3906,7 @@
       return out;
     }
     if (st.phase === 'main') {
-      const occupied = zonesWith(P.mz).filter(z => !P.mz[z].god && !isInk(P.mz[z]));      // Vegeta Dios: lo atrapado no se sacrifica
+      const occupied = zonesWith(P.mz).filter(z => !P.mz[z].god && !isInk(P.mz[z]) && !caged(st, p));      // Vegeta Dios: lo atrapado no se sacrifica
       P.hand.forEach((card, i) => {
         const d = def(card);
         if (d.kind === 'spell' && handLocked(st, p, card)) return;      // Merlin: carta bloqueada
@@ -4662,6 +4695,20 @@
         if (tm && tm.cube) { delete tm.cube; log(st, p, `${nm} rompe el Cubo Perfecto que encerraba a ${mdef(tm).name}`); }
         break;
       }
+      case 'dofhilo': {
+        u.dhT = st.turn;
+        const tm = st.players[a.target.vs].mz[a.target.z];
+        if (!tm) break;
+        tm.hilos = { by: p, uid: m.c.uid };
+        log(st, p, `${nm} tiende hilos invisibles sobre ${mdef(tm).name}`);
+        if (multi(st)) st.log[st.log.length - 1].q = a.target.vs;
+        break;
+      }
+      case 'dofjaula': {
+        m.c.dfJ = true; st.cage = { by: p, t0: st.turn };
+        log(st, p, `${nm} despliega la Jaula de Pájaros: los enemigos no pueden abandonar el campo durante 2 turnos`);
+        break;
+      }
       case 'gyuhoz': {
         u.ghT = st.turn;
         const e = a.target.vs, tm = st.players[e].mz[a.target.z];
@@ -5163,6 +5210,21 @@
       attackWindows(st, pd.cont.by);
       return;
     }
+    if (pd.ab === 'dofhilo') {
+      const a0 = st.atk, at = a0 && st.players[a0.p].mz[a0.z];
+      if (pd.stage === 'ask' && a.use) { st.pending = Object.assign({}, pd, { stage: 'target' }); return; }
+      if (pd.stage === 'target' && a0 && at) {
+        const c = (pd.cands || []).find(x => x.vs === a.vs && x.z === a.z);
+        if (c) {
+          const tm = st.players[c.vs].mz[c.z];
+          a0.vs = c.vs; a0.target = c.z; delete at.hilos;
+          log(st, p, `Parasite: Doflamingo mueve los hilos y ${mdef(at).name} atacará a ${tm && !tm.down ? mdef(tm).name : 'un personaje boca abajo'}`);
+          if (multi(st)) st.log[st.log.length - 1].q = c.vs;
+        }
+      }
+      attackWindows(st, pd.cont.by);
+      return;
+    }
     if (pd.ab === 'dakired') {
       const a0 = st.atk;
       if (pd.stage === 'ask' && a.use && a0) {
@@ -5183,7 +5245,7 @@
     }
     if (pd.ab === 'chmark') {
       const c = (pd.cands || []).find(x => x.vs === a.vs && x.z === a.z);
-      if (c) { (st.cmarks = st.cmarks || []).push({ by: p, vs: c.vs, z: c.z, uid: pd.uid }); log(st, p, 'Chamber deja una marca oculta en el campo rival'); }
+      if (c) { (st.cmarks = st.cmarks || []).push({ by: p, vs: c.vs, z: c.z, uid: pd.uid, dof: !!pd.dof, t0: st.turn }); log(st, p, pd.dof ? 'Doflamingo convierte una zona libre del campo rival en una trampa de hilos' : 'Chamber deja una marca oculta en el campo rival'); }
       return;
     }
     if (pd.ab === 'gravrew') {
@@ -5727,6 +5789,7 @@
           if (pd.cands) pending.cands = pd.cands.map(c => ({ vs: c.vs, z: c.z }));
           if (pd.info) pending.info = pd.info;
           if (pd.hand) pending.hand = pd.hand.slice();
+          if (pd.dof) pending.dof = true;
           if (pd.ch) pending.gem = { id: pd.ch.inst.id };
         }
         if (pd.k === 'discard') pending.excess = st.players[seat].hand.length - HAND_MAX;
@@ -5760,6 +5823,8 @@
       domain: st.domain ? { seat: st.domain.p, left: Math.min(2, Math.max(0, 2 - (elapsed(st, st.domain.t0)))), nm: st.domain.nm || 'de Sukuna', dn: st.domain.dn || 'Relicario Demoníaco', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       marks: (st.marks || []).map(k => ({ by: k.by, vs: k.vs, z: k.z })),
       belts: (st.belts || []).filter(k => k.by === seat).map(k => ({ vs: k.vs, z: k.z })),
+      hilos: [].concat(...st.players.map((Q, q) => Q.mz.map((m, z) => (m && m.hilos && m.hilos.by === seat ? { vs: q, z } : null)).filter(Boolean))),
+      cage: st.cage && elapsed(st, st.cage.t0) < 2 ? { by: st.cage.by, left: Math.max(0, 2 - elapsed(st, st.cage.t0)) } : null,
       cmarks: (st.cmarks || []).filter(k => k.by === seat).map(k => ({ vs: k.vs, z: k.z })),      // marcas ocultas de Chamber: sólo las ve quien las puso
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
