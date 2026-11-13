@@ -110,13 +110,16 @@ module.exports = function (T) {
     ok(igz >= 0 && st.players[0].mz[igz].bySung, 'Igris entra invocado por Sung');
     eq(stat(st, 0, igz), [2300, 2300], 'Lealtad al Monarca: +400/+400');
     ok(!pw(st, 0, 'sjigris'), 'una vez por turno');
-    ok(E.view(st, 0).players[0].mz[igz].art === Cards.get('c_igris').imgSung, 'Igris invocado por Sung usa su otra imagen');
-    // Ejército de las sombras
     st.players[1].grave.push({ uid: st.nextUid++, id: 'c_kratos' });
     st.players[0].mz[0].sjc = 2;
+    ok(!pw(st, 0, 'sjarmy') && !pw(st, 0, 'sjberu') && !pw(st, 0, 'sjbellion'), 'sólo 1 soldado de las sombras por turno: tras Igris no hay Ejército, Beru ni Bellion');
+    ready(st, 0, st.turn + 2);
+    ok(E.view(st, 0).players[0].mz[igz].art === Cards.get('c_igris').imgSung, 'Igris invocado por Sung usa su otra imagen');
+    // Ejército de las sombras
     const ar = pw(st, 0, 'sjarmy', a => a.g === 1);
     ok(!!ar, 'con 2 cargas levanta a un personaje del cementerio rival');
     act(st, 0, ar); no(st);
+    ok(!pw(st, 0, 'sjarmy') && !pw(st, 0, 'sjigris'), 'tras levantar a un soldado con Ejército tampoco hay más ese turno');
     const kz = st.players[0].mz.findIndex(m => m && m.c.id === 'c_kratos');
     ok(kz >= 0 && st.players[0].mz[kz].shadow && st.players[0].mz[kz].owner === 1, 'entra como soldado de las sombras (sigue siendo del rival)');
     eq(cnt(st), [E.countCards(st, 0), E.countCards(st, 1)], 'el conteo sigue correcto');

@@ -4125,12 +4125,12 @@
       if (m.c.id === 'c_asta' && ab.includes('astaneg') && m.astaW) for (const i of hand('c_asta_negra').slice(0, 1)) if (spot(P, def(P.hand[i]), [z]) >= 0) push({ pw: 'astaneg', hand: i });
       if (m.c.id === 'c_asta_negra' && ab.includes('astauni') && (m.astaK || 0) >= 2) for (const i of hand('c_asta_union').slice(0, 1)) if (spot(P, def(P.hand[i]), [z]) >= 0) push({ pw: 'astauni', hand: i });
       if (ab.includes('astacausa') && !m.c.ecU && allyChars(st, p).some(t => negList(st, t.vs, t.z).length)) push({ pw: 'astacausa' });
-      if (ab.includes('sjarmy') && (m.sjc || 0) >= 2) for (let g = 0; g < st.n; g++) for (const c of st.players[g].grave) { const cd = def(c); if (cd.kind === 'monster' && !cd.hidden && spot(P, cd) >= 0) push({ pw: 'sjarmy', g, u: c.uid }); }
-      if (ab.includes('sjigris') && u.sjiT !== st.turn) {
+      if (ab.includes('sjarmy') && (m.sjc || 0) >= 2 && P.sjT !== st.turn) for (let g = 0; g < st.n; g++) for (const c of st.players[g].grave) { const cd = def(c); if (cd.kind === 'monster' && !cd.hidden && spot(P, cd) >= 0) push({ pw: 'sjarmy', g, u: c.uid }); }
+      if (ab.includes('sjigris') && u.sjiT !== st.turn && P.sjT !== st.turn) {
         for (const i of hand('c_igris').slice(0, 1)) if (spot(P, def(P.hand[i])) >= 0) push({ pw: 'sjigris', from: 'hand', u: P.hand[i].uid });
         const dk = P.deck.find(c => c.id === 'c_igris'); if (dk && spot(P, def(dk)) >= 0) push({ pw: 'sjigris', from: 'deck', u: dk.uid });
       }
-      for (const [k, id] of [['sjberu', 'c_beru'], ['sjbellion', 'c_bellion']]) if (ab.includes(k) && u[k + 'T'] !== st.turn) {
+      for (const [k, id] of [['sjberu', 'c_beru'], ['sjbellion', 'c_bellion']]) if (ab.includes(k) && u[k + 'T'] !== st.turn && P.sjT !== st.turn) {
         for (const i of hand(id).slice(0, 1)) if (spot(P, def(P.hand[i])) >= 0) push({ pw: k, from: 'hand', u: P.hand[i].uid });
         const gr = P.grave.find(c => c.id === id); if (gr && spot(P, def(gr)) >= 0) push({ pw: k, from: 'grave', u: gr.uid });
       }
@@ -5012,9 +5012,10 @@
       }
       case 'sjarmy': {
         const G = st.players[a.g], i = G ? G.grave.findIndex(c => c.uid === a.u) : -1;
-        if (i < 0 || (m.sjc || 0) < 2) break;
+        if (i < 0 || (m.sjc || 0) < 2 || P.sjT === st.turn) break;
         const inst = G.grave[i], cd = def(inst), zz = spot(P, cd);
         if (zz < 0) break;
+        P.sjT = st.turn;
         G.grave.splice(i, 1); inst.spent = false; m.sjc -= 2;
         const o = { pos: 'atk', wide: !!cd.wide, shadow: true };
         if (a.g !== p) o.owner = a.g;
@@ -5026,9 +5027,11 @@
         break;
       }
       case 'sjigris': case 'sjberu': case 'sjbellion': {
+        if (P.sjT === st.turn) break;
         u[a.pw === 'sjigris' ? 'sjiT' : a.pw + 'T'] = st.turn;
         const src = a.from === 'deck' ? P.deck : a.from === 'grave' ? P.grave : P.hand, i = src.findIndex(c => c.uid === a.u);
         if (i < 0 || spot(P, def(src[i])) < 0) break;
+        P.sjT = st.turn;
         const inst = src.splice(i, 1)[0];
         if (a.from === 'deck') shuffle(st, P.deck);
         log(st, p, `${nm} llama a ${def(inst).name}${a.from === 'grave' ? ' desde el cementerio' : a.from === 'deck' ? ' desde el mazo' : ''}`);
