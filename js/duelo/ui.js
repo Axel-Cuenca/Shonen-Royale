@@ -1435,6 +1435,7 @@
       if (s.tour) b.push(['🎯', 'Tour de Force listo: su próximo ataque ignora lo que impida destruir al objetivo']);
       if (s.fer != null) b.push(['🐾' + s.fer + '/4', 'Ferocidad: ' + s.fer + '/4 (2 por cada habilidad potenciada)']);
       if (s.esc) b.push([s.esc.k === 'amanecer' ? '🌅' : s.esc.k === 'mediodia' ? '☀️' : '🌇', 'Sunshine: ' + ({ amanecer: 'Amanecer', mediodia: 'Mediodía', atardecer: 'Atardecer' })[s.esc.k] + (s.esc.left ? ' · quedan ' + s.esc.left + ' turno(s) de esta etapa' : '')]);
+      if (s.shadowCopy) b.push(['👤', 'Copia de sombra: la mitad de ATK y DEF, sin habilidades; desaparece al final del próximo turno de su dueño']);
       if (s.puppet) b.push(['🧵', 'Marioneta: controlado por los hilos hasta el final del turno (no ataca ni usa habilidades)']);
       if (s.thread) b.push(['🪡', 'Hilo de Hilos del Destino: su próxima habilidad puede ser anulada']);
       if (s.soulOff) b.push(['🌀', 'Intercambio de Almas: sin habilidades especiales hasta el final del turno de quien lo lanzó']);
@@ -1966,6 +1967,7 @@
       if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
+      if (s.sh) return `Robo de Sombras: guarda la sombra de ${s.sh.nm || 'un personaje'}. Mientras siga aquí, el rival no puede recuperarlo del cementerio. En tu turno puedes liberarla (una vez).`;
       if (s.iza) return `Izanagi: registró el efecto de ${s.iza.nm || 'un enemigo'}. ${s.iza.armed ? 'Este turno puedes devolvérselo.' : 'En tu próximo turno podrás devolvérselo (sólo ese turno).'}`;
       if (s.seal) return `Sello de Ocho Trigramas: guarda ${(typeof PWN !== 'undefined' && PWN[s.seal.pw]) || s.seal.pw} de ${s.seal.from || 'un enemigo'}. En tu turno puedes liberarla con uno de tus personajes (una vez; después el sello va al cementerio).`;
       if (s.con) return `Contrato de la Muerte: el nombre de ${s.con.tn} está escrito. Faltan ${s.con.n} contador(es) de tiempo (se retira uno al empezar el turno de su dueño); al retirar el último, ese personaje es destruido. Si deja el campo antes, el contrato se descarta.`;
@@ -1986,6 +1988,8 @@
         if (alm.length) acts.push({ label: 'Liberar un efecto guardado…', desc: 'Usa uno de los efectos guardados (1 por turno).', run: () => modal(h('div', { class: 'box' }, h('h2', null, '👻 Gema del Alma'), h('p', { class: 'sub' }, 'Elige el efecto y el objetivo.'),
           h('div', { class: 'acts' }, alm.map(a => { const t = a.target; const tl = !t ? '' : t.u != null ? ' · ' + ((v.me.hand.find(c => c.uid === t.u) || {}).id ? nameId(v.me.hand.find(c => c.uid === t.u).id) : 'carta') : t.z != null ? ' · ' + (t.vs != null ? nameOf(t.vs) + ' ' : '') + 'zona ' + (t.z + 1) : ''; return btn(nameId(s.alma.eff[a.idx]) + tl, () => { closeModal(); act(a); }, 'gold'); }), btn('Cancelar', closeModal, 'ghost')))) });
         for (const a of sw.filter(a => a.pw === 'capliberar')) { const e = (v.me.limbo || []).find(x => x.uid === a.u); acts.push({ label: 'Liberar a ' + (e && e.id ? nameId(e.id) : 'un personaje'), desc: 'Invocación especial sin tributos. Una vez por turno.', run: () => act(a) }); }
+        const sbl = sw.find(a => a.pw === 'sombralib');
+        if (sbl) acts.push({ label: 'Liberar la sombra', desc: `Coloca una copia de ${s.sh && s.sh.nm ? s.sh.nm : 'el personaje capturado'} (mitad de ATK y DEF, sin habilidades) hasta el final de tu próximo turno. Una vez.`, run: () => act(sbl) });
         const izr = sw.find(a => a.pw === 'izaret');
         if (izr) acts.push({ label: 'Devolver el efecto registrado', desc: `Devuelve contra ${s.iza && s.iza.nm ? s.iza.nm : 'el personaje enemigo'} el efecto que iba a destruir a tu aliado. Sólo en este turno.`, run: () => act(izr) });
         const sel = sw.filter(a => a.pw === 'sellolib');
@@ -2039,7 +2043,7 @@
       const who = multi() && pd.by != null ? nameOf(pd.by) : 'El rival';
       if ((pd.trigger === 'reduce' || (pd.info && pd.info.boom)) && pd.info && pd.info.txt) return pd.info.txt;      // Explosión del Creeper: aviso propio
       return { attack: `${who} declara un ataque.`, spell: `${who} activa una magia.`, summon: `${who} invoca un monstruo.`, power: `${who} va a usar una habilidad de personaje.`, trap: `${who} va a activar una trampa.`,
-        destroy: `Un efecto de ${who.toLowerCase()} va a destruir a uno de tus personajes.`, reduce: `Un efecto de ${who.toLowerCase()} va a reducir el ATK o la DEF de uno de tus personajes.` }[pd.trigger] || '';
+        destroy: `Un efecto de ${who.toLowerCase()} va a destruir a uno de tus personajes.`, kill: 'Un personaje enemigo acaba de ser destruido en combate.', reduce: `Un efecto de ${who.toLowerCase()} va a reducir el ATK o la DEF de uno de tus personajes.` }[pd.trigger] || '';
     }
     function pendingUI() {
       const pd = v.pending;
@@ -2301,6 +2305,7 @@
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : s.guerrero && s.guerrero.waiting ? '⏳' : '👁️'));
         if (area === 'st' && s.c && s.con) el.append(h('span', { class: 'eqm', title: `Contrato de la Muerte: ${s.con.n} contador(es) de tiempo sobre ${s.con.tn}` }, '⏳' + s.con.n));
+        if (area === 'st' && s.c && s.sh) el.append(h('span', { class: 'eqm', title: 'Robo de Sombras: sombra capturada' }, '👤'));
         if (area === 'st' && s.c && s.iza) el.append(h('span', { class: 'eqm', title: 'Izanagi: efecto registrado' }, '👁️'));
         if (area === 'st' && s.c && s.seal) el.append(h('span', { class: 'eqm', title: 'Sello de Ocho Trigramas: tiene una habilidad sellada' }, '☯️'));
         if (area === 'st' && s.c && s.thr) el.append(h('span', { class: 'eqm', title: 'Hilos del Destino: el personaje sigue conectado a los hilos' }, '🧵'));

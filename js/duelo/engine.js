@@ -79,7 +79,8 @@
   function uOf(m) { const k = eid(m), b = m.uBy || (m.uBy = {}); return b[k] || (b[k] = {}); }
   /** Todas las habilidades que tiene la carta, aunque estén apagadas (para robarlas o absorberlas). La fusión de Pothala suma las del compañero. */
   /** Habilidades de la forma actual (Viego poseído: las suyas + UNA del cuerpo poseído; Ginyu: las del cuerpo intercambiado). */
-  const rawAbil = m => { const d = mdef(m); let a = (d.ab || []).concat(m.ext || []); if (m.swap) a = m.swap.ab.concat(m.ext || []);
+  const rawAbil = m => { if (m.shadowCopy) return []; const d = mdef(m);      // la copia de sombra no conserva habilidades
+    let a = (d.ab || []).concat(m.ext || []); if (m.swap) a = m.swap.ab.concat(m.ext || []);
     if (m.poss) a = (C().get(m.c.id).ab || []).concat(m.poss.pick ? [m.poss.pick] : [], m.ext || []); if (m.fused) a = a.concat(mdef(m.fused.b).ab || [], m.fused.b.ext || []); return a; };
   /** Habilidades que puede usar ahora (los dominios apagan las de los personajes de pocas estrellas; las selladas por Telarañas no cuentan). */
   function abil(st, m) {
@@ -504,7 +505,7 @@
     return { yuta, ring, ringYuta, happy: yuta || ring, bonus: ringYuta ? 1200 : (yuta || ring) ? 700 : 0 };
   }
   // m.base: valores propios de esta aparición en el campo (p. ej. Popeye revivido con 1500/1500)
-  const baseOf = m => { const b = ((m.copy || m.form) ? mdef(m) : (m.base || def(m.c))); return m.swap ? Object.assign({}, b, { atk: m.swap.atk, def: m.swap.def }) : b; };      // Ginyu: ¡CAMBIO!, ATK/DEF del otro cuerpo
+  const baseOf = m => { const b = ((m.copy || m.form) ? mdef(m) : (m.base || def(m.c))); if (m.shadowCopy) return Object.assign({}, b, { atk: Math.floor(b.atk / 2), def: Math.floor(b.def / 2) }); return m.swap ? Object.assign({}, b, { atk: m.swap.atk, def: m.swap.def }) : b; };      // Robo de Sombras: la copia tiene la mitad      // Ginyu: ¡CAMBIO!, ATK/DEF del otro cuerpo
   /** Combate en curso: el otro personaje del enfrentamiento de `m` (atacante u objetivo), o null. */
   function combatFoe(st, m) {
     const cb = st.atk || st.cmb;
@@ -999,6 +1000,7 @@
       if (!(cbk && cbk.p === killer.p && st.players[killer.p].mz[cbk.z] === killer.m)) ferocidad(st, killer.p, killer.m, 'mata');      // si ya sumó por declarar este ataque, el combate no da una segunda carga
       onKill(st, killer, { p, name: nm, pos: victimPos, abs: victimAbs }, ctx);
       if (ctx.src === 'combat' && !banish && has(st, killer.m, 'viegodom') && !killer.m.poss && !killer.m.copy && !killer.m.fused && st.team[killer.p] !== st.team[p] && !(m.c && m.c.virt) && !m.ghost) st.trig.push({ k: 'viegodom', p: killer.p, uid: killer.m.c.uid, vuid: m.c.uid, vo: m.owner != null ? m.owner : p, vid: m.c.id, abs: victimAbs.slice(), nm });      // Viego: Dominación Soberana
+      if (ctx.src === 'combat' && !banish && st.team[killer.p] !== st.team[p] && !(m.c && m.c.virt) && !m.ghost && !isInk(m)) st.trig.push({ k: 'sombra', p: killer.p, vp: p, vuid: m.c.uid, vo: m.owner != null ? m.owner : p, vid: m.c.id });      // Robo de Sombras
       const vinst = st.team[killer.p] !== st.team[p] ? venomOf(killer.m) : null;                 // Venom, o su portador, destruye a un enemigo
       if (vinst) {
         const known = (vinst.keep || []).map(k => k.id).concat(def(vinst).ab || []);
@@ -1177,6 +1179,10 @@
         const g = slotByUid(st, t.p, t.uid);
         if (!g || !g.m.gr || g.m.gr.n < 2) continue;
         st.pending = { k: 'ability', ab: 'gravrew', player: t.p, uid: t.uid, stage: 'ask', nm: mdef(g.m).name, opts: ['vel', 'res', 'pod'] };
+      } else if (t.k === 'sombra') {                    // Robo de Sombras: ¿capturar la sombra del enemigo derrotado en combate?
+        if (!st.players[t.vo].grave.some(c => c.uid === t.vuid)) continue;
+        const list = []; for (let i = 0; i < st.n; i++) { const q = (t.p + i) % st.n; if (st.players[q].alive && st.team[q] === st.team[t.p]) list.push(q); }
+        if (nextWindow(st, 'kill', { k: 'sombra', by: t.p, t }, list)) break;
       } else if (t.k === 'viegodom') {                  // Viego: ¿poseer el cuerpo del derrotado?
         const vg = slotByUid(st, t.p, t.uid);
         if (!vg || vg.m.down || vg.m.poss || !st.players[t.vo].grave.some(c => c.uid === t.vuid)) continue;
@@ -2463,6 +2469,7 @@
       if (d.fx === 'kamui' && !(cont && cont.vic && st.players[cont.vic.p].mz[cont.vic.z] && st.team[cont.vic.p] === st.team[resp])) return;
       if (d.fx === 'contrato' && !(zonesWith(R.mz).length && !isInk(st.players[st.summon.p].mz[st.summon.z]) && !st.players[st.summon.p].mz[st.summon.z].ghost)) return;      // Contrato de la Muerte: necesita un personaje propio en el campo
       if (d.fx === 'hilos' && !hilosOpts(st, resp).length) return;
+      if (d.fx === 'sombra' && !(cont && cont.k === 'sombra' && cont.t && st.players[cont.t.vo].grave.some(c => c.uid === cont.t.vuid) )) return;      // Robo de Sombras: el derrotado debe estar en su cementerio
       if (d.fx === 'izanagi' && !(cont && cont.vic && (cont.k === 'kcombat' || cont.k === 'gpower') && st.team[cont.vic.p] === st.team[resp] && !R.izaUsed && st.players[cont.vic.p].mz[cont.vic.z])) return;      // Izanagi: una vez por duelo, sólo ante un ataque o una habilidad
       if (d.fx === 'sello' && !(cont && cont.k === 'power' && cont.pa && PW_ABID[cont.pa.pw] && st.players[cont.by].mz[cont.pa.zone])) return;      // Sello de Ocho Trigramas: sólo ante una habilidad enemiga conocida
       if ((d.fx === 'unico' || d.fx === 'tsukuyomi' || d.fx === 'amor') && !(st.atk && st.atk.target !== 'direct' && st.players[st.atk.vs].mz[st.atk.target])) return;
@@ -2712,6 +2719,18 @@
           for (const x of [at, dm]) (x.binds = x.binds || []).push({ atk: true, abt: true, n: 1, t0: st.turn, nm: 'el Mandamiento del Amor' });
           log(st, resp, `${mdef(at).name} (${A} ATK) supera a ${dm.down ? 'su objetivo' : mdef(dm).name} (${D} ATK): ambos quedan inmovilizados 1 turno completo (no atacan ni usan habilidades contra otros personajes)`);
         }
+        break;
+      }
+      case 'sombra': {                    // Robo de Sombras: captura la sombra del derrotado
+        const c = pd && pd.cont, t = c && c.t;
+        if (!t) break;
+        const G = st.players[t.vo], gi = G.grave.findIndex(x => x.uid === t.vuid);
+        if (gi < 0) break;
+        const inst = G.grave[gi], dd = def(inst), k = keepTrap(st, resp, pd.tuid, { sh: { vid: inst.id, nm: dd.name, atk: dd.atk, def: dd.def, t0: st.turn } });
+        if (!k) { log(st, resp, 'No hay sitio para dejar Robo de Sombras en el campo'); break; }
+        G.grave.splice(gi, 1);
+        (st.shadows = st.shadows || []).push({ tu: k.c.uid, o: t.vo, c: inst });
+        log(st, resp, `Robo de Sombras: la sombra de ${dd.name} (${dd.atk} ATK / ${dd.def} DEF) queda atrapada en la carta; el rival no puede recuperarlo mientras dure`);
         break;
       }
       case 'izanagi': {                   // Izanagi: reescritura de la realidad
@@ -3324,6 +3343,7 @@
       if (k >= 0) { const inst = vm.link.splice(k, 1)[0]; st.players[inst.by].grave.push(inst); }
       vm.copy = null; delete vm.poss; log(st, st.current, `Viego abandona el cuerpo de ${nm0} y recupera su apariencia y estadísticas`);
     } }
+    for (let z = 0; z < ZONES; z++) { const sm = P.mz[z]; if (sm && sm.shadowCopy && sm.shadowCopy.by === st.current && st.turn > sm.shadowCopy.t0) { log(st, st.current, `La copia de sombra de ${mdef(sm).name} desaparece`); removeMonster(st, st.current, z, 'ink'); } }      // Robo de Sombras
     for (const Q of st.players) if (Q.hlock) Q.hlock = Q.hlock.filter(l => l.on !== st.turn);      // Merlin: la carta bloqueada se libera al final del turno de Merlin
     for (const s of P.mz) if (s) { s.atkMod = 0; if (s.sed) { dropMods(s, 'sed'); s.sed = null; } dropMods(s, 'lobos'); }
     for (const s of P.mz) {                                      // Kaioken x10: al terminar el turno se pierden los bonos y llega el agotamiento
@@ -3567,6 +3587,11 @@
     });
   }
   function sweep(st) {
+    if (st.shadows && st.shadows.length) st.shadows = st.shadows.filter(e => {      // Robo de Sombras: si la carta deja el campo, el personaje vuelve a su cementerio
+      if (st.players.some(Q => Q.st.some(x => x && x.sh && x.c.uid === e.tu))) return true;
+      st.players[e.o].grave.push(e.c); log(st, e.o, `${def(e.c).name} es liberado de Robo de Sombras y vuelve al cementerio`);
+      return false;
+    });
     swapCheck(st);
     hanCheck(st);
     for (const P of st.players) for (const k of ['grave', 'banish', 'hand', 'deck']) if (P[k] && P[k].some(c => c && c.virt)) P[k] = P[k].filter(c => !(c && c.virt));      // efecto liberado por la Gema del Alma
@@ -4116,6 +4141,10 @@
       }
       if (def(s.c).fx === 'capsulas' && s.capT !== st.turn && P.mz.some(x => !x)) {      // Cápsulas Hoi-Poi: libera una
         for (const e of (st.limbo || [])) if (e.kind === 'cap' && e.cap === s.c.uid && e.p === p && spot(P, mdef(e.m)) >= 0) out.push({ t: 'spow', zone: z, pw: 'capliberar', u: e.m.c.uid });
+      }
+      if (s.sh && st.current === p && st.phase === 'main') {      // Robo de Sombras: liberar la sombra
+        const dd = C().get(s.sh.vid);
+        if (dd && !dd.wide && !dd.huge && spot(P, dd) >= 0) out.push({ t: 'spow', zone: z, pw: 'sombralib' });
       }
       if (s.iza && s.iza.armed === st.turn && st.current === p && st.phase === 'main') {      // Izanagi: devolver el efecto registrado
         const t = findByUid(st, s.iza.eu), mx = { canon: 7, tm: 4, cuerno: 4 }[s.iza.pw];
@@ -5317,6 +5346,14 @@
       entered(st, p, z);
       return;
     }
+    if (a.pw === 'sombralib') {
+      const sh = s.sh, dd = sh && C().get(sh.vid), zz = dd ? spot(P, dd) : -1;
+      if (!dd || zz < 0) return;
+      P.st[a.zone] = null; P.grave.push(s.c);
+      P.mz[zz] = mkSlot(st, { uid: st.nextUid++, id: sh.vid, virt: true }, { pos: 'atk', shadowCopy: { t0: st.turn, by: p } });
+      log(st, p, `${nm}: libera la sombra de ${dd.name}. Una copia (la mitad de ATK y DEF, sin habilidades) aparece en tu campo y desaparecerá al final de tu próximo turno`);
+      return;
+    }
     if (a.pw === 'izaret') {
       const t = s.iza && findByUid(st, s.iza.eu);
       if (!t) return;
@@ -6093,6 +6130,7 @@
       { const es = escStage(st, s); if (es.k) { v.esc = { k: es.k, left: es.left }; if (es.k === 'mediodia' && mdef(s).imgMed) v.art = mdef(s).imgMed; } }
       if (s.swap) v.swap = true;
       if (s.cube) v.cube = { left: Math.max(0, 2 - elapsed(st, s.cube.t0)) };
+      if (s.shadowCopy) v.shadowCopy = true;      // Robo de Sombras
       if (s.thread) v.thread = true;      // Hilos del Destino
       if (s.puppet) v.puppet = true;
       if (s.soulOff) v.soulOff = true;      // Intercambio de Almas
@@ -6152,6 +6190,7 @@
     if (s.inv) v.inv = true;      // contador de investigación de Near
     if (s.con) v.con = { n: s.con.n, tn: s.con.tn };      // Contrato de la Muerte
     if (s.seal) v.seal = { pw: s.seal.pw, from: s.seal.from };
+    if (s.sh) v.sh = { id: s.sh.vid, nm: s.sh.nm };      // Robo de Sombras
     if (s.iza) v.iza = { nm: s.iza.nm, kind: s.iza.kind, armed: s.iza.armed === st.turn };      // Izanagi      // Sello de Ocho Trigramas
     if (s.thr) { const th = findByUid(st, s.thr.tu); v.thr = { id: th ? th.m.c.id : null }; }      // Hilos del Destino
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
@@ -6274,6 +6313,7 @@
     });
     for (const s of P.st) if (s) n++;
     for (const Q of st.players) for (const s of Q.st) if (s && s.prison) { if (s.prison.owner === p) n++; for (const l of (s.prison.m.link || [])) if ((l.by != null ? l.by : s.prison.owner) === p) n++; }
+    for (const e of (st.shadows || [])) if (e.o === p) n++;                // la sombra guardada en Robo de Sombras sigue siendo carta de su dueño
     for (const e of (st.limbo || [])) {                                  // fuera del campo por un tiempo (Mafuba, Kamui)
       const own = e.m.owner != null ? e.m.owner : e.p;
       if (own === p) n++;

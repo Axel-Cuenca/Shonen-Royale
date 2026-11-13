@@ -1177,6 +1177,11 @@
       text: 'Reescritura de la Realidad (una vez por duelo): cuando un enemigo vaya a destruir a un aliado con un ataque o una habilidad, evitas la destrucción y registras ese efecto; el aliado pierde 500 ATK para siempre. En tu próximo turno puedes devolver ese mismo efecto contra el personaje enemigo que lo provocó; si no lo haces ese turno, pierdes la oportunidad.',
       sfx: { use: V('izanagi-use') }
     },
+    {
+      kind: 'trap', id: 'c_robo_sombras', name: 'Robo de Sombras', icon: '👤', img: I('robo_sombras'), trigger: 'kill', fx: 'sombra',
+      lore: 'Esta trampa captura la sombra de un personaje enemigo derrotado antes de que pueda desaparecer por completo. Aunque el personaje llega al cementerio, su sombra queda atrapada y puede ser utilizada posteriormente para crear una copia temporal bajo tu control.',
+      text: 'Extracción forzada: cuando un personaje enemigo sea destruido en combate, captura su sombra (la trampa queda en el campo y el rival no puede recuperar a ese personaje mientras tanto). Liberación (una vez): coloca en una zona libre una copia con su nombre y apariencia, con la mitad de su ATK y DEF y sin habilidades, que desaparece al final de tu próximo turno.'
+    },
     spell({
       id: 'c_ojos_shinigami', name: 'Ojos de Shinigami', icon: '👁️', img: I('ojos_shinigami'), fx: 'equip', sub: 'equip', eyesAll: true,
       lore: 'Los Ojos de Shinigami permiten ver más allá de las apariencias y descubrir la verdadera identidad de quienes intentan ocultarse.',
@@ -1192,6 +1197,7 @@
     deathnote: ['c_death_note', 'c_ojos_shinigami', 'c_contrato_muerte'],
     blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
     pecados: ['c_full_counter', 'c_el_unico', 'c_mandamiento_amor'],
+    sololeveling: ['c_robo_sombras'],
     zodiaco: ['c_armadura'], anillos: ['c_anillo_unico'], hp: ['c_capa'], lol: ['c_espada'],
     pokemon: ['c_pokeball', 'c_superball'], villano: ['c_minions'], hxh: ['c_cana_gon'], bleach: ['c_kyoka'],
     normal: ['c_ola_fuego', 'c_infarto', 'c_seleccion_magia', 'c_tormenta', 'c_uno_dos', 'c_ultratumba', 'c_invitacion', 'c_x', 'c_rayo_solar', 'c_botiquin']
@@ -1244,7 +1250,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi', 'robo_sombras']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

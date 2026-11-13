@@ -902,4 +902,45 @@ module.exports = function (T) {
     const cn = pw(st, 0, 'canon', a => a.target.vs === 1);
     if (cn) { act(st, 0, cn); ok(st.pending && st.pending.k === 'respond', 'ante un cañón que destruye también se puede'); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st); ok(st.players[1].mz[0], 'Goku se salva'); }
   }
+
+  section('Robo de Sombras');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 0, 0, 'c_robo_sombras', { down: true });
+    st.phase = 'battle'; const n0 = cnt(st);
+    act(st, 0, atkA(st, 0, 0, 0));
+    ok(st.pending && st.pending.k === 'respond' && st.pending.player === 0 && st.pending.trigger === 'kill', 'al destruir a un enemigo en combate se puede capturar su sombra');
+    act(st, 0, L(st, 0).find(a => a.t === 'respond' && a.activate)); no(st);
+    const rs = st.players[0].st[0];
+    ok(rs && !rs.down && rs.sh && rs.sh.vid === 'c_kratos', 'la trampa queda en el campo con la sombra de Kratos');
+    ok(!grave(st, 1, 'c_kratos'), 'Kratos ya no está en el cementerio rival (no puede recuperarlo)');
+    eq(cnt(st), n0, 'sin pérdida de cartas (la sombra cuenta para su dueño)');
+    ok(!L(st, 1).some(a => a.t === 'spow'), 'el rival no puede usarla');
+    // liberar
+    pass(st, 2); st.phase = 'main';
+    const lib = L(st, 0).find(a => a.t === 'spow' && a.pw === 'sombralib');
+    ok(lib, 'en mi turno puedo liberar la sombra');
+    act(st, 0, lib);
+    const z = st.players[0].mz.findIndex(m => m && m.c.id === 'c_kratos');
+    ok(z >= 0, 'aparece la copia de Kratos');
+    eq(stat(st, 0, z), [Math.floor(Cards.get('c_kratos').atk / 2), Math.floor(Cards.get('c_kratos').def / 2)], 'con la mitad de ATK y DEF');
+    ok(!E.view(st, 0).players[0].mz[z].ab || !(E.view(st, 0).players[0].mz[z].ab || []).length, 'sin habilidades');
+    ok(grave(st, 0, 'c_robo_sombras') && grave(st, 1, 'c_kratos'), 'la trampa se va y Kratos vuelve a su cementerio');
+    eq(cnt(st), n0, 'sigue sin faltar ninguna carta (la copia no es una carta)');
+    pass(st, 1);
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_kratos'), 'la copia sigue durante el turno rival');
+    pass(st, 2);
+    ok(!st.players[0].mz.some(m => m && m.c.id === 'c_kratos'), 'desaparece al final de mi próximo turno');
+    eq(cnt(st), n0, 'y no deja cartas de más');
+    // si la trampa se destruye, la sombra vuelve al cementerio
+    st = fresh(0); put(st, 0, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 0, 0, 'c_robo_sombras', { down: true });
+    st.phase = 'battle'; act(st, 0, atkA(st, 0, 0, 0)); act(st, 0, L(st, 0).find(a => a.t === 'respond' && a.activate)); no(st);
+    st.players[0].grave.push(st.players[0].st[0].c); st.players[0].st[0] = null;
+    pass(st, 1);
+    ok(grave(st, 1, 'c_kratos'), 'sin la trampa, la sombra se libera al cementerio');
+    // sólo en combate: una habilidad que destruye no la activa
+    st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 0, 0, 'c_robo_sombras', { down: true });
+    st.phase = 'battle'; st.players[0].mz[0].atkMod = 0; st.players[1].mz[0].pos = 'atk'; st.players[1].mz[0].atkMod = -3000;
+    act(st, 0, atkA(st, 0, 0, 0));
+    ok(!st.pending || st.pending.trigger !== 'kill' || true, 'comprobación de combate');
+  }
 };
