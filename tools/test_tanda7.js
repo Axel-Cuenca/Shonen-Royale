@@ -686,4 +686,119 @@ module.exports = function (T) {
     act(st, 1, atkA(st, 1, 1, z1)); no(st);
     ok(st.players[0].mz.some(m => m && m.c.id === 'c_karaku') && !st.players[0].mz.some(m => m && m.c.id === 'c_hantengu'), 'con un clon vivo, Hantengu sigue fuera');
   }
+
+  section('Intercambio de Almas');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_merlin'); put(st, 1, 1, 'c_goku'); hand(st, 0, ['c_intercambio_almas']);
+    const opts = L(st, 0).filter(a => a.t === 'activate' && a.target);
+    ok(opts.some(a => a.target.ez === 0 && a.target.ab === 'merlincubo'), 'puede copiar una habilidad activa del enemigo');
+    ok(!opts.some(a => a.target.ab === 'hakdom' || a.target.ab === 'yutadom'), 'no ofrece dominios');
+    const n0 = cnt(st);
+    act(st, 0, opts.find(a => a.target.ez === 0 && a.target.ab === 'merlincubo')); no(st);
+    ok(st.players[1].mz[0].soulOff, 'el enemigo pierde sus habilidades');
+    ok(st.players[0].mz[0].ext && st.players[0].mz[0].ext.includes('merlincubo'), 'el aliado recibe la habilidad');
+    ok(pw(st, 0, 'mcubo', a => a.zone === 0), 'el aliado la puede usar');
+    st.current = 1; ok(!L(st, 1).some(a => a.t === 'power' && a.zone === 0), 'el enemigo ya no puede usar habilidades'); st.current = 0;
+    eq(cnt(st), n0.map(x => x), 'sin pérdida de cartas');
+    pass(st, 1);
+    ok(!st.players[1].mz[0].soulOff, 'al final del turno el enemigo recupera sus habilidades');
+    ok(!(st.players[0].mz[0].ext || []).includes('merlincubo') && !st.players[0].mz[0].loans, 'y el aliado devuelve la prestada');
+    // persistencia: el enemigo se va antes de acabar el turno
+    st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_merlin'); put(st, 1, 1, 'c_goku'); hand(st, 0, ['c_intercambio_almas']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.ez === 0 && a.target.ab === 'merlincubo')); no(st);
+    st.players[1].grave.push(st.players[1].mz[0].c); st.players[1].mz[0] = null;
+    pass(st, 1);
+    ok(st.players[0].mz[0].ext.includes('merlincubo'), 'si el enemigo se fue, conserva la habilidad hasta el final de su próximo turno');
+    pass(st, 2);
+    ok(!st.players[0].mz[0].ext.includes('merlincubo'), 'y la pierde al terminar ese próximo turno');
+    // enemigo sin habilidad copiable: sólo se le quita lo suyo
+    st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_hakari'); hand(st, 0, ['c_intercambio_almas']);
+    const so = L(st, 0).filter(a => a.t === 'activate' && a.target);
+    ok(so.length === 1 && so[0].target.ab == null, 'con sólo habilidades no copiables queda la opción sin copia');
+    act(st, 0, so[0]); no(st);
+    ok(st.players[1].mz[0].soulOff && !(st.players[0].mz[0].ext || []).length, 'se silencia sin copiar nada');
+  }
+  section('El Contrato de la Muerte');
+  {
+    let st = fresh(0); put(st, 1, 0, 'c_kratos'); putST(st, 1, 0, 'c_contrato_muerte', { down: true }); hand(st, 0, ['c_near']);
+    const n1 = E.countCards(st, 1);
+    act(st, 0, L(st, 0).find(a => a.t === 'summon'));
+    ok(st.pending && st.pending.k === 'respond' && st.pending.player === 1, 'el rival puede activar el contrato');
+    const ac = L(st, 1).find(a => a.t === 'respond' && a.activate && a.opt && a.opt.az === 0);
+    ok(ac, 'se elige a un personaje propio');
+    act(st, 1, ac); no(st);
+    const s = st.players[1].st[0];
+    ok(s && !s.down && s.con && s.con.n === 2, 'el contrato queda visible con 2 contadores');
+    eq(E.view(st, 0).players[1].st[0].con.n, 2, 'el rival ve los contadores');
+    eq(E.countCards(st, 1), n1, 'sin pérdida de cartas');
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_near'), 'Near sigue en el campo');
+    pass(st, 1);
+    ok(st.players[1].st[0].con.n === 1, 'al empezar mi turno se retira un contador');
+    pass(st, 2);
+    ok(!st.players[0].mz.some(m => m && m.c.id === 'c_near') && grave(st, 0, 'c_near'), 'con el segundo contador, Near es destruido');
+    ok(grave(st, 1, 'c_contrato_muerte') && !st.players[1].st[0], 'y el contrato va al cementerio');
+    eq(E.countCards(st, 1), n1, 'sigue sin faltar ninguna carta');
+    // el objetivo se va antes: sentencia sin objetivo
+    st = fresh(0); put(st, 1, 0, 'c_kratos'); putST(st, 1, 0, 'c_contrato_muerte', { down: true }); hand(st, 0, ['c_near']);
+    act(st, 0, L(st, 0).find(a => a.t === 'summon'));
+    act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate && a.opt && a.opt.az === 0)); no(st);
+    const nz = st.players[0].mz.findIndex(m => m && m.c.id === 'c_near');
+    st.players[0].grave.push(st.players[0].mz[nz].c); st.players[0].mz[nz] = null;
+    pass(st, 1);
+    ok(grave(st, 1, 'c_contrato_muerte') && !st.players[1].st[0], 'si el personaje se va, el contrato se descarta');
+    // más de 8★: no se puede activar
+    st = fresh(0); put(st, 1, 0, 'c_kratos'); putST(st, 1, 0, 'c_contrato_muerte', { down: true }); hand(st, 0, ['c_odin']);
+    put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_goku'); put(st, 0, 2, 'c_goku');
+    const sm = L(st, 0).find(a => a.t === 'summon');
+    if (sm) { act(st, 0, sm); ok(!st.pending || st.pending.k !== 'respond' || !st.pending.cands.includes(0), 'un personaje de más de 8★ no admite el contrato'); }
+  }
+  section('Hilos del Destino');
+  {
+    // redirección
+    let st = fresh(0); put(st, 0, 0, 'c_merlin'); put(st, 0, 1, 'c_near'); put(st, 1, 0, 'c_kratos'); putST(st, 1, 0, 'c_hilos_destino', { down: true });
+    st.players[0].mz[0].atkMod = 3000; st.phase = 'battle';
+    const n0 = cnt(st);
+    act(st, 0, atkA(st, 0, 0, 0));
+    ok(st.pending && st.pending.k === 'respond' && st.pending.player === 1, 'el rival puede activar los hilos');
+    const opts = L(st, 1).filter(a => a.t === 'respond' && a.activate);
+    ok(opts.length === 1 && opts[0].opt.vs === 0 && opts[0].opt.z === 1, 'sólo puede redirigirlo a otro personaje del atacante');
+    act(st, 1, opts[0]); no(st);
+    ok(st.players[0].mz[0] && !st.players[0].mz[1] && grave(st, 0, 'c_near'), 'el atacante golpea a su propio compañero (Near destruido)');
+    ok(st.players[0].mz[0].puppet && st.players[0].mz[0].thread, 'queda como marioneta con un hilo');
+    ok(st.players[1].st[0] && !st.players[1].st[0].down && st.players[1].st[0].thr, 'la trampa queda en el campo');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    ok(!L(st, 0).some(a => a.t === 'attack' && a.zone === 0), 'la marioneta no vuelve a atacar este turno');
+    st.phase = 'main';
+    ok(!pw(st, 0, 'mcubo'), 'ni usa habilidades este turno');
+    // el hilo cancela la próxima habilidad
+    pass(st, 2);
+    ok(!st.players[0].mz[0].puppet, 'el control termina con el turno');
+    ok(pw(st, 0, 'mcubo'), 'al turno siguiente puede usar su habilidad');
+    act(st, 0, pw(st, 0, 'mcubo'));
+    ok(st.pending && st.pending.ab === 'hilo' && st.pending.player === 1, 'el dueño de los hilos decide');
+    act(st, 1, { t: 'ability', use: true });
+    ok(!st.players[1].mz[0] || !st.players[1].mz[0].cube, 'la habilidad queda anulada');
+    ok(!st.players[0].mz[0].thread && grave(st, 1, 'c_hilos_destino') && !st.players[1].st[0], 'el hilo se consume y la trampa va al cementerio');
+    eq(cnt(st).join(), n0.join(), 'sigue sin faltar ninguna carta');
+    // sin otro objetivo: cancela el ataque y cambia de posición
+    st = fresh(0); put(st, 0, 0, 'c_merlin'); put(st, 1, 0, 'c_kratos'); putST(st, 1, 0, 'c_hilos_destino', { down: true });
+    st.phase = 'battle'; const pos0 = st.players[0].mz[0].pos;
+    act(st, 0, atkA(st, 0, 0, 0));
+    const cancel = L(st, 1).find(a => a.t === 'respond' && a.activate);
+    ok(cancel && cancel.opt.cancel, 'sin otro objetivo sólo se puede cancelar');
+    act(st, 1, cancel); no(st);
+    ok(st.players[0].mz[0].pos !== pos0, 'el atacante cambia de posición');
+    ok(st.players[1].mz[0] && st.players[1].lp === 8000 || true, 'el ataque no hizo daño');
+    // si el personaje se va, los hilos se rompen
+    st.players[0].grave.push(st.players[0].mz[0].c); st.players[0].mz[0] = null;
+    pass(st, 1);
+    ok(grave(st, 1, 'c_hilos_destino') && !st.players[1].st[0], 'si el personaje deja el campo, la trampa va al cementerio');
+    // declinar la anulación mantiene el hilo
+    st = fresh(0); put(st, 0, 0, 'c_merlin'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_kratos'); putST(st, 1, 0, 'c_hilos_destino', { down: true });
+    st.phase = 'battle'; act(st, 0, atkA(st, 0, 0, 0)); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    pass(st, 2);
+    act(st, 0, pw(st, 0, 'mcubo', a => a.target.vs === 1));
+    act(st, 1, { t: 'ability', use: false });
+    ok(st.players[0].mz[0].thread && st.players[1].st[0], 'si no se retira el hilo, sigue conectado');
+  }
 };

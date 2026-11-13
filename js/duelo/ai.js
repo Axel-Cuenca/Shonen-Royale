@@ -308,6 +308,7 @@
               const gain = (foe.atk || 0) - (mine.atk || 0);
               return gain >= 600 ? 42 + Math.min(30, gain / 60) : -1;
             }
+            case 'almas': return a.target && a.target.ab && info.count ? 41 : -1;                     // presta una habilidad activa del enemigo
             case 'karma': {
               const m = me.mz[a.target.z];
               return m && !m.down && info.count ? 41 : -1;

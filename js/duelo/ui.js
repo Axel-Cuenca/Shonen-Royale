@@ -1435,6 +1435,10 @@
       if (s.tour) b.push(['🎯', 'Tour de Force listo: su próximo ataque ignora lo que impida destruir al objetivo']);
       if (s.fer != null) b.push(['🐾' + s.fer + '/4', 'Ferocidad: ' + s.fer + '/4 (2 por cada habilidad potenciada)']);
       if (s.esc) b.push([s.esc.k === 'amanecer' ? '🌅' : s.esc.k === 'mediodia' ? '☀️' : '🌇', 'Sunshine: ' + ({ amanecer: 'Amanecer', mediodia: 'Mediodía', atardecer: 'Atardecer' })[s.esc.k] + (s.esc.left ? ' · quedan ' + s.esc.left + ' turno(s) de esta etapa' : '')]);
+      if (s.puppet) b.push(['🧵', 'Marioneta: controlado por los hilos hasta el final del turno (no ataca ni usa habilidades)']);
+      if (s.thread) b.push(['🪡', 'Hilo de Hilos del Destino: su próxima habilidad puede ser anulada']);
+      if (s.soulOff) b.push(['🌀', 'Intercambio de Almas: sin habilidades especiales hasta el final del turno de quien lo lanzó']);
+      if (s.loans && s.loans.length) b.push(['🌀', 'Habilidad prestada (Intercambio de Almas): ' + s.loans.map(abn).join(', ')]);
       if (s.cube) b.push(['🧊', `Encerrado en un Cubo Perfecto (${s.cube.left} turno(s)): no ataca, no recibe ataques ni habilidades y no puede ser elegido`]);
       if (s.fly) b.push(['🪽', 'Fuera de alcance: no se le puede atacar hasta el próximo turno de su controlador']);
       if (s.camu) b.push(['🌿', 'Camuflaje: inmune a las magias y trampas enemigas']);
@@ -1625,6 +1629,21 @@
               btn('Cancelar', closeModal, 'ghost')));
           }, 'Elige al enemigo del que copias');
         }, 'Elige a tu personaje que hace el sacrificio');
+      }
+      if (d.fx === 'almas') {                // tu aliado que usa la habilidad, el enemigo que pierde las suyas y qué habilidad se presta
+        const zs = [...new Set(list.map(a => a.target.z))];
+        return pickTargets(zs.map(z => ({ seat: v.seat, area: 'mz', z })), t1 => {
+          const sub = list.filter(a => a.target.z === t1.z), seen = new Set(), foes = [];
+          for (const a of sub) { const k = a.target.vs + ':' + a.target.ez; if (!seen.has(k)) { seen.add(k); foes.push({ seat: a.target.vs, area: 'mz', z: a.target.ez }); } }
+          pickTargets(foes, t2 => {
+            const opts = sub.filter(a => a.target.vs === t2.seat && a.target.ez === t2.z);
+            if (opts.length === 1) return act(opts[0]);
+            const lab = a => 'Prestar: ' + (C.AB && C.AB[a.target.ab] ? C.AB[a.target.ab][0] : a.target.ab);
+            modal(h('div', { class: 'box' }, h('h2', null, 'Intercambio de Almas: ¿qué habilidad usa tu aliado?'),
+              h('div', { class: 'acts', style: 'flex-direction:column;align-items:stretch;gap:8px' }, opts.map(a => btn(lab(a), () => { closeModal(); act(a); }, 'gold'))),
+              btn('Cancelar', closeModal, 'ghost')));
+          }, 'Elige al enemigo que pierde sus habilidades');
+        }, 'Elige a tu aliado que usará la habilidad');
       }
       if (d.fx === 'edo') {                  // 1) el aliado que se sacrifica, 2) el personaje del cementerio que vuelve (puede ser el sacrificado)
         const zs = [...new Set(list.map(a => a.target.z))];
@@ -1947,6 +1966,8 @@
       if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
+      if (s.con) return `Contrato de la Muerte: el nombre de ${s.con.tn} está escrito. Faltan ${s.con.n} contador(es) de tiempo (se retira uno al empezar el turno de su dueño); al retirar el último, ese personaje es destruido. Si deja el campo antes, el contrato se descarta.`;
+      if (s.thr) return `Hilos del Destino: ${s.thr.id ? nameId(s.thr.id) : 'el personaje'} sigue conectado a los hilos. La próxima vez que use una habilidad, su dueño puede retirar el hilo para anularla.`;
       if (s.prison) return `Tiene sellado a ${nameId(s.prison.c)}: vuelve en ${s.prison.left} turno(s).`;
       if (s.promise) return 'Rika Orimoto es feliz mientras el portador siga en el campo. El portador no puede cambiar durante la partida' + (s.bearer ? ' (portador: ' + nameId(s.bearer) + ').' : '.');
       return null;
@@ -2018,7 +2039,10 @@
             // Gema de la Realidad: hay que elegir a quién se redirige el ataque o a quién se destruye en su lugar
             const lb = d.fx === 'fullcounter' ? (pd.trigger === 'attack' ? 'Devolver el ataque a' : 'Devolver el efecto a') : d.fx === 'kyoka' ? 'Que la habilidad caiga sobre' : pd.trigger === 'attack' ? 'Redirigir el ataque a' : 'Destruir en su lugar a';
             return h('div', { class: 'optbox' }, h('b', null, `${d.icon} ${d.name}`), h('div', { style: 'font-size:12px;margin:2px 0 6px' }, d.text),
-              os.map(a => { const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
+              os.map(a => {
+                if (a.opt.cancel) return h('button', { class: 'btn gold', onclick: () => act(a) }, 'Cancelar el ataque y cambiar de posición al atacante');
+                if (a.opt.az != null) { const mm = v.me.mz[a.opt.az]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `Escribir el nombre desde ${mm && mm.c ? nameId(mm.c.id) : 'tu personaje'} · zona ${a.opt.az + 1}`); }
+                const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
           })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));
         modal(box, false); modalEl.dataset.pend = 1;
@@ -2174,6 +2198,11 @@
           by && by.c ? h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get(by.c.id))) : null,
           h('div', { class: 'acts' }, btn('Anular', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejar que se resuelva', () => act({ t: 'ability', use: false }), 'ghost')));
         modal(box, false); modalEl.dataset.pend = 1;
+      } else if (pd.k === 'ability' && pd.ab === 'hilo') {
+        const box = h('div', { class: 'box' }, h('h2', null, '🧵 Hilos del Destino: Hilos Persistentes'), h('p', { class: 'sub' }, `${pd.nm || 'El personaje conectado a tus hilos'} va a usar ${pd.pwn || 'una habilidad'}. Puedes retirar el hilo para que no se resuelva (la trampa va al cementerio).`),
+          h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_hilos_destino'))),
+          h('div', { class: 'acts' }, btn('Retirar el hilo y anular la habilidad', () => act({ t: 'ability', use: true }), 'gold'), btn('Dejarla pasar', () => act({ t: 'ability', use: false }), 'ghost')));
+        modal(box, false); modalEl.dataset.pend = 1;
       } else if (pd.k === 'ability' && pd.ab === 'shikaestr') {
         const box = h('div', { class: 'box' }, h('h2', null, '🧠 Shikamaru: Estratega brillante'), h('p', { class: 'sub' }, `${pd.nm || 'Un personaje enemigo'} va a usar una habilidad. Shikamaru puede anticiparse: pierde 400 ATK hasta el final del turno (la habilidad se usa igual). (Una vez por turno)`),
           h('div', { style: 'display:flex;justify-content:center;margin:8px 0' }, cardEl(C.get('c_shikamaru'))),
@@ -2258,6 +2287,8 @@
         if (area === 'mz' && s.c) { const bg = badgesEl(s); if (bg) el.append(bg); if (s.wide) el.classList.add('wideA'); if (s.huge) el.classList.add('hugeA'); }
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : s.guerrero && s.guerrero.waiting ? '⏳' : '👁️'));
+        if (area === 'st' && s.c && s.con) el.append(h('span', { class: 'eqm', title: `Contrato de la Muerte: ${s.con.n} contador(es) de tiempo sobre ${s.con.tn}` }, '⏳' + s.con.n));
+        if (area === 'st' && s.c && s.thr) el.append(h('span', { class: 'eqm', title: 'Hilos del Destino: el personaje sigue conectado a los hilos' }, '🧵'));
         cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {
           landing = true; c.classList.add('landing');

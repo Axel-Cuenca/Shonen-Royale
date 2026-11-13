@@ -1147,6 +1147,21 @@
       text: 'Invocación del Mundo Impuro: sacrifica a un personaje de tu campo y revive especialmente a un personaje de tu cementerio (puede ser el recién sacrificado) en una zona libre, sin tributos. Conserva sus estadísticas y habilidades. No se puede activar sin un personaje válido en el cementerio o sin zona libre.'
     }),
     spell({
+      id: 'c_intercambio_almas', name: 'Intercambio de Almas', icon: '🌀', img: I('intercambio_almas'), fx: 'almas',
+      lore: 'Una técnica que altera la esencia de dos individuos, separando temporalmente a un guerrero de sus capacidades y permitiendo que otro experimente el poder que le fue arrebatado. El cuerpo y el alma no siempre pertenecen a quien los controla.',
+      text: 'Alteración del Alma: elige a un enemigo y a un aliado. El enemigo pierde sus habilidades especiales hasta el final de tu turno y tu aliado puede usar una de sus habilidades activas originales (no pasivas, definitivas ni de transformación). Si el enemigo deja el campo antes, tu aliado la conserva hasta el final de tu próximo turno.'
+    }),
+    {
+      kind: 'trap', id: 'c_contrato_muerte', name: 'El Contrato de la Muerte', icon: '📓', img: I('contrato_muerte'), trigger: 'summon', fx: 'contrato', maxLevel: 8,
+      lore: 'Un contrato basado en las reglas de la Death Note. Al conocer el nombre verdadero de una persona, su destino queda sellado. La sentencia no es inmediata: el tiempo comienza a correr desde el momento en que su nombre queda escrito.',
+      text: 'Nombre Escrito: cuando un rival invoque un personaje de 8★ o menos, elige a un personaje tuyo: el rival revela el nombre y las estrellas del invocado y su nombre queda escrito (2 contadores de tiempo; el contrato queda en el campo). Sentencia: al empezar tu turno retiras un contador; al retirar el segundo, ese personaje es destruido. Si deja el campo antes, el contrato se descarta sin efecto.'
+    },
+    {
+      kind: 'trap', id: 'c_hilos_destino', name: 'Hilos del Destino', icon: '🧵', img: I('hilos_destino'), trigger: 'attack', fx: 'hilos',
+      lore: 'Mediante hilos malditos, el usuario puede manipular los movimientos de sus enemigos como si fueran marionetas. Incluso después de perder el control, el personaje afectado continúa conectado a los hilos, permitiendo interrumpir su próxima técnica.',
+      text: 'Manipulación de Marionetas: cuando un enemigo declare un ataque, tomas el control del atacante hasta el final del turno y lo obligas a atacar a otro personaje de su bando (con su misma potencia); si no hay otro objetivo, el ataque se cancela y cambia de posición. Hilos Persistentes: la trampa queda en el campo y, la próxima vez que ese personaje use una habilidad, puedes retirar el hilo para anularla (y la trampa va al cementerio).'
+    },
+    spell({
       id: 'c_ojos_shinigami', name: 'Ojos de Shinigami', icon: '👁️', img: I('ojos_shinigami'), fx: 'equip', sub: 'equip', eyesAll: true,
       lore: 'Los Ojos de Shinigami permiten ver más allá de las apariencias y descubrir la verdadera identidad de quienes intentan ocultarse.',
       text: 'Visión del Shinigami: equípala a un personaje tuyo. Mientras siga en el campo, ves en privado la identidad de todos los personajes enemigos boca abajo (el rival los sigue viendo ocultos). No los voltea ni activa efectos de revelar.'
@@ -1155,10 +1170,10 @@
   // Tipo (serie) de las magias y trampas: sólo informativo (2026-11-12), no cambia ninguna regla. Las que no son de una serie del juego son «normal».
   const ST_TYPE = {
     dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia', 'c_camara_gravedad', 'c_sala_tiempo', 'c_capsulas'],
-    jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero'],
+    jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero', 'c_intercambio_almas', 'c_hilos_destino'],
     marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
     naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei'],
-    deathnote: ['c_death_note', 'c_ojos_shinigami'],
+    deathnote: ['c_death_note', 'c_ojos_shinigami', 'c_contrato_muerte'],
     blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
     pecados: ['c_full_counter', 'c_el_unico'],
     zodiaco: ['c_armadura'], anillos: ['c_anillo_unico'], hp: ['c_capa'], lol: ['c_espada'],
@@ -1213,7 +1228,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

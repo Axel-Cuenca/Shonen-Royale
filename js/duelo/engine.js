@@ -110,11 +110,19 @@
   /** Cartas de equipo activas en la casilla z con una marca (los dominios que anulan los equipos las apagan). */
   const eqWith = (st, P, z, key) => (stOff(st) ? [] : P.st.filter(s => s && !s.down && s.equipTo === z && def(s.c)[key]));
   /** Restricciones temporales (Posesión de sombras, Águila de tinta, Tsukuyomi) y petrificación de Galand. k: 'atk' | 'ab'. */
-  const blocked = (m, k) => !!m && (!!m.petri || !!m.cube || (m.binds || []).some(b => b[k]));      // Merlin: Cubo Perfecto bloquea ataque y habilidades
+  const blocked = (m, k) => !!m && (!!m.petri || !!m.cube || !!m.puppet || (k === 'ab' && !!m.soulOff) || (m.binds || []).some(b => b[k]));      // Hilos del Destino (marioneta) y Intercambio de Almas (sin habilidades)      // Merlin: Cubo Perfecto bloquea ataque y habilidades
   /** Hay un personaje enemigo de p con Anti-Magia Absoluta boca arriba. */
   const antiAbs = (st, p) => st.players.some((Q, q) => Q.alive && st.team[q] !== st.team[p] && Q.mz.some(x => x && !x.down && has(st, x, 'antiabs')));
   /** Dominios de Jujutsu Kaisen (05-11-2026): se puede abrir uno si no hay ninguno, o si gana el choque al que ya está activo:
    *  más estrellas, o las mismas (gana el segundo en activarse). Con menos estrellas no se ofrece. */
+  /** Intercambio de Almas (JJK): habilidades ACTIVAS que se pueden prestar (sin pasivas, definitivas, dominios ni transformaciones). */
+  const SOUL_AB = ['furia', 'bigbang1', 'desmantelar', 'dexter', 'chidori', 'avada', 'cuerno', 'zenitsu2', 'gyomei2', 'gyomei3', 'patriarca', 'maestro', 'llama', 'telar', 'punos', 'toge', 'semilla', 'sylas', 'rasengan', 'rengarmax', 'rengarcaza', 'kaivuelo', 'merlincubo', 'tuskmagia', 'viegoniebla', 'dofhilo', 'dofjaula', 'gyuhoz', 'gyudanza', 'dakibelt', 'chtour', 'yoclon', 'yoviaje', 'nearmira', 'kzmask', 'astacausa', 'sjarmy', 'sjigris', 'sjmon', 'kameha', 'bulmagen', 'satanpub', 'elizluz', 'galco', 'galcaza', 'tobidim', 'tinta', 'shikasomb', 'liukang', 'misaojos', 'misadn', 'kaioken', 'brillo', 'odinrev', 'odinbend'];
+  /** Habilidades originales del enemigo que `am` puede recibir prestadas. */
+  function soulAbs(st, am, tm) {
+    if (!tm || !am || rawAbil(tm).includes('makirest')) return [];
+    const own = abil(st, am), orig = (C().get(tm.c.id) || {}).ab || [];
+    return Array.from(new Set(orig)).filter(x => SOUL_AB.includes(x) && !own.includes(x) && !(tm.sealed || []).some(q => q.ab === x));
+  }
   const DOM_AB = ['relicario', 'jogodom', 'yutadom', 'higudom', 'hakdom'];
   const DOM_NAME = { relicario: 'Relicario Demoníaco', dominio: 'Ataúd de la Montaña de Hierro', ydominio: 'Amor Mutuo y Verdadero', higudom: 'Sentencia Mortal', hakdom: 'Apuesta Mortal' };
   function domLv(st) {
@@ -1669,6 +1677,37 @@
         }
       }
     },
+    // Intercambio de Almas: un enemigo pierde sus habilidades y un aliado usa una de sus habilidades activas
+    almas: {
+      targets: (st, p) => {
+        const P = st.players[p], out = [];
+        for (const z of rikaOwn(st, P)) {
+          const am = P.mz[z];
+          if (am.down || am.wide) continue;
+          for (const e of foeChars(st, p)) {
+            const tm = st.players[e.vs].mz[e.z];
+            if (tm.down || rikaUp(st, tm)) continue;
+            const abs = soulAbs(st, am, tm);
+            if (!abs.length) out.push({ z, vs: e.vs, ez: e.z });
+            else for (const ab of abs) out.push({ z, vs: e.vs, ez: e.z, ab });
+          }
+        }
+        return out;
+      },
+      resolve: (st, p, d, t) => {
+        const P = st.players[p], am = P.mz[t && t.z], E = st.players[t && t.vs], tm = E && E.mz[t.ez];
+        if (!am || !tm || tm.down || am.down || !canTarget(st, p, t.vs, t.ez)) { log(st, p, 'no tiene objetivo'); return; }
+        tm.soulOff = { by: p, t0: st.turn };
+        log(st, p, `${mdef(tm).name} pierde el acceso a sus habilidades especiales hasta el final del turno`);
+        if (t.ab && soulAbs(st, am, tm).includes(t.ab)) {
+          am.ext = (am.ext || []).concat([t.ab]); am.extFrom = Object.assign({}, am.extFrom); am.extFrom[t.ab] = mdef(tm).name;
+          (am.loans = am.loans || []).push({ ab: t.ab, eu: tm.c.uid, by: p, t0: st.turn, next: false });
+          const ar = C().AB[t.ab];
+          log(st, p, `${mdef(am).name} usa como propia ${ar ? ar[0] : t.ab} de ${mdef(tm).name} hasta el final del turno`);
+        }
+        if (multi(st)) st.log[st.log.length - 1].q = t.vs;
+      }
+    },
     // Voto Vinculante: sacrifica estadísticas de un aliado por una estadística o habilidad de un enemigo (queda toda la invocación)
     voto: {
       targets: (st, p) => {
@@ -1721,7 +1760,7 @@
     },
     // Gokumonkyo (continua) y Guerrero del Infinito (continua): se colocan en continueSpell
     gokumon: {
-      targets: (st, p) => { const out = []; for (const e of foes(st, p)) for (const z of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[z])) out.push(multi(st) ? { vs: e, z } : { z }); return out; },
+      targets: (st, p) => { const out = []; for (const e of foes(st, p)) for (const z of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[z]) && !st.players[e].mz[z].c.virt) out.push(multi(st) ? { vs: e, z } : { z }); return out; },
       resolve: () => { /* se coloca en continueSpell */ }
     },
     guerrero: {
@@ -2010,6 +2049,11 @@
       }
     }
     const t6 = a.target, um6 = st.players[p].mz[a.zone];
+    if (um6 && um6.thread && !done.includes('hilo')) {                                  // Hilos del Destino: el hilo puede impedir que se resuelva
+      const th = um6.thread, ts = st.players[th.by] && st.players[th.by].st.find(x => x && x.thr && x.thr.tu === um6.c.uid);
+      if (ts && st.players[th.by].alive) { st.pending = { k: 'ability', ab: 'hilo', player: th.by, stage: 'ask', pp: p, pa: a, done, nm: mdef(um6).name, pwn: PWL[a.pw] || a.pw }; return; }
+      delete um6.thread;
+    }
     if (um6 && !done.includes('shika')) {                                               // Shikamaru: Estratega brillante
       for (const q of foes(st, p)) {
         const sz = st.players[q].mz.findIndex(x => x && !x.down && has(st, x, 'shikaestr') && !blocked(x, 'ab') && uOf(x).seT !== st.turn);
@@ -2315,7 +2359,7 @@
         pe = foeOf(st, ch.p, t);
         prisoner = st.players[pe].mz[t && t.z];
         // se vuelve a comprobar quién controla al objetivo: el que tiene en su campo manda; debe ser de un rival vivo, nunca un aliado
-        okp = okp && !!prisoner && !isInk(prisoner) && foes(st, ch.p).includes(pe);
+        okp = okp && !!prisoner && !isInk(prisoner) && !prisoner.c.virt && foes(st, ch.p).includes(pe);
       }
       if (!okp) { P.grave.push(ch.inst); log(st, ch.p, `${d.name} no tiene objetivo`); return; }
       if (d.fx === 'gokumon') {                          // Prisión Absoluta: nada impide el sellado
@@ -2416,10 +2460,35 @@
       if (d.fx === 'fullcounter' && !fcOpts(st, resp, trigger, cont).length) return;                                       // Full Counter: necesita un objetivo rival válido
       if (d.fx === 'kyoka' && !kyokaOpts(st, resp, cont).length) return;
       if (d.fx === 'kamui' && !(cont && cont.vic && st.players[cont.vic.p].mz[cont.vic.z] && st.team[cont.vic.p] === st.team[resp])) return;
+      if (d.fx === 'contrato' && !(zonesWith(R.mz).length && !isInk(st.players[st.summon.p].mz[st.summon.z]) && !st.players[st.summon.p].mz[st.summon.z].ghost)) return;      // Contrato de la Muerte: necesita un personaje propio en el campo
+      if (d.fx === 'hilos' && !hilosOpts(st, resp).length) return;
       if ((d.fx === 'unico' || d.fx === 'tsukuyomi') && !(st.atk && st.atk.target !== 'direct' && st.players[st.atk.vs].mz[st.atk.target])) return;
       r.push(z);
     });
     return r;
+  }
+  /** Hilos del Destino: otros personajes del equipo del atacante a los que se puede redirigir el ataque; si no hay, cancelarlo. [] = no se puede activar. */
+  function hilosOpts(st, resp) {
+    const a = st.atk, at = a && st.players[a.p].mz[a.z];
+    if (!a || !at || at.down || st.team[a.p] === st.team[resp] || isInk(at) || !canTarget(st, resp, a.p, a.z)) return [];
+    const out = [];
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive || st.team[q] !== st.team[a.p]) continue;
+      for (const z of zonesWith(st.players[q].mz)) {
+        const tm = st.players[q].mz[z];
+        if ((q === a.p && z === a.z) || tm.six || isInk(tm) || !canTarget(st, resp, q, z) || !atkOk(st, at, q, z)) continue;
+        out.push({ vs: q, z });
+      }
+    }
+    return out.length ? out : [{ cancel: true }];
+  }
+  /** Saca de golpe del cementerio la trampa recién activada y la deja boca arriba en el campo (contadores / hilo). */
+  function keepTrap(st, p, uid, extra) {
+    const P = st.players[p], i = P.grave.findIndex(c => c.uid === uid), z = firstFree(P.st);
+    if (i < 0 || z < 0) return null;
+    const c = P.grave.splice(i, 1)[0];
+    P.st[z] = Object.assign({ c, down: false, setTurn: st.turn }, extra);
+    return P.st[z];
   }
   /** Gema de la Realidad: opciones de cada efecto ([null] = sin elección; [] = no se puede activar). */
   function realityOpts(st, resp, trigger, cont) {
@@ -2447,7 +2516,7 @@
   function spellVictim(st, ch) {
     const d = def(ch.inst), t = ch.target;
     if (!t) return null;
-    if (d.fx === 'voto') return t.vs != null && t.ez != null ? { p: t.vs, z: t.ez } : null;
+    if (d.fx === 'voto' || d.fx === 'almas') return t.vs != null && t.ez != null ? { p: t.vs, z: t.ez } : null;
     if (t.z == null || t.area === 'st' || d.fx === 'destroyST' || d.fx === 'pothala' || d.fx === 'cana' || d.fx === 'special' || d.fx === 'esferas' || d.fx === 'ultratumba') return null;
     const p = t.vs != null ? t.vs : ((FOE_TGT[d.fx] || d.fx === 'gem' || d.fx === 'gokumon' || d.fx === 'mafuba') ? foeOf(st, ch.p, t) : ch.p);
     return st.players[p] && st.players[p].mz[t.z] ? { p, z: t.z } : null;
@@ -2583,6 +2652,35 @@
       case 'infarto': {
         const s = st.summon, m = s && st.players[s.p].mz[s.z];
         if (m) { log(st, resp, `provoca un infarto a ${mdef(m).name}`); destroyMonster(st, s.p, s.z, { src: 'trap', bp: resp }); }
+        break;
+      }
+      case 'contrato': {                  // El Contrato de la Muerte: escribe el nombre; 2 contadores y la sentencia
+        const sm = st.summon, m = sm && st.players[sm.p].mz[sm.z], o = pd && pd.opt, own = o && st.players[resp].mz[o.az];
+        if (!m || !own || lvl(m) > 8 || isInk(m)) break;
+        const nmT = def(m.c).name;
+        log(st, resp, `${mdef(own).name} inicia el intercambio de información: el rival revela que su personaje es ${nmT} (${lvl(m)}★)`);
+        const k = keepTrap(st, resp, pd.tuid, { con: { n: 2, tu: m.c.uid, tn: nmT, tp: sm.p, t0: st.turn } });
+        log(st, resp, k ? `El nombre de ${nmT} queda escrito en el Contrato de la Muerte: 2 contadores de tiempo` : 'No hay sitio para dejar el contrato en el campo: no se escribe el nombre');
+        break;
+      }
+      case 'hilos': {                     // Hilos del Destino: Manipulación de Marionetas + Hilos Persistentes
+        const a = st.atk, at = a && st.players[a.p].mz[a.z], o = pd && pd.opt;
+        if (!a || !at || !o) break;
+        const nmA = mdef(at).name;
+        at.puppet = { by: resp, t: st.turn };
+        if (o.cancel) {
+          a.negated = true;
+          if (!at.down) at.pos = at.pos === 'atk' ? 'def' : 'atk';
+          log(st, resp, `Manipulación de Marionetas: ${nmA} cancela su ataque y cambia de posición`);
+        } else {
+          const tm = st.players[o.vs] && st.players[o.vs].mz[o.z];
+          if (!tm) break;
+          a.vs = o.vs; a.target = o.z;
+          log(st, resp, `Manipulación de Marionetas: ${nmA} ataca a ${tm.down ? 'un personaje boca abajo' : mdef(tm).name} por los hilos`);
+          if (multi(st)) st.log[st.log.length - 1].q = o.vs;
+        }
+        const k = keepTrap(st, resp, pd.tuid, { thr: { tu: at.c.uid } });
+        if (k) { at.thread = { by: resp }; log(st, resp, `Hilos Persistentes: ${nmA} queda conectado a los hilos`); }
         break;
       }
       case 'negateAttack': if (st.atk) st.atk.negated = true; log(st, resp, 'el ataque es negado'); break;
@@ -3204,6 +3302,20 @@
       }
       if (s.tobiNA && st.turn > s.tobiNA.t) delete s.tobiNA;
     }
+    for (const Q of st.players) for (const x of Q.mz) if (x) {          // Intercambio de Almas y Hilos del Destino
+      if (x.puppet) delete x.puppet;
+      if (x.soulOff && x.soulOff.by === st.current) { delete x.soulOff; log(st, st.current, `${mdef(x).name} recupera sus habilidades`); }
+      if (x.loans && x.loans.length) {
+        x.loans = x.loans.filter(l => {
+          if (l.by !== st.current) return true;
+          if (l.t0 === st.turn && !l.next && !findByUid(st, l.eu)) { l.next = true; log(st, st.current, `${mdef(x).name} conserva la habilidad copiada hasta el final de su próximo turno (el alma persiste)`); return true; }
+          x.ext = (x.ext || []).filter(e => e !== l.ab); if (x.extFrom) delete x.extFrom[l.ab];
+          log(st, st.current, `${mdef(x).name} devuelve la habilidad prestada`);
+          return false;
+        });
+        if (!x.loans.length) delete x.loans;
+      }
+    }
     limboTick(st, 'end');
     st.current = nextAlive(st, st.current);
     startTurn(st);
@@ -3228,6 +3340,18 @@
     for (const hm of st.players[st.current].mz) if (hm && hm.hoz && hm.hoz.some(k => elapsed(st, k.t0) >= 1)) { addMod(st, hm, 'hozv', -500, -500, 0); log(st, st.current, `${mdef(hm).name}: la sangre venenosa le quita 500 ATK y 500 DEF`); }
     if (st.cmarks) st.cmarks = st.cmarks.filter(k => !k.dof || elapsed(st, k.t0) < 2);
     if (st.fog) st.fog = st.fog.filter(f => !(f.by === st.current && st.turn > f.t0));
+    { const CP = st.players[st.current];       // El Contrato de la Muerte: un contador menos al empezar el turno de su dueño
+      for (let i = 0; i < ZONES; i++) {
+        const cs = CP.st[i];
+        if (!cs || !cs.con) continue;
+        const tg = findByUid(st, cs.con.tu);
+        if (!tg) { CP.st[i] = null; CP.grave.push(cs.c); log(st, st.current, `Contrato de la Muerte: ${cs.con.tn} dejó el campo; la sentencia pierde su objetivo`); continue; }
+        cs.con.n--;
+        if (cs.con.n > 0) { log(st, st.current, `Contrato de la Muerte: queda ${cs.con.n} contador de tiempo para ${cs.con.tn}`); continue; }
+        CP.st[i] = null; CP.grave.push(cs.c);
+        log(st, st.current, `Contrato de la Muerte: se retira el último contador; la sentencia cae sobre ${cs.con.tn}`);
+        destroyMonster(st, tg.p, tg.z, { src: 'trap', bp: st.current });
+      } }
     if (st.cage && elapsed(st, st.cage.t0) >= 2) { st.cage = null; log(st, st.current, 'La Jaula de Pájaros se desvanece'); }
     for (const Q of st.players) if (Q.hlock) for (const l of Q.hlock) if (l.q === st.current && st.turn > l.t0 && !l.on) l.on = st.turn;
     for (const Q of st.players) for (const cm of Q.mz) if (cm && cm.cube && elapsed(st, cm.cube.t0) >= 2) { delete cm.cube; log(st, st.current, `El Cubo Perfecto sobre ${mdef(cm).name} se disuelve`); }
@@ -3329,7 +3453,11 @@
     m.link = (m.link || []).filter(c => !bu.has(c.uid));
     if (!m.link.length) delete m.link;
     P.sealed = (P.sealed || []).filter(x => x !== zb);
-    P.mz[zb] = f.b;
+    if (m.owner != null && m.owner !== p && f.b.owner == null) f.b.owner = m.owner;      // si el fusionado cambió de controlador, el otro sigue siendo de su dueño
+    let zt = zb;
+    if (P.mz[zt] || zt === z) zt = spot(P, mdef(f.b));                                    // su zona ya no está libre (cambió de campo): busca otra
+    if (zt >= 0) P.mz[zt] = f.b;
+    else { st.players[f.b.owner != null ? f.b.owner : p].grave.push(f.b.c); log(st, p, `${mdef(f.b).name} no tiene sitio y va al cementerio`); }
     log(st, p, `La fusión termina: ${mdef(m).name} y ${mdef(f.b).name} se separan`);
   }
   /** Gokumonkyo: a los 5 turnos el personaje vuelve a su zona (si no hay sitio espera) y la carta va al cementerio. */
@@ -3394,8 +3522,11 @@
         if (!s) continue;
         if (s.gem && !findByUid(st, s.gem.uid)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'La Gema de la Mente pierde su objetivo y se destruye'); }
         else if (s.karma && s.karma.phase === 'foe' && !findByUid(st, s.karma.foeUid)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'Karma termina: el enemigo dejó el campo'); }
+        else if (s.con && !findByUid(st, s.con.tu)) { P.st[i] = null; P.grave.push(s.c); log(st, p, `Contrato de la Muerte: ${s.con.tn} dejó el campo; la sentencia pierde su objetivo y el contrato se descarta`); }
+        else if (s.thr && !findByUid(st, s.thr.tu)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'Hilos del Destino: el personaje dejó el campo; los hilos se rompen'); }
       }
     }
+    for (const Q of st.players) for (const x of Q.mz) if (x && x.thread && !st.players[x.thread.by].st.some(k => k && k.thr && k.thr.tu === x.c.uid)) delete x.thread;      // Hilos del Destino: sin trampa no hay hilo
     for (const Q of st.players) for (const x of Q.mz) if (x && x.hoz) {      // Gyutaro se fue: sus marcas y su veneno desaparecen
       const keep = x.hoz.filter(k => findByUid(st, k.by));
       if (keep.length !== x.hoz.length) { dropMods(x, 'hoz'); dropMods(x, 'hozv'); if (keep.length) { x.hoz = keep; for (const k of keep) addMod(st, x, 'hoz', -200, -200, 0); } else delete x.hoz; }
@@ -3958,7 +4089,7 @@
       if (pd.k === 'respond') {
         out.push({ t: 'respond', activate: false });
         for (const z of pd.cands) {
-          const rd = def(P.st[z].c), os = rd.fx === 'realidad' ? realityOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'fullcounter' ? fcOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'kyoka' ? kyokaOpts(st, p, pd.cont) : [null];
+          const rd = def(P.st[z].c), os = rd.fx === 'realidad' ? realityOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'fullcounter' ? fcOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'kyoka' ? kyokaOpts(st, p, pd.cont) : rd.fx === 'contrato' ? zonesWith(P.mz).map(z => ({ az: z })) : rd.fx === 'hilos' ? hilosOpts(st, p) : [null];
           for (const o of os) out.push(o ? { t: 'respond', activate: true, zone: z, opt: o } : { t: 'respond', activate: true, zone: z });
         }
       } else if (pd.k === 'pick') {
@@ -5225,7 +5356,7 @@
           const s = P.st[a.zone], d = def(s.c);
           log(st, p, `activa la trampa ${d.name}`);
           P.st[a.zone] = null; P.grave.push(s.c);
-          pd.opt = a.opt;
+          pd.opt = a.opt; pd.tuid = s.c.uid;
           if (s.inv) {      // Near: Estrategia de N
             const nn = nearFor(st, p, s);
             if (nn) { st.pending = { k: 'ability', ab: 'near', player: nn.q, nz: nn.z, stage: 'ask', tp: p, tid: d.id, rp: pd, nm: d.name, opts: ['prev'].concat(trapAlts(st, p, d, pd).length ? ['manip'] : []), uid: st.players[nn.q].mz[nn.z].c.uid }; break; }
@@ -5301,6 +5432,17 @@
       else runPower(st, pd.pp, pd.pa, (pd.done || []).concat('anti'));
       return;
     }
+    if (pd.ab === 'hilo') {                                     // Hilos del Destino: Hilos Persistentes
+      const um = st.players[pd.pp].mz[pd.pa.zone], z = P.st.findIndex(x => x && x.thr && um && x.thr.tu === um.c.uid);
+      if (a.use && um && z >= 0) {
+        const s = P.st[z]; P.st[z] = null; P.grave.push(s.c); delete um.thread;
+        log(st, p, `Hilos del Destino: retira el hilo y ${mdef(um).name} no consigue resolver ${pd.pwn || 'su habilidad'}`);
+        blockPw(st, pd.pp, pd.pa); consumePower(st, pd.pp, pd.pa, false);
+        return;
+      }
+      runPower(st, pd.pp, pd.pa, (pd.done || []).concat('hilo'));
+      return;
+    }
     if (pd.ab === 'shikaestr') {                               // Shikamaru: Estratega brillante
       const sk = P.mz[pd.zy], um = st.players[pd.pp].mz[pd.pa.zone];
       if (a.use && sk && um) { uOf(sk).seT = st.turn; um.atkMod = (um.atkMod || 0) - 400; log(st, p, `${mdef(sk).name} se anticipa (Estratega brillante): ${mdef(um).name} pierde 400 ATK hasta el final del turno`); }
@@ -5315,7 +5457,7 @@
         st.atk = a0; continueAttack(st);
       } else if (pd.kind === 'spell') {
         const ch = pd.ch;
-        if (use) { const nz = shadowDo(st, p, pd.vz, a.pick); if (nz >= 0) { ch.target = Object.assign({}, ch.target, def(ch.inst).fx === 'voto' ? { ez: nz } : { z: nz }); } }
+        if (use) { const nz = shadowDo(st, p, pd.vz, a.pick); if (nz >= 0) { ch.target = Object.assign({}, ch.target, (def(ch.inst).fx === 'voto' || def(ch.inst).fx === 'almas') ? { ez: nz } : { z: nz }); } }
         st.chain = ch; continueSpell(st);
       } else {
         const pa = pd.pa;
@@ -5861,6 +6003,10 @@
       { const es = escStage(st, s); if (es.k) { v.esc = { k: es.k, left: es.left }; if (es.k === 'mediodia' && mdef(s).imgMed) v.art = mdef(s).imgMed; } }
       if (s.swap) v.swap = true;
       if (s.cube) v.cube = { left: Math.max(0, 2 - elapsed(st, s.cube.t0)) };
+      if (s.thread) v.thread = true;      // Hilos del Destino
+      if (s.puppet) v.puppet = true;
+      if (s.soulOff) v.soulOff = true;      // Intercambio de Almas
+      if (s.loans && s.loans.length) v.loans = s.loans.map(l => l.ab);
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;
@@ -5914,6 +6060,8 @@
     if (s.down && !own) return { down: true, c: null };
     const v = { down: !!s.down, c: { uid: s.c.uid, id: s.c.id }, setTurn: s.setTurn, equipTo: s.equipTo };
     if (s.inv) v.inv = true;      // contador de investigación de Near
+    if (s.con) v.con = { n: s.con.n, tn: s.con.tn };      // Contrato de la Muerte
+    if (s.thr) { const th = findByUid(st, s.thr.tu); v.thr = { id: th ? th.m.c.id : null }; }      // Hilos del Destino
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };
     if (s.karma) v.karma = { phase: s.karma.phase, left: s.karma.phase === 'foe' ? Math.max(0, 3 - (elapsed(st, s.karma.t0))) : null };
