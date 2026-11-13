@@ -22,6 +22,7 @@ module.exports = function (T) {
   const answer = (st, pick) => { let n = 0; while (st.pending && n++ < 12) { const q = E.actor(st), l = L(st, q); act(st, q, pick(st, q, l) || l.find(x => x.t === 'respond' && !x.activate) || l.find(x => x.t === 'ability' && x.use === false) || l[0]); } };
   const no = st => answer(st, () => null);
   const yes = st => answer(st, (s, q, l) => l.find(x => x.t === 'respond' && x.activate) || l.find(x => x.t === 'ability' && x.use === true));
+  const pass = (st, n) => { for (let i = 0; i < (n || 1); i++) { const p = E.actor(st); act(st, p, L(st, p).find(x => x.t === 'endTurn') || L(st, p).find(x => x.t === 'discard')); } };
   const grave = (st, p, id) => st.players[p].grave.some(c => c.id === id);
 
   section('tanda 7: catálogo');
@@ -256,5 +257,70 @@ module.exports = function (T) {
       act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.pick === 'prev'));
       ok(!st.players[0].mz[1].binds, 'Previsión cancela la trampa: el atacante no queda bloqueado');
     } else ok(false, 'no se pudo activar la trampa');
+  }
+
+  section('Cámara de Gravedad');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_popeye'); hand(st, 0, ['c_camara_gravedad']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.z === 0)); no(st);
+    const gm = () => st.players[0].mz[0];
+    ok(gm().gr, 'entrena');
+    st.phase = 'battle'; ok(!atkA(st, 0, 0, 0), 'no ataca mientras entrena');
+    st.phase = 'main'; ok(!L(st, 0).some(a => a.t === 'pos' && a.zone === 0), 'no cambia de posición');
+    // dos inicios de turno propios
+    for (let i = 0; i < 2; i++) { st.turn += 2; st.current = 0; E.timers && 0; }
+    gm().gr.n = 2; st.trig = [{ k: 'gravrew', p: 0, uid: gm().c.uid }];
+    // Sobreexigencia
+    gm().gr.n = 1; st.turn = 9;
+    // recompensa Poder
+    gm().gr.n = 2; gm().gr = { n: 2, t0: 1 };
+    st.pending = { k: 'ability', ab: 'gravrew', player: 0, uid: gm().c.uid, stage: 'ask', nm: 'Goku', opts: ['vel', 'res', 'pod'] };
+    act(st, 0, { t: 'ability', pick: 'pod' });
+    ok(!gm().gr && gm().gpow, 'Poder elegido');
+    eq(stat(st, 0, 0)[0], Cards.get('c_goku').atk + 900, '+900 ATK');
+    // Resistencia: la magia enemiga no lo elige
+    st = fresh(1); put(st, 0, 0, 'c_goku', { gres: true }); hand(st, 1, ['c_death_note']);
+    ok(!L(st, 1).some(a => a.t === 'activate' && a.target && a.target.vs !== 1 && a.target.z === 0), 'las magias enemigas no lo eligen');
+  }
+
+  section('Sala del Espíritu y el Tiempo');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); hand(st, 0, ['c_sala_tiempo']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.z === 0)); no(st);
+    ok(!st.players[0].mz[0] && st.limbo && st.limbo.length === 1, 'sale del campo');
+    const n0 = E.countCards(st, 0);
+    st.turn += 6; E.legal && 0;
+    // vuelve tras 2 rondas: se simula con el tick de inicio de turno
+    st.limbo[0].t0 = 1; st.turn = 7;
+    for (let i = 0; i < 3; i++) { st.current = 0; st.turn++; }
+    const back = pw => 0;
+    // forzamos el regreso
+    const e = st.limbo[0]; st.players[0].mz[0] = e.m; st.limbo = []; e.m.sc = 2;
+    ok(pw(st, 0, 'salaf') && pw(st, 0, 'salar') && pw(st, 0, 'salad'), 'con 2 contadores puede elegir cualquier recompensa');
+    act(st, 0, pw(st, 0, 'salaf'));
+    eq([stat(st, 0, 0)[0], st.players[0].mz[0].sc], [Cards.get('c_goku').atk + 800, 1], 'Entrenamiento físico: +800 ATK, 1 contador menos');
+    ok(!pw(st, 0, 'salad'), 'Dominio de combate necesita 2 contadores');
+    act(st, 0, pw(st, 0, 'salar'));
+    ok(st.players[0].mz[0].sres, 'Resistencia extrema lista');
+  }
+
+  section('Gravedad y Sala: paso real de turnos');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku', { summonedTurn: 0 }); put(st, 1, 0, 'c_popeye'); hand(st, 0, ['c_camara_gravedad']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.z === 0)); no(st);
+    pass(st, 2);
+    eq(st.players[0].mz[0].gr.n, 1, 'primer contador al empezar tu turno');
+    pass(st, 2);
+    ok(st.pending && st.pending.ab === 'gravrew', 'con 2 contadores ofrece la recompensa');
+    act(st, 0, { t: 'ability', pick: 'vel' });
+    ok(st.players[0].mz[0].gv && !st.players[0].mz[0].gr, 'Velocidad aplicada y entrenamiento terminado');
+    // Sala: vuelve tras 2 rondas con 2 contadores
+    st = fresh(0); put(st, 0, 0, 'c_goku', { summonedTurn: 0 }); put(st, 1, 0, 'c_popeye'); hand(st, 0, ['c_sala_tiempo']);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.z === 0)); no(st);
+    ok(!st.players[0].mz[0], 'fuera del campo');
+    pass(st, 2); ok(!st.players[0].mz[0], 'sigue dentro tras 1 ronda');
+    pass(st, 2); ok(!st.players[0].mz[0], 'sigue dentro tras 2 rondas');
+    pass(st, 2);
+    ok(st.players[0].mz[0] && st.players[0].mz[0].sc === 2, 'vuelve con 2 contadores');
   }
 };
