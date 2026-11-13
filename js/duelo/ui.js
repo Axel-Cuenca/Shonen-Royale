@@ -1602,6 +1602,18 @@
       modal(h('div', { class: 'box' }, h('h2', null, '🐉 Puño del Dragón'), info, h('div', { class: 'acts' }, rows), go, btn('Cancelar', closeModal, 'ghost')));
     }
     function sameSet(a, b) { return a.length === b.length && a.slice().sort().join() === b.slice().sort().join(); }
+    /** Invocar o colocar: si hay más de una zona posible, deja elegir dónde (las acciones legales con `z` son una por zona). */
+    function placeChoice(a) {
+      const zs = a && (a.t === 'summon' || a.t === 'set') && a.fz == null ? L().filter(o => o.t === a.t && o.hand === a.hand && o.z != null && sameSet(o.tributes, a.tributes)) : [];
+      sel = null;
+      if (zs.length < 2) return act(a);
+      const wide = C.get(v.me.hand[a.hand].id).wide, name = nameId(v.me.hand[a.hand].id);
+      const lbl = o => (wide ? `Zonas ${o.z + 1} y ${o.z + 2}` : `Zona ${o.z + 1}`) + (a.tributes.some(t => t === o.z || (wide && t === o.z + 1)) ? ' (la del sacrificio)' : '');
+      render();
+      modal(h('div', { class: 'box' }, h('h2', null, '📍 ¿Dónde ' + (a.t === 'set' ? 'colocas' : 'invocas') + ' a ' + name + '?'),
+        h('div', { class: 'acts', style: 'flex-wrap:wrap' }, zs.map(o => btn(lbl(o), () => { closeModal(); act(o); }, 'gold'))),
+        h('div', { class: 'acts' }, btn('Cancelar', closeModal, 'ghost'))));
+    }
     function startTribute(i, type, opts2) {
       const need = opts2[0].tributes.length;
       const allowed = [...new Set(opts2.flatMap(o => o.tributes))];
@@ -1751,8 +1763,9 @@
           continue;
         }
         const label = t === 'summon' ? 'Invocar (ataque)' : 'Colocar boca abajo (defensa)';
-        if (os[0].tributes.length === 0) acts.push({ label, run: () => act(os[0]) });
-        else acts.push({ label: label + ` · sacrificar ${os[0].tributes.length}`, run: () => startTribute(i, t, os) });
+        const base = os.filter(a => a.z == null);
+        if (base[0].tributes.length === 0) acts.push({ label, run: () => placeChoice(base[0]) });
+        else acts.push({ label: label + ` · sacrificar ${base[0].tributes.length}`, run: () => startTribute(i, t, base) });
       }
       const cp = mine.filter(a => a.t === 'couple');
       if (cp.length) {
@@ -2048,7 +2061,7 @@
         if (k >= 0) sel.chosen.splice(k, 1); else sel.chosen.push(z);
         if (sel.chosen.length === sel.need) {
           const a = sel.opts.find(o => sameSet(o.tributes, sel.chosen));
-          if (a) return act(a);
+          if (a) return placeChoice(a);
         }
         return render();
       }

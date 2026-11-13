@@ -309,7 +309,7 @@ module.exports = function (T) {
     const st = fresh(); put(st, 0, 0, 'c_popeye'); put(st, 0, 1, 'c_lara'); give(st, 0, ['c_sukuna60']);
     ok(!has(st, 0, x => x.t === 'summon'), 'con 2 personajes no se invoca uno de 10★');
     put(st, 0, 2, 'c_creeper');
-    const a = L(st, 0).filter(x => x.t === 'summon'); ok(a.length === 1 && a[0].tributes.length === 3, 'con 3 sí, sacrificando los 3');
+    const a = L(st, 0).filter(x => x.t === 'summon' && x.z == null); ok(a.length === 1 && a[0].tributes.length === 3, 'con 3 sí, sacrificando los 3');
     const tot0 = total(st, 0); act(st, 0, a[0]);
     ok(st.players[0].mz.filter(Boolean).length === 1 && st.players[0].mz.some(m => m && m.c.id === 'c_sukuna60'), 'queda sólo el invocado');
     eq(st.players[0].grave.length, 3, 'los 3 sacrificados van al cementerio'); eq(total(st, 0), tot0, 'sin duplicar');

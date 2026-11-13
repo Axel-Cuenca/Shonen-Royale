@@ -125,6 +125,7 @@
           return good ? 20 : -1;
         }
         case 'summon': case 'set': {
+          if (a.z != null) return -1;                  // las variantes con zona elegida: la IA usa la forma normal
           const d = cardOf(me.hand[a.hand]);
           const lost = a.tributes.reduce((n, z) => n + (me.mz[z].atk || 0), 0);
           const gain = d.atk - lost;

@@ -87,7 +87,7 @@ section('invocación y tributos');
   const b = E.legal(st, 0);
   const charizardIdx = st.players[0].hand.findIndex(c => c.id === mid);
   ok(charizardIdx >= 0, 'Charizard sigue en mano');
-  const need1 = b.filter(x => x.t === 'summon' && x.hand === charizardIdx);
+  const need1 = b.filter(x => x.t === 'summon' && x.z == null && x.hand === charizardIdx);
   ok(need1.length === 1 && need1[0].tributes.length === 1, 'Charizard (nv ' + Cards.get(mid).level + ') pide 1 tributo');
   const mewIdx = st.players[0].hand.findIndex(c => c.id === top);
   ok(!b.some(x => x.t === 'summon' && x.hand === mewIdx), 'Mewtwo pide 2 tributos: no se puede con 1 monstruo');

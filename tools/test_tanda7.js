@@ -1053,6 +1053,39 @@ module.exports = function (T) {
     ok(!st.pending || st.pending.trigger !== 'kill' || true, 'comprobación de combate');
   }
 
+  section('Elegir la zona al invocar (13-11-2026)');
+  {
+    let st = fresh(0); hand(st, 0, ['c_goku']);
+    const base = L(st, 0).filter(a => a.t === 'summon' && a.hand === 0);
+    ok(base.some(a => a.z == null) && base.filter(a => a.z != null).map(a => a.z).join() === '0,1,2', 'se puede invocar en cualquiera de las 3 zonas (y la forma sin zona sigue valiendo)');
+    act(st, 0, base.find(a => a.z === 2));
+    ok(st.players[0].mz[2] && st.players[0].mz[2].c.id === 'c_goku' && !st.players[0].mz[0] && !st.players[0].mz[1], 'queda en la zona elegida');
+    st = fresh(0); hand(st, 0, ['c_goku']);
+    act(st, 0, { t: 'summon', hand: 0, tributes: [] });
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_goku', 'sin zona elegida entra en la primera libre (como siempre)');
+    // colocar boca abajo también
+    st = fresh(0); hand(st, 0, ['c_goku']);
+    act(st, 0, L(st, 0).find(a => a.t === 'set' && a.z === 1));
+    ok(st.players[0].mz[1] && st.players[0].mz[1].down && !st.players[0].mz[0], 'boca abajo en la zona elegida');
+    // zonas ocupadas: sólo las libres
+    st = fresh(0); put(st, 0, 1, 'c_popeye'); hand(st, 0, ['c_goku']);
+    ok(L(st, 0).filter(a => a.t === 'summon' && a.z != null).map(a => a.z).join() === '0,2', 'sólo las zonas libres');
+    // con tributo: la zona del sacrificado también vale
+    st = fresh(0); put(st, 0, 0, 'c_popeye'); put(st, 0, 1, 'c_creeper'); put(st, 0, 2, 'c_lara'); hand(st, 0, ['c_sukuna60']);
+    const tr = L(st, 0).filter(a => a.t === 'summon' && a.z != null && a.tributes.length === 3);
+    ok(tr.length === 3, 'con 3 tributos queda libre todo el campo: 3 zonas');
+    const nZ = cnt(st);
+    act(st, 0, tr.find(a => a.z === 1));
+    ok(st.players[0].mz[1] && st.players[0].mz[1].c.id === 'c_sukuna60' && !st.players[0].mz[0] && !st.players[0].mz[2], 'entra en la zona elegida');
+    eq(cnt(st), nZ, 'sin pérdida de cartas');
+    // un personaje ancho ocupa dos zonas contiguas: sólo se ofrecen las posibles
+    st = fresh(0); const wideId = Cards.custom.find(c => c.wide && !c.huge && c.level <= 4);
+    if (wideId) { hand(st, 0, [wideId.id]); const w = L(st, 0).filter(a => a.t === 'summon' && a.z != null).map(a => a.z); ok(w.join() === '0,1', 'un personaje ancho: zonas 1-2 o 2-3'); act(st, 0, L(st, 0).find(a => a.t === 'summon' && a.z === 1)); ok(st.players[0].mz[1] && st.players[0].mz[1].wide, 'ocupa las zonas 2 y 3'); }
+    // la IA no elige variantes
+    st = fresh(0); hand(st, 0, ['c_goku']);
+    ok(!L(st, 0).filter(a => a.t === 'summon').every(a => a.z != null), 'la forma normal sigue disponible');
+  }
+
   section('tanda 7: partidas al azar con todas las cartas nuevas');
   {
     const NEW = Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id)).filter(i => Cards.get(i) && !Cards.get(i).hidden);

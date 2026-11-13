@@ -210,12 +210,15 @@
     return o;
   }
   /** Primera zona donde cabe esa carta (la de la izquierda si ocupa dos), o -1. */
-  function spot(P, d, free) {
-    const o = occ(P, free);
-    if (d.huge) return o.some(x => x) ? -1 : 0;                           // Titán Colosal: necesita las 3 zonas libres
-    if (d.wide) { for (let a = 0; a + 1 < ZONES; a++) if (!o[a] && !o[a + 1]) return a; return -1; }
-    return o.indexOf(false);
+  /** Todas las zonas donde puede entrar la carta (la de la izquierda si ocupa dos); `free` = zonas que liberan los tributos. */
+  function spots(P, d, free) {
+    const o = occ(P, free), out = [];
+    if (d.huge) return o.some(x => x) ? [] : [0];                         // Titán Colosal: necesita las 3 zonas libres
+    if (d.wide) { for (let a = 0; a + 1 < ZONES; a++) if (!o[a] && !o[a + 1]) out.push(a); return out; }
+    o.forEach((x, i) => { if (!x) out.push(i); });
+    return out;
   }
+  function spot(P, d, free) { const z = spots(P, d, free); return z.length ? z[0] : -1; }
   const freeN = P => occ(P).filter(x => !x).length;
   const shadowOf = (P, z) => (z > 0 && P.mz[z - 1] && P.mz[z - 1].wide ? z - 1 : (z === 2 && P.mz[0] && P.mz[0].huge ? 0 : -1));
   /** Quién invoca a qué Titán en su lugar (Lara → Titán Martillo; Eren → Titán de Ataque). */
@@ -2955,7 +2958,7 @@
       log(st, p, `equipa a Jake el Perro en ${hn} como ${mode === 'sword' ? 'espada (+' + 600 * g + ' ATK)' : 'escudo (+' + 500 * g + ' DEF)'}`);
     }
   }
-  function placeMonster(st, p, handIdx, tributes, faceDown, inv) {
+  function placeMonster(st, p, handIdx, tributes, faceDown, inv, zreq) {
     const P = st.players[p];
     const inst = P.hand.splice(handIdx, 1)[0];
     inst.spent = false;
@@ -2975,7 +2978,7 @@
       entered(st, inv.vs, inv.fz);
       return;
     }
-    const d = def(inst), z = spot(P, d);
+    const d = def(inst), zs = spots(P, d), z = zreq != null && zs.includes(zreq) ? zreq : (zs.length ? zs[0] : -1);      // el jugador elige la zona; si ya no vale, la primera libre
     if (z < 0) { P.hand.splice(Math.min(handIdx, P.hand.length), 0, inst); log(st, p, `no queda espacio para ${d.name}: vuelve a la mano`); return; }      // p. ej. lo que Cell tenía absorbido volvió a su casilla
     P.mz[z] = mkSlot(st, inst, { pos: faceDown ? 'def' : 'atk', down: !!faceDown, wide: !!d.wide });
     P.normalUsed = true;
@@ -3900,7 +3903,7 @@
       if ((ab.includes('absorb') || ab.includes('absorbp')) && canOnce(P, z, u, 'absorb') && !m.abs) {      // con la Gema se podría absorber otra vez: sólo si ya liberó lo absorbido
         for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) {
           const tm = st.players[q].mz[tz];
-          if ((q === p && tz === z) || tm.down || !st.players[q].alive || lvl(tm) > lvl(m) || !canTarget(st, p, q, tz) || shadowSafe(st, p, q, tz)) continue;
+          if ((q === p && tz === z) || tm.down || (tm.c && tm.c.virt) || isInk(tm) || !st.players[q].alive || lvl(tm) > lvl(m) || !canTarget(st, p, q, tz) || shadowSafe(st, p, q, tz)) continue;      // los clones y fichas virtuales no son cartas: no se absorben
           push({ pw: 'absorb', target: { vs: q, z: tz } });
         }
       }
@@ -4335,6 +4338,8 @@
             if (spot(P, d, tr) < 0) continue;
             out.push({ t: 'summon', hand: i, tributes: tr });
             out.push({ t: 'set', hand: i, tributes: tr });
+            const zs = spots(P, d, tr);                  // dónde se coloca: una acción por zona posible (la forma sin zona = la primera libre)
+            if (zs.length > 1) for (const z of zs) { out.push({ t: 'summon', hand: i, tributes: tr, z }); out.push({ t: 'set', hand: i, tributes: tr, z }); }
           }
         } else {
           if (d.kind === 'spell' && !spellsOff(st)) {
@@ -5528,8 +5533,8 @@
     st.seq = (st.seq || 0) + 1;   // cuenta cada acción hecha: reinicia el contador de inactividad del turno
     const P = st.players[p];
     switch (a.t) {
-      case 'summon': placeMonster(st, p, a.hand, a.tributes, false, a.fz != null ? { vs: a.vs, fz: a.fz } : null); break;
-      case 'set': placeMonster(st, p, a.hand, a.tributes, true); break;
+      case 'summon': placeMonster(st, p, a.hand, a.tributes, false, a.fz != null ? { vs: a.vs, fz: a.fz } : null, a.z); break;
+      case 'set': placeMonster(st, p, a.hand, a.tributes, true, null, a.z); break;
       case 'couple': coupleAV(st, p, a.hand, a.host, a.tributes); break;
       case 'special': { const inst = P.hand.splice(a.hand, 1)[0]; specialSummon(st, p, inst, 'atk'); break; }
       case 'setst': {
