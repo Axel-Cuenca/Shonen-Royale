@@ -659,4 +659,31 @@ module.exports = function (T) {
     ok(!pw(st, 0, 'tklegion'), 'una sola vez por duelo');
     ok(pw(st, 0, 'tkmet') || true, 'no gasta la Magia de Alto Orco');
   }
+  section('Hantengu');
+  {
+    let st = fresh(1); put(st, 0, 0, 'c_hantengu', { pos: 'def' }); put(st, 1, 0, 'c_goku');
+    const n0 = E.countCards(st, 0);
+    st.players[1].mz[0].atkMod = 5000; st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    ok(!st.players[0].mz.some(m => m && m.c.id === 'c_hantengu'), 'Hantengu salió del campo');
+    ok(!grave(st, 0, 'c_hantengu'), 'no fue al cementerio');
+    ok(st.players[0].mz.filter(m => m && (m.c.id === 'c_sekido' || m.c.id === 'c_karaku')).length === 2, 'aparecen Sekido y Karaku');
+    eq(E.countCards(st, 0), n0, 'los clones no son cartas: sin pérdida ni ganancia');
+    const sk = st.players[0].mz.findIndex(m => m && m.c.id === 'c_sekido');
+    // unión
+    st.current = 0; st.turn = 8; st.phase = 'main'; st.pending = null;
+    ok(pw(st, 0, 'hanunion'), 'se pueden fusionar');
+    act(st, 0, pw(st, 0, 'hanunion'));
+    const zk = st.players[0].mz.find(m => m && m.c.id === 'c_zohakuten');
+    ok(zk, 'aparece Zohakuten'); eq(stat(st, 0, st.players[0].mz.indexOf(zk)), [2500, 2200], 'con 2500/2200');
+    eq(E.countCards(st, 0), n0, 'Hantengu sigue contando (vinculado a Zohakuten)');
+    // los clones mueren por separado → Hantengu vuelve
+    st = fresh(1); put(st, 0, 0, 'c_hantengu', { pos: 'def' }); put(st, 1, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 1, 'c_kratos', { atkMod: 5000 });
+    st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    const z1 = st.players[0].mz.findIndex(m => m && m.c.id === 'c_sekido'), z2 = st.players[0].mz.findIndex(m => m && m.c.id === 'c_karaku');
+    st.players[0].mz[z1].pos = 'def'; st.players[0].mz[z2].pos = 'def';
+    act(st, 1, atkA(st, 1, 1, z1)); no(st);
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_karaku') && !st.players[0].mz.some(m => m && m.c.id === 'c_hantengu'), 'con un clon vivo, Hantengu sigue fuera');
+  }
 };

@@ -248,6 +248,9 @@
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
     gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    handiv: ['División Emocional', 'La primera vez que Hantengu fuera a ser destruido, en lugar de ir al cementerio se divide en Sekido y Karaku (1600/1300 cada uno) en zonas libres de tu campo. Hantengu sale del campo (no va al cementerio) mientras queden clones; sólo una vez por invocación.'],
+    hanunion: ['Unión de Emociones', 'Con Sekido y Karaku en el campo, se fusionan en Zohakuten (2500/2200), invocación especial sin tributos en una zona libre.'],
+    hancobard: ['Cobardía Absoluta', 'Mientras Hantengu tenga al menos un clon en el campo, no puede ser elegido como objetivo (está fuera del campo). Si los clones desaparecen, vuelve si hay zona libre.'],
     tuskmagia: ['Magia de Alto Orco', 'Una vez por turno elige una magia: Meteorito (destruye las magias/trampas de una zona enemiga y hace 500 de daño al personaje que tuviera una carta equipada allí), Gravedad (un enemigo no puede atacar, cambiar de posición ni activar habilidades en su próximo turno) o Barrera (protege en secreto a un aliado: la próxima habilidad enemiga que lo elija se redirige a un personaje enemigo que tú eliges).'],
     tuskgran: ['Gran Magia: Legión de Meteoritos', 'Sólo si Sung Jin-Woo lo invocó. Una vez por duelo, sacrifica a otra sombra aliada: destruye todas las magias y trampas enemigas boca abajo y obliga a los personajes enemigos a cambiar de zona si tienen una libre. No gasta su Magia de Alto Orco. Además, invocado por Sung gana +500 ATK y +500 DEF.'],
     viegodom: ['Dominación Soberana', 'Cuando destruye a un enemigo en combate, puede poseer su cuerpo en lugar de enviarlo al cementerio: adopta su apariencia y estadísticas originales. En su siguiente turno puede usar UNA habilidad original de ese personaje. Al final de ese turno recupera su cuerpo y el derrotado va al cementerio.'],
@@ -269,6 +272,9 @@
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    handiv: 'Al verse acorralado, divide su cuerpo en manifestaciones de sus emociones.',
+    hanunion: 'Sus clones pueden unirse para dar origen a Zohakuten.',
+    hancobard: 'Un demonio cobarde que se esconde mientras otros luchan por él.',
     tuskmagia: 'Sus hechizos destruyen defensas, inmovilizan enemigos y protegen a sus aliados.',
     tuskgran: 'Bajo las órdenes de Sung Jin-Woo desata una lluvia de meteoritos devastadora.',
     viegodom: 'Se apodera de los cuerpos de sus enemigos caídos.',
@@ -1022,6 +1028,17 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_hantengu', name: 'Hantengu', type: 'demonslayer', level: 5, atk: 1100, def: 1000, img: I('hantengu'), ab: ['handiv', 'hancobard'],
+      lore: 'Hantengu es un demonio cobarde que, al verse acorralado, divide su cuerpo en manifestaciones de sus emociones. Sus clones pueden unirse para dar origen a Zohakuten, una forma mucho más poderosa.',
+      text: 'División Emocional: la primera vez que iba a ser destruido, se divide en Sekido y Karaku (1600/1300) y no va al cementerio. Unión de Emociones: los dos clones se fusionan en Zohakuten (2500/2200). Cobardía Absoluta: con clones en el campo, no se le puede elegir.'
+    }),
+    mon({ id: 'c_sekido', name: 'Sekido', type: 'demonslayer', level: 4, atk: 1600, def: 1300, img: I('sekido'), ab: ['hanunion'], hidden: true, sfx: { attack: V('sekido-attack') },
+      text: 'Clon de ira de Hantengu. Con Karaku, puede fusionarse en Zohakuten. No es una carta: desaparece al ser destruido.' }),
+    mon({ id: 'c_karaku', name: 'Karaku', type: 'demonslayer', level: 4, atk: 1600, def: 1300, img: I('karaku'), ab: [], hidden: true, sfx: { attack: V('karaku-attack') },
+      text: 'Clon de placer de Hantengu. Con Sekido, puede fusionarse en Zohakuten. No es una carta: desaparece al ser destruido.' }),
+    mon({ id: 'c_zohakuten', name: 'Zohakuten', type: 'demonslayer', level: 7, atk: 2500, def: 2200, img: I('zohakuten'), ab: [], hidden: true, sfx: { attack: V('zohakuten-attack') },
+      text: 'Fusión de Sekido y Karaku. No es una carta: desaparece al ser destruido (Hantengu se va al cementerio con él).' }),
+    mon({
       id: 'c_tusk', name: 'Tusk', type: 'sololeveling', level: 4, atk: 1500, def: 1500, img: I('kargalgan'), imgSung: I('tusk'), ab: ['tuskmagia', 'tuskgran'],
       lore: 'Tusk es un poderoso Alto Orco capaz de utilizar distintas formas de magia para controlar el campo de batalla. Sus hechizos le permiten destruir defensas, inmovilizar enemigos y proteger a sus aliados. Cuando lucha bajo las órdenes de Sung Jin-Woo, puede desatar una lluvia de meteoritos devastadora.',
       text: 'Magia de Alto Orco (1 por turno): Meteorito, Gravedad o Barrera. Invocado por Sung Jin-Woo: +500 ATK/DEF y Gran Magia: Legión de Meteoritos (1 vez por duelo, sacrificando otra sombra).'
@@ -1196,7 +1213,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};
