@@ -597,4 +597,34 @@ module.exports = function (T) {
     st.players[1].mz[0] = null; pass(st, 1);
     eq(stat(st, 0, 0)[0], gAtk, 'al irse Vegeta, Ginyu recupera su ATK');
   }
+  section('Viego');
+  {
+    // pasiva de espada: 500 (1000 con la espada equipada)
+    let st = fresh(0); put(st, 0, 0, 'c_viego'); put(st, 1, 0, 'c_goku', { pos: 'def' });
+    st.phase = 'battle';
+    const d0 = stat(st, 1, 0)[1];
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    // Dominación Soberana
+    st = fresh(0); put(st, 0, 0, 'c_viego', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' });
+    st.phase = 'battle';
+    act(st, 0, atkA(st, 0, 0, 0));
+    while (st.pending && st.pending.k === 'respond') act(st, E.actor(st), L(st, E.actor(st)).find(x => x.t === 'respond' && !x.activate));
+    ok(st.pending && st.pending.ab === 'viegodom', 'Viego puede poseer al derrotado');
+    const n1 = E.countCards(st, 1);
+    act(st, 0, { t: 'ability', use: true });
+    ok(!grave(st, 1, 'c_kratos'), 'el derrotado no va al cementerio todavía');
+    eq(E.countCards(st, 1), n1, 'sin pérdida de cartas');
+    eq(E.view(st, 0).players[0].mz[0].c.id, 'c_kratos', 'Viego adopta su apariencia');
+    eq(stat(st, 0, 0)[0], Cards.get('c_kratos').atk + 5000, 'y sus estadísticas');
+    pass(st, 2); // turno rival y vuelta al de Viego
+    ok(L(st, 0).filter(a => a.t === 'power' && a.pw === 'viegoabil').length >= 0, 'en su siguiente turno puede elegir una habilidad');
+    pass(st, 1);
+    ok(grave(st, 1, 'c_kratos') && st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_viego' && !st.players[0].mz[0].copy, 'al acabar ese turno recupera su cuerpo y el derrotado va al cementerio');
+    // Niebla Negra
+    st = fresh(0); put(st, 0, 0, 'c_viego'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_vegeta');
+    act(st, 0, pw(st, 0, 'viegoniebla', a => a.target.z === 1));
+    st.current = 1; st.turn = 7; st.phase = 'battle';
+    ok(!atkA(st, 1, 0, 1), 'desde otra zona no se puede atacar a la zona cubierta');
+    ok(atkA(st, 1, 1, 1), 'pero sí desde la misma zona');
+  }
 };

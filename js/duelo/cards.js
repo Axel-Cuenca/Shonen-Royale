@@ -248,6 +248,9 @@
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
     gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    viegodom: ['Dominación Soberana', 'Cuando destruye a un enemigo en combate, puede poseer su cuerpo en lugar de enviarlo al cementerio: adopta su apariencia y estadísticas originales. En su siguiente turno puede usar UNA habilidad original de ese personaje. Al final de ese turno recupera su cuerpo y el derrotado va al cementerio.'],
+    viegoniebla: ['Niebla Negra', 'Una vez por turno cubre una zona: los aliados de esa zona no pueden ser atacados desde otras zonas hasta el próximo turno de su controlador. No impide habilidades, magias ni trampas.'],
+    viegoesp: ['Espada del Rey Arruinado', 'Pasiva: cuando ataca a otro personaje roba 500 de DEF al objetivo y gana 500 ATK en ese combate. Si además lleva equipada una Espada del Rey Arruinado, los efectos se suman (1000).'],
     ginyucambio: ['¡CAMBIO! – Cambio de Cuerpo', 'Una vez por turno elige a un personaje enemigo de hasta 5★ e intercambian sus cuerpos: Ginyu usa el ATK, DEF y habilidades del otro (y conserva ¡CAMBIO!); el enemigo usa el ATK y DEF originales de Ginyu y pierde sus habilidades. Ambos conservan nombre, estrellas y tipo. Termina cuando uno de los dos deja el campo.'],
     dofhilo: ['Parasite – Hilos de Control', 'Una vez por turno pone hilos invisibles (sólo tú lo sabes) sobre un personaje enemigo. Cuando ese personaje declare un ataque, Doflamingo puede elegir otro objetivo válido para ese ataque (incluso un aliado del atacante); el ataque conserva su fuerza y efectos. Los hilos se consumen al redirigir.'],
     dofjaula: ['Jaula de Pájaros', 'Una vez por duelo, durante 2 turnos los personajes enemigos no pueden abandonar el campo (sacrificios, transformaciones, invocaciones especiales, etc.) ni cambiar de zona. Sí pueden ser destruidos por otros medios.'],
@@ -264,6 +267,8 @@
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    viegodom: 'Se apodera de los cuerpos de sus enemigos caídos.',
+    viegoniebla: 'La Niebla Negra oculta y protege a sus aliados mientras prepara su siguiente movimiento.',
     ginyucambio: 'Intercambia cuerpos con su enemigo y se apodera de sus habilidades.',
     dofhilo: 'Controla a sus enemigos como marionetas.',
     dofjaula: 'Atrapa a sus rivales dentro de una jaula de hilos.',
@@ -1013,6 +1018,12 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_viego', name: 'Viego, el Rey Arruinado', type: 'lol', level: 5, atk: 1600, def: 1500, img: I('viego'), ab: ['viegodom', 'viegoniebla', 'viegoesp'],
+      lore: 'Viego, el Rey Arruinado, utiliza su poder para apoderarse de los cuerpos de sus enemigos caídos. La Niebla Negra se extiende por el campo, ocultando y protegiendo a sus aliados mientras prepara su siguiente movimiento.',
+      text: 'Dominación Soberana: al destruir a un enemigo en combate, posee su cuerpo hasta el final de su siguiente turno y usa una de sus habilidades. Niebla Negra: protege una zona de ataques de otras zonas. Espada del Rey Arruinado (pasiva): roba 500 DEF y gana 500 ATK al atacar (se suma a la espada equipada).',
+      sfx: { summon: V('viego-summon'), attack: V('viego-attack') }
+    }),
+    mon({
       id: 'c_ginyu', name: 'Ginyu', type: 'dbz', level: 3, atk: 1200, def: 1300, img: I('ginyu'), ab: ['ginyucambio'],
       lore: 'Ginyu utiliza su técnica especial para intercambiar cuerpos con su enemigo, apoderándose de sus habilidades y dejando al oponente atrapado en su cuerpo original.',
       text: '¡CAMBIO!: una vez por turno intercambia el cuerpo (ATK, DEF y habilidades) con un enemigo de hasta 5★ hasta que uno de los dos deje el campo.'
@@ -1176,7 +1187,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};
