@@ -1070,7 +1070,8 @@
     function renderPool() {
       const ql = q.trim().toLowerCase();
       let list = C.all().filter(c => (kind === 'all' || c.kind === kind) && (!type || (c.types && c.types.includes(type))) && (!ql || c.name.toLowerCase().includes(ql)));
-      if (!C.test) list = list.map((c, i) => [c, i]).sort((a, b) => (D.Shop.hasCard(b[0].id) - D.Shop.hasCard(a[0].id)) || a[1] - b[1]).map(x => x[0]);      // primero las que ya tienes
+      if (type) list = list.slice().sort((a, b) => (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((a.level || 0) - (b.level || 0)) || a.name.localeCompare(b.name, 'es'));      // dentro de un tipo: por nivel (de menor a mayor)
+      else if (!C.test) list = list.map((c, i) => [c, i]).sort((a, b) => (D.Shop.hasCard(b[0].id) - D.Shop.hasCard(a[0].id)) || a[1] - b[1]).map(x => x[0]);      // primero las que ya tienes
       const total = list.length; list = list.slice(0, shown);
       poolEl.replaceChildren(...list.map(poolCard), ...(total > shown ? [btn(`Ver más (${total - shown})`, () => { shown += 80; renderPool(); }, 'ghost')] : []), ...(!total ? [h('p', { class: 'sub' }, 'No hay cartas con ese filtro.')] : []));
     }
@@ -1116,7 +1117,7 @@
     function renderAll() { renderHead(); renderChips(); renderPool(); renderDeck(); renderStatus(); }
 
     const search = h('input', { type: 'search', placeholder: 'Buscar carta…', 'aria-label': 'Buscar carta', oninput: () => { q = search.value; shown = 60; renderPool(); } });
-    const typeSel = h('select', { 'aria-label': 'Tipo', onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(C.custom.map(c => c.type).filter((t, i, a) => a.indexOf(t) === i)).map(t => h('option', { value: t }, C.TYPE_ES[t])));
+    const typeSel = h('select', { 'aria-label': 'Tipo', onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(C.custom.map(c => c.type)).filter((t, i, a) => t && a.indexOf(t) === i).sort((a, b) => (C.TYPE_ES[a] || a).localeCompare(C.TYPE_ES[b] || b, 'es')).map(t => h('option', { value: t }, C.TYPE_ES[t] || t)));      // tipos en orden alfabético
     root.append(h('div', { class: 'edtop' }, h('button', { class: 'back', onclick: deckBuilder }, '← Mis mazos'), headEl), h('h1', null, dk.name),
       h('div', { class: 'dktabs' }, tabPool, tabDeck),
       h('div', { class: 'edmain' },
