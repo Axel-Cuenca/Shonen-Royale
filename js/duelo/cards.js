@@ -21,7 +21,8 @@
     adventuretime: 'Hora de Aventura', naruto: 'Naruto',
     looney: 'Looney Tunes', yugioh: 'Yu-Gi-Oh!', cartoon: 'Cartoon Network', dmc: 'Devil May Cry', hp: 'Harry Potter',
     blackclover: 'Black Clover', sololeveling: 'Solo Leveling', deathnote: 'Death Note',
-    bleach: 'Bleach', pokemon: 'Pokémon', villano: 'Mi Villano Favorito', hxh: 'Hunter x Hunter'
+    bleach: 'Bleach', pokemon: 'Pokémon', villano: 'Mi Villano Favorito', hxh: 'Hunter x Hunter',
+    valorant: 'Valorant', onepiece: 'One Piece'
   };
   const TYPE_COLOR = {
     normal: '#a8a77a', fire: '#ee8130', water: '#6390f0', electric: '#f7d02c', grass: '#7ac74c', ice: '#96d9d6',
@@ -33,7 +34,8 @@
     adventuretime: '#f5a623', naruto: '#f28c1e',
     looney: '#e0a526', yugioh: '#5b3a8c', cartoon: '#2a8fd0', dmc: '#b3202a', hp: '#7a5c2e',
     blackclover: '#2f3b2f', sololeveling: '#3b4fd8', deathnote: '#3a3a3a',
-    bleach: '#e8892b', pokemon: '#e3350d', villano: '#e8c02a', hxh: '#2e8b57'
+    bleach: '#e8892b', pokemon: '#e3350d', villano: '#e8c02a', hxh: '#2e8b57',
+    valorant: '#fd4556', onepiece: '#d9a21b'
   };
 
   // ---------------- catálogo ----------------
@@ -940,15 +942,26 @@
       kind: 'trap', id: 'c_tsukuyomi', name: 'Tsukuyomi', icon: '👁️', img: I('tsukuyomi'), trigger: 'attack', fx: 'tsukuyomi',
       text: 'Cuando un enemigo declara un ataque: lo cancela y ese personaje no puede atacar durante sus 2 turnos siguientes.',
       sfx: { use: V('tsukuyomi-use') }
-    }
+    },
+    // ---------------- tanda 7 (2026-11-13) ----------------
+    spell({
+      id: 'c_edo_tensei', name: 'Edo Tensei', icon: '⚰️', img: I('edo_tensei'), fx: 'edo',
+      lore: 'El Edo Tensei es una técnica prohibida que permite traer de vuelta a los muertos mediante un sacrificio. Un personaje aliado es utilizado como recipiente para invocar a un personaje que se encuentra en el cementerio.',
+      text: 'Invocación del Mundo Impuro: sacrifica a un personaje de tu campo y revive especialmente a un personaje de tu cementerio (puede ser el recién sacrificado) en una zona libre, sin tributos. Conserva sus estadísticas y habilidades. No se puede activar sin un personaje válido en el cementerio o sin zona libre.'
+    }),
+    spell({
+      id: 'c_ojos_shinigami', name: 'Ojos de Shinigami', icon: '👁️', img: I('ojos_shinigami'), fx: 'equip', sub: 'equip', eyesAll: true,
+      lore: 'Los Ojos de Shinigami permiten ver más allá de las apariencias y descubrir la verdadera identidad de quienes intentan ocultarse.',
+      text: 'Visión del Shinigami: equípala a un personaje tuyo. Mientras siga en el campo, ves en privado la identidad de todos los personajes enemigos boca abajo (el rival los sigue viendo ocultos). No los voltea ni activa efectos de revelar.'
+    })
   ];
   // Tipo (serie) de las magias y trampas: sólo informativo (2026-11-12), no cambia ninguna regla. Las que no son de una serie del juego son «normal».
   const ST_TYPE = {
     dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia'],
     jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero'],
     marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
-    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma'],
-    deathnote: ['c_death_note'],
+    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei'],
+    deathnote: ['c_death_note', 'c_ojos_shinigami'],
     blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
     pecados: ['c_full_counter', 'c_el_unico'],
     zodiaco: ['c_armadura'], anillos: ['c_anillo_unico'], hp: ['c_capa'], lol: ['c_espada'],
@@ -1002,9 +1015,10 @@
     4: ['goku_ui', 'majin_vegeta', 'armin', 'titan_colosal', 'galio', 'naruto_chico', 'naruto_kyuubi', 'thanos', 'botiquin', 'kaioken', 'death_note', 'ultratumba'],
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
-      'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi']
+      'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
+    7: ['edo_tensei', 'ojos_shinigami']
   };
-  const TANDAS = [1, 2, 3, 4, 5, 6], PACK_TANDAS = [2, 3, 4, 5, 6];
+  const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};
   for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
   /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */

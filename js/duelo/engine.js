@@ -1291,6 +1291,29 @@
         if (c.length) st.pending = { k: 'pick', player: p, zone: 'grave', cands: c.map(i => i.uid), cont: 'revive' };
       }
     },
+    // Edo Tensei: sacrificas a un personaje tuyo del campo y revives a uno de tu cementerio (puede ser el sacrificado)
+    edo: {
+      targets: (st, p) => {
+        const P = st.players[p], out = [];
+        P.mz.forEach((m, z) => {
+          if (!m || isInk(m) || (m.owner != null && m.owner !== p)) return;      // fichas de tinta y personajes corrompidos no se sacrifican
+          const gone = m.c;
+          const cands = P.grave.filter(i => def(i).kind === 'monster' && !def(i).hidden && spot(P, def(i), [z]) >= 0).map(i => i.uid);
+          if (gone && def(gone).kind === 'monster' && !def(gone).hidden && spot(P, def(gone), [z]) >= 0) cands.push(gone.uid);
+          for (const u of cands) out.push({ z, u });
+        });
+        return out;
+      },
+      resolve: (st, p, d, t) => {
+        const P = st.players[p], m = t && P.mz[t.z];
+        if (!m) { log(st, p, 'no tiene objetivo'); return; }
+        const nm = mdef(m).name;
+        log(st, p, `Edo Tensei: sacrifica a ${nm}`);
+        removeMonster(st, p, t.z, 'grave');
+        const c = P.grave.find(x => x.uid === t.u);
+        if (!c || reviveInst(st, p, c) < 0) log(st, p, 'Edo Tensei: no revive a nadie');
+      }
+    },
     destroyOne: {
       targets: (st, p, d) => st.players[p].lp > d.self ? zoneTargets(st, p, 'mz') : [],
       resolve: (st, p, d, t) => {
@@ -5094,9 +5117,10 @@
         for (const n of nu.filter(n => { const sx = st.players[n.vs] && st.players[n.vs].st[n.z]; return sx && sx.down && sx.c.uid === n.uid; })) players[n.vs].st[n.z] = Object.assign(stView(st.players[n.vs].st[n.z], true, st), { peeked: true }); } }
     {   // Misa (Ojos de Shinigami) e Inosuke (Sentido del tacto): ven en privado personajes boca abajo
       const S0 = st.players[seat], tacto = S0.mz.some(m => m && !m.down && has(st, m, 'inotacto')), eyes = S0.eyes || [];
+      const ojos = !stOff(st) && S0.st.some(x => x && !x.down && x.equipTo != null && def(x.c).eyesAll && S0.mz[x.equipTo]);      // Ojos de Shinigami: ve a TODOS los personajes enemigos boca abajo mientras el portador siga en el campo
       for (let q = 0; q < st.n; q++) {
         if (q === seat || st.team[q] === st.team[seat]) continue;
-        st.players[q].mz.forEach((m, z) => { if (m && m.down && (tacto || eyes.some(e => e.uid === m.c.uid)) && players[q].mz[z] && !players[q].mz[z].c) players[q].mz[z] = Object.assign(slotView(st, st.players[q], m, z, true), { peeked: true }); });
+        st.players[q].mz.forEach((m, z) => { if (m && m.down && (tacto || ojos || eyes.some(e => e.uid === m.c.uid)) && players[q].mz[z] && !players[q].mz[z].c) players[q].mz[z] = Object.assign(slotView(st, st.players[q], m, z, true), { peeked: true }); });
         st.players[q].st.forEach((s, z) => { if (s && s.down && (tacto || eyes.some(e => e.uid === s.c.uid)) && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // también magias y trampas boca abajo (Inosuke siempre; Misa, las que miró)
       }
     }

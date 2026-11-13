@@ -352,7 +352,7 @@
         h('div', { class: 'sub' }, C.tributesFor(d.level) ? `Para invocarlo hay que sacrificar ${C.tributesFor(d.level)} monstruo(s) tuyo(s).` : 'Se invoca sin sacrificios.'),
         h('div', { class: 'sub' }, 'No hay ventajas de tipo: el combate sólo compara ATK y DEF.'));
     } else {
-      txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, h('span', { class: 'chip', style: 'background:' + (d.kind === 'spell' ? '#1f9d8a' : '#b04c9a') }, d.kind === 'spell' ? 'Magia' : 'Trampa'), (d.types || []).map(typeChip)), h('div', null, d.text));
+      txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, h('span', { class: 'chip', style: 'background:' + (d.kind === 'spell' ? '#1f9d8a' : '#b04c9a') }, d.kind === 'spell' ? 'Magia' : 'Trampa'), (d.types || []).map(typeChip)), d.lore ? h('div', { class: 'abil lore' }, h('div', { class: 'ab1' }, h('div', { class: 'nar' }, '“' + d.lore + '”'), h('div', { class: 'fun' }, h('span', { class: 'fi' }, '⚙'), d.text))) : h('div', null, d.text));
       if (d.kind === 'trap') txt.append(h('div', { class: 'sub' }, 'Se coloca boca abajo y se activa sola cuando puedes responder (desde el turno siguiente).'));
     }
     if (extra) txt.append(extra);
@@ -1605,6 +1605,17 @@
               btn('Cancelar', closeModal, 'ghost')));
           }, 'Elige al enemigo del que copias');
         }, 'Elige a tu personaje que hace el sacrificio');
+      }
+      if (d.fx === 'edo') {                  // 1) el aliado que se sacrifica, 2) el personaje del cementerio que vuelve (puede ser el sacrificado)
+        const zs = [...new Set(list.map(a => a.target.z))];
+        return pickTargets(zs.map(z => ({ seat: v.seat, area: 'mz', z })), t1 => {
+          const sub = list.filter(a => a.target.z === t1.z);
+          const sac = (v.me.mz[t1.z] || {}).c;
+          const cs = sub.map(a => ({ uid: a.target.u, id: ((v.me.grave.find(c => c && c.uid === a.target.u)) || (sac && sac.uid === a.target.u ? sac : null) || {}).id })).filter(x => x.id);
+          modal(h('div', { class: 'box' }, h('h2', null, '⚰️ ¿A quién traes de vuelta?'), h('p', { class: 'sub' }, 'Tu personaje elegido se sacrifica y el que elijas aquí entra en su lugar.'),
+            h('div', { class: 'cands' }, cs.map(x => h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); act(sub.find(a => a.target.u === x.uid)); } }, cardEl(C.get(x.id)), h('small', null, C.get(x.id).name)))),
+            btn('Cancelar', closeModal, 'ghost')));
+        }, 'Edo Tensei: elige al personaje que se sacrifica');
       }
       if (d.fx === 'cana') return chooseGrave(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje desterrado que vuelve a tu mano', 'banish');
       if (d.fx === 'botiquin') return pickTargets(list.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(list.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Botiquín: elige al personaje que curas (tuyo o rival)');
