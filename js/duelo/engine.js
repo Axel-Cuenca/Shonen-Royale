@@ -87,6 +87,7 @@
     let a = rawAbil(m);
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
     if (m.spentAb && m.spentAb.length) a = a.filter(x => !m.spentAb.includes(x));      // X: habilidades consumidas para siempre
+    { const cb = st.atk || st.cmb; if (cb && cb.wpn && cb.wpnU === m.c.uid) { if (cb.wpn === 'nube') return []; if (cb.wpn === 'lanza') a = a.filter(x => POWER_IDS.includes(x)); } }      // Maki: Nube Juguetona / Lanza Invertida del Cielo
     return (a.includes('gogres') || m.camu) ? a.concat('rikaprot') : a;      // Rengar: Camuflaje, igual de inmune a magias y trampas
     // Gogeta: Resistencia absoluta = inmune a las magias y trampas
   }
@@ -1646,7 +1647,7 @@
             const tm = st.players[e.vs].mz[e.z];
             if (tm.down || rikaUp(st, tm)) continue;
             out.push({ z, vs: e.vs, ez: e.z, mode: 1 }, { z, vs: e.vs, ez: e.z, mode: 2 });
-            for (const ab of Array.from(new Set(rawAbil(tm)))) if (!abil(st, P.mz[z]).includes(ab)) out.push({ z, vs: e.vs, ez: e.z, mode: 3, ab });
+            if (!rawAbil(tm).includes('makirest')) for (const ab of Array.from(new Set(rawAbil(tm)))) if (!abil(st, P.mz[z]).includes(ab)) out.push({ z, vs: e.vs, ez: e.z, mode: 3, ab });      // Maki: Restricción Celestial, no se le copian habilidades
           }
         }
         return out;
@@ -2785,6 +2786,7 @@
     m.atkN = atkCount(m) + 1; m.attacked = true;
     if (vs == null) vs = foeOf(st, p, null);
     st.atk = { p, z, target, vs, negated: false };
+    if (m.wpn) { const dmw = target !== 'direct' && st.players[vs].mz[target]; st.atk.wpn = m.wpn; if (dmw) st.atk.wpnU = dmw.c.uid; delete m.wpn; }      // Maki: arma elegida para este ataque
     if (extra && extra.length) st.atk.extra = extra;      // Puño del Dragón: otras casillas atravesadas en el mismo ataque
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
@@ -2946,7 +2948,7 @@
   }
   function continueAttack(st) {
     const a = st.atk; st.atk = null;
-    st.cmb = a ? { p: a.p, z: a.z, target: a.target, vs: a.vs, turn: st.turn } : null;      // el combate sigue en curso (bonos de Warwick)
+    st.cmb = a ? { p: a.p, z: a.z, target: a.target, vs: a.vs, turn: st.turn, wpn: a.wpn, wpnU: a.wpnU } : null;      // el combate sigue en curso (bonos de Warwick)
     if (!a || a.negated || st.winner !== null) { if (a) atkDone(st, a); return; }
     const at0 = st.players[a.p].mz[a.z];
     { const cl = a.target !== 'direct' && st.players[a.vs].mz[a.target];
@@ -3039,6 +3041,7 @@
       log(st, a.p, `${mdef(at).name} cae sobre su presa: ignora todas las bonificaciones de ${mdef(dm).name} en este ataque`);
     }
     if (at.gpow && !st.ign) st.ign = [dm];
+    if (a.wpn === 'nube' && a.wpnU === dm.c.uid) { st.ign = (st.ign || []).concat(dm); log(st, -1, `Nube Juguetona: ${mdef(dm).name} combate sin sus habilidades ni la ayuda de magias`); }
     if (a.duel) { st.ign = [at, dm]; log(st, -1, `Duelo individual: ${mdef(at).name} y ${mdef(dm).name} combaten sin ayuda de habilidades, aliados ni magias`); }
     try { resolveCombat2(st, a, me, op, at, dm, vs); } finally { st.ign = null; }
   }
@@ -3075,11 +3078,11 @@
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
-    if (at.tour && me.mz[a.z] === at) {      // Chamber, Tour de Force: el ataque ignora lo que impide destruir al objetivo y se consume
-      at.tour = false;
+    if ((at.tour || (a.wpn === 'katana' && a.wpnU === dm.c.uid)) && me.mz[a.z] === at) {      // Chamber, Tour de Force / Maki, Katana del Alma Dividida: el ataque ignora lo que impide destruir al objetivo
+      if (at.tour) at.tour = false;
       if (op.mz[a.target] === dm && !shielded) {
         const A2 = atkOf(st, me, a.z), B2 = dm.pos === 'atk' ? atkOf(st, op, a.target) : defOf(st, op, a.target);
-        if (A2 > B2) { log(st, a.p, `${ad.name}: Contrato Mortal, nada impide la destrucción de ${dd.name}`); removeMonster(st, vs, a.target, 'grave', { death: true }); log(st, -1, `${dd.name} es destruido`); }
+        if (A2 > B2) { log(st, a.p, a.wpn === 'katana' ? `${ad.name}: la Katana del Alma Dividida ignora toda protección de ${dd.name}` : `${ad.name}: Contrato Mortal, nada impide la destrucción de ${dd.name}`); removeMonster(st, vs, a.target, 'grave', { death: true }); log(st, -1, `${dd.name} es destruido`); }
       }
     }
     if (shielded && op.mz[a.target] === dm) {
@@ -3435,7 +3438,7 @@
     for (const Q of st.players) {
       if (!Q.alive) continue;
       for (const m of Q.mz) {
-        if (!m || m.down || m === y) continue;
+        if (!m || m.down || m === y || rawAbil(m).includes('makirest')) continue;
         for (const x of rawAbil(m)) if (POWER_IDS.includes(x) && !have.includes(x) && !out.includes(x) && !(m.sealed || []).some(q => q.ab === x)) out.push(x);
       }
     }
@@ -3550,7 +3553,7 @@
             if (!st.players[q].alive) continue;
             for (const tz of zonesWith(st.players[q].mz)) {
               const tm = st.players[q].mz[tz];
-              if ((q === p && tz === z) || tm.down || mdef(tm).wide || eid(tm) === m.c.id || eid(tm) === m.copy || !canTarget(st, p, q, tz)) continue;
+              if ((q === p && tz === z) || tm.down || mdef(tm).wide || eid(tm) === m.c.id || eid(tm) === m.copy || rawAbil(tm).includes('makirest') || !canTarget(st, p, q, tz)) continue;
               push({ pw: 'copy', target: { vs: q, z: tz } });
             }
           }
@@ -3644,7 +3647,7 @@
       if (ab.includes('sylas') && (u.syT !== st.turn || (u.syN || 0) < g)) {
         for (const t of foeChars(st, p)) {
           const tm = st.players[t.vs].mz[t.z];
-          if (tm.down) continue;
+          if (tm.down || rawAbil(tm).includes('makirest')) continue;
           for (const x of Array.from(new Set(rawAbil(tm)))) if (STEALABLE.includes(x) && !rawAbil(m).includes(x) && !(tm.sealed || []).some(q => q.ab === x)) push({ pw: 'robo', target: t, ab: x });
         }
       }
@@ -3950,6 +3953,7 @@
           else for (const tz of targets) {
             const a0 = mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz };
             out.push(a0);
+            if (has(st, m, 'makiinv') && !m.down) for (const w of ['nube', 'katana', 'lanza']) if ((uOf(m).mkw || {})[w] !== st.turn) out.push(Object.assign({}, a0, { weapon: w }));      // Maki: Inventario Maldito
             if (canStrip(st, P, z) && boosted(st, e, tz)) out.push(Object.assign({}, a0, { strip: true }));      // Anulación de aumentos
           }
         }
@@ -4992,6 +4996,7 @@
       case 'attack':
         if (a.hira) hiraAttack(st, p, a);
         else {
+          if (a.weapon) { const wm = P.mz[a.zone], U = uOf(wm); U.mkw = Object.assign({}, U.mkw); U.mkw[a.weapon] = st.turn; wm.wpn = a.weapon; log(st, p, `${mdef(wm).name} saca del Inventario Maldito: ${{ nube: 'Nube Juguetona', katana: 'Katana del Alma Dividida', lanza: 'Lanza Invertida del Cielo' }[a.weapon]}`); }
           if (a.dragon) { const dm = P.mz[a.zone]; uOf(dm).pdr = true; log(st, p, `${mdef(dm).name} usa Puño del Dragón: atraviesa ${a.dragon.length + 1} casillas en el mismo ataque`); }
           declareAttack(st, p, a.zone, a.target, a.vs, a.dragon && a.dragon.map(x => ({ vs: x.vs != null ? x.vs : foeOf(st, p, null), z: x.z })));
           if (a.strip && st.atk) st.atk.strip = true;
@@ -5736,12 +5741,12 @@
       if (nu && nu.length) {
         for (const n of nu.filter(n => { const sx = st.players[n.vs] && st.players[n.vs].st[n.z]; return sx && sx.down && sx.c.uid === n.uid; })) players[n.vs].st[n.z] = Object.assign(stView(st.players[n.vs].st[n.z], true, st), { peeked: true }); } }
     {   // Misa (Ojos de Shinigami) e Inosuke (Sentido del tacto): ven en privado personajes boca abajo
-      const S0 = st.players[seat], tacto = S0.mz.some(m => m && !m.down && has(st, m, 'inotacto')), eyes = S0.eyes || [];
+      const S0 = st.players[seat], tacto = S0.mz.some(m => m && !m.down && has(st, m, 'inotacto')), sentido = S0.mz.some(m => m && !m.down && has(st, m, 'makisent')), eyes = S0.eyes || [];
       const ojos = !stOff(st) && S0.st.some(x => x && !x.down && x.equipTo != null && def(x.c).eyesAll && S0.mz[x.equipTo]);      // Ojos de Shinigami: ve a TODOS los personajes enemigos boca abajo mientras el portador siga en el campo
       for (let q = 0; q < st.n; q++) {
         if (q === seat || st.team[q] === st.team[seat]) continue;
         st.players[q].mz.forEach((m, z) => { if (m && m.down && (tacto || ojos || eyes.some(e => e.uid === m.c.uid)) && players[q].mz[z] && !players[q].mz[z].c) players[q].mz[z] = Object.assign(slotView(st, st.players[q], m, z, true), { peeked: true }); });
-        st.players[q].st.forEach((s, z) => { if (s && s.down && (tacto || eyes.some(e => e.uid === s.c.uid)) && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // también magias y trampas boca abajo (Inosuke siempre; Misa, las que miró)
+        st.players[q].st.forEach((s, z) => { if (s && s.down && (tacto || (sentido && def(s.c).kind === 'trap') || eyes.some(e => e.uid === s.c.uid)) && players[q].st[z] && !players[q].st[z].c) players[q].st[z] = Object.assign(stView(s, true, st), { peeked: true }); });      // también magias y trampas boca abajo (Inosuke siempre; Misa, las que miró)
       }
     }
     const fl = foes(st, seat);

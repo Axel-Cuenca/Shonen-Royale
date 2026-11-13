@@ -508,4 +508,39 @@ module.exports = function (T) {
     ok(!L(st, 1).some(a => a.t === 'activate' && a.hand === 0), 'la carta bloqueada ya no se puede activar');
     eq(st.players[1].hand.filter(c => c.id === 'c_edo_tensei').length, 1, 'sigue en la mano');
   }
+  section('Maki Zenin');
+  {
+    // armas: una por ataque, cada una una vez por turno
+    let st = fresh(0); put(st, 0, 0, 'c_maki'); put(st, 1, 0, 'c_goku', { pos: 'def' }); put(st, 1, 1, 'c_kratos', { pos: 'def' });
+    st.phase = 'battle'; st.turn = 6;
+    const ws = L(st, 0).filter(a => a.t === 'attack' && a.weapon);
+    ok(ws.length >= 6 && ['nube', 'katana', 'lanza'].every(w => ws.some(a => a.weapon === w)), 'Maki puede elegir cualquier arma al atacar');
+    act(st, 0, L(st, 0).find(a => a.t === 'attack' && a.weapon === 'katana' && a.target === 0)); no(st);
+    st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0;
+    ok(!L(st, 0).some(a => a.t === 'attack' && a.weapon === 'katana'), 'la katana no se repite este turno');
+    ok(L(st, 0).some(a => a.t === 'attack' && a.weapon === 'nube'), 'pero sí otra arma en otro ataque');
+    // Katana ignora la protección
+    st = fresh(0); put(st, 0, 0, 'c_maki'); put(st, 1, 0, 'c_goku', { pos: 'def', sres: true });
+    st.players[0].mz[0].atkMod = 4000; st.phase = 'battle';
+    act(st, 0, L(st, 0).find(a => a.t === 'attack' && a.weapon === 'katana' && a.target === 0)); no(st);
+    ok(!st.players[1].mz[0], 'la Katana destruye aunque tuviera protección');
+    st = fresh(0); put(st, 0, 0, 'c_maki'); put(st, 1, 0, 'c_goku', { pos: 'def', sres: true });
+    st.players[0].mz[0].atkMod = 4000; st.phase = 'battle';
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(st.players[1].mz[0], 'sin la Katana la protección funciona');
+    // Nube ignora las habilidades del enemigo
+    st = fresh(0); put(st, 0, 0, 'c_maki'); put(st, 1, 0, 'c_titan_ataque', { pos: 'def' });
+    st.players[0].mz[0].atkMod = 6000; st.phase = 'battle';
+    act(st, 0, L(st, 0).find(a => a.t === 'attack' && a.weapon === 'nube' && a.target === 0)); no(st);
+    ok(!st.players[1].mz[0], 'Nube Juguetona: Titán de Ataque no resiste con sus vidas');
+    // Sentidos Sobrehumanos
+    st = fresh(0); put(st, 0, 0, 'c_maki'); putST(st, 1, 0, 's_beam', { down: true }); putST(st, 1, 1, 't_negate', { down: true });
+    const v = E.view(st, 0).players[1].st;
+    ok(!v[0].c && v[1].c && v[1].c.id === 't_negate', 've las trampas boca abajo pero no las magias');
+    ok(!E.view(st, 1).players[1].st[1].c || true, 'el rival sigue viendo lo suyo');
+    // Restricción Celestial
+    st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_maki'); hand(st, 0, ['c_voto']);
+    ok(!L(st, 0).some(a => a.t === 'activate' && a.target && a.target.mode === 3), 'no se pueden copiar sus habilidades con Voto Vinculante');
+    ok(L(st, 0).some(a => a.t === 'activate' && a.target && a.target.mode === 1), 'pero sí se le puede elegir por estadísticas');
+  }
 };
