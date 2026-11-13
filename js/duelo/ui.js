@@ -343,6 +343,7 @@
     if (d.kind === 'monster') {
       txt.append(h('h3', null, d.name), h('div', { class: 'chips' }, d.types.map(typeChip)),
         h('div', null, `Nivel ${d.level} · ATK ${d.atk} · DEF ${d.def}`),
+        d.lore ? h('div', { class: 'abil lore' }, h('div', { class: 'ab1' }, h('div', { class: 'nar' }, '“' + d.lore + '”'))) : null,
         (d.ab || []).some(k => C.LORE && C.LORE[k])
           ? h('div', { class: 'abil lore' }, (d.ab || []).filter(k => C.AB[k]).map(k => h('div', { class: 'ab1' },
               h('b', null, C.AB[k][0]),
@@ -1271,7 +1272,9 @@
       agujero: 'Agujero bajo tierra', brillo: 'Brillo', dtrig: 'Devil Trigger', avada: 'Avada Kedavra', chidori: 'Chidori', dios: 'Poder de Dios', maquina: 'Máquina del tiempo', cuerno: 'Ataque de Cuerno', canal: 'Canalización', supernova: 'Supernova', bigbang1: 'Big Bang', kform: 'Transformación', telar: 'Telarañas', corromper: 'Promesa de Poder', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', avpred: 'Depredador de Magia', ydominio: 'Amor Mutuo y Verdadero',
       eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man',
       jkmove: 'Jake: cambiar de aliado o modo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10',
-      katana: 'Katana de la Antimagia', higudom: 'Sentencia Mortal (dominio)' };
+      katana: 'Katana de la Antimagia', higudom: 'Sentencia Mortal (dominio)',
+      kaisel: 'Montura de las Sombras: invocar a Kaisel', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería' };
+    const PWD = { kaiselvuelo: 'Un aliado no puede ser elegido como objetivo de ataques hasta el próximo turno de su controlador. Una vez por turno.', rsalv: 'Gasta 2 de ferocidad: +600 ATK permanente.', rrug: 'Gasta 2 de ferocidad: se libera de todos sus efectos negativos.', rcam: 'Gasta 2 de ferocidad: inmune a las magias y trampas enemigas.', rred: 'Gasta 2 de ferocidad: un enemigo no ataca, no cambia de posición ni usa habilidades durante 3 turnos.', rcaza: 'Se oculta (no se le puede atacar) hasta tu próximo turno y marca una presa: su primer ataque contra ella ignora sus bonificaciones. Una vez cada 2 turnos.' };
     const pwName = k => PWN[k] || abn(k);
     const MODN = { conc: 'Concentración Total', marca: 'Marca de Cazador', roca: 'Respiración de la Roca', sol: 'Respiración Solar', rayo: 'Postura del Rayo', bestia: 'Postura de la Bestia', desp: 'Poder Oculto', kaioken: 'Kaio-ken',
       llama: 'Llama Infernal', rhaast: 'Transformación en Rhaast', rhaastk: 'Rhaast (asesinatos)', sombra: 'Asesino Sombra', muerte: 'Muertes', bestia: 'la Bestia', rojo: 'Rojo', voto: 'Voto Vinculante', 'av-base': 'Anti-Venom', 'av-atk': 'Adaptación Ofensiva',
@@ -1419,6 +1422,10 @@
       if (s.yuta && s.yuta.dom) b.push(['💞', 'Dominio de Yuta activo']);
       if (s.manto) b.push(['🧥', 'Manto de Kyuubi: recibirá en su lugar el golpe mortal']);
       if (s.exh) b.push(['💤', 'Agotado: 0 ATK y 0 DEF']);
+      if (s.fer != null) b.push(['🐾' + s.fer + '/4', 'Ferocidad: ' + s.fer + '/4 (2 por cada habilidad potenciada)']);
+      if (s.fly) b.push(['🪽', 'Fuera de alcance: no se le puede atacar hasta el próximo turno de su controlador']);
+      if (s.camu) b.push(['🌿', 'Camuflaje: inmune a las magias y trampas enemigas']);
+      if (s.prey) b.push(['🎯', 'Tiene una presa marcada: su primer ataque contra ella ignora sus bonificaciones']);
       if (s.ksp) b.push(['🔥', 'Kaioken activo' + (s.ksp.x ? ' (x10)' : '')]);
       if (s.dn) b.push(['📓', 'Death Note: morirá durante el turno de su dueño']);
       if (s.rika) b.push([s.rika.happy ? '😊' : '😡', s.rika.happy ? 'Rika contenta' : 'Maldición Incontrolable']);
@@ -1812,7 +1819,7 @@
           else if (k === 'astaneg' || k === 'astauni' || k === 'sjmon') acts.push({ label: 'Transformarse en ' + nameId(v.me.hand[g[0].hand].id), desc: { astaneg: 'Un aliado murió: Asta pasa a Forma Negra (desde tu mano, en su lugar).', astauni: 'Dos aliados más murieron con Forma Negra en el campo: pasa a Unión Demoníaca.', sjmon: 'Con 2 o más soldados de las sombras en el campo.' }[k], run: () => act(g[0]) });
           else if (k === 'sjarmy') acts.push({ label: 'Ejército de las sombras…', desc: 'Gasta 2 cargas: levanta como soldado de las sombras a un personaje de cualquier cementerio. Sigue siendo de su dueño y, al salir del campo, vuelve a su cementerio.', run: () => modal(h('div', { class: 'box' }, h('h2', null, '🌑 ¿A quién levantas?'),
             h('div', { class: 'cands' }, g.map(a => { const gc = (v.players[a.g].grave || []).find(c => c.uid === a.u); return gc ? h('div', { style: 'cursor:pointer;text-align:center;font-size:13px', onclick: () => { closeModal(); act(a); } }, cardEl(C.get(gc.id)), h('small', null, C.get(gc.id).name + (a.g === v.seat ? ' (tuyo)' : ' · ' + shortOf(a.g)))) : null; })), btn('Cancelar', closeModal, 'ghost'))) });
-          else if (k === 'sjigris' || k === 'sjberu' || k === 'sjbellion') for (const a of g) acts.push({ label: pwName(k) + ' (desde ' + ({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio' })[a.from] + ')', desc: (C.AB[k] || [])[1] || '', run: () => act(a) });
+          else if (k === 'sjigris' || k === 'sjberu' || k === 'sjbellion' || k === 'kaisel') for (const a of g) acts.push({ label: pwName(k) + ' (desde ' + ({ hand: 'la mano', deck: 'el mazo', grave: 'el cementerio' })[a.from] + ')', desc: (C.AB[k === 'kaisel' ? 'kaimontura' : k] || [])[1] || '', run: () => act(a) });
           else if (k === 'elizluz') {
             const ts = [...new Set(g.map(a => a.target.vs + ':' + a.target.z))];
             acts.push({ label: 'Luz purificadora…', desc: 'Quita un efecto negativo de un aliado. Una vez por turno.', run: () => pickTargets(ts.map(x => { const [q, zz] = x.split(':').map(Number); return { seat: q, area: 'mz', z: zz }; }), t => {
@@ -1836,8 +1843,8 @@
           }
           else if (k === 'misaojos') acts.push({ label: 'Ojos de Shinigami…', desc: 'Mira en privado una carta enemiga boca abajo (personaje, magia o trampa).', run: () => choose(g, null, 'Elige la carta boca abajo') });
           else if (k === 'tobidim') acts.push({ label: 'Dimensión Kamui…', desc: 'Manda a un personaje (de cualquiera) a otra dimensión: vuelve al terminar el siguiente turno de su controlador.', run: () => choose(g, 'mz', 'Elige al personaje') });
-          else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', run: () => choose(g, 'mz') });
-          else acts.push({ label: pwName(k), run: () => act(g[0]) });
+          else if (g[0].target) acts.push({ label: (k === 'copy' ? 'Transformarse en un personaje del campo' : pwName(k)) + '…', desc: PWD[k], run: () => choose(g, 'mz') });
+          else acts.push({ label: pwName(k), desc: PWD[k], run: () => act(g[0]) });
         }
       }
       if (s.used) {        // habilidades de un solo uso ya gastadas en esta invocación: se muestran deshabilitadas

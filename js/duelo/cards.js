@@ -224,6 +224,18 @@
     misaojos: ['Ojos de Shinigami', 'Una vez por turno (dos si Light Yagami está en tu campo), mira en secreto una carta boca abajo del rival: personaje, magia o trampa. La carta sigue boca abajo para el rival.'],
     misadn: ['Portadora de la Death Note', 'Usa la Death Note sobre un personaje enemigo, igual que la carta mágica: muere durante el turno de su dueño (al empezarlo). Se puede usar una vez cada 2 turnos, sin límite total.'],
   };
+  // Tanda 7 (2026-11-13)
+  Object.assign(AB, {
+    kaimontura: ['Montura de las Sombras', 'Mientras Sung Jin-Woo esté en el campo, Kaisel puede invocarse especialmente desde la mano o el cementerio, una vez por turno. No gasta la invocación normal. (Se activa desde la ficha de Sung Jin-Woo.)'],
+    kaivuelo: ['Vuelo Dracónico', 'Una vez por turno, elige a un personaje aliado: hasta el próximo turno de su controlador, los enemigos no pueden elegirlo como objetivo de ataques. No lo protege de habilidades, magias ni trampas.'],
+    rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
+    rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
+    rengarcaza: ['Emoción de la Cacería', 'Una vez cada 2 turnos, Rengar se oculta hasta el próximo turno de su controlador (no se le puede elegir como objetivo de ataques) y elige a un enemigo como presa. Su primer ataque contra esa presa ignora todas sus bonificaciones de ATK y DEF (sin quitárselas).']
+  });
+  Object.assign(LORE, {
+    kaimontura: 'Como montura del Monarca de las Sombras, Kaisel puede acudir a su lado para transportarlo y servirle.',
+    kaivuelo: 'Kaisel eleva a un aliado sobre su espalda y lo aleja del alcance de sus enemigos.'
+  });
   const CUSTOM = [
     mon({
       id: 'c_popeye', name: 'Popeye El Marinero', type: 'popeye', level: 4, atk: 1200, def: 1200,
@@ -944,6 +956,16 @@
       sfx: { use: V('tsukuyomi-use') }
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
+    mon({
+      id: 'c_kaisel', name: 'Kaisel, Dragón de las Sombras', type: 'sololeveling', level: 6, atk: 1700, def: 1800, img: I('kaisel'), ab: ['kaimontura', 'kaivuelo'],
+      text: 'Montura de las Sombras: con Sung Jin-Woo en el campo, puede invocarse desde la mano o el cementerio una vez por turno sin gastar la invocación normal. Vuelo Dracónico: una vez por turno, un aliado no puede ser elegido como objetivo de ataques hasta el próximo turno de su controlador.'
+    }),
+    mon({
+      id: 'c_rengar', name: 'Rengar', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('rengar'), ab: ['rengarfer', 'rengarmax', 'rengarcaza'],
+      lore: 'Rengar es un cazador despiadado que disfruta perseguir a sus presas y estudiar sus movimientos antes de atacar. Cuanto más combate, más ferocidad acumula, hasta convertirse en un depredador prácticamente imparable.',
+      text: 'Depredador Salvaje: gana ferocidad (máx. 4) al atacar o destruir enemigos. Ferocidad Máxima: gasta 2 para Salvajismo, Rugido de Batalla, Bola de Red o Camuflaje. Emoción de la Cacería: oculta a Rengar y marca una presa.',
+      sfx: { attack: V('rengar-attack'), summon: V('rengar-summon'), ability: V('rengar-caceria') }
+    }),
     spell({
       id: 'c_edo_tensei', name: 'Edo Tensei', icon: '⚰️', img: I('edo_tensei'), fx: 'edo',
       lore: 'El Edo Tensei es una técnica prohibida que permite traer de vuelta a los muertos mediante un sacrificio. Un personaje aliado es utilizado como recipiente para invocar a un personaje que se encuentra en el cementerio.',
@@ -1016,7 +1038,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

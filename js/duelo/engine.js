@@ -87,7 +87,8 @@
     let a = rawAbil(m);
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
     if (m.spentAb && m.spentAb.length) a = a.filter(x => !m.spentAb.includes(x));      // X: habilidades consumidas para siempre
-    return a.includes('gogres') ? a.concat('rikaprot') : a;      // Gogeta: Resistencia absoluta = inmune a las magias y trampas
+    return (a.includes('gogres') || m.camu) ? a.concat('rikaprot') : a;      // Rengar: Camuflaje, igual de inmune a magias y trampas
+    // Gogeta: Resistencia absoluta = inmune a las magias y trampas
   }
   const has = (st, m, id) => abil(st, m).includes(id);
   // ---------------- tanda 6 (05-11-2026): utilidades compartidas ----------------
@@ -496,9 +497,15 @@
     return att === m ? (dfn || null) : dfn === m ? (att || null) : null;
   }
   let wdIn = false;      // evita la recursión entre dos Instintos depredadores
+  /** Rengar, Emoción de la Cacería: durante ese ataque se ignoran las bonificaciones (sin quitarlas) de la presa. */
+  const ignBase = (st, m, key) => {
+    const b = baseOf(m), neg = (m.mods || []).reduce((n, x) => n + Math.min(0, x[key] || 0), 0);
+    return Math.max(0, (key === 'atk' ? Math.min(0, m.atkMod || 0) : 0) + (m.price ? Math.floor(b[key] / 2) : b[key]) + neg);
+  };
   function atkOf(st, P, z) {
     const m = P.mz[z];
-    if (m.exh) return 0;                                                  // Kaioken x10: agotado
+    if (m.exh) return 0;
+    if (st.ign && st.ign === m && !m.fused) return ignBase(st, m, 'atk');                                                  // Kaioken x10: agotado
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
     const b = baseOf(m);
     let v = Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
@@ -520,6 +527,7 @@
     const m = P.mz[z];
     if (m.exh) return 0;
     if (m.fused) return Math.max(0, m.fused.def + modSum(m, 'def'));
+    if (st.ign && st.ign === m) return ignBase(st, m, 'def');
     if (m.defFix != null) return m.defFix;                               // Beru: Regeneración de sombras (500 de DEF exactos)
     const b = baseOf(m);
     return Math.max(0, (m.price ? Math.floor(b.def / 2) : b.def) + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
@@ -888,6 +896,8 @@
     if (killer) {
       const ku = uOf(killer.m);
       ku.kills = (ku.kills || 0) + 1;
+      const cbk = st.atk || st.cmb;
+      if (!(cbk && cbk.p === killer.p && st.players[killer.p].mz[cbk.z] === killer.m)) ferocidad(st, killer.p, killer.m, 'mata');      // si ya sumó por declarar este ataque, el combate no da una segunda carga
       onKill(st, killer, { p, name: nm, pos: victimPos, abs: victimAbs }, ctx);
       const vinst = st.team[killer.p] !== st.team[p] ? venomOf(killer.m) : null;                 // Venom, o su portador, destruye a un enemigo
       if (vinst) {
@@ -2460,9 +2470,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -2581,6 +2591,14 @@
     stage(p, z, true);
     stage(vs, tz, false);
   }
+  /** Rengar: Depredador Salvaje, 1 punto de ferocidad por declarar un ataque o destruir a un enemigo (máx. 4; un combate no da 2). */
+  function ferocidad(st, p, m, why) {
+    if (!m || m.down || !has(st, m, 'rengarfer')) return;
+    const u = uOf(m);
+    if ((u.fer || 0) >= 4) return;
+    u.fer = (u.fer || 0) + 1;
+    log(st, p, `${mdef(m).name}: Depredador Salvaje, ${why === 'ataca' ? 'ataca' : 'destruye a un enemigo'} y acumula ferocidad (${u.fer}/4)`);
+  }
   function declareAttack(st, p, z, target, vs, extra) {
     const m = st.players[p].mz[z];
     m.atkN = atkCount(m) + 1; m.attacked = true;
@@ -2589,6 +2607,7 @@
     if (extra && extra.length) st.atk.extra = extra;      // Puño del Dragón: otras casillas atravesadas en el mismo ataque
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
+    ferocidad(st, p, m, 'ataca');
     const entry = st.log[st.log.length - 1];
     if (target !== 'direct' && st.players[vs].mz[target]) onDeclare(st, p, z, vs, target);
     if (target !== 'direct' && has(st, m, 'inopost')) {      // Inosuke: Postura de la Bestia, +200/+200 por cada ataque que declara contra un personaje (no directo), hasta 11 veces por duelo
@@ -2794,6 +2813,14 @@
     }
     const dm = op.mz[a.target];
     if (!dm) return;
+    if (at.prey && !at.fly && at.prey.vs === vs && at.prey.uid === dm.c.uid) {      // Rengar: su primer ataque contra la presa ignora sus bonificaciones
+      st.ign = dm; at.prey = null;
+      log(st, a.p, `${mdef(at).name} cae sobre su presa: ignora todas las bonificaciones de ${mdef(dm).name} en este ataque`);
+    }
+    try { resolveCombat2(st, a, me, op, at, dm, vs); } finally { st.ign = null; }
+  }
+  function resolveCombat2(st, a, me, op, at, dm, vs) {
+    const ad = mdef(at), atker = { p: a.p, uid: at.c.uid };
     const dd = mdef(dm), defender = { p: vs, uid: dm.c.uid };
     if (dm.down) { dm.down = false; log(st, vs, `se revela: ${dd.name}`); st.log[st.log.length - 1].rv = { vs, z: a.target, ti: dm.c.id, tpos: dm.pos }; }   // lo que se ve en el aviso «versus»
     let A = atkOf(st, me, a.z);
@@ -2898,6 +2925,7 @@
         log(st, by, `¡El Brillo explota dentro de ${bn}!`);
         for (const zz of [z - 1, z, z + 1]) if (zz >= 0 && zz < ZONES && cp.mz[zz]) destroyMonster(st, st.current, zz, { src: 'power', bp: by });
       } }
+    for (const fm of st.players[st.current].mz) if (fm && fm.fly) { fm.fly = null; delete fm.fly; }      // la protección de Kaisel / el escondite de Rengar termina al empezar el turno de su controlador
     expireMods(st);
     limboTick(st, 'start');
     for (const s of st.players[st.current].mz) {                               // Mr. Satan: El gran salvador
@@ -3163,6 +3191,7 @@
     if (tm.god && st.team[st.players.findIndex(Q => Q.mz.includes(m))] !== st.team[tm.god.p]) return false;
     if (!tm.down && has(st, tm, 'satancamp') && lvl(m) >= 7) return false;                // Mr. Satan: ¡Soy el campeón mundial!
     if (m.tobiNA && m.tobiNA.uid === tm.c.uid) return false;                               // Tobi: Maestro de la manipulación
+    if (tm.fly) return false;                                                              // Kaisel (Vuelo Dracónico) / Rengar (Emoción de la Cacería): no se puede elegir como objetivo de ataques
     return true;
   }
   /** El atacante de la casilla z puede quitar aumentos (familia Asta o Espada Destructora de Demonios). */
@@ -3377,6 +3406,19 @@
       }
       if (ab.includes('rasengan') && canOnce(P, z, u, 'ras') && !(m.mods || []).some(x => x.k === 'ras')) push({ pw: 'rasengan' });
       if (m.ksp && !m.ksp.x && !m.exh && (m.mods || []).some(x => x.k === 'kaiospell')) push({ pw: 'kaiox10' });
+      // ----- tanda 7 -----
+      if (ab.includes('sjdom') && P.kaT !== st.turn) {            // Kaisel: Montura de las Sombras (con Sung Jin-Woo en el campo, desde la mano o el cementerio, sin gastar la invocación normal)
+        for (const c of P.hand) if (c.id === 'c_kaisel' && spot(P, def(c)) >= 0) push({ pw: 'kaisel', from: 'hand', u: c.uid });
+        for (const c of P.grave) if (c.id === 'c_kaisel' && spot(P, def(c)) >= 0) push({ pw: 'kaisel', from: 'grave', u: c.uid });
+      }
+      if (ab.includes('kaivuelo') && u.kvT !== st.turn) for (const t of allyChars(st, p)) if (!st.players[t.vs].mz[t.z].fly) push({ pw: 'kaiselvuelo', target: t });
+      if (ab.includes('rengarmax') && (u.fer || 0) >= 2) {
+        push({ pw: 'rsalv' });
+        if (seedList(st, p, z, false, true).length) push({ pw: 'rrug' });
+        if (!m.camu) push({ pw: 'rcam' });
+        for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz) && !blocked(st.players[e].mz[tz], 'atk')) push({ pw: 'rred', target: { vs: e, z: tz } });
+      }
+      if (ab.includes('rengarcaza') && !m.fly && (u.rcT0 == null || elapsed(st, u.rcT0) >= 2)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && canTarget(st, p, e, tz)) push({ pw: 'rcaza', target: { vs: e, z: tz } }); }
       // ----- tanda 6 -----
       const hand = id => P.hand.map((c, i) => (c.id === id ? i : -1)).filter(i => i >= 0);
       if (m.c.id === 'c_asta' && ab.includes('astaneg') && m.astaW) for (const i of hand('c_asta_negra').slice(0, 1)) if (spot(P, def(P.hand[i]), [z]) >= 0) push({ pw: 'astaneg', hand: i });
@@ -3597,7 +3639,7 @@
         if (!m) return;
         if (m.snake) return;      // Serpiente de Megumi: no cambia de posición
         if (m.down && m.summonedTurn < st.turn) out.push({ t: 'flip', zone: z });
-        if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn && !(m.pos === 'atk' && has(st, m, 'rikamal') && !rikaState(st).happy)) out.push({ t: 'pos', zone: z });
+        if (!m.down && !m.moved && !m.attacked && m.summonedTurn < st.turn && !(m.binds || []).some(b => b.pos) && !(m.pos === 'atk' && has(st, m, 'rikamal') && !rikaState(st).happy)) out.push({ t: 'pos', zone: z });
       });
       out.push(...powerActs(st, p), ...spowerActs(st, p));
       if (canAttackNow(st) && P.mz.some(m => m && !m.down && m.pos === 'atk')) out.push({ t: 'toBattle' });
@@ -4240,6 +4282,50 @@
           if (inst.id === 'c_beru') { addMod(st, sm, 'leal', 500, 0, 0); sm.xtra = { t: st.turn, n: 1 }; log(st, p, 'Lealtad al Monarca: Beru gana +500 ATK y un ataque extra este turno'); }
           if (inst.id === 'c_bellion') log(st, p, 'Lealtad al Monarca: tus soldados de las sombras ganan +300 ATK y +300 DEF mientras Bellion siga en el campo');
         }
+        break;
+      }
+      case 'kaisel': {
+        const src = a.from === 'grave' ? P.grave : P.hand, i = src.findIndex(c => c.uid === a.u);
+        if (i < 0 || spot(P, def(src[i])) < 0) break;
+        P.kaT = st.turn;
+        const inst = src.splice(i, 1)[0];
+        log(st, p, `${nm}: Montura de las Sombras, Kaisel acude${a.from === 'grave' ? ' desde el cementerio' : ''}`);
+        specialSummon(st, p, inst, 'atk');
+        break;
+      }
+      case 'kaiselvuelo': {
+        const tp = a.target.vs, tm = st.players[tp].mz[a.target.z];
+        if (!tm) break;
+        u.kvT = st.turn;
+        tm.fly = { t0: st.turn };
+        log(st, p, `${nm} sube a ${tm.down ? 'un aliado' : mdef(tm).name} a su espalda: no se le puede atacar hasta el próximo turno de su controlador`);
+        break;
+      }
+      case 'rsalv': u.fer -= 2; addMod(st, m, 'salv', 600 * 1, 0, 0); log(st, p, `${nm} usa Salvajismo: +600 ATK permanente (ferocidad ${u.fer})`); break;
+      case 'rrug': {
+        u.fer -= 2;
+        const got = seedList(st, p, a.zone, true, true);
+        log(st, p, `${nm} ruge: se libera de ${got.length ? got.join(', ') : 'todo efecto negativo'} (ferocidad ${u.fer})`);
+        break;
+      }
+      case 'rcam': u.fer -= 2; m.camu = true; log(st, p, `${nm} se camufla: inmune a las magias y trampas enemigas (ferocidad ${u.fer})`); break;
+      case 'rred': {
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        u.fer -= 2;
+        (tm.binds = tm.binds || []).push({ atk: true, ab: true, pos: true, n: 3, t0: st.turn, nm: 'la Bola de Red' });
+        log(st, p, `${nm} lanza la Bola de Red sobre ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}: 3 turnos sin atacar, cambiar de posición ni usar habilidades (ferocidad ${u.fer})`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
+      case 'rcaza': {
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        u.rcT0 = st.turn;
+        m.fly = { t0: st.turn };
+        m.prey = { vs: e, uid: tm.c.uid };
+        log(st, p, `${nm} se oculta y elige a ${mdef(tm).name} como su presa`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
         break;
       }
       case 'kameha':
@@ -5006,6 +5092,10 @@
       if (s.bySung) v.bySung = true;
       if (s.shade) v.shade = true;                                                      // Esencia de las Sombras: tono azul (sólo visual)
       if (s.petri) v.petri = true;
+      if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
+      if (s.camu) v.camu = true;
+      if (s.prey && own) v.prey = true;
+      if (rawAbil(s).includes('rengarfer')) v.fer = uOf(s).fer || 0;
       if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, n: b.n }));
       if (s.pub != null) v.pub = true;
       if (s.tobiNA) v.tobiNA = true;

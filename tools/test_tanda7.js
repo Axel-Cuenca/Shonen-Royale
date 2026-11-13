@@ -64,4 +64,93 @@ module.exports = function (T) {
     st.players[0].mz[0] = null;
     ok(!E.view(st, 0).players[1].mz[0].c, 'al irse el portador, deja de ver');
   }
+
+  section('Kaisel');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_sung'); hand(st, 0, ['c_kaisel']); st.players[0].normalUsed = true;
+    const a = pw(st, 0, 'kaisel');
+    ok(a && a.from === 'hand', 'con Sung en el campo se puede invocar a Kaisel desde la mano aunque la invocación normal esté gastada');
+    act(st, 0, a);
+    eq(ids(st, 0), ['c_sung', 'c_kaisel', null], 'Kaisel entra al campo');
+    st.players[0].grave = [{ uid: 777, id: 'c_kaisel' }]; hand(st, 0, []);
+    ok(!pw(st, 0, 'kaisel'), 'una vez por turno');
+    st.players[0].kaT = -1; st.players[0].mz[1] = null;
+    ok(pw(st, 0, 'kaisel', x => x.from === 'grave'), 'también desde el cementerio');
+    st = fresh(0); hand(st, 0, ['c_kaisel']);
+    ok(!pw(st, 0, 'kaisel'), 'sin Sung no hay Montura');
+    st = fresh(0); put(st, 0, 0, 'c_kaisel'); put(st, 0, 1, 'c_goku'); put(st, 1, 0, 'c_kratos'); put(st, 1, 1, 'c_popeye');
+    const v = pw(st, 0, 'kaiselvuelo', x => x.target.z === 1);
+    ok(v, 'Kaisel puede transportar a un aliado');
+    act(st, 0, v);
+    ok(st.players[0].mz[1].fly, 'el aliado queda fuera de alcance');
+    ok(!pw(st, 0, 'kaiselvuelo'), 'una vez por turno');
+    st.current = 1; st.phase = 'battle'; st.turn = 7;
+    ok(!L(st, 1).some(x => x.t === 'attack' && x.target === 1), 'el enemigo no puede elegirlo como objetivo');
+    ok(L(st, 1).some(x => x.t === 'attack' && x.target === 0), 'pero sí a los demás');
+  }
+
+  section('Rengar');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_rengar'); put(st, 1, 0, 'c_popeye', { pos: 'def' });
+    const fer = () => E.view(st, 0).players[0].mz[0].fer;
+    battle(st);
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    eq(fer(), 1, 'declarar un ataque da 1 de ferocidad (y destruir en ese combate no da otra)');
+    ok(!st.players[1].mz[0], 'Popeye cayó en el combate');
+    const setFer = n => { st.players[0].mz[0].uBy = { c_rengar: { fer: n } }; };
+    st = fresh(0); put(st, 0, 0, 'c_rengar'); put(st, 1, 0, 'c_goku'); setFer(1);
+    ok(!pw(st, 0, 'rsalv'), 'con menos de 2 de ferocidad no hay potenciación');
+    setFer(4);
+    act(st, 0, pw(st, 0, 'rsalv'));
+    eq([fer(), stat(st, 0, 0)[0]], [2, 2000], 'Salvajismo: gasta 2 y suma +600 ATK');
+    act(st, 0, pw(st, 0, 'rsalv'));
+    eq([fer(), stat(st, 0, 0)[0]], [0, 2600], 'se puede repetir mientras haya cargas, y se acumula');
+    // Camuflaje
+    setFer(2); act(st, 0, pw(st, 0, 'rcam'));
+    ok(st.players[0].mz[0].camu, 'Camuflaje activo');
+    hand(st, 1, ['c_death_note']);
+    ok(!L(st, 1).some(a => a.t === 'activate' && a.target && a.target.z === 0 && a.target.vs !== 1), 'las magias enemigas no pueden elegirlo');
+    // Bola de Red
+    st = fresh(0); put(st, 0, 0, 'c_rengar'); put(st, 1, 0, 'c_goku', { summonedTurn: 0 }); setFer(2);
+    act(st, 0, pw(st, 0, 'rred', x => x.target.z === 0));
+    ok(st.players[1].mz[0].binds && st.players[1].mz[0].binds[0].n === 3, 'Bola de Red: 3 turnos');
+    st.current = 1; st.turn = 7; st.phase = 'main';
+    ok(!L(st, 1).some(a => (a.t === 'attack' || a.t === 'pos' || a.t === 'power') && a.zone === 0), 'el inmovilizado no ataca, no cambia de posición ni usa habilidades');
+    // Rugido
+    st = fresh(0); put(st, 0, 0, 'c_rengar'); setFer(2); E.addMod ? 0 : 0;
+    st.players[0].mz[0].mods = [{ k: 'x', atk: -500, def: 0, t0: 1, n: 3 }];
+    eq(stat(st, 0, 0)[0], 900, 'reducido a 900');
+    act(st, 0, pw(st, 0, 'rrug'));
+    eq(stat(st, 0, 0)[0], 1400, 'Rugido de Batalla: quita lo negativo');
+    // Emoción de la Cacería
+    st = fresh(0); put(st, 0, 0, 'c_rengar'); put(st, 1, 0, 'c_goku', { summonedTurn: 0 });
+    st.players[1].mz[0].mods = [{ k: 'b', atk: 1000, def: 1000, t0: 1, n: 0 }];
+    act(st, 0, pw(st, 0, 'rcaza', x => x.target.z === 0));
+    ok(st.players[0].mz[0].fly && st.players[0].mz[0].prey, 'oculto y con presa');
+    ok(!pw(st, 0, 'rcaza'), 'una vez cada 2 turnos');
+    st.current = 1; st.turn = 7; st.phase = 'battle';
+    ok(!L(st, 1).some(a => a.t === 'attack' && a.target === 0), 'oculto: no se le puede elegir');
+    st.current = 0; st.turn = 8; st.phase = 'main'; E.apply && 0;
+    st.players[0].mz[0].fly = null;
+    st.phase = 'battle';
+    const g0 = E.view(st, 0).players[1].mz[0];
+    eq(g0.atk, Cards.get('c_goku').atk + 1000, 'la presa tiene +1000 ATK');
+    const rg = st.players[0].mz[0];
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(!rg.prey, 'la presa se consume tras el ataque');
+  }
+
+  section('Rengar: ignorar bonificaciones de la presa');
+  {
+    const run = hunt => {
+      const st = fresh(0); put(st, 0, 0, 'c_rengar'); put(st, 1, 0, 'c_popeye', { pos: 'def', summonedTurn: 0 });
+      st.players[1].mz[0].mods = [{ k: 'b', atk: 0, def: 3000, t0: 1, n: 0 }];
+      if (hunt) act(st, 0, pw(st, 0, 'rcaza', x => x.target.z === 0)), st.players[0].mz[0].fly = null;
+      battle(st); act(st, 0, atkA(st, 0, 0, 0)); no(st);
+      return st;
+    };
+    ok(run(false).players[1].mz[0], 'sin presa, la DEF reforzada resiste');
+    const st = run(true);
+    ok(!st.players[1].mz[0], 'con presa se ignora la bonificación y cae');
+  }
 };
