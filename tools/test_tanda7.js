@@ -73,6 +73,8 @@ module.exports = function (T) {
     ok(a && a.from === 'hand', 'con Sung en el campo se puede invocar a Kaisel desde la mano aunque la invocación normal esté gastada');
     act(st, 0, a);
     eq(ids(st, 0), ['c_sung', 'c_kaisel', null], 'Kaisel entra al campo');
+    ok(st.players[0].mz[1].bySung, 'Kaisel invocado por Sung es soldado de las sombras');
+    { const b = fresh(0); put(b, 0, 0, 'c_sung'); put(b, 0, 2, 'c_bellion', { bySung: true }); hand(b, 0, ['c_kaisel']); act(b, 0, pw(b, 0, 'kaisel')); const kz = b.players[0].mz.findIndex(m => m && m.c.id === 'c_kaisel'); eq(stat(b, 0, kz), [1700 + 300, 1800 + 300], 'Kaisel recibe la Lealtad de Bellion'); }
     st.players[0].grave = [{ uid: 777, id: 'c_kaisel' }]; hand(st, 0, []);
     ok(!pw(st, 0, 'kaisel'), 'una vez por turno');
     st.players[0].kaT = -1; st.players[0].mz[1] = null;

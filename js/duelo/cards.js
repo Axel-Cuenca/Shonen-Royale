@@ -1118,7 +1118,7 @@
     }),
     mon({
       id: 'c_kaisel', name: 'Kaisel, Dragón de las Sombras', type: 'sololeveling', level: 6, atk: 1700, def: 1800, img: I('kaisel'), ab: ['kaimontura', 'kaivuelo'],
-      text: 'Montura de las Sombras: con Sung Jin-Woo en el campo, puede invocarse desde la mano o el cementerio una vez por turno sin gastar la invocación normal. Vuelo Dracónico: una vez por turno, un aliado no puede ser elegido como objetivo de ataques hasta el próximo turno de su controlador.'
+      text: 'Montura de las Sombras: con Sung Jin-Woo en el campo, puede invocarse desde la mano o el cementerio una vez por turno sin gastar la invocación normal; así invocado cuenta como soldado de las sombras (recibe la Lealtad de Bellion, lo protegen Sung y sus soldados, etc.). Vuelo Dracónico: una vez por turno, un aliado no puede ser elegido como objetivo de ataques hasta el próximo turno de su controlador.'
     }),
     mon({
       id: 'c_escanor', name: 'Escanor', type: 'pecados', level: 7, atk: 2000, def: 2200, img: I('escanor'), imgMed: I('escanor_mediodia'), ab: ['escsun', 'escduelo'],

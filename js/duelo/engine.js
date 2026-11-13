@@ -117,7 +117,7 @@
   const isClone = m => !!m && !!m.c && !!(C().get(m.c.id) || {}).clone;
   /** Soldados de las sombras: Igris, Beru, Bellion (se invoquen como se invoquen) y lo que levanta Sung Jin-Woo. */
   const SOLDIER_IDS = ['c_igris', 'c_beru', 'c_bellion'];
-  const isSoldier = m => !!m && !m.down && (!!m.shadow || SOLDIER_IDS.includes(m.c.id));
+  const isSoldier = m => !!m && !m.down && (!!m.shadow || !!m.bySung || SOLDIER_IDS.includes(m.c.id));
   const soldiersOf = P => P.mz.filter(isSoldier).length;
   /** Hay un Sung Jin-Woo (o su Monarca) boca arriba en el campo de q. */
   const sungOn = (st, q) => st.players[q].mz.some(x => x && !x.down && has(st, x, 'sjdom'));
@@ -5050,7 +5050,8 @@
         P.kaT = st.turn;
         const inst = src.splice(i, 1)[0];
         log(st, p, `${nm}: Montura de las Sombras, Kaisel acude${a.from === 'grave' ? ' desde el cementerio' : ''}`);
-        specialSummon(st, p, inst, 'atk');
+        const kz = specialSummon(st, p, inst, 'atk'), km = P.mz[kz];
+        if (km && km.c.uid === inst.uid) { km.bySung = true; log(st, p, 'Kaisel se une al ejército como soldado de las sombras'); }
         break;
       }
       case 'kaiselvuelo': {
