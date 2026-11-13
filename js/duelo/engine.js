@@ -161,7 +161,8 @@
   /** Ataques que puede declarar por turno: 1; 2 con Uno, Dos o como Asesino Sombra. */
   const maxAttacks = (st, m) => {
     let n = (m.uno === st.turn) || m.form === 'c_kayn_sombra' ? 2 : 1;
-    if (m.liu === st.turn) n = Math.max(n, 3);                                     // Liu Kang: Patadas Continuas
+    if (m.liu === st.turn) n = Math.max(n, 3);
+    if (escStage(st, m).k === 'mediodia') { const f = findByUid(st, m.c.uid); if (f) { const hit = m.escHit && m.escHit.t === st.turn ? m.escHit.u : []; n = Math.max(n, hit.length + foes(st, f.p).reduce((c, e) => c + zonesWith(st.players[e].mz).filter(z => !isInk(st.players[e].mz[z]) && !hit.includes(st.players[e].mz[z].c.uid)).length, 0)); } }      // Escanor al Mediodía: un ataque contra cada enemigo                                     // Liu Kang: Patadas Continuas
     if (m.xtra && m.xtra.t === st.turn) n += m.xtra.n;                             // ataques extra (Beru, Critical Over, Espada Orgánica)
     if (rawAbil(m).includes('sjpoder')) { const f = findByUid(st, m.c.uid); if (f && soldiersOf(st.players[f.p]) >= 2) n++; }      // Poder del Monarca
     return n;
@@ -498,17 +499,25 @@
   }
   let wdIn = false;      // evita la recursión entre dos Instintos depredadores
   /** Rengar, Emoción de la Cacería: durante ese ataque se ignoran las bonificaciones (sin quitarlas) de la presa. */
+  /** Escanor, Sunshine: etapa según las rondas desde su invocación (Amanecer · Mediodía 3 turnos desde el segundo turno de su controlador · Atardecer). */
+  function escStage(st, m) {
+    if (!m || !rawAbil(m).includes('escsun') || m.down) return { k: null, atk: 0 };
+    const e = elapsed(st, m.summonedTurn || 0);
+    if (e < 1) return { k: 'amanecer', atk: 0, left: 1 - e };
+    if (e < 4) return { k: 'mediodia', atk: 800, left: 4 - e };
+    return { k: 'atardecer', atk: 0, left: 0 };
+  }
   const ignBase = (st, m, key) => {
     const b = baseOf(m), neg = (m.mods || []).reduce((n, x) => n + Math.min(0, x[key] || 0), 0);
-    return Math.max(0, (key === 'atk' ? Math.min(0, m.atkMod || 0) : 0) + (m.price ? Math.floor(b[key] / 2) : b[key]) + neg);
+    return Math.max(0, (key === 'atk' ? Math.min(0, m.atkMod || 0) : 0) + (m.price ? Math.floor(b[key] / 2) : b[key]) + neg + (key === 'atk' ? escStage(st, m).atk : 0));
   };
   function atkOf(st, P, z) {
     const m = P.mz[z];
     if (m.exh) return 0;
-    if (st.ign && st.ign === m && !m.fused) return ignBase(st, m, 'atk');                                                  // Kaioken x10: agotado
+    if (st.ign && st.ign.includes(m) && !m.fused) return ignBase(st, m, 'atk');                                                  // Kaioken x10: agotado
     if (m.fused) return Math.max(0, m.fused.atk + (m.atkMod || 0) + modSum(m, 'atk'));
     const b = baseOf(m);
-    let v = Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z));
+    let v = Math.max(0, (m.price ? Math.floor(b.atk / 2) : b.atk) + (m.atkMod || 0) + (m.bonus ? m.bonus.atk : 0) + modSum(m, 'atk') + equipBonus(P, z, 'eAtk', st) + passiveBonus(st, P, z) + escStage(st, m).atk);
     if (!m.down && has(st, m, 'sjpoder')) v += 200 * soldiersOf(P);                                  // Poder del Monarca
     if (st.domain && st.domain.uid === m.c.uid && st.domain.higu && st.domain.higu.sword) v += 2000;      // Higuruma: Espada del Verdugo
     if (!m.down && !wdIn && (abil(st, m).includes('wardep') || abil(st, m).includes('igrisesp'))) {             // Warwick: Instinto depredador (+500 ATK si combate, atacando o atacado, contra alguien con más ATK)
@@ -527,7 +536,7 @@
     const m = P.mz[z];
     if (m.exh) return 0;
     if (m.fused) return Math.max(0, m.fused.def + modSum(m, 'def'));
-    if (st.ign && st.ign === m) return ignBase(st, m, 'def');
+    if (st.ign && st.ign.includes(m)) return ignBase(st, m, 'def');
     if (m.defFix != null) return m.defFix;                               // Beru: Regeneración de sombras (500 de DEF exactos)
     const b = baseOf(m);
     return Math.max(0, (m.price ? Math.floor(b.def / 2) : b.def) + (m.bonus ? m.bonus.def : 0) + modSum(m, 'def') + equipBonus(P, z, 'eDef', st) + passiveBonus(st, P, z));
@@ -735,6 +744,7 @@
     if (!m) return false;
     const ab = abil(st, m), nm = mdef(m).name;
     const fromCard = ctx.src === 'spell' || ctx.src === 'trap';
+    if (!ctx.all && (ctx.src === 'spell' || ctx.src === 'trap' || ctx.src === 'power') && escStage(st, m).k === 'amanecer') { log(st, p, `${nm} está en el Amanecer: ningún efecto que lo elija puede destruirlo`); return false; }
     if (m.six && !ctx.ignoreSix && ctx.src !== 'mark') { log(st, p, `${nm} es intocable: los Seis Ojos lo protegen`); return false; }
     if (ctx.src === 'combat' && ab.includes('gogres')) {      // Gogeta: sólo lo derrota el ataque de un enemigo con más de 2800 ATK
       const ak = ctx.defn && ctx.by ? slotByUid(st, ctx.by.p, ctx.by.uid) : null;
@@ -1338,7 +1348,7 @@
     destroyAll: {
       targets: st => st.players.some(P => zonesWith(P.mz).length) ? [null] : [],
       resolve: (st, caster) => {
-        for (let p = 0; p < st.n; p++) for (let z = 0; z < ZONES; z++) destroyMonster(st, p, z, { src: 'spell', bp: caster });
+        for (let p = 0; p < st.n; p++) for (let z = 0; z < ZONES; z++) destroyMonster(st, p, z, { src: 'spell', bp: caster, all: true });
         log(st, -1, 'Todos los monstruos son destruidos');
       }
     },
@@ -2608,6 +2618,7 @@
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
     ferocidad(st, p, m, 'ataca');
+    if (target !== 'direct' && escStage(st, m).k === 'mediodia' && st.players[vs].mz[target]) { if (!m.escHit || m.escHit.t !== st.turn) m.escHit = { t: st.turn, u: [] }; m.escHit.u.push(st.players[vs].mz[target].c.uid); }
     const entry = st.log[st.log.length - 1];
     if (target !== 'direct' && st.players[vs].mz[target]) onDeclare(st, p, z, vs, target);
     if (target !== 'direct' && has(st, m, 'inopost')) {      // Inosuke: Postura de la Bestia, +200/+200 por cada ataque que declara contra un personaje (no directo), hasta 11 veces por duelo
@@ -2721,6 +2732,14 @@
     return null;
   }
   function attackWindows(st, p) {
+    {   // Escanor, ¿Quién decidió eso?: si lo desafía un enemigo con más ATK, duelo individual (sin habilidades, ayuda ni magias)
+      const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' ? st.players[a.vs].mz[a.target] : null;
+      if (at && dm && !dm.down && st.team[a.vs] !== st.team[a.p] && has(st, dm, 'escduelo') && atkOf(st, st.players[a.p], a.z) > atkOf(st, st.players[a.vs], a.target)) {
+        a.duel = true; a.meli = true; a.boomX = 1; a.shR = 1;
+        log(st, a.vs, `${mdef(dm).name}: ¿Quién decidió eso? Acepta el desafío`);
+        return continueAttack(st);
+      }
+    }
     if (uiCounter(st, p)) return;
     if (openWindow(st, 'attack', { k: 'attack', by: p })) return;
     continueAttack(st);
@@ -2814,9 +2833,10 @@
     const dm = op.mz[a.target];
     if (!dm) return;
     if (at.prey && !at.fly && at.prey.vs === vs && at.prey.uid === dm.c.uid) {      // Rengar: su primer ataque contra la presa ignora sus bonificaciones
-      st.ign = dm; at.prey = null;
+      st.ign = [dm]; at.prey = null;
       log(st, a.p, `${mdef(at).name} cae sobre su presa: ignora todas las bonificaciones de ${mdef(dm).name} en este ataque`);
     }
+    if (a.duel) { st.ign = [at, dm]; log(st, -1, `Duelo individual: ${mdef(at).name} y ${mdef(dm).name} combaten sin ayuda de habilidades, aliados ni magias`); }
     try { resolveCombat2(st, a, me, op, at, dm, vs); } finally { st.ign = null; }
   }
   function resolveCombat2(st, a, me, op, at, dm, vs) {
@@ -3651,7 +3671,7 @@
         if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         const org = m.orgT === st.turn && atkCount(m) >= 1;      // Espada Orgánica: el ataque extra va contra otro personaje enemigo
         for (const e of fl) {
-          const all = zonesWith(st.players[e].mz).filter(tz => !isInk(st.players[e].mz[tz])), targets = all.filter(tz => atkOk(st, m, e, tz));
+          const all = zonesWith(st.players[e].mz).filter(tz => !isInk(st.players[e].mz[tz])), targets = all.filter(tz => atkOk(st, m, e, tz) && !(m.escHit && m.escHit.t === st.turn && m.escHit.u.includes(st.players[e].mz[tz].c.uid)));
           if (!all.length) { if (!org) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' }); }
           else for (const tz of targets) {
             const a0 = mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz };
@@ -5092,6 +5112,7 @@
       if (s.bySung) v.bySung = true;
       if (s.shade) v.shade = true;                                                      // Esencia de las Sombras: tono azul (sólo visual)
       if (s.petri) v.petri = true;
+      { const es = escStage(st, s); if (es.k) { v.esc = { k: es.k, left: es.left }; if (es.k === 'mediodia' && mdef(s).imgMed) v.art = mdef(s).imgMed; } }
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;

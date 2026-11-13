@@ -228,6 +228,8 @@
   Object.assign(AB, {
     kaimontura: ['Montura de las Sombras', 'Mientras Sung Jin-Woo esté en el campo, Kaisel puede invocarse especialmente desde la mano o el cementerio, una vez por turno. No gasta la invocación normal. (Se activa desde la ficha de Sung Jin-Woo.)'],
     kaivuelo: ['Vuelo Dracónico', 'Una vez por turno, elige a un personaje aliado: hasta el próximo turno de su controlador, los enemigos no pueden elegirlo como objetivo de ataques. No lo protege de habilidades, magias ni trampas.'],
+    escsun: ['Sunshine: El Ciclo del Sol', 'Tres etapas según el tiempo en el campo. Amanecer (hasta su segundo turno): ningún efecto que lo elija puede destruirlo. Mediodía (3 rondas, desde el comienzo del segundo turno de su controlador): 2800 ATK y puede atacar una vez a cada personaje enemigo; después, un ataque por turno. Atardecer: vuelve a 2000 ATK / 2200 DEF.'],
+    escduelo: ['¿Quién decidió eso?', 'Si un enemigo con más ATK que Escanor lo ataca, Escanor acepta: durante ese combate no se pueden usar habilidades, ni ayuda de aliados, ni magias o trampas, y se anulan las bonificaciones de ATK de otros personajes o cartas mágicas. Se resuelve sólo con las estadísticas.'],
     rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
     rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
     rengarcaza: ['Emoción de la Cacería', 'Una vez cada 2 turnos, Rengar se oculta hasta el próximo turno de su controlador (no se le puede elegir como objetivo de ataques) y elige a un enemigo como presa. Su primer ataque contra esa presa ignora todas sus bonificaciones de ATK y DEF (sin quitárselas).']
@@ -961,6 +963,12 @@
       text: 'Montura de las Sombras: con Sung Jin-Woo en el campo, puede invocarse desde la mano o el cementerio una vez por turno sin gastar la invocación normal. Vuelo Dracónico: una vez por turno, un aliado no puede ser elegido como objetivo de ataques hasta el próximo turno de su controlador.'
     }),
     mon({
+      id: 'c_escanor', name: 'Escanor', type: 'pecados', level: 7, atk: 2000, def: 2200, img: I('escanor'), imgMed: I('escanor_mediodia'), ab: ['escsun', 'escduelo'],
+      lore: 'Escanor es el León del Orgullo. Su poder crece con el sol: comienza débil al amanecer, alcanza una fuerza monstruosa al mediodía y finalmente pierde ese poder cuando llega el atardecer. Cuanto más alto está el sol, más temible se vuelve.',
+      text: 'Sunshine: Amanecer (no lo destruye ningún efecto que lo elija), Mediodía (2800 ATK y ataca una vez a cada enemigo) y Atardecer (vuelve a la base). ¿Quién decidió eso?: ante un atacante con más ATK, duelo individual sin habilidades, aliados ni magias.',
+      sfx: { ability: V('escanor-ability') }
+    }),
+    mon({
       id: 'c_rengar', name: 'Rengar', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('rengar'), ab: ['rengarfer', 'rengarmax', 'rengarcaza'],
       lore: 'Rengar es un cazador despiadado que disfruta perseguir a sus presas y estudiar sus movimientos antes de atacar. Cuanto más combate, más ferocidad acumula, hasta convertirse en un depredador prácticamente imparable.',
       text: 'Depredador Salvaje: gana ferocidad (máx. 4) al atacar o destruir enemigos. Ferocidad Máxima: gasta 2 para Salvajismo, Rugido de Batalla, Bola de Red o Camuflaje. Emoción de la Cacería: oculta a Rengar y marca una presa.',
@@ -1038,7 +1046,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

@@ -30,7 +30,7 @@ module.exports = function (T) {
     for (const id of Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id))) {
       const c = Cards.get(id);
       ok(c && c.img && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
-      for (const k of ['imgSung', 'imgDom', 'imgAlt']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
+      for (const k of ['imgSung', 'imgDom', 'imgAlt', 'imgMed']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
       for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k);
       for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': ' + a + ' tiene texto');
     }
@@ -152,5 +152,29 @@ module.exports = function (T) {
     ok(run(false).players[1].mz[0], 'sin presa, la DEF reforzada resiste');
     const st = run(true);
     ok(!st.players[1].mz[0], 'con presa se ignora la bonificación y cae');
+  }
+
+  section('Escanor');
+  {
+    let st = fresh(0); const m = put(st, 0, 0, 'c_escanor', { summonedTurn: 6 });
+    eq(stat(st, 0, 0), [2000, 2200], 'Amanecer: 2000/2200');
+    put(st, 1, 0, 'c_goku'); hand(st, 1, ['c_death_note']);
+    E.legal(st, 1).forEach(() => 0);
+    st.turn = 6 + 2; ok(true);
+    // Mediodía a las 2 rondas
+    st = fresh(0); put(st, 0, 0, 'c_escanor', { summonedTurn: 6 }); st.turn = 10; st.current = 0; st.phase = 'battle';
+    put(st, 1, 0, 'c_popeye', { pos: 'def' }); put(st, 1, 1, 'c_creeper', { pos: 'def' });
+    eq(stat(st, 0, 0)[0], 2800, 'Mediodía: 2800 ATK');
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(atkA(st, 0, 0, 1) && !atkA(st, 0, 0, 0), 'sigue atacando a otro enemigo, no repite');
+    // Atardecer
+    st = fresh(0); put(st, 0, 0, 'c_escanor', { summonedTurn: 6 }); st.turn = 16;
+    eq(stat(st, 0, 0), [2000, 2200], 'Atardecer: vuelve a la base');
+    // Duelo individual
+    st = fresh(1); put(st, 0, 0, 'c_escanor', { summonedTurn: 6 }); put(st, 1, 0, 'c_goku'); st.players[1].mz[0].atkMod = 3000;
+    st.phase = 'battle'; st.turn = 7; st.current = 1;
+    act(st, 1, atkA(st, 1, 0, 0));
+    ok(!st.pending || st.pending.ab !== 'meliodas', 'sin ventanas');
+    ok(!st.players[1].mz[0], 'el atacante cae: sus bonificaciones se anularon (Goku base < 2000)');
   }
 };

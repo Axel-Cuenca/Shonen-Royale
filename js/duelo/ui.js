@@ -1423,6 +1423,7 @@
       if (s.manto) b.push(['🧥', 'Manto de Kyuubi: recibirá en su lugar el golpe mortal']);
       if (s.exh) b.push(['💤', 'Agotado: 0 ATK y 0 DEF']);
       if (s.fer != null) b.push(['🐾' + s.fer + '/4', 'Ferocidad: ' + s.fer + '/4 (2 por cada habilidad potenciada)']);
+      if (s.esc) b.push([s.esc.k === 'amanecer' ? '🌅' : s.esc.k === 'mediodia' ? '☀️' : '🌇', 'Sunshine: ' + ({ amanecer: 'Amanecer', mediodia: 'Mediodía', atardecer: 'Atardecer' })[s.esc.k] + (s.esc.left ? ' · quedan ' + s.esc.left + ' turno(s) de esta etapa' : '')]);
       if (s.fly) b.push(['🪽', 'Fuera de alcance: no se le puede atacar hasta el próximo turno de su controlador']);
       if (s.camu) b.push(['🌿', 'Camuflaje: inmune a las magias y trampas enemigas']);
       if (s.prey) b.push(['🎯', 'Tiene una presa marcada: su primer ataque contra ella ignora sus bonificaciones']);
