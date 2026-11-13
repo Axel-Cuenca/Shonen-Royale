@@ -120,6 +120,11 @@ module.exports = function (T) {
     const kz = st.players[0].mz.findIndex(m => m && m.c.id === 'c_kratos');
     ok(kz >= 0 && st.players[0].mz[kz].shadow && st.players[0].mz[kz].owner === 1, 'entra como soldado de las sombras (sigue siendo del rival)');
     eq(cnt(st), [E.countCards(st, 0), E.countCards(st, 1)], 'el conteo sigue correcto');
+    // Esencia de las Sombras: tono azul sólo visual
+    ok(E.view(st, 0).players[0].mz[kz].shade === true, 'Esencia de las Sombras: el personaje levantado por Sung se ve azul');
+    ok(!E.view(st, 0).players[0].mz[igz].shade, 'Igris (ilustración propia) no se tiñe');
+    ok(!E.view(st, 0).players[0].mz[0].shade, 'Sung no se tiñe');
+    eq(stat(st, 0, kz), [Cards.get('c_kratos').atk, Cards.get('c_kratos').def], 'el tono no cambia las estadísticas');
     // Monarca: con 2 soldados
     ready(st, 0, st.turn + 2);
     const mo = pw(st, 0, 'sjmon');
@@ -150,6 +155,7 @@ module.exports = function (T) {
     act(st, 0, pw(st, 0, 'sjberu')); no(st);
     const bz = st.players[0].mz.findIndex(m => m && m.c.id === 'c_beru'), be = st.players[0].mz[bz];
     eq(stat(st, 0, bz)[0], 2700, 'Beru: +500 ATK permanente');
+    ok(!E.view(st, 0).players[0].mz[bz].shade, 'Beru (ilustración propia) no se tiñe');
     ok(be.xtra && be.xtra.n === 1, 'y un ataque extra ese turno');
     // Regeneración de sombras
     put(st, 1, 0, 'c_bardock_ssj'); ready(st, 1, st.turn + 1);

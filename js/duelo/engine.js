@@ -1795,6 +1795,10 @@
     return null;
   }
   /** Ejecuta un poder pasando por Total Counter y Rika. */
+  /** Esencia de las Sombras (2026-11-12): marca VISUAL de lo que Sung Jin-Woo trae al campo (tono azul oscuro). No cambia ninguna estadística ni regla
+   *  (a diferencia de `bySung`/`shadow`). Vive en la casilla: si el personaje sale y vuelve por otro medio, no la lleva. Los que ya tienen ilustración
+   *  propia de soldado (`imgSung`: Igris, Beru) no se tiñen. Toda habilidad de Sung que traiga un personaje debe llamar a esta función. */
+  function shadeEssence(m) { if (m && !mdef(m).imgSung) m.shade = true; }
   /** Titán Colosal entra por Armin: destruye a todos los demás personajes del campo de 10★ o menos. No se puede cancelar. */
   function colosalBlast(st, p, cz) {
     const C0 = st.players[p].mz[cz];
@@ -4193,6 +4197,7 @@
         const o = { pos: 'atk', wide: !!cd.wide, shadow: true };
         if (a.g !== p) o.owner = a.g;
         P.mz[zz] = mkSlot(st, inst, o);
+        shadeEssence(P.mz[zz]);
         log(st, p, `${nm} usa Ejército de las sombras: ${cd.name} se alza como soldado de las sombras`);
         if (multi(st) && a.g !== p) st.log[st.log.length - 1].q = a.g;
         entered(st, p, zz);
@@ -4207,7 +4212,7 @@
         log(st, p, `${nm} llama a ${def(inst).name}${a.from === 'grave' ? ' desde el cementerio' : a.from === 'deck' ? ' desde el mazo' : ''}`);
         const zz = specialSummon(st, p, inst, 'atk'), sm = P.mz[zz];
         if (sm && sm.c.uid === inst.uid) {
-          sm.bySung = true;
+          sm.bySung = true; shadeEssence(sm);
           if (inst.id === 'c_igris') { addMod(st, sm, 'leal', 400, 400, 0); log(st, p, 'Lealtad al Monarca: Igris gana +400 ATK y +400 DEF'); }
           if (inst.id === 'c_beru') { addMod(st, sm, 'leal', 500, 0, 0); sm.xtra = { t: st.turn, n: 1 }; log(st, p, 'Lealtad al Monarca: Beru gana +500 ATK y un ataque extra este turno'); }
           if (inst.id === 'c_bellion') log(st, p, 'Lealtad al Monarca: tus soldados de las sombras ganan +300 ATK y +300 DEF mientras Bellion siga en el campo');
@@ -4976,6 +4981,7 @@
       if (isInk(s)) v.ink = true;
       if (isSoldier(s)) v.soldier = true;
       if (s.bySung) v.bySung = true;
+      if (s.shade) v.shade = true;                                                      // Esencia de las Sombras: tono azul (sólo visual)
       if (s.petri) v.petri = true;
       if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, n: b.n }));
       if (s.pub != null) v.pub = true;

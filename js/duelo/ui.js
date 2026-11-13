@@ -1870,7 +1870,7 @@
       }
       for (const t of statusText(s)) hint = (hint ? hint + ' · ' : '') + t;
       const info = h('div', null, h('div', { class: 'sub' }, `${s.down ? 'Boca abajo · ' : ''}${s.pos === 'atk' ? 'Ataque' : 'Defensa'} · ATK ${s.atk} / DEF ${s.def}`), hint ? h('div', { class: 'sub', style: 'margin-top:6px' }, hint) : null, stolenBox(s));
-      modal(h('div', { class: 'box' }, detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(actBtn)) : null, btn('Cerrar', closeModal, 'ghost')));
+      modal(h('div', Object.assign({ class: 'box' }, s.shade && !s.down ? { 'data-shade': '1' } : {}), detailBox(d, info), acts.length ? h('div', { class: 'acts' }, acts.map(actBtn)) : null, btn('Cerrar', closeModal, 'ghost')));
     }
     function stormFlow(list) {
       const hands = [...new Set(list.map(a => a.hand))];
@@ -2132,6 +2132,7 @@
       const cs = cosOf(seat);
       const el = h('div', { class: 'zone ' + area + ' ' + side + (isAlly(seat) ? ' ally' : '') + (low ? ' lowrow' : '') + (hl ? ' hl' : '') + (attacking ? ' atkr' : '') + (struck || lpHit ? ' struck' : '') + (weary ? ' tired' : '') + (area === 'mz' && s && s.domain ? ' domsrc' : ''), 'data-k': key, onclick: () => zoneClick(seat, area, z) });
       for (const k of ['hc', 'ha', 'hm', 'cb']) if (cs[k]) el.dataset[k] = D.Shop.slug(cs[k]);
+      if (area === 'mz' && s && s.shade && !s.down) el.dataset.shade = '1';                  // Esencia de las Sombras (tono azul)
       let cur = null, landing = false, art = null, asCard = false;
       if (s) {
         let c;

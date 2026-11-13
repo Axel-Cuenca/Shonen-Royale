@@ -1926,3 +1926,8 @@ html.fxbg .board3d .zone .eqm { transform: translateZ(2.4em); font-size: 1.3em; 
 .abil.lore .nar { font-style: italic; color: #e8cf8f; margin: 2px 0 5px; }
 .abil.lore .fun { font-size: .95em; opacity: .92; }
 .abil.lore .fi { margin-right: 6px; opacity: .7; }
+
+/* Esencia de las Sombras (2026-11-12): tono azul oscuro en lo que Sung Jin-Woo trae al campo. Sólo color, sobre la imagen (nunca en .zone: aplana el 3D). */
+.zone[data-shade], .zone[data-shade] .card, .box[data-shade] { --skf: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(.72) contrast(1.15); }
+.zone[data-shade] .card .cch, .zone[data-shade] .card .cimg, .box[data-shade] .card .cch, .box[data-shade] .card .cimg,
+.box[data-shade] .hin > img { filter: var(--skf) drop-shadow(0 0 .5em rgba(40, 80, 255, .75)); }
