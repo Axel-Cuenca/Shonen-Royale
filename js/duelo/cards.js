@@ -248,6 +248,8 @@
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
     gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    merlincubo: ['Perfect Cube – Cubo Perfecto', 'Una vez por turno encierra a un personaje (aliado o enemigo) en una barrera durante 2 turnos: no puede atacar, ni ser atacado, ni activar habilidades, ni ser elegido como objetivo. Merlin puede romper el cubo en su turno; si Merlin se va, el cubo dura lo que le quedara.'],
+    merlininv: ['Investigación Mágica', 'Una vez por turno, cuando el rival activa una magia, Merlin mira en privado su mano y elige una carta de magia o trampa: queda bloqueada (el rival no puede activarla) hasta el final del siguiente turno de Merlin. No sale de su mano.'],
     gyuvinc: ['Vínculo con Daki', 'Si Daki va a ser destruida, Gyutaro acude desde la mano o el mazo como invocación especial y la destrucción se cancela. Comparte Destino Compartido con ella.'],
     rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
     rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
@@ -255,6 +257,8 @@
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    merlincubo: 'Controla el espacio mediante barreras mágicas.',
+    merlininv: 'Estudia los movimientos de sus enemigos para anticiparse a sus estrategias.',
     dakibelt: 'Sus cinturones de carne controlan el campo de batalla y desvían los ataques enemigos.',
     dakivinc: 'Su vínculo con Gyutaro es inseparable.',
     dakidest: 'Ambos comparten un destino: sólo caen si caen juntos.',
@@ -995,6 +999,11 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_merlin', name: 'Merlin', type: 'pecados', level: 6, atk: 1700, def: 1800, img: I('merlin'), ab: ['merlincubo', 'merlininv'],
+      lore: 'Merlin, la Gula de la Avaricia, es una maga extraordinaria capaz de controlar el espacio mediante barreras mágicas y estudiar los movimientos de sus enemigos para anticiparse a sus estrategias.',
+      text: 'Perfect Cube: una vez por turno encierra a un personaje 2 turnos (no ataca, no recibe ataques ni habilidades ni objetivos). Investigación Mágica: cuando el rival activa una magia, mira su mano y bloquea una carta.'
+    }),
+    mon({
       id: 'c_daki', name: 'Daki', type: 'demonslayer', level: 4, atk: 1400, def: 1500, img: I('daki'), ab: ['dakibelt', 'dakivinc', 'dakidest'],
       lore: 'Daki utiliza sus cinturones de carne para controlar el campo de batalla, ocultar trampas y manipular los ataques enemigos. Su vínculo con Gyutaro es inseparable: ambos comparten un destino y no pueden ser derrotados definitivamente por separado.',
       text: 'Cinturones de Carne: hasta 3 cinturones ocultos; redirigen un ataque enemigo (una vez por cinturón). Vínculo con Gyutaro: si va a morir, invoca a Gyutaro de la mano o el mazo y se cancela. Destino Compartido: con Gyutaro, sólo mueren si caen los dos el mismo turno.',
@@ -1137,7 +1146,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

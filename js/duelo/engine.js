@@ -107,7 +107,7 @@
   /** Cartas de equipo activas en la casilla z con una marca (los dominios que anulan los equipos las apagan). */
   const eqWith = (st, P, z, key) => (stOff(st) ? [] : P.st.filter(s => s && !s.down && s.equipTo === z && def(s.c)[key]));
   /** Restricciones temporales (Posesión de sombras, Águila de tinta, Tsukuyomi) y petrificación de Galand. k: 'atk' | 'ab'. */
-  const blocked = (m, k) => !!m && (!!m.petri || (m.binds || []).some(b => b[k]));
+  const blocked = (m, k) => !!m && (!!m.petri || !!m.cube || (m.binds || []).some(b => b[k]));      // Merlin: Cubo Perfecto bloquea ataque y habilidades
   /** Hay un personaje enemigo de p con Anti-Magia Absoluta boca arriba. */
   const antiAbs = (st, p) => st.players.some((Q, q) => Q.alive && st.team[q] !== st.team[p] && Q.mz.some(x => x && !x.down && has(st, x, 'antiabs')));
   /** Dominios de Jujutsu Kaisen (05-11-2026): se puede abrir uno si no hay ninguno, o si gana el choque al que ya está activo:
@@ -2162,6 +2162,7 @@
     log(st, p, `activa ${def(inst).name}`);
     if (def(inst).cost) { lose(st, p, def(inst).cost, true); if (st.winner !== null) return; }      // Guerrero del Infinito: los PV no se recuperan aunque la anulen
     if (gloveOffer(st, p)) return;
+    if (merlinOffer(st, p)) return;
     if (openWindow(st, 'spell', { k: 'spell', by: p })) return;
     continueSpell(st);
   }
@@ -2199,6 +2200,29 @@
     return true;
   }
   /** Ofrece el robo antes de que la gema se resuelva. true = hay que esperar la respuesta. */
+  /** Merlin: Investigación Mágica. Cuando un rival activa una magia, mira su mano y bloquea una carta hasta el final de su próximo turno. */
+  /** Merlin: una carta de la mano bloqueada hasta el final del siguiente turno de quien la bloqueó (= 2 rondas desde que se puso, contando el turno actual). */
+  function handLocked(st, p, card) {
+    const P = st.players[p];
+    if (!P.hlock || !P.hlock.length) return false;
+    P.hlock = P.hlock.filter(l => P.hand.some(c => c.uid === l.uid));
+    return P.hlock.some(l => l.uid === card.uid);
+  }
+  function merlinOffer(st, p) {
+    const ch = st.chain;
+    if (!ch || ch.merlin || stOff(st) || st.domain) return false;
+    ch.merlin = true;
+    const P = st.players[p];
+    if (!P.hand.some(c => def(c).kind !== 'monster')) return false;
+    for (const q of foes(st, p)) {
+      const m = st.players[q].mz.find(x => x && !x.down && has(st, x, 'merlininv') && !blocked(x, 'ab') && uOf(x).imR !== curRound(st));
+      if (!m) continue;
+      st.chain = null;
+      st.pending = { k: 'ability', ab: 'merlin', player: q, stage: 'ask', ch, by: p, uid: m.c.uid, nm: def(ch.inst).name, hand: P.hand.map((c, i) => ({ i, id: c.id, ok: def(c).kind !== 'monster' && !(P.hlock || []).some(l => l.uid === c.uid) })) };
+      return true;
+    }
+    return false;
+  }
   function gloveOffer(st, p) {
     const ch = st.chain;
     if (!ch || ch.glove) return false;
@@ -2625,9 +2649,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', mcubo: 'Cubo Perfecto', mrompe: 'Romper el cubo', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', mcubo: 'merlincubo', mrompe: 'merlincubo', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -3081,6 +3105,7 @@
   }
   function finishTurn(st) {
     const P = st.players[st.current];
+    for (const Q of st.players) if (Q.hlock) Q.hlock = Q.hlock.filter(l => l.on !== st.turn);      // Merlin: la carta bloqueada se libera al final del turno de Merlin
     for (const s of P.mz) if (s) { s.atkMod = 0; if (s.sed) { dropMods(s, 'sed'); s.sed = null; } dropMods(s, 'lobos'); }
     for (const s of P.mz) {                                      // Kaioken x10: al terminar el turno se pierden los bonos y llega el agotamiento
       if (!s) continue;
@@ -3133,6 +3158,8 @@
       } }
     for (let z = 0; z < ZONES; z++) { const cm = st.players[st.current].mz[z]; if (cm && isClone(cm) && cm.born !== st.turn) { removeMonster(st, st.current, z, 'ink'); log(st, st.current, 'El clon de Yoru se desvanece'); } }
     for (const hm of st.players[st.current].mz) if (hm && hm.hoz && hm.hoz.some(k => elapsed(st, k.t0) >= 1)) { addMod(st, hm, 'hozv', -500, -500, 0); log(st, st.current, `${mdef(hm).name}: la sangre venenosa le quita 500 ATK y 500 DEF`); }
+    for (const Q of st.players) if (Q.hlock) for (const l of Q.hlock) if (l.q === st.current && st.turn > l.t0 && !l.on) l.on = st.turn;
+    for (const Q of st.players) for (const cm of Q.mz) if (cm && cm.cube && elapsed(st, cm.cube.t0) >= 2) { delete cm.cube; log(st, st.current, `El Cubo Perfecto sobre ${mdef(cm).name} se disuelve`); }
     for (const gm of st.players[st.current].mz) {      // Cámara de Gravedad / Sala del Espíritu
       if (gm && gm.gr && gm.gr.t0 !== st.turn && gm.gr.n < 2) { gm.gr.n++; log(st, st.current, `${mdef(gm).name}: contador de entrenamiento ${gm.gr.n}/2`); }
       if (gm && gm.gr && gm.gr.n >= 2) st.trig.push({ k: 'gravrew', p: st.current, uid: gm.c.uid });
@@ -3375,6 +3402,7 @@
     const m = st.players[q].mz[z];
     if (!m || (isInk(m) && !(isClone(m) && st.team[byP] !== st.team[q]))) return false;      // el clon de Yoru sólo se elige si es enemigo; las bestias de tinta de Sai no se eligen con nada (no son cartas: no se absorben, roban ni encierran)
     if (m.six && !(o && o.ignoreSix)) return false;
+    if (m.cube) return false;                                                              // Merlin: Cubo Perfecto (ni como objetivo de otras cartas)
     if (m.cprot != null && elapsed(st, m.cprot) <= 0 && st.team[byP] !== st.team[q]) return false;      // Cápsulas Hoi-Poi: protegido contra efectos enemigos
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
     if (m.god && st.team[byP] !== st.team[m.god.p]) return false;      // Poder de Dios: sólo interactúa el equipo de Vegeta Dios
@@ -3420,6 +3448,7 @@
     if (tm.god && st.team[st.players.findIndex(Q => Q.mz.includes(m))] !== st.team[tm.god.p]) return false;
     if (!tm.down && has(st, tm, 'satancamp') && lvl(m) >= 7) return false;                // Mr. Satan: ¡Soy el campeón mundial!
     if (m.tobiNA && m.tobiNA.uid === tm.c.uid) return false;                               // Tobi: Maestro de la manipulación
+    if (tm.cube) return false;                                                             // Merlin: Cubo Perfecto (no recibe ataques)
     if (tm.fly) return false;                                                              // Kaisel (Vuelo Dracónico) / Rengar (Emoción de la Cacería): no se puede elegir como objetivo de ataques
     return true;
   }
@@ -3652,6 +3681,10 @@
       if (ab.includes('hakdom') && st.domain && st.domain.uid === m.c.uid && u.hrT !== st.turn) push({ pw: 'hruleta' });
       if ((m.sc || 0) >= 1) { push({ pw: 'salaf' }); if (!m.sres) push({ pw: 'salar' }); }
       if ((m.sc || 0) >= 2) push({ pw: 'salad' });
+      if (ab.includes('merlincubo')) {
+        if (u.mcT !== st.turn) for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (const tz of zonesWith(st.players[q].mz)) { const tm = st.players[q].mz[tz]; if (!tm.cube && !tm.down && !isInk(tm) && canTarget(st, p, q, tz)) push({ pw: 'mcubo', target: { vs: q, z: tz } }); }
+        for (let q = 0; q < st.n; q++) for (const tz of zonesWith(st.players[q].mz)) { const tm = st.players[q].mz[tz]; if (tm.cube && tm.cube.by === p) push({ pw: 'mrompe', target: { vs: q, z: tz } }); }
+      }
       if (ab.includes('gyuhoz') && u.ghT !== st.turn) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].down && canTarget(st, p, e, tz) && !isInk(st.players[e].mz[tz])) push({ pw: 'gyuhoz', target: { vs: e, z: tz } });
       if (ab.includes('gyudanza') && u.gdT !== st.turn && canAttackNow(st) && atkCount(m) < maxAttacks(st, m) && !blocked(m, 'atk') && m.pos === 'atk' && hozCount(st, m) > 0) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[tz]) && canTarget(st, p, e, tz)) push({ pw: 'gyudanza', target: { vs: e, z: tz } });
       if (ab.includes('dakibelt')) {
@@ -3827,6 +3860,7 @@
       } else if (pd.k === 'ability') {
         if (pd.ab === 'steal' || pd.ab === 'vlearn' || (pd.ab === 'near' && pd.stage === 'ask') || pd.ab === 'gravrew' || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
+        else if (pd.ab === 'merlin' && pd.stage === 'pick') { for (const h of pd.hand) if (h.ok) out.push({ t: 'ability', pick: h.i }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
         else { out.push({ t: 'ability', pos: 'atk' }); out.push({ t: 'ability', pos: 'def' }); }
@@ -3839,6 +3873,7 @@
       const occupied = zonesWith(P.mz).filter(z => !P.mz[z].god && !isInk(P.mz[z]));      // Vegeta Dios: lo atrapado no se sacrifica
       P.hand.forEach((card, i) => {
         const d = def(card);
+        if (d.kind === 'spell' && handLocked(st, p, card)) return;      // Merlin: carta bloqueada
         if (d.kind === 'monster') {
           if (card.id === 'c_jake') zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.jk && !h.fused && !isInk(h)) for (const mode of ['sword', 'shield']) out.push({ t: 'attach', hand: i, host: hz, mode }); });
           if (SYMB[card.id] && P.symT !== st.turn) zonesUp(P).forEach(hz => { const h = P.mz[hz]; if (!h.sym && !h.fused && !isInk(h)) out.push({ t: 'attach', hand: i, host: hz, mode: 'venom' }); });
@@ -4609,6 +4644,20 @@
         st.log[st.log.length - 1].roul = n;
         break;
       }
+      case 'mcubo': {
+        u.mcT = st.turn;
+        const tm = st.players[a.target.vs].mz[a.target.z];
+        if (!tm) break;
+        tm.cube = { t0: st.turn, by: p };
+        log(st, p, `${nm} encierra a ${mdef(tm).name} en un Cubo Perfecto (2 turnos)`);
+        if (multi(st)) st.log[st.log.length - 1].q = a.target.vs;
+        break;
+      }
+      case 'mrompe': {
+        const tm = st.players[a.target.vs].mz[a.target.z];
+        if (tm && tm.cube) { delete tm.cube; log(st, p, `${nm} rompe el Cubo Perfecto que encerraba a ${mdef(tm).name}`); }
+        break;
+      }
       case 'gyuhoz': {
         u.ghT = st.turn;
         const e = a.target.vs, tm = st.players[e].mz[a.target.z];
@@ -5225,6 +5274,23 @@
       attackWindows(st, pd.cont.by);
       return;
     }
+    if (pd.ab === 'merlin') {
+      const ch = pd.ch, F = st.players[pd.by];
+      const resume = () => { st.chain = ch; if (!openWindow(st, 'spell', { k: 'spell', by: ch.p })) continueSpell(st); };
+      if (pd.stage === 'ask' && a.use) { st.pending = Object.assign({}, pd, { stage: 'pick' }); return; }
+      if (pd.stage === 'pick' && a.pick != null) {
+        const c = F.hand[a.pick], ok = pd.hand.find(h => h.i === a.pick && h.ok);
+        const mm = slotByUid(st, p, pd.uid);
+        if (c && ok) {
+          if (mm) uOf(mm.m).imR = curRound(st);
+          (F.hlock = F.hlock || []).push({ uid: c.uid, t0: st.turn, q: p });
+          log(st, p, `Investigación Mágica: Merlin observa la mano de su rival y bloquea una carta hasta el final de su próximo turno`);
+          if (multi(st)) st.log[st.log.length - 1].q = pd.by;
+        }
+      }
+      resume();
+      return;
+    }
     if (pd.ab === 'glove' && pd.trap) {                        // Gema de la Realidad (trampa)
       const T = pd.trap, from = T.by, F = st.players[from], bm = P.mz[pd.bz], z = firstFree(P.st);
       const gi = F.grave.findIndex(x => x.uid === T.c.uid);
@@ -5543,6 +5609,7 @@
       if (s.shade) v.shade = true;                                                      // Esencia de las Sombras: tono azul (sólo visual)
       if (s.petri) v.petri = true;
       { const es = escStage(st, s); if (es.k) { v.esc = { k: es.k, left: es.left }; if (es.k === 'mediodia' && mdef(s).imgMed) v.art = mdef(s).imgMed; } }
+      if (s.cube) v.cube = { left: Math.max(0, 2 - elapsed(st, s.cube.t0)) };
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;
@@ -5654,6 +5721,7 @@
           if (pd.opts) { pending.opts = pd.opts.slice(); pending.from = pd.from; }
           if (pd.cands) pending.cands = pd.cands.map(c => ({ vs: c.vs, z: c.z }));
           if (pd.info) pending.info = pd.info;
+          if (pd.hand) pending.hand = pd.hand.slice();
           if (pd.ch) pending.gem = { id: pd.ch.inst.id };
         }
         if (pd.k === 'discard') pending.excess = st.players[seat].hand.length - HAND_MAX;
@@ -5717,7 +5785,7 @@
       if (e.m.abs && e.m.abs.owner === p) n += 1 + (e.m.abs.link ? e.m.abs.link.length : 0);
     }
     if (st.chain && st.chain.p === p && !st.chain.inst.virt) n++;
-    else if (st.pending && (st.pending.ab === 'glove' || st.pending.ab === 'uidef' || st.pending.ab === 'antimag' || st.pending.ab === 'shadowred') && st.pending.ch && st.pending.ch.p === p && !st.pending.ch.inst.virt && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete / magia a la espera de la Defensa instintiva de Goku UI
+    else if (st.pending && (st.pending.ab === 'glove' || st.pending.ab === 'merlin' || st.pending.ab === 'uidef' || st.pending.ab === 'antimag' || st.pending.ab === 'shadowred') && st.pending.ch && st.pending.ch.p === p && !st.pending.ch.inst.virt && st.pending.stage !== 'done') n++;      // gema en la mano del Guantelete / magia a la espera de la Defensa instintiva de Goku UI
     // lo absorbido por Cell cuenta para su dueño original
     for (const Q of st.players) for (const s of Q.mz) if (s && s.abs && s.abs.owner === p) n += 1 + (s.abs.link ? s.abs.link.length : 0);
     for (const Q of st.players) for (const s of Q.mz) if (s && s.fused && s.fused.b && s.fused.b.abs && s.fused.b.abs.owner === p) n += 1 + (s.fused.b.abs.link ? s.fused.b.abs.link.length : 0);      // lo absorbido por el personaje que quedó fusionado

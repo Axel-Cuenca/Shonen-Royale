@@ -474,4 +474,38 @@ module.exports = function (T) {
     ok(st.players[0].lp === 8000 && st.players[1].lp < 8000, 'el ataque cayó directo sobre el dueño de la zona libre');
     eq((st.belts || []).length, 0, 'el cinturón usado desaparece');
   }
+  section('Merlin');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_merlin'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_goku');
+    act(st, 0, pw(st, 0, 'mcubo', a => a.target.vs === 1 && a.target.z === 0));
+    ok(st.players[1].mz[0].cube, 'Goku queda encerrado');
+    ok(!pw(st, 0, 'mcubo'), 'un cubo por turno');
+    st.current = 1; st.turn = 7; st.phase = 'main';
+    ok(!L(st, 1).some(a => a.t === 'power' && a.zone === 0), 'encerrado no usa habilidades');
+    ok(!L(st, 1).some(a => a.t === 'attack' && a.zone === 0), 'ni ataca');
+    st.phase = 'battle';
+    st.current = 1;
+    ok(!L(st, 0).some(a => a.t === 'attack' && a.target === 0), 'ni recibe ataques (mirando desde el otro lado)');
+    st.current = 0; st.turn = 6; st.phase = 'main';
+    ok(pw(st, 0, 'mrompe'), 'Merlin puede romper el cubo');
+    act(st, 0, pw(st, 0, 'mrompe')); ok(!st.players[1].mz[0].cube, 'cubo roto');
+    // caduca solo
+    st = fresh(0); put(st, 0, 0, 'c_merlin'); put(st, 1, 0, 'c_goku');
+    act(st, 0, pw(st, 0, 'mcubo', a => a.target.vs === 1)); ok(st.players[1].mz[0].cube, 'encerrado');
+    pass(st, 3); ok(st.players[1].mz[0] && st.players[1].mz[0].cube, 'a mitad de plazo sigue');
+    pass(st, 3);
+    ok(!st.players[1].mz[0] || !st.players[1].mz[0].cube, 'tras 2 turnos el cubo se disuelve');
+    // Investigación Mágica
+    st = fresh(1); put(st, 0, 0, 'c_merlin'); hand(st, 1, ['c_edo_tensei', 's_beam', 'c_goku']); put(st, 1, 0, 'c_kratos'); st.players[1].grave = [{ uid: 950, id: 'c_goku' }];
+    const act1 = L(st, 1).find(a => a.t === 'activate' && a.hand === 1);
+    ok(act1, 'el rival puede activar su magia');
+    act(st, 1, act1);
+    ok(st.pending && st.pending.ab === 'merlin' && st.pending.player === 0, 'Merlin puede investigar');
+    act(st, 0, { t: 'ability', use: true });
+    const picks = L(st, 0).filter(a => a.t === 'ability' && a.pick != null);
+    ok(picks.length === 1 && picks[0].pick === 0, 'sólo se puede elegir una carta de magia/trampa de la mano');
+    act(st, 0, picks[0]); no(st);
+    ok(!L(st, 1).some(a => a.t === 'activate' && a.hand === 0), 'la carta bloqueada ya no se puede activar');
+    eq(st.players[1].hand.filter(c => c.id === 'c_edo_tensei').length, 1, 'sigue en la mano');
+  }
 };
