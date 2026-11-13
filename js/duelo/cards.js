@@ -248,6 +248,7 @@
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
     gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    ginyucambio: ['¡CAMBIO! – Cambio de Cuerpo', 'Una vez por turno elige a un personaje enemigo de hasta 5★ e intercambian sus cuerpos: Ginyu usa el ATK, DEF y habilidades del otro (y conserva ¡CAMBIO!); el enemigo usa el ATK y DEF originales de Ginyu y pierde sus habilidades. Ambos conservan nombre, estrellas y tipo. Termina cuando uno de los dos deja el campo.'],
     dofhilo: ['Parasite – Hilos de Control', 'Una vez por turno pone hilos invisibles (sólo tú lo sabes) sobre un personaje enemigo. Cuando ese personaje declare un ataque, Doflamingo puede elegir otro objetivo válido para ese ataque (incluso un aliado del atacante); el ataque conserva su fuerza y efectos. Los hilos se consumen al redirigir.'],
     dofjaula: ['Jaula de Pájaros', 'Una vez por duelo, durante 2 turnos los personajes enemigos no pueden abandonar el campo (sacrificios, transformaciones, invocaciones especiales, etc.) ni cambiar de zona. Sí pueden ser destruidos por otros medios.'],
     dofdesp: ['Despertar de la Ito Ito no Mi', 'Cuando destruye a un personaje enemigo, puede convertir una zona libre del campo enemigo en una trampa de hilos durante 2 turnos (sólo tú la ves). El primer enemigo que entre en ella no puede atacar, cambiar de posición ni usar habilidades hasta el final de su siguiente turno; la trampa se consume.'],
@@ -263,6 +264,7 @@
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    ginyucambio: 'Intercambia cuerpos con su enemigo y se apodera de sus habilidades.',
     dofhilo: 'Controla a sus enemigos como marionetas.',
     dofjaula: 'Atrapa a sus rivales dentro de una jaula de hilos.',
     dofdesp: 'Transforma el propio campo de batalla en una trampa invisible.',
@@ -1011,6 +1013,11 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_ginyu', name: 'Ginyu', type: 'dbz', level: 3, atk: 1200, def: 1300, img: I('ginyu'), ab: ['ginyucambio'],
+      lore: 'Ginyu utiliza su técnica especial para intercambiar cuerpos con su enemigo, apoderándose de sus habilidades y dejando al oponente atrapado en su cuerpo original.',
+      text: '¡CAMBIO!: una vez por turno intercambia el cuerpo (ATK, DEF y habilidades) con un enemigo de hasta 5★ hasta que uno de los dos deje el campo.'
+    }),
+    mon({
       id: 'c_doflamingo', name: 'Doflamingo', type: 'onepiece', level: 7, atk: 2000, def: 1900, img: I('doflamingo'), ab: ['dofhilo', 'dofjaula', 'dofdesp'],
       lore: 'Doflamingo utiliza los hilos de la Ito Ito no Mi para controlar a sus enemigos como marionetas, atrapar a sus rivales dentro de una jaula y transformar el propio campo de batalla en una trampa invisible.',
       text: 'Parasite: pone hilos ocultos en un enemigo y redirige su próximo ataque. Jaula de Pájaros (1 vez por duelo): 2 turnos sin que los enemigos salgan del campo. Despertar: al destruir a un enemigo, deja una trampa de hilos en una zona libre rival.',
@@ -1169,7 +1176,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

@@ -581,4 +581,20 @@ module.exports = function (T) {
     ok(entered && entered.binds && entered.binds.length, 'el primero que entra queda inmovilizado');
     eq((st.cmarks || []).length, 0, 'la trampa se consume');
   }
+  section('Ginyu');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_ginyu'); put(st, 1, 0, 'c_vegeta'); put(st, 1, 1, 'c_sukuna60');
+    ok(pw(st, 0, 'ginyu', a => a.target.z === 0), 'puede elegir a un enemigo de hasta 5★');
+    ok(!pw(st, 0, 'ginyu', a => a.target.z === 1), 'no a uno de 6★ o más');
+    const vAtk = Cards.get('c_vegeta').atk, gAtk = Cards.get('c_ginyu').atk;
+    act(st, 0, pw(st, 0, 'ginyu', a => a.target.z === 0));
+    eq(stat(st, 0, 0)[0], vAtk, 'Ginyu usa el ATK de Vegeta');
+    eq(stat(st, 1, 0)[0], gAtk, 'Vegeta usa el ATK de Ginyu');
+    ok(E.view(st, 0).players[0].mz[0].c.id === 'c_ginyu' && E.view(st, 0).players[1].mz[0].c.id === 'c_vegeta', 'conservan su identidad');
+    ok(!pw(st, 0, 'ginyu'), 'no repite en el mismo turno');
+    // habilidades intercambiadas
+    // si uno se va, el otro recupera su cuerpo
+    st.players[1].mz[0] = null; pass(st, 1);
+    eq(stat(st, 0, 0)[0], gAtk, 'al irse Vegeta, Ginyu recupera su ATK');
+  }
 };
