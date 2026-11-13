@@ -1918,6 +1918,24 @@
     }
   }
   /** Tras elegir una trampa: Total Counter y Rika pueden intervenir antes de que haga efecto. */
+  /** Near, Estrategia de N: ¿puede Near (de un rival de resp) actuar sobre la trampa s que resp acaba de activar? */
+  function nearFor(st, resp, s) {
+    if (!s || !s.inv) return null;
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive || st.team[q] === st.team[resp]) continue;
+      for (let z = 0; z < ZONES; z++) {
+        const m = st.players[q].mz[z];
+        if (m && !m.down && m.c.uid === s.inv.by && has(st, m, 'nearn') && !blocked(m, 'ab') && uOf(m).nsT !== st.turn) return { q, z };
+      }
+    }
+    return null;
+  }
+  /** Objetivos alternativos de una trampa con elección (Manipulación). */
+  function trapAlts(st, resp, d, pd) {
+    const os = d.fx === 'realidad' ? realityOpts(st, resp, pd.trigger, pd.cont) : d.fx === 'fullcounter' ? fcOpts(st, resp, pd.trigger, pd.cont) : d.fx === 'kyoka' ? kyokaOpts(st, resp, pd.cont) : [];
+    const cur = pd.opt;
+    return os.filter(o => o && o.vs != null && !(cur && cur.vs === o.vs && cur.z === o.z)).map(o => ({ vs: o.vs, z: o.z }));
+  }
   function trapResolve(st, resp, d, pd, done, invTeam) {
     const vict = (d.fx === 'destroyAttacker' || d.fx === 'mirror') && st.atk ? st.atk.p : ((d.fx === 'destroySummoned' || d.fx === 'infarto') && st.summon ? st.summon.p : null);
     if (!done.includes('gema')) {                        // Gema de la Realidad: invierte la destrucción o la reducción de estadísticas
@@ -2513,9 +2531,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -3478,6 +3496,13 @@
       if (ab.includes('rengarcaza') && !m.fly && (u.rcT0 == null || elapsed(st, u.rcT0) >= 2)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && canTarget(st, p, e, tz)) push({ pw: 'rcaza', target: { vs: e, z: tz } }); }
       if (ab.includes('hakdom') && canOnce(P, z, u, 'hdm') && domainOk(st, m)) push({ pw: 'hakdom' });
       if (ab.includes('hakdom') && st.domain && st.domain.uid === m.c.uid && u.hrT !== st.turn) push({ pw: 'hruleta' });
+      if (ab.includes('nearmira') && u.nmT !== st.turn) {      // Sucesor de L: mira en privado una carta boca abajo rival
+        const eyes = P.eyes || [];
+        for (const e of fl) {
+          for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (tm.down && !eyes.some(x => x.uid === tm.c.uid)) push({ pw: 'nearmira', target: { vs: e, z: tz } }); }
+          st.players[e].st.forEach((sx, sz) => { if (sx && sx.down && !sx.prison && !eyes.some(x => x.uid === sx.c.uid)) push({ pw: 'nearmira', target: { vs: e, z: sz, area: 'st' } }); });
+        }
+      }
       if (ab.includes('kzmask') && u.kzmT !== st.turn) {
         for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz)) push({ pw: 'kzfuego', target: { vs: e, z: tz } });
         push({ pw: 'kzviento' });
@@ -3631,7 +3656,7 @@
       } else if (pd.k === 'pick') {
         for (const u of pd.cands) { out.push({ t: 'pick', uid: u }); if (pd.cont === 'invite') out.push({ t: 'pick', uid: u, pos: 'def' }); }      // Invitación: en ataque o en defensa
       } else if (pd.k === 'ability') {
-        if (pd.ab === 'steal' || pd.ab === 'vlearn' || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
+        if (pd.ab === 'steal' || pd.ab === 'vlearn' || (pd.ab === 'near' && pd.stage === 'ask') || pd.ab === 'marcamal' || pd.ab === 'dante' || pd.ab === 'shadowred') { for (const a of pd.opts) out.push({ t: 'ability', pick: a }); out.push({ t: 'ability', use: false }); }
         else if (pd.ab === 'karma' || pd.stage === 'target' || pd.stage === 'glovetgt') { for (const c of pd.cands) out.push({ t: 'ability', vs: c.vs, z: c.z }); }
         else if (pd.ab === 'avchoice') { out.push({ t: 'ability', pick: 'atk' }); out.push({ t: 'ability', pick: 'mag' }); }
         else if (pd.stage === 'ask') { out.push({ t: 'ability', use: true }); out.push({ t: 'ability', use: false }); }
@@ -4411,6 +4436,17 @@
         st.log[st.log.length - 1].roul = n;
         break;
       }
+      case 'nearmira': {
+        u.nmT = st.turn;
+        const e = a.target.vs, tc = a.target.area === 'st' ? st.players[e].st[a.target.z] : st.players[e].mz[a.target.z];
+        if (!tc) break;
+        P.eyes = (P.eyes || []).filter(x => x.uid !== tc.c.uid).concat([{ uid: tc.c.uid, vs: e }]);
+        const isTrap = a.target.area === 'st' && def(tc.c).kind === 'trap';
+        if (isTrap) tc.inv = { by: m.c.uid };
+        log(st, p, `${nm} investiga en secreto una carta boca abajo${isTrap ? ' y le deja un contador de investigación' : ''}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
       case 'kzfuego': {
         u.kzmT = st.turn;
         const e = a.target.vs, tm = st.players[e].mz[a.target.z];
@@ -4699,6 +4735,10 @@
           log(st, p, `activa la trampa ${d.name}`);
           P.st[a.zone] = null; P.grave.push(s.c);
           pd.opt = a.opt;
+          if (s.inv) {      // Near: Estrategia de N
+            const nn = nearFor(st, p, s);
+            if (nn) { st.pending = { k: 'ability', ab: 'near', player: nn.q, nz: nn.z, stage: 'ask', tp: p, tid: d.id, rp: pd, nm: d.name, opts: ['prev'].concat(trapAlts(st, p, d, pd).length ? ['manip'] : []), uid: st.players[nn.q].mz[nn.z].c.uid }; break; }
+          }
           if (d.fx === 'realidad' && gloveTrapOffer(st, p, d, s, pd)) break;
           if (nextWindow(st, 'trap', { k: 'trapAct', by: p, rp: pd, tid: d.id }, foes(st, p))) break;      // X puede cancelar la trampa
           trapResolve(st, p, d, pd, []);
@@ -4837,6 +4877,26 @@
       if (a0) a0.uiDone = true;
       attackWindows(st, pd.cont.by);
       return;
+    }
+    if (pd.ab === 'near') {                                    // Estrategia de N: Previsión (cancela) o Manipulación (otro objetivo)
+      const nm = P.mz[pd.nz], d = C().get(pd.tid);
+      const go = pd2 => { if (nextWindow(st, 'trap', { k: 'trapAct', by: pd.tp, rp: pd.rp, tid: pd.tid, nearDone: true }, foes(st, pd.tp))) return; trapResolve(st, pd.tp, d, pd.rp, []); };
+      if (pd.stage === 'target') {
+        const c = (pd.cands || []).find(x => x.vs === a.vs && x.z === a.z);
+        if (c && nm) { uOf(nm).nsT = st.turn; pd.rp.opt = { vs: c.vs, z: c.z }; log(st, p, `${mdef(nm).name} usa Manipulación: cambia el objetivo de ${pd.nm}`); }
+        return go();
+      }
+      if (nm && a.pick === 'prev') {
+        uOf(nm).nsT = st.turn;
+        log(st, p, `${mdef(nm).name} usa Previsión: ${pd.nm} es cancelada`);
+        respondRest(st, pd.rp);
+        return;
+      }
+      if (nm && a.pick === 'manip') {
+        const alts = trapAlts(st, pd.tp, d, pd.rp);
+        if (alts.length) { st.pending = Object.assign({}, pd, { stage: 'target', cands: alts }); return; }
+      }
+      return go();
     }
     if (pd.ab === 'uidef') {                                   // Goku Ultra Instinto: Defensa instintiva
       const gm = P.mz[pd.zy], k = pd.kind;
@@ -5239,6 +5299,7 @@
     if (!s) return null;
     if (s.down && !own) return { down: true, c: null };
     const v = { down: !!s.down, c: { uid: s.c.uid, id: s.c.id }, setTurn: s.setTurn, equipTo: s.equipTo };
+    if (s.inv) v.inv = true;      // contador de investigación de Near
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };
     if (s.karma) v.karma = { phase: s.karma.phase, left: s.karma.phase === 'foe' ? Math.max(0, 3 - (elapsed(st, s.karma.t0))) : null };

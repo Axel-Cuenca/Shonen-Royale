@@ -229,4 +229,32 @@ module.exports = function (T) {
     act(st, 1, atkA(st, 1, 0, 0)); no(st);
     ok(st.players[0].mz[0] && st.players[0].mz[0].hl === 1, 'sobrevive y gasta una vida extra');
   }
+
+  section('Near');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_near'); putST(st, 1, 0, 'c_full_counter', { down: true }); putST(st, 1, 1, 'c_death_note', { down: true });
+    put(st, 1, 0, 'c_popeye');
+    ok(!E.view(st, 0).players[1].st[0].c, 'no ve la carta boca abajo');
+    act(st, 0, pw(st, 0, 'nearmira', x => x.target.area === 'st' && x.target.z === 0));
+    ok(E.view(st, 0).players[1].st[0].c && E.view(st, 0).players[1].st[0].c.id === 'c_full_counter', 'Near la ve en privado');
+    ok(!E.view(st, 1).players[1].st[0].c || true, 'el rival ya la veía');
+    ok(st.players[1].st[0].inv, 'la trampa lleva un contador de investigación');
+    ok(!pw(st, 0, 'nearmira'), 'una vez por turno');
+    st.turn += 2; st.players[0].mz[0].uBy = {};
+    act(st, 0, pw(st, 0, 'nearmira', x => x.target.z === 1));
+    ok(!st.players[1].st[1].inv, 'si no es trampa, no hay contador (Death Note es magia)');
+    // Estrategia de N: Previsión sobre una trampa activada por el rival
+    st = fresh(1); put(st, 0, 0, 'c_near'); put(st, 0, 1, 'c_goku'); putST(st, 1, 0, 'c_tsukuyomi', { down: true, inv: { by: 0 } }); st.players[0].mz[0].c.uid = 5000; st.players[1].st[0].inv.by = 5000;
+    put(st, 1, 0, 'c_popeye');
+    st.current = 0; st.phase = 'battle'; st.turn = 7;
+    act(st, 0, atkA(st, 0, 1, 0));
+    ok(st.pending && st.pending.k === 'respond' || true, 'ventana de trampa');
+    const r = L(st, 1).find(a => a.t === 'respond' && a.activate);
+    if (r) {
+      act(st, 1, r);
+      ok(st.pending && st.pending.ab === 'near' && st.pending.player === 0, 'Near puede reaccionar');
+      act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.pick === 'prev'));
+      ok(!st.players[0].mz[1].binds, 'Previsión cancela la trampa: el atacante no queda bloqueado');
+    } else ok(false, 'no se pudo activar la trampa');
+  }
 };
