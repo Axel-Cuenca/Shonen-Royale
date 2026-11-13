@@ -248,6 +248,8 @@
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
     gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    tuskmagia: ['Magia de Alto Orco', 'Una vez por turno elige una magia: Meteorito (destruye las magias/trampas de una zona enemiga y hace 500 de daño al personaje que tuviera una carta equipada allí), Gravedad (un enemigo no puede atacar, cambiar de posición ni activar habilidades en su próximo turno) o Barrera (protege en secreto a un aliado: la próxima habilidad enemiga que lo elija se redirige a un personaje enemigo que tú eliges).'],
+    tuskgran: ['Gran Magia: Legión de Meteoritos', 'Sólo si Sung Jin-Woo lo invocó. Una vez por duelo, sacrifica a otra sombra aliada: destruye todas las magias y trampas enemigas boca abajo y obliga a los personajes enemigos a cambiar de zona si tienen una libre. No gasta su Magia de Alto Orco. Además, invocado por Sung gana +500 ATK y +500 DEF.'],
     viegodom: ['Dominación Soberana', 'Cuando destruye a un enemigo en combate, puede poseer su cuerpo en lugar de enviarlo al cementerio: adopta su apariencia y estadísticas originales. En su siguiente turno puede usar UNA habilidad original de ese personaje. Al final de ese turno recupera su cuerpo y el derrotado va al cementerio.'],
     viegoniebla: ['Niebla Negra', 'Una vez por turno cubre una zona: los aliados de esa zona no pueden ser atacados desde otras zonas hasta el próximo turno de su controlador. No impide habilidades, magias ni trampas.'],
     viegoesp: ['Espada del Rey Arruinado', 'Pasiva: cuando ataca a otro personaje roba 500 de DEF al objetivo y gana 500 ATK en ese combate. Si además lleva equipada una Espada del Rey Arruinado, los efectos se suman (1000).'],
@@ -267,6 +269,8 @@
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    tuskmagia: 'Sus hechizos destruyen defensas, inmovilizan enemigos y protegen a sus aliados.',
+    tuskgran: 'Bajo las órdenes de Sung Jin-Woo desata una lluvia de meteoritos devastadora.',
     viegodom: 'Se apodera de los cuerpos de sus enemigos caídos.',
     viegoniebla: 'La Niebla Negra oculta y protege a sus aliados mientras prepara su siguiente movimiento.',
     ginyucambio: 'Intercambia cuerpos con su enemigo y se apodera de sus habilidades.',
@@ -1018,6 +1022,11 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_tusk', name: 'Tusk', type: 'sololeveling', level: 4, atk: 1500, def: 1500, img: I('kargalgan'), imgSung: I('tusk'), ab: ['tuskmagia', 'tuskgran'],
+      lore: 'Tusk es un poderoso Alto Orco capaz de utilizar distintas formas de magia para controlar el campo de batalla. Sus hechizos le permiten destruir defensas, inmovilizar enemigos y proteger a sus aliados. Cuando lucha bajo las órdenes de Sung Jin-Woo, puede desatar una lluvia de meteoritos devastadora.',
+      text: 'Magia de Alto Orco (1 por turno): Meteorito, Gravedad o Barrera. Invocado por Sung Jin-Woo: +500 ATK/DEF y Gran Magia: Legión de Meteoritos (1 vez por duelo, sacrificando otra sombra).'
+    }),
+    mon({
       id: 'c_viego', name: 'Viego, el Rey Arruinado', type: 'lol', level: 5, atk: 1600, def: 1500, img: I('viego'), ab: ['viegodom', 'viegoniebla', 'viegoesp'],
       lore: 'Viego, el Rey Arruinado, utiliza su poder para apoderarse de los cuerpos de sus enemigos caídos. La Niebla Negra se extiende por el campo, ocultando y protegiendo a sus aliados mientras prepara su siguiente movimiento.',
       text: 'Dominación Soberana: al destruir a un enemigo en combate, posee su cuerpo hasta el final de su siguiente turno y usa una de sus habilidades. Niebla Negra: protege una zona de ataques de otras zonas. Espada del Rey Arruinado (pasiva): roba 500 DEF y gana 500 ATK al atacar (se suma a la espada equipada).',
@@ -1187,7 +1196,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

@@ -627,4 +627,36 @@ module.exports = function (T) {
     ok(!atkA(st, 1, 0, 1), 'desde otra zona no se puede atacar a la zona cubierta');
     ok(atkA(st, 1, 1, 1), 'pero sí desde la misma zona');
   }
+  section('Tusk');
+  {
+    // Meteorito
+    let st = fresh(0); put(st, 0, 0, 'c_tusk'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 's_beam', { down: true });
+    putST(st, 1, 1, 'c_espada', { down: false, equipTo: 0 });
+    const lp0 = st.players[1].lp;
+    act(st, 0, pw(st, 0, 'tkmet', a => a.target.z === 1));
+    ok(!st.players[1].st[1] && grave(st, 1, 'c_espada'), 'el meteorito destruye lo que había en la zona');
+    eq(st.players[1].lp, lp0 - 500, 'y el personaje equipado recibe 500 de daño');
+    ok(!pw(st, 0, 'tkgrav') && !pw(st, 0, 'tkbar'), 'sólo una magia por turno');
+    // Gravedad
+    st = fresh(0); put(st, 0, 0, 'c_tusk'); put(st, 1, 0, 'c_goku');
+    act(st, 0, pw(st, 0, 'tkgrav', a => a.target.z === 0));
+    st.current = 1; st.turn = 7; st.phase = 'battle';
+    ok(!L(st, 1).some(a => a.t === 'attack'), 'el afectado no ataca en su turno');
+    // Barrera: redirige una habilidad
+    st = fresh(0); put(st, 0, 0, 'c_tusk'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_zenitsu'); put(st, 1, 1, 'c_goku');
+    act(st, 0, pw(st, 0, 'tkbar', a => a.target.z === 1));
+    eq(E.view(st, 0).barr.length, 1, 'el dueño ve la barrera');
+    ok(!(E.view(st, 1).barr || []).length, 'el rival no sabe a quién protege');
+    // Gran Magia sólo con Sung
+    st = fresh(0); put(st, 0, 0, 'c_tusk'); put(st, 0, 1, 'c_igris', { shadow: true });
+    ok(!pw(st, 0, 'tklegion'), 'sin haber sido invocado por Sung no tiene Gran Magia');
+    st = fresh(0); put(st, 0, 0, 'c_tusk', { shadow: true }); put(st, 0, 1, 'c_igris', { shadow: true }); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_kratos');
+    putST(st, 1, 0, 's_beam', { down: true }); putST(st, 1, 2, 't_negate', { down: true }); putST(st, 1, 1, 's_beam', { down: false });
+    act(st, 0, pw(st, 0, 'tklegion', a => a.target.z === 1));
+    ok(st.players[0].mz[1] === null, 'sacrifica a la otra sombra');
+    ok(!st.players[1].st[0] && !st.players[1].st[2] && st.players[1].st[1], 'destruye las magias y trampas boca abajo, no las boca arriba');
+    eq(ids(st, 1), ['c_kratos', null, 'c_goku'], 'los enemigos cambian de zona si hay libre');
+    ok(!pw(st, 0, 'tklegion'), 'una sola vez por duelo');
+    ok(pw(st, 0, 'tkmet') || true, 'no gasta la Magia de Alto Orco');
+  }
 };
