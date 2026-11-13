@@ -41,4 +41,27 @@ module.exports = function ({ ok, eq, section }) {
   // temporada nueva: sin escudos
   store.rank = { pts: 450, w: 3, l: 1, best: 450, season: '2000-01', sh: 2 };
   R.state(); ok(store.rank.sh === 0, 'al empezar una temporada nueva los escudos se reinician');
+
+  section('Ranking: partida abandonada (13-11-2026)');
+  {
+    store = { rank: { pts: 500, w: 0, l: 0, best: 500, season: R.seasonId() } };
+    let saves = 0; R.init(() => store, () => { saves++; });
+    const T = 1000;
+    R.arm([500], T);
+    ok(store.rank.open && store.rank.open.t === T && saves > 0 && R.isOpen(T), 'al empezar queda anotada en la cuenta (se guarda en la nube)');
+    // el jugador se va, vuelve días después (otro navegador): cuenta como derrota igualmente
+    ok(R.settle(store.rank.open.foes, T), 'se cobra al volver, sin importar cuánto tarde');
+    eq(store.rank.pts, 500 - 24, 'pierde los puntos de una derrota');
+    ok(!store.rank.open && store.rank.l === 1, 'la nota se borra y cuenta una derrota');
+    ok(!R.settle([500], T) && store.rank.pts === 500 - 24, 'la misma partida nunca se cobra dos veces');
+    // terminar con normalidad borra la nota y no deja nada por cobrar
+    R.arm([500], 2000); R.disarm();
+    ok(!store.rank.open && !R.isOpen(2000), 'una partida terminada no deja nota');
+    // otra sesión de la cuenta la cobró primero: la original ya no está abierta (no se puntúa dos veces)
+    R.arm([500], 3000); R.settle([500], 3000);
+    ok(!R.isOpen(3000), 'si ya se cobró como derrota, la sesión original lo detecta');
+    // valores raros no rompen nada
+    R.arm(['x', -5, 1e9, null], 4000);
+    ok(store.rank.open.foes.every(f => f >= 0 && f <= 5000), 'los rivales anotados se sanean');
+  }
 };

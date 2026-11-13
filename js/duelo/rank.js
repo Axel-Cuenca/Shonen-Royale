@@ -125,6 +125,24 @@
     return { before, after: r.pts, delta: r.pts - before, from: bt, to: at, rankUp, rankDown, shielded, shields: r.sh };
   }
 
+  // ---------------- partida abierta (abandonos) ----------------
+  // Al empezar una partida puntuable se anota en la cuenta (nube) que hay una en curso. Si se termina, se borra la nota;
+  // si el jugador se va sin acabar (cierra el navegador, recarga, cambia de dispositivo…), al volver cuenta como derrota,
+  // sin importar cuánto tarde ni desde dónde entre.
+  const cleanFoes = a => (Array.isArray(a) ? a : []).slice(0, 8).map(x => Math.max(0, Math.min(MAX_PTS, Math.floor(Number(x)) || 0)));
+  function arm(foes, t) { const r = state(); if (!r) return; r.open = { t, foes: cleanFoes(foes) }; saveStore(); }
+  /** ¿Sigue anotada la partida abierta `t`? (si otra sesión ya la cobró como derrota, no se puntúa dos veces) */
+  const isOpen = t => { const r = state(); return !!(r && r.open && r.open.t === t); };
+  /** La partida terminó con normalidad: se borra la nota (el resultado se aplica aparte). */
+  function disarm() { const r = state(); if (r && r.open) delete r.open; }
+  /** Cobra como derrota la partida `t` que quedó abierta (una sola vez por partida). */
+  function settle(foes, t) {
+    const r = state(); if (!r || (t != null && r.settledT === t)) return false;
+    delete r.open; if (t != null) r.settledT = t;
+    apply({ S: 0, foes: cleanFoes(foes) });
+    return true;
+  }
+
   // ---------------- tabla pública (Firestore) ----------------
   const fsOf = () => { try { const f = D.Account.firebase().fb; return D.Account.cloud && f ? f.firestore() : null; } catch (e) { return null; } };
   const uidOf = () => { try { const u = D.Account.user; return u && !u.guest ? u.uid : null; } catch (e) { return null; } };
@@ -148,5 +166,5 @@
     } catch (e) { lastErr = e.code || e.message; return { ok: false, error: e.code === 'permission-denied' ? 'denied' : (e.code || 'error') }; }
   }
 
-  D.Rank = { SHIELDS, WIN_MAX, LOSS_MAX, TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, pending, claim, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
+  D.Rank = { SHIELDS, WIN_MAX, LOSS_MAX, TIERS, ROMAN, TIER_SIZE, STEP, GM, tierOf, seasonId, seasonName, daysLeft, softReset, expected, delta, scoreOfPlace, init, state, me, apply, arm, isOpen, disarm, settle, pending, claim, publish, top, get denied() { return denied; }, get lastErr() { return lastErr; } };
 })();
