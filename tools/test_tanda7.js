@@ -860,4 +860,46 @@ module.exports = function (T) {
     ok(!L(st, 1).some(a => a.t === 'spow' && a.pw === 'sellolib'), 'sin un personaje que cumpla las condiciones no se libera (y no se consume)');
     ok(st.players[1].st[0] && st.players[1].st[0].seal, 'el sello sigue ahí');
   }
+
+  section('Izanagi');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 1, 0, 'c_izanagi', { down: true });
+    st.phase = 'battle'; const n0 = cnt(st), kz = st.players[1].mz[0];
+    act(st, 0, atkA(st, 0, 0, 0));
+    ok(st.pending && st.pending.k === 'respond' && st.pending.player === 1, 'el aliado va a morir: se puede activar Izanagi');
+    act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    ok(st.players[1].mz[0] === kz && st.players[0].mz[0], 'nadie muere: la destrucción se evita');
+    const base = Cards.get('c_kratos').atk;
+    ok(stat(st, 1, 0)[0] === base - 500, 'el protegido pierde 500 ATK');
+    const iz = st.players[1].st[0];
+    ok(iz && !iz.down && iz.iza && iz.iza.eu === st.players[0].mz[0].c.uid, 'Izanagi queda registrada con el atacante');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    ok(st.players[1].izaUsed, 'una vez por duelo');
+    // al turno siguiente puede devolverlo
+    pass(st, 1);
+    st.phase = 'main';
+    const ret = L(st, 1).find(a => a.t === 'spow' && a.pw === 'izaret');
+    ok(ret, 'en mi próximo turno puedo devolver el efecto');
+    act(st, 1, ret); no(st);
+    ok(!st.players[0].mz[0] && grave(st, 0, 'c_goku'), 'el atacante es destruido');
+    ok(grave(st, 1, 'c_izanagi') && !st.players[1].st[0], 'Izanagi va al cementerio');
+    eq(cnt(st), n0, 'sigue sin faltar ninguna carta');
+    // la pérdida de ATK es permanente
+    st = fresh(0); put(st, 0, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 1, 0, 'c_izanagi', { down: true });
+    st.phase = 'battle'; act(st, 0, atkA(st, 0, 0, 0)); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    ok(st.players[1].mz[0].c.izaPen === 500, 'la penalización queda en la carta (sobrevive a salir y reinvocarse)');
+    // si no se usa en ese turno, se pierde
+    pass(st, 1); pass(st, 1);
+    ok(grave(st, 1, 'c_izanagi') && !st.players[1].st[0], 'si no se devuelve en ese turno, se pierde la oportunidad');
+    // sólo una vez por duelo
+    putST(st, 1, 1, 'c_izanagi', { down: true });
+    st.current = 0; st.turn = 12; st.phase = 'battle'; st.pending = null; st.players[0].mz[0].attacked = false; st.players[0].mz[0].atkN = 0; st.players[0].mz[0].atkMod = 5000;
+    st.players[1].mz[0].pos = 'def';
+    act(st, 0, atkA(st, 0, 0, 0));
+    ok(!st.pending || st.pending.k !== 'respond', 'la segunda Izanagi ya no se puede activar');
+    // contra una habilidad
+    st = fresh(0); put(st, 0, 0, 'c_bardock_ssj'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_izanagi', { down: true });
+    const cn = pw(st, 0, 'canon', a => a.target.vs === 1);
+    if (cn) { act(st, 0, cn); ok(st.pending && st.pending.k === 'respond', 'ante un cañón que destruye también se puede'); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st); ok(st.players[1].mz[0], 'Goku se salva'); }
+  }
 };

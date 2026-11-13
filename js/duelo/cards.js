@@ -1171,6 +1171,12 @@
       lore: 'Mediante el Sello de Ocho Trigramas, el usuario puede contener el chakra de una técnica enemiga, impidiendo que su ejecutor vuelva a utilizarla. Posteriormente, puede liberar la técnica sellada y aprovechar su poder en beneficio propio.',
       text: 'Contención de chakra: cuando un enemigo active una habilidad, la sellas: no se resuelve, ese personaje no puede volver a usarla durante esta invocación y el sello queda en el campo. Liberación: una vez, usa esa habilidad con uno de tus personajes como si fuera suya (si cumple sus condiciones y objetivos); después la carta va al cementerio.'
     },
+    {
+      kind: 'trap', id: 'c_izanagi', name: 'Izanagi', icon: '👁️', img: I('izanagi'), triggers: ['destroy'], fx: 'izanagi',
+      lore: 'Izanagi es una técnica prohibida del clan Uchiha que permite alterar la realidad durante un instante. El usuario puede convertir un destino inevitable en una ilusión, evitar su propia derrota y reescribir el resultado del ataque enemigo. Sin embargo, alterar la realidad tiene un precio.',
+      text: 'Reescritura de la Realidad (una vez por duelo): cuando un enemigo vaya a destruir a un aliado con un ataque o una habilidad, evitas la destrucción y registras ese efecto; el aliado pierde 500 ATK para siempre. En tu próximo turno puedes devolver ese mismo efecto contra el personaje enemigo que lo provocó; si no lo haces ese turno, pierdes la oportunidad.',
+      sfx: { use: V('izanagi-use') }
+    },
     spell({
       id: 'c_ojos_shinigami', name: 'Ojos de Shinigami', icon: '👁️', img: I('ojos_shinigami'), fx: 'equip', sub: 'equip', eyesAll: true,
       lore: 'Los Ojos de Shinigami permiten ver más allá de las apariencias y descubrir la verdadera identidad de quienes intentan ocultarse.',
@@ -1182,7 +1188,7 @@
     dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia', 'c_camara_gravedad', 'c_sala_tiempo', 'c_capsulas'],
     jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero', 'c_intercambio_almas', 'c_hilos_destino'],
     marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
-    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei', 'c_sello_trigramas'],
+    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei', 'c_sello_trigramas', 'c_izanagi'],
     deathnote: ['c_death_note', 'c_ojos_shinigami', 'c_contrato_muerte'],
     blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
     pecados: ['c_full_counter', 'c_el_unico', 'c_mandamiento_amor'],
@@ -1238,7 +1244,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

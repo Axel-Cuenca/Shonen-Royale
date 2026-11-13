@@ -1966,6 +1966,7 @@
       if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
+      if (s.iza) return `Izanagi: registró el efecto de ${s.iza.nm || 'un enemigo'}. ${s.iza.armed ? 'Este turno puedes devolvérselo.' : 'En tu próximo turno podrás devolvérselo (sólo ese turno).'}`;
       if (s.seal) return `Sello de Ocho Trigramas: guarda ${(typeof PWN !== 'undefined' && PWN[s.seal.pw]) || s.seal.pw} de ${s.seal.from || 'un enemigo'}. En tu turno puedes liberarla con uno de tus personajes (una vez; después el sello va al cementerio).`;
       if (s.con) return `Contrato de la Muerte: el nombre de ${s.con.tn} está escrito. Faltan ${s.con.n} contador(es) de tiempo (se retira uno al empezar el turno de su dueño); al retirar el último, ese personaje es destruido. Si deja el campo antes, el contrato se descarta.`;
       if (s.thr) return `Hilos del Destino: ${s.thr.id ? nameId(s.thr.id) : 'el personaje'} sigue conectado a los hilos. La próxima vez que use una habilidad, su dueño puede retirar el hilo para anularla.`;
@@ -1985,6 +1986,8 @@
         if (alm.length) acts.push({ label: 'Liberar un efecto guardado…', desc: 'Usa uno de los efectos guardados (1 por turno).', run: () => modal(h('div', { class: 'box' }, h('h2', null, '👻 Gema del Alma'), h('p', { class: 'sub' }, 'Elige el efecto y el objetivo.'),
           h('div', { class: 'acts' }, alm.map(a => { const t = a.target; const tl = !t ? '' : t.u != null ? ' · ' + ((v.me.hand.find(c => c.uid === t.u) || {}).id ? nameId(v.me.hand.find(c => c.uid === t.u).id) : 'carta') : t.z != null ? ' · ' + (t.vs != null ? nameOf(t.vs) + ' ' : '') + 'zona ' + (t.z + 1) : ''; return btn(nameId(s.alma.eff[a.idx]) + tl, () => { closeModal(); act(a); }, 'gold'); }), btn('Cancelar', closeModal, 'ghost')))) });
         for (const a of sw.filter(a => a.pw === 'capliberar')) { const e = (v.me.limbo || []).find(x => x.uid === a.u); acts.push({ label: 'Liberar a ' + (e && e.id ? nameId(e.id) : 'un personaje'), desc: 'Invocación especial sin tributos. Una vez por turno.', run: () => act(a) }); }
+        const izr = sw.find(a => a.pw === 'izaret');
+        if (izr) acts.push({ label: 'Devolver el efecto registrado', desc: `Devuelve contra ${s.iza && s.iza.nm ? s.iza.nm : 'el personaje enemigo'} el efecto que iba a destruir a tu aliado. Sólo en este turno.`, run: () => act(izr) });
         const sel = sw.filter(a => a.pw === 'sellolib');
         if (sel.length) acts.push({ label: 'Liberar la habilidad sellada…', desc: 'Úsala con uno de tus personajes como si fuera suya (una vez).', run: () => {
           const zs = [...new Set(sel.map(a => a.mz))];
@@ -2298,6 +2301,7 @@
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : s.guerrero && s.guerrero.waiting ? '⏳' : '👁️'));
         if (area === 'st' && s.c && s.con) el.append(h('span', { class: 'eqm', title: `Contrato de la Muerte: ${s.con.n} contador(es) de tiempo sobre ${s.con.tn}` }, '⏳' + s.con.n));
+        if (area === 'st' && s.c && s.iza) el.append(h('span', { class: 'eqm', title: 'Izanagi: efecto registrado' }, '👁️'));
         if (area === 'st' && s.c && s.seal) el.append(h('span', { class: 'eqm', title: 'Sello de Ocho Trigramas: tiene una habilidad sellada' }, '☯️'));
         if (area === 'st' && s.c && s.thr) el.append(h('span', { class: 'eqm', title: 'Hilos del Destino: el personaje sigue conectado a los hilos' }, '🧵'));
         cur = curOf(s, area); if (art) cur.art = art;

@@ -163,6 +163,7 @@
     const m = Object.assign({ c: inst, pos: 'atk', down: false, summonedTurn: st.turn, attacked: false, moved: false, atkMod: 0 }, o || {});
     if (def(inst).huge) m.huge = true;
     if (inst.id === 'c_kayn' && !m.kn) m.kn = { rh: false, sh: false };      // transformaciones de Kayn desbloqueadas
+    if (inst.izaPen) addMod(st, m, 'iza', -inst.izaPen, 0, 0);               // Izanagi: el precio de alterar la realidad no se recupera nunca
     if (inst.keep && inst.keep.length) {                                      // Sylas y Venom conservan lo que aprendieron durante toda la partida
       m.ext = (m.ext || []).slice(); m.extFrom = Object.assign({}, m.extFrom);
       for (const k of inst.keep) if (!m.ext.includes(k.id) && !(C().get(inst.id).ab || []).includes(k.id)) { m.ext.push(k.id); m.extFrom[k.id] = k.from || null; }
@@ -2462,6 +2463,7 @@
       if (d.fx === 'kamui' && !(cont && cont.vic && st.players[cont.vic.p].mz[cont.vic.z] && st.team[cont.vic.p] === st.team[resp])) return;
       if (d.fx === 'contrato' && !(zonesWith(R.mz).length && !isInk(st.players[st.summon.p].mz[st.summon.z]) && !st.players[st.summon.p].mz[st.summon.z].ghost)) return;      // Contrato de la Muerte: necesita un personaje propio en el campo
       if (d.fx === 'hilos' && !hilosOpts(st, resp).length) return;
+      if (d.fx === 'izanagi' && !(cont && cont.vic && (cont.k === 'kcombat' || cont.k === 'gpower') && st.team[cont.vic.p] === st.team[resp] && !R.izaUsed && st.players[cont.vic.p].mz[cont.vic.z])) return;      // Izanagi: una vez por duelo, sólo ante un ataque o una habilidad
       if (d.fx === 'sello' && !(cont && cont.k === 'power' && cont.pa && PW_ABID[cont.pa.pw] && st.players[cont.by].mz[cont.pa.zone])) return;      // Sello de Ocho Trigramas: sólo ante una habilidad enemiga conocida
       if ((d.fx === 'unico' || d.fx === 'tsukuyomi' || d.fx === 'amor') && !(st.atk && st.atk.target !== 'direct' && st.players[st.atk.vs].mz[st.atk.target])) return;
       r.push(z);
@@ -2709,6 +2711,20 @@
         if (A > D) {
           for (const x of [at, dm]) (x.binds = x.binds || []).push({ atk: true, abt: true, n: 1, t0: st.turn, nm: 'el Mandamiento del Amor' });
           log(st, resp, `${mdef(at).name} (${A} ATK) supera a ${dm.down ? 'su objetivo' : mdef(dm).name} (${D} ATK): ambos quedan inmovilizados 1 turno completo (no atacan ni usan habilidades contra otros personajes)`);
+        }
+        break;
+      }
+      case 'izanagi': {                   // Izanagi: reescritura de la realidad
+        const c = pd && pd.cont, v = c && c.vic, vm = v && st.players[v.p].mz[v.z];
+        if (!c || !vm) break;
+        const att = c.k === 'kcombat' ? { p: c.a.p, z: c.a.z } : { p: c.by, z: c.pa && c.pa.zone }, em = att.z != null && st.players[att.p] && st.players[att.p].mz[att.z];
+        c.cancel = true; if (c.k === 'kcombat') c.kamui = true;
+        st.players[resp].izaUsed = true;
+        vm.c.izaPen = (vm.c.izaPen || 0) + 500; addMod(st, vm, 'iza', -500, 0, 0);
+        log(st, resp, `Izanagi: ${vm.down ? 'el personaje' : mdef(vm).name} evita la destrucción (la realidad se reescribe) y pierde 500 ATK para siempre`);
+        if (em && !isInk(em)) {
+          const k = keepTrap(st, resp, pd.tuid, { iza: { kind: c.k === 'kcombat' ? 'attack' : 'power', eu: em.c.uid, pw: c.pa && c.pa.pw, nm: mdef(em).name, t0: st.turn, armed: null } });
+          if (k) log(st, resp, `El efecto de ${mdef(em).name} queda registrado: podrás devolvérselo en tu próximo turno`);
         }
         break;
       }
@@ -3339,6 +3355,7 @@
       }
       if (s.tobiNA && st.turn > s.tobiNA.t) delete s.tobiNA;
     }
+    for (let i = 0; i < ZONES; i++) { const is = P.st[i]; if (is && is.iza && is.iza.armed === st.turn) { P.st[i] = null; P.grave.push(is.c); log(st, st.current, 'Izanagi: no se usó la devolución a tiempo; la oportunidad se pierde'); } }
     for (const Q of st.players) for (const x of Q.mz) if (x) {          // Intercambio de Almas y Hilos del Destino
       if (x.puppet) delete x.puppet;
       if (x.soulOff && x.soulOff.by === st.current) { delete x.soulOff; log(st, st.current, `${mdef(x).name} recupera sus habilidades`); }
@@ -3380,6 +3397,7 @@
     { const CP = st.players[st.current];       // El Contrato de la Muerte: un contador menos al empezar el turno de su dueño
       for (let i = 0; i < ZONES; i++) {
         const cs = CP.st[i];
+        if (cs && cs.iza && cs.iza.armed == null && st.turn > cs.iza.t0) cs.iza.armed = st.turn;      // Izanagi: ya es tu próximo turno
         if (!cs || !cs.con) continue;
         const tg = findByUid(st, cs.con.tu);
         if (!tg) { CP.st[i] = null; CP.grave.push(cs.c); log(st, st.current, `Contrato de la Muerte: ${cs.con.tn} dejó el campo; la sentencia pierde su objetivo`); continue; }
@@ -4034,7 +4052,7 @@
   function seedList(st, q, z, doIt, extra) {
     const m = st.players[q].mz[z], out = [];
     if (!m || m.down) return out;
-    const neg = (m.mods || []).filter(x => (x.atk < 0 || x.def < 0) && x.k !== 'voto');
+    const neg = (m.mods || []).filter(x => (x.atk < 0 || x.def < 0) && x.k !== 'voto' && x.k !== 'iza');
     for (const x of neg) out.push(SEEDN[x.k] || x.k);
     if (m.sealed && m.sealed.length) out.push('Telarañas');
     if (m.promesa) out.push('Promesa de Poder');
@@ -4064,7 +4082,7 @@
   function negList(st, q, z) {
     const m = st.players[q].mz[z], out = [];
     if (!m || m.down) return out;
-    (m.mods || []).forEach((x, i) => { if ((x.atk < 0 || x.def < 0) && x.k !== 'voto') out.push({ k: 'mod' + i, nm: SEEDN[x.k] || 'una reducción de estadísticas', rm: () => { m.mods = m.mods.filter(y => y !== x); } }); });
+    (m.mods || []).forEach((x, i) => { if ((x.atk < 0 || x.def < 0) && x.k !== 'voto' && x.k !== 'iza') out.push({ k: 'mod' + i, nm: SEEDN[x.k] || 'una reducción de estadísticas', rm: () => { m.mods = m.mods.filter(y => y !== x); } }); });
     if (m.sealed && m.sealed.length) out.push({ k: 'sealed', nm: 'las Telarañas', rm: () => { delete m.sealed; } });
     if (m.promesa) out.push({ k: 'promesa', nm: 'la Promesa de Poder', rm: () => { delete m.promesa; st.corrupt = (st.corrupt || []).filter(c => c.uid !== m.c.uid); } });
     if (m.exh) out.push({ k: 'exh', nm: 'el agotamiento', rm: () => { delete m.exh; } });
@@ -4098,6 +4116,10 @@
       }
       if (def(s.c).fx === 'capsulas' && s.capT !== st.turn && P.mz.some(x => !x)) {      // Cápsulas Hoi-Poi: libera una
         for (const e of (st.limbo || [])) if (e.kind === 'cap' && e.cap === s.c.uid && e.p === p && spot(P, mdef(e.m)) >= 0) out.push({ t: 'spow', zone: z, pw: 'capliberar', u: e.m.c.uid });
+      }
+      if (s.iza && s.iza.armed === st.turn && st.current === p && st.phase === 'main') {      // Izanagi: devolver el efecto registrado
+        const t = findByUid(st, s.iza.eu), mx = { canon: 7, tm: 4, cuerno: 4 }[s.iza.pw];
+        if (t && st.team[t.p] !== st.team[p] && canTarget(st, p, t.p, t.z) && !(mx && lvl(t.m) > mx)) out.push({ t: 'spow', zone: z, pw: 'izaret' });
       }
       if (s.seal && s.seal.ab && st.current === p && st.phase === 'main') {      // Sello de Ocho Trigramas: libera la habilidad con uno de tus personajes
         P.mz.forEach((m, mz) => {
@@ -5295,6 +5317,14 @@
       entered(st, p, z);
       return;
     }
+    if (a.pw === 'izaret') {
+      const t = s.iza && findByUid(st, s.iza.eu);
+      if (!t) return;
+      P.st[a.zone] = null; P.grave.push(s.c);
+      log(st, p, `${nm}: devuelve el efecto contra ${mdef(t.m).name}`);
+      destroyMonster(st, t.p, t.z, { src: s.iza.kind === 'attack' ? 'combat' : 'power', bp: p, pw: s.iza.pw });
+      return;
+    }
     if (a.pw === 'sellolib') {
       const sl = s.seal, m = P.mz[a.mz];
       if (!sl || !m || !a.act) return;
@@ -6121,7 +6151,8 @@
     const v = { down: !!s.down, c: { uid: s.c.uid, id: s.c.id }, setTurn: s.setTurn, equipTo: s.equipTo };
     if (s.inv) v.inv = true;      // contador de investigación de Near
     if (s.con) v.con = { n: s.con.n, tn: s.con.tn };      // Contrato de la Muerte
-    if (s.seal) v.seal = { pw: s.seal.pw, from: s.seal.from };      // Sello de Ocho Trigramas
+    if (s.seal) v.seal = { pw: s.seal.pw, from: s.seal.from };
+    if (s.iza) v.iza = { nm: s.iza.nm, kind: s.iza.kind, armed: s.iza.armed === st.turn };      // Izanagi      // Sello de Ocho Trigramas
     if (s.thr) { const th = findByUid(st, s.thr.tu); v.thr = { id: th ? th.m.c.id : null }; }      // Hilos del Destino
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };
