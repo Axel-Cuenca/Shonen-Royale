@@ -1263,7 +1263,7 @@
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
     7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi', 'robo_sombras', 'shisui']
   };
-  const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
+  const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6, 7];
   const TANDA_OF = {};
   for (const t of TANDAS) for (const k of TANDA_IDS[t]) TANDA_OF['c_' + k] = t;
   /** Tanda de una carta (las que no están en la lista, p. ej. las de prueba, son libres como la tanda 1). */

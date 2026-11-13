@@ -1819,6 +1819,10 @@ html.rm .pkc { animation-duration: .01s; }
 .t6 .foil { background: radial-gradient(ellipse at 50% 42%, #7a2bd855 0%, transparent 62%), radial-gradient(ellipse at 50% 110%, #ff335555 0%, transparent 55%), linear-gradient(160deg, #2b2036, #0b0710 70%); }
 .t6 .foil .lines { opacity: .28; background: repeating-linear-gradient(90deg, #b07bff22 0 2px, transparent 2px 9px); }
 .t6 .num { text-shadow: 0 2px 0 #3a0a18, 0 0 16px #ff3355; }
+.t7 { --c1: #0f4a48; --c2: #050f14; --c3: #b8fff0; --glow: #3ee6c0; }
+.t7 .foil { background: radial-gradient(ellipse at 50% 44%, #3ee6c04d 0%, transparent 60%), radial-gradient(ellipse at 50% 112%, #7a5bff55 0%, transparent 55%), linear-gradient(160deg, #0f4a48, #050f14 72%); }
+.t7 .foil .lines { opacity: .3; background: repeating-linear-gradient(90deg, #8ffbe322 0 2px, transparent 2px 9px); }
+.t7 .num { text-shadow: 0 2px 0 #03282a, 0 0 16px #3ee6c0; }
 .pkstage { position: relative; height: 330px; display: grid; place-items: center; }
 .pkstage .pk { pointer-events: none; } .pkstage .foil { width: 200px; animation: pkFloat 3.2s ease-in-out infinite; }
 @keyframes pkFloat { 50% { transform: translateY(-9px) rotate(.8deg); } }
