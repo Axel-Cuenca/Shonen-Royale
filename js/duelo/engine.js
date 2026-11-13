@@ -641,6 +641,7 @@
   function limboTick(st, hook) {
     if (!st.limbo || !st.limbo.length) return;
     st.limbo = st.limbo.filter(e => {
+      if (e.kind === 'cap') return true;
       const due = e.kind === 'rounds' ? hook === 'start' && elapsed(st, e.t0) >= e.n
         : e.kind === 'start' ? hook === 'start' && st.current === e.p && st.turn > e.t0
           : hook === 'end' && st.current === e.p && st.turn > e.t0;
@@ -778,6 +779,7 @@
     if (!m) return false;
     const ab = abil(st, m), nm = mdef(m).name;
     const fromCard = ctx.src === 'spell' || ctx.src === 'trap';
+    if (m.cprot != null && elapsed(st, m.cprot) <= 0 && ctx.src !== 'combat' && ctx.src !== 'mark' && ctx.bp != null && st.team[ctx.bp] !== st.team[p]) { log(st, p, `${nm} está protegido por la cápsula: ningún efecto enemigo lo destruye`); return false; }
     if (m.gres && ctx.src === 'spell') { log(st, p, `${nm} resiste la magia enemiga: no puede destruirlo`); return false; }
     if (!ctx.all && (ctx.src === 'spell' || ctx.src === 'trap' || ctx.src === 'power') && escStage(st, m).k === 'amanecer') { log(st, p, `${nm} está en el Amanecer: ningún efecto que lo elija puede destruirlo`); return false; }
     if (m.six && !ctx.ignoreSix && ctx.src !== 'mark') { log(st, p, `${nm} es intocable: los Seis Ojos lo protegen`); return false; }
@@ -1244,7 +1246,7 @@
   /** Rika Orimoto (Protección Absoluta): las magias y trampas no pueden elegirla ni afectarla. */
   const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot') && !isInk(P.mz[z]));
   const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
-  const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1, alma: 1 };
+  const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1, alma: 1, capsulas: 1 };
   /** Gema del Tiempo: hay una instantánea del campo propio de hace un turno propio. */
   const canRewind = (st, p) => st.current === p && !!(st.players[p].snaps && st.players[p].snaps.length >= 2);
   /** Restaura SOLO el campo propio (monstruos y magias/trampas) al estado que tenía al empezar su turno anterior.
@@ -1350,6 +1352,16 @@
         const c = P.grave.filter(i => def(i).kind === 'monster' && spot(P, def(i)) >= 0);
         if (c.length) st.pending = { k: 'pick', player: p, zone: 'grave', cands: c.map(i => i.uid), cont: 'revive' };
       }
+    },
+    // Cápsulas Hoi-Poi: magia continua que guarda hasta 2 aliados fuera del campo (la lógica está en continueSpell / spowerActs / sweep)
+    capsulas: {
+      targets: (st, p) => {
+        const zs = rikaOwn(st, st.players[p]).filter(z => !st.players[p].mz[z].wide && !isInk(st.players[p].mz[z]) && !(st.players[p].mz[z].owner != null && st.players[p].mz[z].owner !== p)), out = [];
+        for (const z of zs) out.push({ z });
+        for (let i = 0; i < zs.length; i++) for (let j = i + 1; j < zs.length; j++) out.push({ z: zs[i], z2: zs[j] });
+        return out;
+      },
+      resolve: () => { /* se coloca en continueSpell */ }
     },
     // Cámara de Gravedad: un aliado entrena 2 turnos (no ataca ni cambia de posición) y elige una recompensa
     gravedad: {
@@ -2180,6 +2192,7 @@
         okp = okp && !!tm && !tm.down && !has(st, tm, 'rikaprot');
         if (okp) slot.gem = { vs: tv, uid: tm.c.uid, uses: 0, usedTurn: -1 };
       }
+      if (d.fx === 'capsulas') okp = okp && !!P.mz[t && t.z];
       if (d.fx === 'storm') slot.storm = { usedTurn: -1 };
       if (d.fx === 'alma') slot.alma = { t0: st.turn, eff: [], usedTurn: -1 };
       if (d.fx === 'guerrero') slot.guerrero = { waiting: true };
@@ -2202,6 +2215,10 @@
         return;
       }
       P.st[z] = slot;
+      if (d.fx === 'capsulas') {                         // Cápsulas Hoi-Poi: guarda hasta 2 aliados
+        for (const zz of [t && t.z, t && t.z2]) if (zz != null && P.mz[zz] && toLimbo(st, ch.p, zz, 'cap', 0, 'Cápsulas Hoi-Poi')) st.limbo[st.limbo.length - 1].cap = ch.inst.uid;
+        return;
+      }
       if (ch.stolen) {                                   // Precio del poder: 4-5★ pierden la mitad de su ATK/DEF base y sus habilidades
         const bm = P.mz[ch.stolen.bz];
         if (bm && lvl(bm) <= 5 && !bm.price) { bm.price = true; log(st, ch.p, `Precio del poder: ${mdef(bm).name} pierde la mitad de su ATK y DEF base y sus habilidades`); }
@@ -3183,6 +3200,17 @@
         else if (s.karma && s.karma.phase === 'foe' && !findByUid(st, s.karma.foeUid)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'Karma termina: el enemigo dejó el campo'); }
       }
     }
+    if (st.limbo && st.limbo.some(e => e.kind === 'cap')) {      // Cápsulas Hoi-Poi: si la carta se va del campo, lo guardado vuelve (o va al cementerio)
+      st.limbo = st.limbo.filter(e => {
+        if (e.kind !== 'cap') return true;
+        const P = st.players[e.p];
+        if (P.st.some(x => x && x.c.uid === e.cap && !x.down)) return true;
+        const z = spot(P, mdef(e.m));
+        if (z >= 0) { P.mz[z] = e.m; e.m.attacked = false; e.m.atkN = 0; e.m.moved = false; log(st, e.p, `${mdef(e.m).name} sale de la cápsula y vuelve al campo`); }
+        else { const O = st.players[e.m.owner != null ? e.m.owner : e.p]; O.grave.push(e.m.c); for (const l of (e.m.link || [])) st.players[l.by != null ? l.by : (e.m.owner != null ? e.m.owner : e.p)].grave.push(l); log(st, e.p, `${mdef(e.m).name} no tiene sitio al salir de la cápsula: va al cementerio`); }
+        return false;
+      });
+    }
     if (st.domain && !findByUid(st, st.domain.uid)) { st.domain = null; log(st, -1, 'El dominio termina'); }
     for (let p = 0; p < st.n; p++) {                    // Guantelete: sin gema robada equipada, el portador recupera su poder y sus habilidades
       const P = st.players[p];
@@ -3260,6 +3288,7 @@
     const m = st.players[q].mz[z];
     if (!m || isInk(m)) return false;      // las bestias de tinta de Sai no se eligen con nada (no son cartas: no se absorben, roban ni encierran)
     if (m.six && !(o && o.ignoreSix)) return false;
+    if (m.cprot != null && elapsed(st, m.cprot) <= 0 && st.team[byP] !== st.team[q]) return false;      // Cápsulas Hoi-Poi: protegido contra efectos enemigos
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
     if (m.god && st.team[byP] !== st.team[m.god.p]) return false;      // Poder de Dios: sólo interactúa el equipo de Vegeta Dios
     if ((abMode || (o && o.ab)) && abImmune(st, byP, q, m, o)) return false;
@@ -3658,6 +3687,9 @@
             for (const tz of zonesWith(st.players[q].mz)) if (!(q === tg.p && tz === tg.z)) out.push({ t: 'spow', zone: z, pw: 'gematk', target: { vs: q, z: tz } });
           }
         }
+      }
+      if (def(s.c).fx === 'capsulas' && s.capT !== st.turn && P.mz.some(x => !x)) {      // Cápsulas Hoi-Poi: libera una
+        for (const e of (st.limbo || [])) if (e.kind === 'cap' && e.cap === s.c.uid && e.p === p && spot(P, mdef(e.m)) >= 0) out.push({ t: 'spow', zone: z, pw: 'capliberar', u: e.m.c.uid });
       }
       if (s.alma && s.alma.usedTurn !== st.turn) {      // Gema del Alma: libera uno de los efectos guardados
         s.alma.eff.forEach((id, idx) => {
@@ -4670,6 +4702,19 @@
   }
   function doSpower(st, p, a) {
     const P = st.players[p], s = P.st[a.zone], nm = def(s.c).name;
+    if (a.pw === 'capliberar') {
+      const i = (st.limbo || []).findIndex(e => e.kind === 'cap' && e.cap === s.c.uid && e.m.c.uid === a.u);
+      if (i < 0) return;
+      const e = st.limbo[i], z = spot(P, mdef(e.m));
+      if (z < 0) return;
+      st.limbo.splice(i, 1);
+      s.capT = st.turn;
+      P.mz[z] = e.m; e.m.attacked = false; e.m.atkN = 0; e.m.moved = false; e.m.summonedTurn = st.turn;
+      log(st, p, `${mdef(e.m).name} sale de la cápsula`);
+      if (elapsed(st, e.t0) >= 2) { e.m.cprot = st.turn; log(st, p, `${mdef(e.m).name} estuvo guardado 2 turnos: protección contra efectos enemigos hasta el final de su siguiente turno`); }
+      entered(st, p, z);
+      return;
+    }
     if (a.pw === 'almaus') {
       const id = s.alma.eff.splice(a.idx, 1)[0], cd = C().get(id);
       s.alma.usedTurn = st.turn;
@@ -5392,7 +5437,7 @@
       shadow: P.mz.map((s, z) => shadowOf(P, z)),
       st: P.st.map(s => stView(s, own || peek, st)),
       sealed: (P.sealed || []).slice(),
-      limbo: (st.limbo || []).filter(e => e.p === p).map(e => ({ id: own || peek || !e.m.down ? eid(e.m) : null, why: e.why, wait: !!e.wait }))
+      limbo: (st.limbo || []).filter(e => e.p === p).map(e => ({ uid: own || peek || !e.m.down ? e.m.c.uid : null, cap: e.cap || null, id: own || peek || !e.m.down ? eid(e.m) : null, why: e.why, wait: !!e.wait }))
     };
   }
   /** Lo que ve el jugador `seat`: su mano y sus cartas boca abajo, y nada del rival que esté oculto. */

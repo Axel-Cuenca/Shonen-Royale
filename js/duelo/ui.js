@@ -1635,6 +1635,17 @@
             btn('Cancelar', closeModal, 'ghost')));
         }, 'Edo Tensei: elige al personaje que se sacrifica');
       }
+      if (d.fx === 'capsulas') {            // 1) el primer aliado, 2) opcionalmente un segundo
+        const firsts = [...new Set(list.map(a => a.target.z))];
+        return pickTargets(firsts.map(z => ({ seat: v.seat, area: 'mz', z })), t1 => {
+          const solo = list.find(a => a.target.z === t1.z && a.target.z2 == null), partners = [...new Set(list.filter(a => (a.target.z === t1.z && a.target.z2 != null) || a.target.z2 === t1.z).map(a => (a.target.z === t1.z ? a.target.z2 : a.target.z)))];
+          if (!partners.length) return act(solo);
+          modal(h('div', { class: 'box' }, h('h2', null, '💊 ¿Guardas también a otro aliado?'), h('p', { class: 'sub' }, 'Puedes guardar hasta 2 personajes.'),
+            h('div', { class: 'acts', style: 'flex-direction:column;align-items:stretch;gap:8px' }, btn('Sólo a ' + nameId((v.me.mz[t1.z] || {}).c ? v.me.mz[t1.z].c.id : ''), () => { closeModal(); act(solo); }, 'gold'),
+              partners.map(z2 => btn('También a ' + nameId((v.me.mz[z2] || {}).c ? v.me.mz[z2].c.id : ''), () => { closeModal(); act(list.find(a => (a.target.z === t1.z && a.target.z2 === z2) || (a.target.z === z2 && a.target.z2 === t1.z))); }, 'gold'))),
+            btn('Cancelar', closeModal, 'ghost')));
+        }, 'Elige el primer aliado que guardas');
+      }
       if (d.fx === 'cana') return chooseGrave(list.map(a => a.target.u), u => act(list.find(a => a.target.u === u)), 'Elige el personaje desterrado que vuelve a tu mano', 'banish');
       if (d.fx === 'botiquin') return pickTargets(list.map(a => ({ seat: a.target.vs, area: 'mz', z: a.target.z })), t => act(list.find(a => a.target.vs === t.seat && a.target.z === t.z)), 'Botiquín: elige al personaje que curas (tuyo o rival)');
       if (d.fx === 'ultratumba') {        // primero el personaje del cementerio (de cualquier jugador) y luego a quién ataca
@@ -1933,6 +1944,7 @@
         const alm = sw.filter(a => a.pw === 'almaus');
         if (alm.length) acts.push({ label: 'Liberar un efecto guardado…', desc: 'Usa uno de los efectos guardados (1 por turno).', run: () => modal(h('div', { class: 'box' }, h('h2', null, '👻 Gema del Alma'), h('p', { class: 'sub' }, 'Elige el efecto y el objetivo.'),
           h('div', { class: 'acts' }, alm.map(a => { const t = a.target; const tl = !t ? '' : t.u != null ? ' · ' + ((v.me.hand.find(c => c.uid === t.u) || {}).id ? nameId(v.me.hand.find(c => c.uid === t.u).id) : 'carta') : t.z != null ? ' · ' + (t.vs != null ? nameOf(t.vs) + ' ' : '') + 'zona ' + (t.z + 1) : ''; return btn(nameId(s.alma.eff[a.idx]) + tl, () => { closeModal(); act(a); }, 'gold'); }), btn('Cancelar', closeModal, 'ghost')))) });
+        for (const a of sw.filter(a => a.pw === 'capliberar')) { const e = (v.me.limbo || []).find(x => x.uid === a.u); acts.push({ label: 'Liberar a ' + (e && e.id ? nameId(e.id) : 'un personaje'), desc: 'Invocación especial sin tributos. Una vez por turno.', run: () => act(a) }); }
         const sto = sw.filter(a => a.pw === 'storm1' || a.pw === 'storm2');
         if (sto.length) acts.push({ label: 'Usar la tormenta…', run: () => stormFlow(sto) });
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);

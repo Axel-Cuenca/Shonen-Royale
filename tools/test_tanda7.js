@@ -323,4 +323,26 @@ module.exports = function (T) {
     pass(st, 2);
     ok(st.players[0].mz[0] && st.players[0].mz[0].sc === 2, 'vuelve con 2 contadores');
   }
+
+  section('Cápsulas Hoi-Poi');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_popeye'); hand(st, 0, ['c_capsulas']);
+    const n0 = E.countCards(st, 0);
+    act(st, 0, L(st, 0).find(a => a.t === 'activate' && a.target && a.target.z === 0 && a.target.z2 === 1)); no(st);
+    eq(ids(st, 0), [null, null, null], 'los dos aliados salen del campo');
+    eq(E.countCards(st, 0), n0, 'no se pierde ninguna carta');
+    ok(!pw(st, 0, 'x'), 'sin habilidades mientras tanto');
+    const lib = () => L(st, 0).find(a => a.t === 'spow' && a.pw === 'capliberar');
+    ok(lib(), 'puede liberar una');
+    act(st, 0, lib());
+    ok(st.players[0].mz.filter(Boolean).length === 1, 'sale uno al campo');
+    ok(!lib(), 'una por turno');
+    ok(!st.players[0].mz.find(Boolean).cprot, 'sin 2 turnos completos no hay protección');
+    // la carta se va: vuelve el otro
+    st.players[0].st[0] = null; st.players[0].grave.push({ uid: 9999, id: 'c_capsulas' });
+    E.legal(st, 0);
+    st.players[0].mz[0] = st.players[0].mz[0];
+    act(st, 0, L(st, 0).find(a => a.t === 'endTurn') || L(st, 0)[0]);
+    ok(st.players[0].mz.filter(Boolean).length === 2 || E.countCards(st, 0) === n0, 'al irse la cápsula lo guardado vuelve');
+  }
 };

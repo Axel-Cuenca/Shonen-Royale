@@ -971,6 +971,12 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     spell({
+      id: 'c_capsulas', name: 'Cápsulas Hoi-Poi', icon: '💊', img: I('capsulas'), fx: 'capsulas', sub: 'cont',
+      lore: 'Las Cápsulas Hoi-Poi permiten almacenar objetos y vehículos de gran tamaño en pequeños recipientes. Gracias a esta tecnología, podés guardar temporalmente a tus personajes y liberarlos cuando llegue el momento adecuado para combatir.',
+      text: 'Tecnología Compactada: guarda hasta 2 aliados fuera del campo (nada los afecta). Una vez por turno liberas uno (invocación especial, sin tributos) en una zona libre. Si estuvo guardado 2 turnos completos, al salir queda protegido de efectos enemigos hasta el final de tu siguiente turno. Si la carta se va del campo, lo guardado vuelve a zonas libres y lo que no quepa va al cementerio.',
+      sfx: { use: V('capsulas-use') }
+    }),
+    spell({
       id: 'c_camara_gravedad', name: 'Cámara de Gravedad', icon: '🌀', img: I('camara_gravedad'), fx: 'gravedad',
       lore: 'La Cámara de Gravedad permite someter a un guerrero a un entrenamiento extremo, aumentando la presión gravitatoria para llevar su cuerpo y sus habilidades más allá de sus límites. Sin embargo, el entrenamiento exige concentración absoluta: cualquier interrupción puede arruinar el progreso.',
       text: 'Entrenamiento de Gravedad: un aliado entrena 2 turnos (no ataca ni cambia de posición; gana 1 contador al empezar tu turno). Con 2 contadores elige: Velocidad (sus ataques no son afectados por trampas), Resistencia (inmune a las magias enemigas) o Poder (+900 ATK y sus ataques ignoran las bonificaciones del enemigo). Sobreexigencia: si una habilidad enemiga lo afecta, pierde sus contadores.'
@@ -1023,7 +1029,7 @@
   ];
   // Tipo (serie) de las magias y trampas: sólo informativo (2026-11-12), no cambia ninguna regla. Las que no son de una serie del juego son «normal».
   const ST_TYPE = {
-    dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia', 'c_camara_gravedad', 'c_sala_tiempo'],
+    dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia', 'c_camara_gravedad', 'c_sala_tiempo', 'c_capsulas'],
     jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero'],
     marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
     naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei'],
@@ -1082,7 +1088,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};
