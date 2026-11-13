@@ -205,4 +205,28 @@ module.exports = function (T) {
     ok(!st.players[1].st[0], 'Rayo destruye una carta boca abajo');
     ok(!pw(st, 0, 'kzfuego'), 'una máscara por turno');
   }
+
+  section('Hakari');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_hakari'); put(st, 1, 0, 'c_popeye');
+    ok(!pw(st, 0, 'hruleta'), 'sin dominio no hay ruleta');
+    act(st, 0, pw(st, 0, 'hakdom'));
+    ok(st.domain && st.domain.uid === st.players[0].mz[0].c.uid, 'abre su dominio');
+    act(st, 0, pw(st, 0, 'hruleta'));
+    const hl = st.players[0].mz[0].hl;
+    ok(hl >= 1 && hl <= 3, 'gana de 1 a 3 cargas');
+    eq(stat(st, 0, 0)[0], 1900 + 500 + 500 * hl, '+500 ATK por carga (más los +500 propios de su dominio)');
+    ok(!pw(st, 0, 'hruleta'), 'un giro por turno');
+    // vida extra evita la destrucción
+    const before = st.players[0].mz[0].hl;
+    E.apply && 0;
+    // frecuencias aproximadas
+    const c = [0, 0, 0, 0];
+    for (let i = 0; i < 300; i++) { const s2 = fresh(0); s2.seed = i * 977 + 3; put(s2, 0, 0, 'c_hakari'); act(s2, 0, pw(s2, 0, 'hakdom')); act(s2, 0, pw(s2, 0, 'hruleta')); c[s2.players[0].mz[0].hl]++; }
+    ok(c[1] > 60 && c[2] > 60 && c[3] > 60, 'los tres resultados salen con frecuencia parecida ' + c.join('/'));
+    // vidas extra
+    st = fresh(1); put(st, 0, 0, 'c_hakari', { hl: 2 }); put(st, 1, 0, 'c_popeye'); st.players[1].mz[0].atkMod = 3000; st.phase = 'battle'; st.turn = 7; st.current = 1;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    ok(st.players[0].mz[0] && st.players[0].mz[0].hl === 1, 'sobrevive y gasta una vida extra');
+  }
 };

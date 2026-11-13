@@ -234,11 +234,13 @@
     kzmask: ['Máscaras Elementales', 'Una vez por turno, elige una máscara: Fuego (un enemigo pierde 400 ATK), Viento (+500 ATK en su próximo combate), Rayo (destruye una magia o trampa rival, aunque esté boca abajo) o Agua (ningún efecto enemigo lo afecta durante su ataque).'],
     kzhilos: ['Hilos de Costura', 'Cuando un aliado iba a ser destruido, Kakuzu puede gastar un corazón adicional para evitarlo (comparte el límite de un corazón por turno).'],
     kzult: ['Último Corazón', 'Al perder todos sus corazones adicionales gana +600 ATK y un ataque adicional ese turno (una sola vez).'],
+    hakdom: ['Expansión de Dominio: Apuesta Mortal', 'Abre su dominio (reglas normales de los dominios: 2 turnos, sólo usan habilidades los de igual o más estrellas, sin magias ni trampas). Mientras dure, una vez por turno gira una ruleta (1/3 cada resultado): Sin premio 1 carga, Casi Jackpot 2, Jackpot 3. Cada carga da 1 vida extra (evita una destrucción) y +500 ATK durante 2 turnos; cada carga cuenta su propia duración.'],
     rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
     rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
     rengarcaza: ['Emoción de la Cacería', 'Una vez cada 2 turnos, Rengar se oculta hasta el próximo turno de su controlador (no se le puede elegir como objetivo de ataques) y elige a un enemigo como presa. Su primer ataque contra esa presa ignora todas sus bonificaciones de ATK y DEF (sin quitárselas).']
   });
   Object.assign(LORE, {
+    hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
     kzcor: 'Gracias a sus corazones adicionales y sus hilos de costura, Kakuzu puede sobrevivir a heridas que acabarían con cualquier otro ninja.',
     kzmask: 'Kakuzu utiliza sus máscaras elementales para liberar diferentes técnicas y adaptarse a cada situación de combate.',
     kzhilos: 'Kakuzu utiliza sus hilos para mantener unidos los cuerpos y corazones, incluso cuando sus aliados están a punto de caer.',
@@ -981,6 +983,12 @@
       text: 'Cinco Corazones: 2 corazones adicionales que evitan su destrucción (1 por turno). Máscaras Elementales: Fuego, Viento, Rayo o Agua, una vez por turno. Hilos de Costura: gasta un corazón para salvar a un aliado. Último Corazón: sin corazones, +600 ATK y un ataque adicional.'
     }),
     mon({
+      id: 'c_hakari', name: 'Hakari Kinji', type: 'jjk', level: 8, atk: 1900, def: 1900, img: I('hakari'), ab: ['hakdom'],
+      lore: 'Hakari Kinji convierte cada combate en una apuesta. Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+      text: 'Expansión de Dominio: Apuesta Mortal. Con su dominio activo, una vez por turno gira una ruleta: 1, 2 o 3 cargas (1/3 cada una). Cada carga = 1 vida extra y +500 ATK durante 2 turnos.',
+      sfx: { ability: V('hakari-dominio') }
+    }),
+    mon({
       id: 'c_rengar', name: 'Rengar', type: 'lol', level: 5, atk: 1400, def: 1400, img: I('rengar'), ab: ['rengarfer', 'rengarmax', 'rengarcaza'],
       lore: 'Rengar es un cazador despiadado que disfruta perseguir a sus presas y estudiar sus movimientos antes de atacar. Cuanto más combate, más ferocidad acumula, hasta convertirse en un depredador prácticamente imparable.',
       text: 'Depredador Salvaje: gana ferocidad (máx. 4) al atacar o destruir enemigos. Ferocidad Máxima: gasta 2 para Salvajismo, Rugido de Batalla, Bola de Red o Camuflaje. Emoción de la Cacería: oculta a Rengar y marca una presa.',
@@ -1058,7 +1066,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

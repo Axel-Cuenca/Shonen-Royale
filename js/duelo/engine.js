@@ -110,8 +110,8 @@
   const antiAbs = (st, p) => st.players.some((Q, q) => Q.alive && st.team[q] !== st.team[p] && Q.mz.some(x => x && !x.down && has(st, x, 'antiabs')));
   /** Dominios de Jujutsu Kaisen (05-11-2026): se puede abrir uno si no hay ninguno, o si gana el choque al que ya está activo:
    *  más estrellas, o las mismas (gana el segundo en activarse). Con menos estrellas no se ofrece. */
-  const DOM_AB = ['relicario', 'jogodom', 'yutadom', 'higudom'];
-  const DOM_NAME = { relicario: 'Relicario Demoníaco', dominio: 'Ataúd de la Montaña de Hierro', ydominio: 'Amor Mutuo y Verdadero', higudom: 'Sentencia Mortal' };
+  const DOM_AB = ['relicario', 'jogodom', 'yutadom', 'higudom', 'hakdom'];
+  const DOM_NAME = { relicario: 'Relicario Demoníaco', dominio: 'Ataúd de la Montaña de Hierro', ydominio: 'Amor Mutuo y Verdadero', higudom: 'Sentencia Mortal', hakdom: 'Apuesta Mortal' };
   function domLv(st) {
     if (!st.domain) return 0;
     if (st.domain.lv != null) return st.domain.lv;
@@ -754,7 +754,15 @@
     }
     return true;
   }
+  /** Hakari: cada vida extra evita una destrucción. */
+  function hakSave(st, p, m) {
+    if (!m.hl || m.hl <= 0) return false;
+    m.hl--;
+    log(st, p, `${mdef(m).name}: una vida extra evita su destrucción (le quedan ${m.hl})`);
+    return true;
+  }
   function kzSave(st, p, z, m) {
+    if (hakSave(st, p, m)) return true;
     if (rawAbil(m).includes('kzcor') && !m.down && !blocked(m, 'ab')) { const r = kzSpend(st, { p, m }, 'Cinco Corazones evita su destrucción'); if (r) return true; }
     for (let q = 0; q < st.n; q++) {
       if (!st.players[q].alive || st.team[q] !== st.team[p]) continue;
@@ -2505,9 +2513,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -3468,6 +3476,8 @@
         for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz) && !blocked(st.players[e].mz[tz], 'atk')) push({ pw: 'rred', target: { vs: e, z: tz } });
       }
       if (ab.includes('rengarcaza') && !m.fly && (u.rcT0 == null || elapsed(st, u.rcT0) >= 2)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && canTarget(st, p, e, tz)) push({ pw: 'rcaza', target: { vs: e, z: tz } }); }
+      if (ab.includes('hakdom') && canOnce(P, z, u, 'hdm') && domainOk(st, m)) push({ pw: 'hakdom' });
+      if (ab.includes('hakdom') && st.domain && st.domain.uid === m.c.uid && u.hrT !== st.turn) push({ pw: 'hruleta' });
       if (ab.includes('kzmask') && u.kzmT !== st.turn) {
         for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz)) push({ pw: 'kzfuego', target: { vs: e, z: tz } });
         push({ pw: 'kzviento' });
@@ -4110,6 +4120,7 @@
           removeMonster(st, tq, a.target.z, 'banish', { purple: true });
         } else {
           const s2 = T.st[a.target.z];
+          if (!s2) break;      // la carta ya no está (la quitó otro efecto)
           log(st, p, `${nm} lanza Púrpura: una carta de magia/trampa es desterrada`);
           if (multi(st)) st.log[st.log.length - 1].q = tq;
           T.st[a.target.z] = null; T.banish.push(s2.c);
@@ -4381,6 +4392,23 @@
         m.prey = { vs: e, uid: tm.c.uid };
         log(st, p, `${nm} se oculta y elige a ${mdef(tm).name} como su presa`);
         if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
+      case 'hakdom': {
+        if (!domainOk(st, m)) break;
+        markOnce(u, 'hdm');
+        openDomain(st, p, m, { x: g, min: lvl(m), nm: 'de Hakari' }, 'hakdom');
+        log(st, p, `${nm} expande su dominio: Apuesta Mortal`);
+        break;
+      }
+      case 'hruleta': {
+        if (!st.domain || st.domain.uid !== m.c.uid) break;
+        u.hrT = st.turn;
+        const r = rnd(st), n = r < 1 / 3 ? 1 : r < 2 / 3 ? 2 : 3;
+        for (let i = 0; i < n; i++) addMod(st, m, 'hk', 500, 0, 2);
+        m.hl = (m.hl || 0) + n;
+        log(st, p, `${nm} gira la ruleta: ${n === 1 ? 'Sin premio' : n === 2 ? '¡Casi Jackpot!' : '¡¡JACKPOT!!'} (+${n} carga${n > 1 ? 's' : ''}: ${n} vida${n > 1 ? 's' : ''} extra y +${500 * n} ATK durante 2 turnos)`);
+        st.log[st.log.length - 1].roul = n;
         break;
       }
       case 'kzfuego': {
@@ -5170,6 +5198,7 @@
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;
+      if (rawAbil(s).includes('hakdom')) { v.hl = s.hl || 0; v.hk = (s.mods || []).filter(x => x.k === 'hk').map(x => Math.max(0, x.n - elapsed(st, x.t0))); }
       if (rawAbil(s).includes('kzcor')) { v.hearts = heartsOf(s); if (v.hearts === 1 && mdef(s).img1) v.art = mdef(s).img1; }
       if (rawAbil(s).includes('rengarfer')) v.fer = uOf(s).fer || 0;
       if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, n: b.n }));
