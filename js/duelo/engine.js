@@ -116,7 +116,7 @@
   /** Clon de Yoru: ficha (como las de tinta) pero se puede atacar y elegir con habilidades enemigas para que desaparezca. */
   const isClone = m => !!m && !!m.c && !!(C().get(m.c.id) || {}).clone;
   /** Soldados de las sombras: Igris, Beru, Bellion (se invoquen como se invoquen) y lo que levanta Sung Jin-Woo. */
-  const SOLDIER_IDS = ['c_igris', 'c_beru', 'c_bellion'];
+  const SOLDIER_IDS = ['c_igris', 'c_beru', 'c_bellion', 'c_kaisel', 'c_tusk'];
   const isSoldier = m => !!m && !m.down && (!!m.shadow || !!m.bySung || SOLDIER_IDS.includes(m.c.id));
   const soldiersOf = P => P.mz.filter(isSoldier).length;
   /** Hay un Sung Jin-Woo (o su Monarca) boca arriba en el campo de q. */
@@ -4062,7 +4062,7 @@
       if (ab.includes('rasengan') && canOnce(P, z, u, 'ras') && !(m.mods || []).some(x => x.k === 'ras')) push({ pw: 'rasengan' });
       if (m.ksp && !m.ksp.x && !m.exh && (m.mods || []).some(x => x.k === 'kaiospell')) push({ pw: 'kaiox10' });
       // ----- tanda 7 -----
-      if (ab.includes('sjdom') && P.kaT !== st.turn) {            // Kaisel: Montura de las Sombras (con Sung Jin-Woo en el campo, desde la mano o el cementerio, sin gastar la invocación normal)
+      if (ab.includes('sjdom') && P.kaT !== st.turn && P.sjT !== st.turn) {            // Kaisel: Montura de las Sombras (con Sung Jin-Woo en el campo, desde la mano o el cementerio, sin gastar la invocación normal)
         for (const c of P.hand) if (c.id === 'c_kaisel' && spot(P, def(c)) >= 0) push({ pw: 'kaisel', from: 'hand', u: c.uid });
         for (const c of P.grave) if (c.id === 'c_kaisel' && spot(P, def(c)) >= 0) push({ pw: 'kaisel', from: 'grave', u: c.uid });
       }
@@ -5046,8 +5046,8 @@
       }
       case 'kaisel': {
         const src = a.from === 'grave' ? P.grave : P.hand, i = src.findIndex(c => c.uid === a.u);
-        if (i < 0 || spot(P, def(src[i])) < 0) break;
-        P.kaT = st.turn;
+        if (i < 0 || spot(P, def(src[i])) < 0 || P.sjT === st.turn) break;
+        P.kaT = st.turn; P.sjT = st.turn;
         const inst = src.splice(i, 1)[0];
         log(st, p, `${nm}: Montura de las Sombras, Kaisel acude${a.from === 'grave' ? ' desde el cementerio' : ''}`);
         const kz = specialSummon(st, p, inst, 'atk'), km = P.mz[kz];
