@@ -410,4 +410,68 @@ module.exports = function (T) {
     no(st);
     ok(st.players[0].mz[1] && st.players[0].mz[1].c.id === 'c_yoru', 'Yoru quedó en la otra zona');
   }
+  section('Daki y Gyutaro');
+  {
+    // Vínculo: Daki iba a caer en combate, Gyutaro acude de la mano
+    let st = fresh(1); put(st, 0, 0, 'c_daki', { pos: 'def' }); hand(st, 0, ['c_gyutaro']); put(st, 1, 0, 'c_goku');
+    st.players[1].mz[0].atkMod = 5000; st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_daki'), 'Daki sigue en el campo (destrucción cancelada)');
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_gyutaro'), 'Gyutaro acudió de la mano');
+    ok(!st.players[0].normalUsed, 'no gasta la invocación normal');
+    // Destino Compartido: cae Daki sin Gyutaro disponible en mano → vuelve
+    st = fresh(1); put(st, 0, 0, 'c_daki', { pos: 'def' }); put(st, 0, 1, 'c_gyutaro'); put(st, 1, 0, 'c_goku');
+    st.players[0].mz[1].atkMod = 0; st.players[1].mz[0].atkMod = 5000; st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    ok(!st.players[0].mz[0], 'Daki cayó');
+    pass(st, 1); // turno del rival termina → empieza el del jugador 0
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_daki'), 'Daki revive al empezar el siguiente turno de su jugador');
+    // Los dos caen el mismo turno → ninguno vuelve
+    st = fresh(1); put(st, 0, 0, 'c_daki', { pos: 'def' }); put(st, 0, 1, 'c_gyutaro', { pos: 'def' }); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_kratos');
+    st.players[1].mz[0].atkMod = 5000; st.players[1].mz[1].atkMod = 5000; st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    act(st, 1, atkA(st, 1, 1, 1)); no(st);
+    pass(st, 1);
+    ok(!st.players[0].mz.some(m => m && (m.c.id === 'c_daki' || m.c.id === 'c_gyutaro')), 'si caen los dos el mismo turno ninguno revive');
+  }
+  {
+    // Hoz de Sangre, veneno y Danza
+    let st = fresh(0); put(st, 0, 0, 'c_gyutaro'); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_kratos');
+    const g0 = stat(st, 1, 0), k0 = stat(st, 1, 1);
+    act(st, 0, pw(st, 0, 'gyuhoz', a => a.target.z === 0));
+    eq(stat(st, 1, 0), [g0[0] - 200, g0[1] - 200], 'una marca quita 200/200');
+    ok(!pw(st, 0, 'gyuhoz'), 'una hoz por turno');
+    st.turn = 8; st.players[0].mz[0].c.uid; // siguiente turno del jugador 0
+    pass(st, 2); // rival y vuelta
+    pass(st, 2);
+    ok(stat(st, 1, 0)[0] <= g0[0] - 200 - 500, 'el veneno se activa desde el segundo turno');
+    // Danza: dos marcas
+    st = fresh(0); put(st, 0, 0, 'c_gyutaro'); put(st, 1, 0, 'c_goku', { pos: 'def' }); put(st, 1, 1, 'c_kratos', { pos: 'def' });
+    act(st, 0, pw(st, 0, 'gyuhoz', a => a.target.z === 0));
+    st.players[0].mz[0].usedPw = null; const u = st.players[0].mz[0];
+    for (const k of Object.keys(u.uBy || {})) delete u.uBy[k].ghT;
+    act(st, 0, pw(st, 0, 'gyuhoz', a => a.target.z === 1));
+    st.turn = 6;
+    ok(pw(st, 0, 'gyudanza'), 'Danza disponible con marcas');
+    act(st, 0, pw(st, 0, 'gyudanza', a => a.target.z === 0)); no(st);
+    ok(!st.players[1].mz.some(m => m && m.hoz), 'las marcas se retiraron');
+    ok(!pw(st, 0, 'gyudanza'), 'una vez por turno');
+  }
+  {
+    // Cinturones de Carne
+    let st = fresh(0); put(st, 0, 0, 'c_daki'); put(st, 0, 1, 'c_kratos');
+    const nc = E.countCards(st, 0);
+    act(st, 0, pw(st, 0, 'dakibelt', a => a.target.vs === 1 && a.target.z === 2));
+    eq(E.view(st, 0).belts.length, 1, 'el dueño ve su cinturón');
+    ok(!(E.view(st, 1).belts || []).length, 'el rival no ve los cinturones');
+    eq(E.countCards(st, 0), nc, 'los cinturones no son cartas');
+    st.current = 1; st.turn = 7; st.phase = 'battle'; put(st, 1, 0, 'c_goku');
+    act(st, 1, atkA(st, 1, 0, 1));
+    ok(st.pending && st.pending.ab === 'dakired', 'Daki puede redirigir');
+    act(st, 0, { t: 'ability', use: true });
+    act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.vs === 1 && a.z === 2));
+    no(st);
+    ok(st.players[0].lp === 8000 && st.players[1].lp < 8000, 'el ataque cayó directo sobre el dueño de la zona libre');
+    eq((st.belts || []).length, 0, 'el cinturón usado desaparece');
+  }
 };

@@ -1605,7 +1605,7 @@ html.rm .sumfx { display: none; }
 .tbanner.win .tb-tx { color: #ffe08a; text-shadow: 0 0 .3em #ffb13c, 0 .05em .1em #000a; }
 .tbanner.lose .tb-tx { color: #ff6a6a; text-shadow: 0 0 .3em #c0121f, 0 .05em .1em #000a; }
 /* Hiraishin: marca en la casilla */
-.zone .hmark{position:absolute;right:4px;top:4px;z-index:6;font-size:15px;line-height:1;color:#ffd84a;text-shadow:0 0 6px #ffb300,0 0 12px #ff8a00;pointer-events:none;animation:hmk 1.4s ease-in-out infinite}
+.zone .hmark.belt{left:4px;right:auto;color:#ff5a6a;text-shadow:0 0 6px #b0001a,0 0 12px #7a0010}.zone .hmark.cmk{left:4px;right:auto;top:22px;color:#6fe3ff;text-shadow:0 0 6px #0090c0}.zone .hmark{position:absolute;right:4px;top:4px;z-index:6;font-size:15px;line-height:1;color:#ffd84a;text-shadow:0 0 6px #ffb300,0 0 12px #ff8a00;pointer-events:none;animation:hmk 1.4s ease-in-out infinite}
 @keyframes hmk{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
 .optbox{display:flex;flex-direction:column;gap:4px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:10px;text-align:left}
 .optbox .btn{font-size:13px}

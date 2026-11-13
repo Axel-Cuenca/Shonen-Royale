@@ -243,12 +243,24 @@
     yoclon: ['Engaño Dimensional', 'Una vez por turno crea un clon ilusorio en una zona libre. Si el rival lo ataca o le aplica una habilidad, el clon desaparece y el ataque o la habilidad no hacen nada. Se desvanece al empezar tu siguiente turno. No ataca ni usa habilidades.'],
     yocambio: ['Cambio Dimensional', 'Una vez por duelo, antes de recibir un ataque, Yoru intercambia su posición con su clon o con otro aliado; el ataque continúa contra la zona original.'],
     yoviaje: ['Viaje Dimensional', 'Una vez por invocación, desaparece del campo hasta el comienzo de su siguiente turno (no ataca, no usa habilidades y nada lo afecta). Vuelve a una zona libre; si no hay, espera.'],
+    dakibelt: ['Cinturones de Carne', 'Hasta 3 cinturones ocultos en zonas del campo (no ocupan casillas ni se pueden atacar). Una vez por turno mueve uno. Cuando un enemigo ataca a un personaje aliado, Daki puede redirigir el ataque a un cinturón: contra el personaje de esa zona o, si está libre, contra los puntos de vida del dueño de la zona. El cinturón usado desaparece.'],
+    dakivinc: ['Vínculo con Gyutaro', 'Si Daki va a ser destruida por cualquier medio, invoca especialmente a Gyutaro desde la mano o el mazo (sin gastar la invocación normal) y la destrucción se cancela.'],
+    dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
+    gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
+    gyudanza: ['Danza de Hoces Giratorias', 'Una vez por turno retira todas las marcas de sangre del campo y ataca a cualquier personaje enemigo con su ATK +300 por cada marca retirada.'],
+    gyuvinc: ['Vínculo con Daki', 'Si Daki va a ser destruida, Gyutaro acude desde la mano o el mazo como invocación especial y la destrucción se cancela. Comparte Destino Compartido con ella.'],
     rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
     rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
     rengarcaza: ['Emoción de la Cacería', 'Una vez cada 2 turnos, Rengar se oculta hasta el próximo turno de su controlador (no se le puede elegir como objetivo de ataques) y elige a un enemigo como presa. Su primer ataque contra esa presa ignora todas sus bonificaciones de ATK y DEF (sin quitárselas).']
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    dakibelt: 'Sus cinturones de carne controlan el campo de batalla y desvían los ataques enemigos.',
+    dakivinc: 'Su vínculo con Gyutaro es inseparable.',
+    dakidest: 'Ambos comparten un destino: sólo caen si caen juntos.',
+    gyuhoz: 'Sus hoces de sangre envenenan lentamente a sus enemigos.',
+    gyudanza: 'Todas las marcas de sangre estallan en un torbellino de hoces.',
+    gyuvinc: 'Acude en auxilio de su hermana.',
     chrdv: 'Utiliza su tecnología para escapar de los ataques enemigos.',
     chmarca: 'Prepara trampas ocultas para quien se atreva a ocupar su terreno.',
     chtour: 'Ejecuta objetivos con su arma definitiva.',
@@ -983,6 +995,18 @@
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
     mon({
+      id: 'c_daki', name: 'Daki', type: 'demonslayer', level: 4, atk: 1400, def: 1500, img: I('daki'), ab: ['dakibelt', 'dakivinc', 'dakidest'],
+      lore: 'Daki utiliza sus cinturones de carne para controlar el campo de batalla, ocultar trampas y manipular los ataques enemigos. Su vínculo con Gyutaro es inseparable: ambos comparten un destino y no pueden ser derrotados definitivamente por separado.',
+      text: 'Cinturones de Carne: hasta 3 cinturones ocultos; redirigen un ataque enemigo (una vez por cinturón). Vínculo con Gyutaro: si va a morir, invoca a Gyutaro de la mano o el mazo y se cancela. Destino Compartido: con Gyutaro, sólo mueren si caen los dos el mismo turno.',
+      sfx: { ability: V('daki-gyutaro') }
+    }),
+    mon({
+      id: 'c_gyutaro', name: 'Gyutaro', type: 'demonslayer', level: 6, atk: 1600, def: 1600, img: I('gyutaro'), ab: ['gyuhoz', 'gyudanza', 'gyuvinc'],
+      lore: 'Gyutaro utiliza sus hoces de sangre para envenenar lentamente a sus enemigos, debilitándolos hasta que ya no pueden resistir sus ataques. Su vínculo con Daki es tan fuerte que ambos comparten su destino: para acabar con ellos definitivamente, deben ser derrotados al mismo tiempo.',
+      text: 'Hoz de Sangre: marca a un enemigo (−200/−200 y veneno −500/−500 por turno desde el segundo). Danza de Hoces Giratorias: retira todas las marcas y ataca con +300 ATK por marca. Vínculo con Daki: la salva de la muerte invocándose. Destino Compartido.',
+      sfx: { summon: V('daki-gyutaro'), attack: V('gyutaro-attack') }
+    }),
+    mon({
       id: 'c_chamber', name: 'Chamber', type: 'valorant', level: 3, atk: 900, def: 900, img: I('chamber'), ab: ['chrdv', 'chmarca', 'chtour'],
       lore: 'Chamber es un especialista en precisión, elegancia y posicionamiento. Utiliza su tecnología para escapar de los ataques enemigos, preparar trampas ocultas y ejecutar objetivos con su arma definitiva.',
       text: 'Rendez-vous: si lo atacan, puede teletransportarse a una zona libre y el ataque falla. Marca Registrada: al invocarlo deja una marca oculta en una zona enemiga; quien la ocupe queda inmovilizado hasta el final de su próximo turno. Tour de Force: una vez por duelo, su próximo ataque ignora lo que impida destruir al objetivo.',
@@ -1113,7 +1137,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

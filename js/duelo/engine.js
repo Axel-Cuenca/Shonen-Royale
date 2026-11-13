@@ -327,7 +327,7 @@
         const Pp = st.players[r.p], gi = Pp.grave.find(c => c.uid === r.uid);
         if (!gi || !Pp.alive) continue;
         if (reviveInst(st, r.p, gi) < 0) { keep.push(r); continue; }
-        log(st, r.p, `${def(gi).name} regresa (Inmortalidad)`);
+        log(st, r.p, `${def(gi).name} regresa (${r.ds ? 'Destino Compartido' : 'Inmortalidad'})`);
       }
       st.vret = keep;
     }
@@ -666,6 +666,15 @@
       st.players[p].imm = st.turn;
       log(st, p, `${nm} protege a su jugador: no recibirá daño el resto del turno`);
     }
+    if (how === 'grave' && m.c && (m.c.id === 'c_daki' || m.c.id === 'c_gyutaro') && !(m.owner != null && m.owner !== p)) {      // Destino Compartido
+      const other = m.c.id === 'c_daki' ? 'c_gyutaro' : 'c_daki';
+      const pv = (st.vret || []).findIndex(r => r.ds && r.t0 === st.turn && r.p === p && st.players[p].grave.some(c => c.uid === r.uid && c.id === other));
+      if (pv >= 0) { st.vret.splice(pv, 1); log(st, p, 'Destino Compartido: los dos cayeron en el mismo turno, ninguno vuelve'); }
+      else if (st.players[p].mz.some(x => x && !x.down && x.c.id === other)) {
+        (st.vret = st.vret || []).push({ p, uid: m.c.uid, t0: st.turn, ds: true });
+        log(st, p, `Destino Compartido: ${nm} volverá en el siguiente turno de su jugador si el otro sobrevive`);
+      }
+    }
     if (dab.includes('inmort') && how === 'grave' && m.c && (m.c.imm || 0) < 2) {      // Voldemort: Inmortalidad (2 regresos)
       m.c.imm = (m.c.imm || 0) + 1;
       (st.vret = st.vret || []).push({ p: m.owner != null ? m.owner : p, uid: m.c.uid, t0: st.turn });
@@ -788,6 +797,16 @@
     if (ctx.src === 'combat' && ab.includes('gogres')) {      // Gogeta: sólo lo derrota el ataque de un enemigo con más de 2800 ATK
       const ak = ctx.defn && ctx.by ? slotByUid(st, ctx.by.p, ctx.by.uid) : null;
       if (!ak || atkOf(st, st.players[ak.p], ak.z) <= 2800) { log(st, p, `${nm} resiste el combate: sólo lo derrota un ataque con más de 2800 ATK`); noteSaved(st, nm); return false; }
+    }
+    if (m.c.id === 'c_daki' && !m.down && ctx.src !== 'mark' && !(m.owner != null && m.owner !== p)) {      // Vínculo con Gyutaro: lo invoca desde la mano o el mazo y cancela la destrucción
+      const gi = P.hand.findIndex(c => c.id === 'c_gyutaro'), gd = gi < 0 ? P.deck.findIndex(c => c.id === 'c_gyutaro') : -1;
+      if ((gi >= 0 || gd >= 0) && spot(P, def({ id: 'c_gyutaro' })) >= 0) {
+        const inst = gi >= 0 ? P.hand.splice(gi, 1)[0] : P.deck.splice(gd, 1)[0];
+        if (gd >= 0) shuffle(st, P.deck);
+        log(st, p, `Vínculo: Daki iba a caer y Gyutaro acude (${gi >= 0 ? 'desde la mano' : 'desde el mazo'}): la destrucción se cancela`);
+        specialSummon(st, p, inst, 'atk');
+        return false;
+      }
     }
     if (cloakOn(P, z) && ctx.src !== 'spell') { log(st, p, `${nm} es invisible: sólo las cartas mágicas pueden destruirlo`); return false; }      // Capa de Invisibilidad
     if (!(ctx.src === 'mark') && kzSave(st, p, z, m)) return false;
@@ -2606,9 +2625,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -2727,6 +2746,8 @@
     stage(p, z, true);
     stage(vs, tz, false);
   }
+  /** Gyutaro: marcas de sangre que hay ahora mismo en el campo. */
+  function hozCount(st, m) { let n = 0; for (const Q of st.players) for (const x of Q.mz) if (x && x.hoz) n += x.hoz.filter(k => k.by === m.c.uid).length; return n; }
   /** Rengar: Depredador Salvaje, 1 punto de ferocidad por declarar un ataque o destruir a un enemigo (máx. 4; un combate no da 2). */
   function ferocidad(st, p, m, why) {
     if (!m || m.down || !has(st, m, 'rengarfer')) return;
@@ -2801,6 +2822,7 @@
     if (m && m.mods && m.mods.some(x => x.k === 'kame')) { dropMods(m, 'kame'); log(st, a.p, `${mdef(m).name} gasta su Kamehameha`); }
     if (m && m.mods && m.mods.some(x => x.k === 'caza')) dropMods(m, 'caza');
     if (m && m.mods && m.mods.some(x => x.k === 'kzviento')) dropMods(m, 'kzviento');
+    if (m && m.mods && m.mods.some(x => x.k === 'dz')) dropMods(m, 'dz');
     for (const Q of st.players) for (const x of Q.mz) if (x && x.mods && x.mods.some(y => y.k === 'unico')) dropMods(x, 'unico');      // El Único: sólo ese combate
     if (m && m.ghost) { log(st, a.p, `${mdef(m).name} es desterrado tras el ataque`); removeMonster(st, a.p, a.z, 'banish'); }
   }
@@ -2863,6 +2885,13 @@
       const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' ? st.players[a.vs].mz[a.target] : null;
       if (at && dm && !dm.down && st.team[a.vs] !== st.team[a.p] && !blocked(dm, 'ab')) {
         const Q = st.players[a.vs];
+        if (!a.dkD && st.belts && st.belts.length) {      // Daki: Cinturones de Carne redirigen el ataque
+          for (let q = 0; q < st.n; q++) {
+            if (!st.players[q].alive || st.team[q] !== st.team[a.vs]) continue;
+            const dz = st.players[q].mz.findIndex(x => x && !x.down && has(st, x, 'dakibelt') && !blocked(x, 'ab'));
+            if (dz >= 0 && st.belts.some(b => b.by === q)) { a.dkD = true; st.pending = { k: 'ability', ab: 'dakired', player: q, stage: 'ask', uid: st.players[q].mz[dz].c.uid, nm: mdef(at).name, cont: { k: 'attack', by: p } }; return; }
+          }
+        }
         if (!a.chD && has(st, dm, 'chrdv') && Q.mz.some(x => !x)) {
           a.chD = true;
           st.pending = { k: 'ability', ab: 'chrdv', player: a.vs, stage: 'ask', uid: dm.c.uid, zy: a.target, nm: mdef(at).name, cont: { k: 'attack', by: p } };
@@ -2972,7 +3001,7 @@
     if (!at || !op.alive) return;
     const ad = mdef(at), atker = { p: a.p, uid: at.c.uid };
     if (a.target === 'direct') {
-      if (zonesWith(op.mz).length) return;
+      if (zonesWith(op.mz).length && !a.fdirect) return;
       const dmg = atkOf(st, me, a.z);
       log(st, a.p, `${ad.name} inflige ${dmg} de daño directo`);
       lose(st, vs, dmg);
@@ -3103,6 +3132,7 @@
         for (const zz of [z - 1, z, z + 1]) if (zz >= 0 && zz < ZONES && cp.mz[zz]) destroyMonster(st, st.current, zz, { src: 'power', bp: by });
       } }
     for (let z = 0; z < ZONES; z++) { const cm = st.players[st.current].mz[z]; if (cm && isClone(cm) && cm.born !== st.turn) { removeMonster(st, st.current, z, 'ink'); log(st, st.current, 'El clon de Yoru se desvanece'); } }
+    for (const hm of st.players[st.current].mz) if (hm && hm.hoz && hm.hoz.some(k => elapsed(st, k.t0) >= 1)) { addMod(st, hm, 'hozv', -500, -500, 0); log(st, st.current, `${mdef(hm).name}: la sangre venenosa le quita 500 ATK y 500 DEF`); }
     for (const gm of st.players[st.current].mz) {      // Cámara de Gravedad / Sala del Espíritu
       if (gm && gm.gr && gm.gr.t0 !== st.turn && gm.gr.n < 2) { gm.gr.n++; log(st, st.current, `${mdef(gm).name}: contador de entrenamiento ${gm.gr.n}/2`); }
       if (gm && gm.gr && gm.gr.n >= 2) st.trig.push({ k: 'gravrew', p: st.current, uid: gm.c.uid });
@@ -3252,6 +3282,10 @@
         if (s.gem && !findByUid(st, s.gem.uid)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'La Gema de la Mente pierde su objetivo y se destruye'); }
         else if (s.karma && s.karma.phase === 'foe' && !findByUid(st, s.karma.foeUid)) { P.st[i] = null; P.grave.push(s.c); log(st, p, 'Karma termina: el enemigo dejó el campo'); }
       }
+    }
+    for (const Q of st.players) for (const x of Q.mz) if (x && x.hoz) {      // Gyutaro se fue: sus marcas y su veneno desaparecen
+      const keep = x.hoz.filter(k => findByUid(st, k.by));
+      if (keep.length !== x.hoz.length) { dropMods(x, 'hoz'); dropMods(x, 'hozv'); if (keep.length) { x.hoz = keep; for (const k of keep) addMod(st, x, 'hoz', -200, -200, 0); } else delete x.hoz; }
     }
     if (st.limbo && st.limbo.some(e => e.kind === 'cap')) {      // Cápsulas Hoi-Poi: si la carta se va del campo, lo guardado vuelve (o va al cementerio)
       st.limbo = st.limbo.filter(e => {
@@ -3618,6 +3652,13 @@
       if (ab.includes('hakdom') && st.domain && st.domain.uid === m.c.uid && u.hrT !== st.turn) push({ pw: 'hruleta' });
       if ((m.sc || 0) >= 1) { push({ pw: 'salaf' }); if (!m.sres) push({ pw: 'salar' }); }
       if ((m.sc || 0) >= 2) push({ pw: 'salad' });
+      if (ab.includes('gyuhoz') && u.ghT !== st.turn) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].down && canTarget(st, p, e, tz) && !isInk(st.players[e].mz[tz])) push({ pw: 'gyuhoz', target: { vs: e, z: tz } });
+      if (ab.includes('gyudanza') && u.gdT !== st.turn && canAttackNow(st) && atkCount(m) < maxAttacks(st, m) && !blocked(m, 'atk') && m.pos === 'atk' && hozCount(st, m) > 0) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[tz]) && canTarget(st, p, e, tz)) push({ pw: 'gyudanza', target: { vs: e, z: tz } });
+      if (ab.includes('dakibelt')) {
+        const bl = (st.belts || []).filter(b => b.by === p);
+        if (bl.length < 3) for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (let tz = 0; tz < ZONES; tz++) if (!bl.some(b => b.vs === q && b.z === tz)) push({ pw: 'dakibelt', target: { vs: q, z: tz } });
+        if (bl.length && u.dkT !== st.turn) bl.forEach((b, bi) => { for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (let tz = 0; tz < ZONES; tz++) if (!bl.some(x => x.vs === q && x.z === tz)) push({ pw: 'dakimove', bi, from: { vs: b.vs, z: b.z }, target: { vs: q, z: tz } }); });
+      }
       if (ab.includes('chtour') && !m.c.chU && !m.tour && canAttackNow(st) && canAttackSlot(st, m)) push({ pw: 'chtour' });
       if (ab.includes('yoclon') && u.ycT !== st.turn && P.mz.some(x => !x)) push({ pw: 'yoclon' });
       if (ab.includes('yoviaje') && !u.yvj && !m.wide) push({ pw: 'yoviaje' });
@@ -4568,6 +4609,37 @@
         st.log[st.log.length - 1].roul = n;
         break;
       }
+      case 'gyuhoz': {
+        u.ghT = st.turn;
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        (tm.hoz = tm.hoz || []).push({ t0: st.turn, by: m.c.uid });
+        addMod(st, tm, 'hoz', -200, -200, 0);
+        log(st, p, `${nm} lanza una hoz de sangre: ${mdef(tm).name} recibe una marca de sangre (−200 ATK y −200 DEF)`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
+      case 'gyudanza': {
+        u.gdT = st.turn;
+        const n = hozCount(st, m);
+        for (const Q of st.players) for (const x of Q.mz) if (x && x.hoz) { x.hoz = x.hoz.filter(k => k.by !== m.c.uid); if (!x.hoz.length) delete x.hoz; dropMods(x, 'hoz'); dropMods(x, 'hozv'); if (x.hoz) { for (const k of x.hoz) addMod(st, x, 'hoz', -200, -200, 0); } }
+        addMod(st, m, 'dz', 300 * n, 0, 0);
+        log(st, p, `${nm} usa Danza de Hoces Giratorias: retira ${n} marca(s) y ataca con +${300 * n} ATK`);
+        declareAttack(st, p, a.zone, a.target.z, a.target.vs);
+        break;
+      }
+      case 'dakibelt': {
+        (st.belts = st.belts || []).push({ by: p, vs: a.target.vs, z: a.target.z });
+        log(st, p, `${nm} deja un cinturón de carne oculto`);
+        break;
+      }
+      case 'dakimove': {
+        const bl = (st.belts || []).filter(b => b.by === p), b = bl[a.bi];
+        if (!b) break;
+        u.dkT = st.turn; b.vs = a.target.vs; b.z = a.target.z;
+        log(st, p, `${nm} mueve uno de sus cinturones de carne`);
+        break;
+      }
       case 'chtour': m.tour = true; m.c.chU = true; log(st, p, `${nm} activa Tour de Force: su próximo ataque ignora lo que impida destruir al objetivo`); break;
       case 'yoclon': {
         const zz = P.mz.findIndex(x => !x);
@@ -5034,6 +5106,24 @@
         return;
       }
       if (a0) a0.uiDone = true;
+      attackWindows(st, pd.cont.by);
+      return;
+    }
+    if (pd.ab === 'dakired') {
+      const a0 = st.atk;
+      if (pd.stage === 'ask' && a.use && a0) {
+        const cands = (st.belts || []).filter(b => b.by === p).map(b => ({ vs: b.vs, z: b.z }));
+        if (cands.length) { st.pending = Object.assign({}, pd, { stage: 'target', cands }); return; }
+      } else if (pd.stage === 'target' && a0) {
+        const bi = (st.belts || []).findIndex(b => b.by === p && b.vs === a.vs && b.z === a.z);
+        if (bi >= 0) {
+          const b = st.belts.splice(bi, 1)[0], tm = st.players[b.vs].mz[b.z];
+          a0.vs = b.vs;
+          if (tm) { a0.target = b.z; log(st, p, `Cinturones de Carne: el ataque se redirige contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`); }
+          else { a0.target = 'direct'; a0.fdirect = true; log(st, p, `Cinturones de Carne: el ataque cae directo sobre los puntos de vida del dueño de esa casilla`); }
+          if (multi(st)) st.log[st.log.length - 1].q = b.vs;
+        }
+      }
       attackWindows(st, pd.cont.by);
       return;
     }
@@ -5596,6 +5686,7 @@
       pending,
       domain: st.domain ? { seat: st.domain.p, left: Math.min(2, Math.max(0, 2 - (elapsed(st, st.domain.t0)))), nm: st.domain.nm || 'de Sukuna', dn: st.domain.dn || 'Relicario Demoníaco', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       marks: (st.marks || []).map(k => ({ by: k.by, vs: k.vs, z: k.z })),
+      belts: (st.belts || []).filter(k => k.by === seat).map(k => ({ vs: k.vs, z: k.z })),
       cmarks: (st.cmarks || []).filter(k => k.by === seat).map(k => ({ vs: k.vs, z: k.z })),      // marcas ocultas de Chamber: sólo las ve quien las puso
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
