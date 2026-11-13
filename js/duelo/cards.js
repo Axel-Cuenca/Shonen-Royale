@@ -237,12 +237,24 @@
     hakdom: ['Expansión de Dominio: Apuesta Mortal', 'Abre su dominio (reglas normales de los dominios: 2 turnos, sólo usan habilidades los de igual o más estrellas, sin magias ni trampas). Mientras dure, una vez por turno gira una ruleta (1/3 cada resultado): Sin premio 1 carga, Casi Jackpot 2, Jackpot 3. Cada carga da 1 vida extra (evita una destrucción) y +500 ATK durante 2 turnos; cada carga cuenta su propia duración.'],
     nearmira: ['Sucesor de L', 'Una vez por turno, Near mira en privado una carta boca abajo del campo rival (sigue boca abajo para el rival). Si es una trampa, le deja un contador de investigación.'],
     nearn: ['Estrategia de N', 'Cuando el rival activa una trampa con un contador de Near, Near puede revelarla y elegir (una vez por turno): Previsión (cancela la activación) o Manipulación (cambia su objetivo por otro válido, si la trampa permite elegirlo).'],
+    chrdv: ['Rendez-vous', 'Cuando un enemigo declara un ataque contra Chamber, puede teletransportarse a una zona libre de su campo: el ataque falla y no recibe daño ni consecuencias.'],
+    chmarca: ['Marca Registrada', 'Al invocarlo, deja una marca oculta en una zona libre del campo enemigo. Cuando un enemigo ocupa esa zona, la marca se activa: ese personaje no puede cambiar de posición, atacar ni usar habilidades hasta el final de su próximo turno. La marca se consume.'],
+    chtour: ['Tour de Force: Contrato Mortal', 'Una vez por duelo, antes de atacar: su próximo ataque ignora los efectos que impidan destruir al objetivo y, si lo destruye, el ataque termina. Se consume al atacar, destruya o no.'],
+    yoclon: ['Engaño Dimensional', 'Una vez por turno crea un clon ilusorio en una zona libre. Si el rival lo ataca o le aplica una habilidad, el clon desaparece y el ataque o la habilidad no hacen nada. Se desvanece al empezar tu siguiente turno. No ataca ni usa habilidades.'],
+    yocambio: ['Cambio Dimensional', 'Una vez por duelo, antes de recibir un ataque, Yoru intercambia su posición con su clon o con otro aliado; el ataque continúa contra la zona original.'],
+    yoviaje: ['Viaje Dimensional', 'Una vez por invocación, desaparece del campo hasta el comienzo de su siguiente turno (no ataca, no usa habilidades y nada lo afecta). Vuelve a una zona libre; si no hay, espera.'],
     rengarfer: ['Depredador Salvaje', 'Rengar gana 1 punto de ferocidad (máximo 4) cada vez que declara un ataque o destruye a un enemigo; un mismo combate no da 2.'],
     rengarmax: ['Ferocidad Máxima', 'Con 2 o más puntos de ferocidad, gasta 2 para potenciar una habilidad: Salvajismo (+600 ATK permanente), Rugido de Batalla (quita todos sus efectos negativos), Bola de Red (un enemigo no puede atacar, cambiar de posición ni usar habilidades durante 3 turnos) o Camuflaje (inmune a las magias y trampas enemigas). Sin límite de usos mientras tenga cargas.'],
     rengarcaza: ['Emoción de la Cacería', 'Una vez cada 2 turnos, Rengar se oculta hasta el próximo turno de su controlador (no se le puede elegir como objetivo de ataques) y elige a un enemigo como presa. Su primer ataque contra esa presa ignora todas sus bonificaciones de ATK y DEF (sin quitárselas).']
   });
   Object.assign(LORE, {
     hakdom: 'Su Expansión de Dominio recrea una máquina de azar donde cada giro puede acercarlo al premio mayor. Cuanto mejor sea el resultado, más difícil será derrotarlo.',
+    chrdv: 'Utiliza su tecnología para escapar de los ataques enemigos.',
+    chmarca: 'Prepara trampas ocultas para quien se atreva a ocupar su terreno.',
+    chtour: 'Ejecuta objetivos con su arma definitiva.',
+    yoclon: 'Yoru engaña a sus enemigos mediante ilusiones: sus clones confunden al rival.',
+    yocambio: 'Intercambia posiciones en el momento preciso.',
+    yoviaje: 'Puede desaparecer temporalmente para atacar desde otra dimensión.',
     kzcor: 'Gracias a sus corazones adicionales y sus hilos de costura, Kakuzu puede sobrevivir a heridas que acabarían con cualquier otro ninja.',
     kzmask: 'Kakuzu utiliza sus máscaras elementales para liberar diferentes técnicas y adaptarse a cada situación de combate.',
     kzhilos: 'Kakuzu utiliza sus hilos para mantener unidos los cuerpos y corazones, incluso cuando sus aliados están a punto de caer.',
@@ -970,6 +982,19 @@
       sfx: { use: V('tsukuyomi-use') }
     },
     // ---------------- tanda 7 (2026-11-13) ----------------
+    mon({
+      id: 'c_chamber', name: 'Chamber', type: 'valorant', level: 3, atk: 900, def: 900, img: I('chamber'), ab: ['chrdv', 'chmarca', 'chtour'],
+      lore: 'Chamber es un especialista en precisión, elegancia y posicionamiento. Utiliza su tecnología para escapar de los ataques enemigos, preparar trampas ocultas y ejecutar objetivos con su arma definitiva.',
+      text: 'Rendez-vous: si lo atacan, puede teletransportarse a una zona libre y el ataque falla. Marca Registrada: al invocarlo deja una marca oculta en una zona enemiga; quien la ocupe queda inmovilizado hasta el final de su próximo turno. Tour de Force: una vez por duelo, su próximo ataque ignora lo que impida destruir al objetivo.',
+      sfx: { summon: V('chamber-summon'), ability: V('chamber-tele') }
+    }),
+    mon({
+      id: 'c_yoru', name: 'Yoru', type: 'valorant', level: 4, atk: 1200, def: 1200, img: I('yoru'), ab: ['yoclon', 'yocambio', 'yoviaje'],
+      lore: 'Yoru es un infiltrador capaz de atravesar dimensiones y engañar a sus enemigos mediante ilusiones. Utiliza clones para confundir al rival, intercambia posiciones en el momento preciso y puede desaparecer temporalmente para atacar desde otra dimensión.',
+      text: 'Engaño Dimensional: una vez por turno crea un clon que absorbe un ataque o una habilidad enemiga. Cambio Dimensional: una vez por duelo, antes de un ataque, intercambia posición con su clon o un aliado. Viaje Dimensional: una vez por invocación, desaparece hasta tu siguiente turno.',
+      sfx: { ability: V('yoru-viaje'), transform: V('yoru-vuelta') }
+    }),
+    mon({ id: 'c_clon_yoru', name: 'Clon de Yoru', type: 'valorant', level: 1, atk: 0, def: 0, img: I('yoru'), ab: [], hidden: true, ink: true, clone: true, text: 'Clon ilusorio de Yoru: desaparece si lo atacan o le aplican una habilidad, o al empezar el siguiente turno de Yoru.' }),
     spell({
       id: 'c_capsulas', name: 'Cápsulas Hoi-Poi', icon: '💊', img: I('capsulas'), fx: 'capsulas', sub: 'cont',
       lore: 'Las Cápsulas Hoi-Poi permiten almacenar objetos y vehículos de gran tamaño en pequeños recipientes. Gracias a esta tecnología, podés guardar temporalmente a tus personajes y liberarlos cuando llegue el momento adecuado para combatir.',
@@ -1088,7 +1113,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'edo_tensei', 'ojos_shinigami']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'edo_tensei', 'ojos_shinigami']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

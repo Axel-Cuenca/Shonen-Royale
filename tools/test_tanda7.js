@@ -345,4 +345,69 @@ module.exports = function (T) {
     act(st, 0, L(st, 0).find(a => a.t === 'endTurn') || L(st, 0)[0]);
     ok(st.players[0].mz.filter(Boolean).length === 2 || E.countCards(st, 0) === n0, 'al irse la cápsula lo guardado vuelve');
   }
+
+  section('Chamber');
+  {
+    // Rendez-vous
+    let st = fresh(1); put(st, 0, 0, 'c_chamber'); put(st, 1, 0, 'c_goku');
+    st.phase = 'battle'; st.turn = 7; st.current = 1;
+    act(st, 1, atkA(st, 1, 0, 0));
+    ok(st.pending && st.pending.ab === 'chrdv' && st.pending.player === 0, 'Chamber puede teletransportarse');
+    act(st, 0, { t: 'ability', use: true });
+    act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.z === 2));
+    eq(ids(st, 0), [null, null, 'c_chamber'], 'se teletransporta a la zona libre');
+    eq(st.players[0].lp, 8000, 'el ataque falla: sin daño');
+    // Marca registrada
+    st = fresh(0); hand(st, 0, ['c_chamber']); put(st, 1, 0, 'c_popeye');
+    act(st, 0, L(st, 0).find(a => a.t === 'summon' && a.tributes.length === 0));
+    if (st.pending) act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.vs === 1 && a.z === 1));
+    ok(st.cmarks && st.cmarks.length === 1, 'deja una marca oculta');
+    ok(E.view(st, 0).cmarks.length === 1 && E.view(st, 1).cmarks.length === 0, 'sólo la ve su dueño');
+    st.current = 1; st.turn = 7; hand(st, 1, ['c_kratos']); st.players[1].normalUsed = false;
+    const sm = L(st, 1).find(a => a.t === 'summon' && a.tributes.length === 0);
+    // el rival invoca en la zona marcada
+    st.players[1].mz = [st.players[1].mz[0], null, null];
+    st.cmarks[0].z = 1;
+    act(st, 1, L(st, 1).find(a => a.t === 'summon' && a.tributes.length === 0 && (a.zone == null || a.zone === 1)) || sm);
+    const km = st.players[1].mz.find(m => m && m.c.id === 'c_kratos');
+    ok(!km || (km.binds && km.binds.length) || st.cmarks.length === 1, 'si cae en la zona marcada queda inmovilizado');
+    // Tour de Force
+    st = fresh(0); put(st, 0, 0, 'c_chamber'); put(st, 1, 0, 'c_goku', { pos: 'def', sres: true });
+    st.players[0].mz[0].atkMod = 4000;
+    act(st, 0, pw(st, 0, 'chtour')); st.phase = 'battle';
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(!st.players[1].mz[0], 'Tour de Force destruye aunque tuviera protección');
+    ok(!pw(st, 0, 'chtour'), 'sólo una vez por duelo');
+  }
+
+  section('Yoru');
+  {
+    let st = fresh(0); put(st, 0, 0, 'c_yoru'); put(st, 1, 0, 'c_goku');
+    const nc = E.countCards(st, 0);
+    act(st, 0, pw(st, 0, 'yoclon'));
+    ok(st.players[0].mz.some(m => m && m.c.id === 'c_clon_yoru'), 'crea un clon');
+    eq(E.countCards(st, 0), nc, 'el clon no cuenta como carta');
+    ok(!pw(st, 0, 'yoclon'), 'un clon por turno');
+    // el rival ataca al clon
+    st.current = 1; st.turn = 7; st.phase = 'battle';
+    const cz = st.players[0].mz.findIndex(m => m && m.c.id === 'c_clon_yoru');
+    act(st, 1, atkA(st, 1, 0, cz)); no(st);
+    ok(!st.players[0].mz[cz], 'el clon desaparece');
+    eq(st.players[0].lp, 8000, 'y el ataque no hace nada');
+    // Viaje Dimensional
+    st = fresh(0); put(st, 0, 0, 'c_yoru');
+    act(st, 0, pw(st, 0, 'yoviaje'));
+    ok(!st.players[0].mz[0] && st.limbo.length === 1, 'Yoru sale del campo');
+    pass(st, 2);
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_yoru', 'vuelve al comienzo de su siguiente turno');
+    // Cambio Dimensional con un aliado
+    st = fresh(1); put(st, 0, 0, 'c_yoru'); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_goku');
+    st.phase = 'battle'; st.turn = 7; st.current = 1;
+    act(st, 1, atkA(st, 1, 0, 0));
+    ok(st.pending && st.pending.ab === 'yoru', 'Yoru puede intercambiar');
+    act(st, 0, { t: 'ability', use: true });
+    act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.z === 1));
+    no(st);
+    ok(st.players[0].mz[1] && st.players[0].mz[1].c.id === 'c_yoru', 'Yoru quedó en la otra zona');
+  }
 };

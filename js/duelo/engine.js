@@ -94,6 +94,8 @@
   // ---------------- tanda 6 (05-11-2026): utilidades compartidas ----------------
   /** Criaturas de tinta de Sai: fichas, no cartas (no van a ninguna pila, no se cuentan, no se sacrifican). */
   const isInk = m => !!m && !!m.c && !!(C().get(m.c.id) || {}).ink;
+  /** Clon de Yoru: ficha (como las de tinta) pero se puede atacar y elegir con habilidades enemigas para que desaparezca. */
+  const isClone = m => !!m && !!m.c && !!(C().get(m.c.id) || {}).clone;
   /** Soldados de las sombras: Igris, Beru, Bellion (se invoquen como se invoquen) y lo que levanta Sung Jin-Woo. */
   const SOLDIER_IDS = ['c_igris', 'c_beru', 'c_bellion'];
   const isSoldier = m => !!m && !m.down && (!!m.shadow || SOLDIER_IDS.includes(m.c.id));
@@ -1114,6 +1116,8 @@
         const hv = findByUid(st, t.uid), hi = handIdx(P, 'c_mahoraga');
         if (!hv || hv.m.down || lvl(hv.m) < 10 || hi < 0 || spot(P, def(P.hand[hi])) < 0) continue;
         st.pending = { k: 'ability', ab: 'mahoraga', player: t.p, uid: P.hand[hi].uid, stage: 'ask', nm: mdef(hv.m).name };
+      } else if (t.k === 'chmark') {                    // Chamber: elige dónde deja la marca oculta
+        st.pending = { k: 'ability', ab: 'chmark', player: t.p, uid: t.uid, stage: 'target', cands: t.cands, nm: 'Marca Registrada' };
       } else if (t.k === 'gravrew') {                   // Cámara de Gravedad: elige la recompensa
         const g = slotByUid(st, t.p, t.uid);
         if (!g || !g.m.gr || g.m.gr.n < 2) continue;
@@ -1220,6 +1224,20 @@
       s.guerrero.waiting = false; s.equipTo = z;
       m.six = { t0: st.turn };
       log(st, p, `${mdef(m).name} recibe los Seis Ojos durante 3 turnos`);
+    }
+    if (st.cmarks && st.cmarks.length && !(m.c && m.c.virt)) {      // Chamber: Marca Registrada
+      const i = st.cmarks.findIndex(k => k.vs === p && k.z === z && st.team[k.by] !== st.team[p]);
+      if (i >= 0) {
+        const k = st.cmarks.splice(i, 1)[0];
+        (m.binds = m.binds || []).push({ atk: true, ab: true, pos: true, n: 1, t0: st.turn, nm: 'la Marca Registrada' });
+        log(st, k.by, `¡La Marca Registrada de Chamber se activa! ${mdef(m).name} no puede cambiar de posición, atacar ni usar habilidades hasta el final de su próximo turno`);
+        if (multi(st)) st.log[st.log.length - 1].q = p;
+      }
+    }
+    if (has(st, m, 'chmarca') && !m.c.virt) {
+      const cands = [];
+      for (const e of foes(st, p)) st.players[e].mz.forEach((x, i) => { if (!x && !(st.cmarks || []).some(k => k.vs === e && k.z === i)) cands.push({ vs: e, z: i }); });
+      if (cands.length) st.trig.push({ k: 'chmark', p, uid: m.c.uid, cands });
     }
     if (has(st, m, 'tobimm')) st.trig.push({ k: 'tobimm', p, uid: m.c.uid });      // Tobi: Maestro de la manipulación
     mahoragaCall(st, p, m);
@@ -1696,7 +1714,7 @@
   function zoneTargets(st, p, area) {
     const out = [];
     for (const e of foes(st, p)) for (const z of zonesWith(st.players[e][area])) {
-      if (area === 'mz' ? (!canTarget(st, p, e, z) || rikaUp(st, st.players[e].mz[z]) || st.players[e].mz[z].gres) : st.players[e].st[z].prison) continue;      // Seis Ojos, Spider-Man y Gokumonkyo no se eligen
+      if (area === 'mz' ? (!canTarget(st, p, e, z) || isClone(st.players[e].mz[z]) || rikaUp(st, st.players[e].mz[z]) || st.players[e].mz[z].gres) : st.players[e].st[z].prison) continue;      // Seis Ojos, Spider-Man y Gokumonkyo no se eligen
       out.push(multi(st) ? { vs: e, z } : { z });
     }
     return out;
@@ -1929,6 +1947,15 @@
     if (st.players[p].mz[a.zone]) {
       if (!a.xd && nextWindow(st, 'power', { k: 'power', by: p, pa: a }, foes(st, p))) return;      // X puede cancelar la habilidad
       if (!a.gd && powerReality(st, p, a)) return;                                                   // Gema de la Realidad
+    }
+    {   // Yoru, Engaño Dimensional: una habilidad enemiga sobre el clon no produce efecto y el clon desaparece
+      const tc = a.target && a.target.vs != null && a.target.z != null && a.target.area !== 'st' ? st.players[a.target.vs].mz[a.target.z] : null;
+      if (tc && isClone(tc) && st.team[a.target.vs] !== st.team[p]) {
+        log(st, p, `${PWL[a.pw] || 'La habilidad'} cae sobre el clon de Yoru: no produce ningún efecto y el clon desaparece`);
+        removeMonster(st, a.target.vs, a.target.z, 'ink');
+        blockPw(st, p, a); consumePower(st, p, a, false);
+        return;
+      }
     }
     const t6 = a.target, um6 = st.players[p].mz[a.zone];
     if (um6 && !done.includes('shika')) {                                               // Shikamaru: Estratega brillante
@@ -2579,9 +2606,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -2832,6 +2859,22 @@
     return null;
   }
   function attackWindows(st, p) {
+    {   // Chamber (Rendez-vous) y Yoru (Cambio Dimensional): reaccionan al ataque contra ellos
+      const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' ? st.players[a.vs].mz[a.target] : null;
+      if (at && dm && !dm.down && st.team[a.vs] !== st.team[a.p] && !blocked(dm, 'ab')) {
+        const Q = st.players[a.vs];
+        if (!a.chD && has(st, dm, 'chrdv') && Q.mz.some(x => !x)) {
+          a.chD = true;
+          st.pending = { k: 'ability', ab: 'chrdv', player: a.vs, stage: 'ask', uid: dm.c.uid, zy: a.target, nm: mdef(at).name, cont: { k: 'attack', by: p } };
+          return;
+        }
+        if (!a.yoD && has(st, dm, 'yocambio') && !dm.c.ycU && !dm.wide && Q.mz.some((x, i) => x && i !== a.target && !x.wide && !x.down)) {
+          a.yoD = true;
+          st.pending = { k: 'ability', ab: 'yoru', player: a.vs, stage: 'ask', uid: dm.c.uid, zy: a.target, nm: mdef(at).name, cont: { k: 'attack', by: p } };
+          return;
+        }
+      }
+    }
     {   // Escanor, ¿Quién decidió eso?: si lo desafía un enemigo con más ATK, duelo individual (sin habilidades, ayuda ni magias)
       const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' ? st.players[a.vs].mz[a.target] : null;
       if (at && dm && !dm.down && st.team[a.vs] !== st.team[a.p] && has(st, dm, 'escduelo') && atkOf(st, st.players[a.p], a.z) > atkOf(st, st.players[a.vs], a.target)) {
@@ -2853,6 +2896,8 @@
     st.cmb = a ? { p: a.p, z: a.z, target: a.target, vs: a.vs, turn: st.turn } : null;      // el combate sigue en curso (bonos de Warwick)
     if (!a || a.negated || st.winner !== null) { if (a) atkDone(st, a); return; }
     const at0 = st.players[a.p].mz[a.z];
+    { const cl = a.target !== 'direct' && st.players[a.vs].mz[a.target];
+      if (cl && isClone(cl) && at0) { log(st, a.vs, `${mdef(at0).name} ataca al clon de Yoru: el clon desaparece y el ataque se desperdicia`); removeMonster(st, a.vs, a.target, 'ink'); atkDone(st, a); return; } }
     if (at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && conejosEvade(st, a.vs, a.target)) { galandHit(st, a, a.vs, a.target); atkDone(st, a); return; }      // Megumi evade el ataque
     if (at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && tobiEvade(st, a.vs, a.target)) { galandHit(st, a, a.vs, a.target); atkDone(st, a); return; }        // Tobi: Kamui
     if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && (has(st, at0, 'yoriichi') || at0.kzwater === st.turn))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
@@ -2977,6 +3022,13 @@
       else if (A < B) { lose(st, a.p, B - A); log(st, -1, 'El ataque rebota'); }
       else log(st, -1, 'Nadie sufre daño');
     }
+    if (at.tour && me.mz[a.z] === at) {      // Chamber, Tour de Force: el ataque ignora lo que impide destruir al objetivo y se consume
+      at.tour = false;
+      if (op.mz[a.target] === dm && !shielded) {
+        const A2 = atkOf(st, me, a.z), B2 = dm.pos === 'atk' ? atkOf(st, op, a.target) : defOf(st, op, a.target);
+        if (A2 > B2) { log(st, a.p, `${ad.name}: Contrato Mortal, nada impide la destrucción de ${dd.name}`); removeMonster(st, vs, a.target, 'grave', { death: true }); log(st, -1, `${dd.name} es destruido`); }
+      }
+    }
     if (shielded && op.mz[a.target] === dm) {
       const left = Math.max(0, shd.cur - A);
       shd.set(left);
@@ -3021,7 +3073,7 @@
       tn.mat++;
       log(st, st.current, `${mdef(s).name} reúne materiales para su armadura (${tn.mat})`);
     }
-    for (let z = 0; z < ZONES; z++) if (P.mz[z] && isInk(P.mz[z])) removeMonster(st, st.current, z, 'ink');      // las criaturas de tinta desaparecen
+    for (let z = 0; z < ZONES; z++) if (P.mz[z] && isInk(P.mz[z]) && !isClone(P.mz[z])) removeMonster(st, st.current, z, 'ink');      // las criaturas de tinta desaparecen (el clon de Yoru dura hasta su siguiente turno)
     for (const s of P.mz) {                                                    // restricciones que duraban este turno del controlador
       if (!s) continue;
       if (s.binds && s.binds.length) {
@@ -3050,6 +3102,7 @@
         log(st, by, `¡El Brillo explota dentro de ${bn}!`);
         for (const zz of [z - 1, z, z + 1]) if (zz >= 0 && zz < ZONES && cp.mz[zz]) destroyMonster(st, st.current, zz, { src: 'power', bp: by });
       } }
+    for (let z = 0; z < ZONES; z++) { const cm = st.players[st.current].mz[z]; if (cm && isClone(cm) && cm.born !== st.turn) { removeMonster(st, st.current, z, 'ink'); log(st, st.current, 'El clon de Yoru se desvanece'); } }
     for (const gm of st.players[st.current].mz) {      // Cámara de Gravedad / Sala del Espíritu
       if (gm && gm.gr && gm.gr.t0 !== st.turn && gm.gr.n < 2) { gm.gr.n++; log(st, st.current, `${mdef(gm).name}: contador de entrenamiento ${gm.gr.n}/2`); }
       if (gm && gm.gr && gm.gr.n >= 2) st.trig.push({ k: 'gravrew', p: st.current, uid: gm.c.uid });
@@ -3286,7 +3339,7 @@
   /** ¿Puede un efecto del jugador byP elegir como objetivo al monstruo (q, z)? Los Seis Ojos no se pueden elegir; Spider-Man no, si lo elige un rival. */
   function canTarget(st, byP, q, z, o) {
     const m = st.players[q].mz[z];
-    if (!m || isInk(m)) return false;      // las bestias de tinta de Sai no se eligen con nada (no son cartas: no se absorben, roban ni encierran)
+    if (!m || (isInk(m) && !(isClone(m) && st.team[byP] !== st.team[q]))) return false;      // el clon de Yoru sólo se elige si es enemigo; las bestias de tinta de Sai no se eligen con nada (no son cartas: no se absorben, roban ni encierran)
     if (m.six && !(o && o.ignoreSix)) return false;
     if (m.cprot != null && elapsed(st, m.cprot) <= 0 && st.team[byP] !== st.team[q]) return false;      // Cápsulas Hoi-Poi: protegido contra efectos enemigos
     if (st.team[byP] !== st.team[q] && has(st, m, 'sentido')) return false;
@@ -3329,7 +3382,7 @@
   /** ¿Puede m atacar al personaje (e, tz)? Seis Ojos, Capa, Poder de Dios, criaturas de tinta, Mr. Satan y Tobi. */
   function atkOk(st, m, e, tz) {
     const tm = st.players[e].mz[tz];
-    if (!tm || tm.six || cloakOn(st.players[e], tz) || isInk(tm)) return false;
+    if (!tm || tm.six || cloakOn(st.players[e], tz) || (isInk(tm) && !isClone(tm))) return false;
     if (tm.god && st.team[st.players.findIndex(Q => Q.mz.includes(m))] !== st.team[tm.god.p]) return false;
     if (!tm.down && has(st, tm, 'satancamp') && lvl(m) >= 7) return false;                // Mr. Satan: ¡Soy el campeón mundial!
     if (m.tobiNA && m.tobiNA.uid === tm.c.uid) return false;                               // Tobi: Maestro de la manipulación
@@ -3565,6 +3618,9 @@
       if (ab.includes('hakdom') && st.domain && st.domain.uid === m.c.uid && u.hrT !== st.turn) push({ pw: 'hruleta' });
       if ((m.sc || 0) >= 1) { push({ pw: 'salaf' }); if (!m.sres) push({ pw: 'salar' }); }
       if ((m.sc || 0) >= 2) push({ pw: 'salad' });
+      if (ab.includes('chtour') && !m.c.chU && !m.tour && canAttackNow(st) && canAttackSlot(st, m)) push({ pw: 'chtour' });
+      if (ab.includes('yoclon') && u.ycT !== st.turn && P.mz.some(x => !x)) push({ pw: 'yoclon' });
+      if (ab.includes('yoviaje') && !u.yvj && !m.wide) push({ pw: 'yoviaje' });
       if (ab.includes('nearmira') && u.nmT !== st.turn) {      // Sucesor de L: mira en privado una carta boca abajo rival
         const eyes = P.eyes || [];
         for (const e of fl) {
@@ -3813,7 +3869,7 @@
         if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         const org = m.orgT === st.turn && atkCount(m) >= 1;      // Espada Orgánica: el ataque extra va contra otro personaje enemigo
         for (const e of fl) {
-          const all = zonesWith(st.players[e].mz).filter(tz => !isInk(st.players[e].mz[tz])), targets = all.filter(tz => atkOk(st, m, e, tz) && !(m.escHit && m.escHit.t === st.turn && m.escHit.u.includes(st.players[e].mz[tz].c.uid)));
+          const all = zonesWith(st.players[e].mz).filter(tz => !isInk(st.players[e].mz[tz]) || isClone(st.players[e].mz[tz])), targets = all.filter(tz => atkOk(st, m, e, tz) && !(m.escHit && m.escHit.t === st.turn && m.escHit.u.includes(st.players[e].mz[tz].c.uid)));
           if (!all.length) { if (!org) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' }); }
           else for (const tz of targets) {
             const a0 = mu ? { t: 'attack', zone: z, vs: e, target: tz } : { t: 'attack', zone: z, target: tz };
@@ -4512,6 +4568,17 @@
         st.log[st.log.length - 1].roul = n;
         break;
       }
+      case 'chtour': m.tour = true; m.c.chU = true; log(st, p, `${nm} activa Tour de Force: su próximo ataque ignora lo que impida destruir al objetivo`); break;
+      case 'yoclon': {
+        const zz = P.mz.findIndex(x => !x);
+        if (zz < 0) break;
+        u.ycT = st.turn;
+        P.mz[zz] = mkSlot(st, { uid: st.nextUid++, id: 'c_clon_yoru', virt: true }, { pos: 'atk' });
+        P.mz[zz].born = st.turn;
+        log(st, p, `${nm} crea un clon ilusorio en la zona ${zz + 1}`);
+        break;
+      }
+      case 'yoviaje': u.yvj = true; log(st, p, `${nm} usa Viaje Dimensional: desaparece hasta el comienzo de su siguiente turno`); toLimbo(st, p, a.zone, 'start', 0, 'Viaje Dimensional'); break;
       case 'salaf': m.sc -= 1; addMod(st, m, 'salaf', 800, 0, 0); log(st, p, `${nm}: Entrenamiento físico (+800 ATK permanente)`); break;
       case 'salar': m.sc -= 1; m.sres = true; log(st, p, `${nm}: Resistencia extrema (resistirá una destrucción)`); break;
       case 'salad': m.sc -= 2; m.sdom = { t0: st.turn }; log(st, p, `${nm}: Dominio de combate (podrá activar una habilidad adicional en su próximo turno)`); break;
@@ -4970,6 +5037,11 @@
       attackWindows(st, pd.cont.by);
       return;
     }
+    if (pd.ab === 'chmark') {
+      const c = (pd.cands || []).find(x => x.vs === a.vs && x.z === a.z);
+      if (c) { (st.cmarks = st.cmarks || []).push({ by: p, vs: c.vs, z: c.z, uid: pd.uid }); log(st, p, 'Chamber deja una marca oculta en el campo rival'); }
+      return;
+    }
     if (pd.ab === 'gravrew') {
       const g = slotByUid(st, p, pd.uid), m = g && g.m;
       if (m && m.gr && ['vel', 'res', 'pod'].includes(a.pick)) {
@@ -5024,6 +5096,30 @@
       }
       st.atk = Object.assign({}, pd.a, { noGalio: true });
       continueAttack(st);
+      return;
+    }
+    if (pd.ab === 'chrdv' || pd.ab === 'yoru') {               // Chamber (teletransporte) / Yoru (Cambio Dimensional)
+      const ch = P.mz[pd.zy], a0 = st.atk;
+      if (pd.stage === 'ask' && a.use && ch && a0) {
+        const cands = pd.ab === 'chrdv' ? P.mz.map((x, i) => (x ? null : { vs: p, z: i })).filter(Boolean)
+          : P.mz.map((x, i) => (x && i !== pd.zy && !x.wide && !x.down ? { vs: p, z: i } : null)).filter(Boolean);
+        if (cands.length) { st.pending = Object.assign({}, pd, { stage: 'target', cands }); return; }
+      } else if (pd.stage === 'target' && ch && a0) {
+        const c = (pd.cands || []).find(x => x.z === a.z);
+        if (c) {
+          if (pd.ab === 'chrdv') {
+            P.mz[c.z] = ch; P.mz[pd.zy] = null;
+            log(st, p, `${mdef(ch).name} se teletransporta: el ataque de ${pd.nm} falla`);
+            st.atk = null; atkDone(st, a0);
+            return;
+          }
+          const o = P.mz[c.z];
+          P.mz[c.z] = ch; P.mz[pd.zy] = o; ch.c.ycU = true;
+          log(st, p, `${mdef(ch).name} intercambia su posición con ${isClone(o) ? 'su clon' : mdef(o).name}: el ataque sigue contra la zona original`);
+          if (multi(st)) st.log[st.log.length - 1].q = a0.p;
+        }
+      }
+      attackWindows(st, pd.cont.by);
       return;
     }
     if (pd.ab === 'toge') {                                    // ¡Quieto! como respuesta: el atacante pasa a defensa y el ataque se cancela
@@ -5360,6 +5456,7 @@
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;
+      if (s.tour) v.tour = true;
       if (s.gr) v.gr = s.gr.n;
       if (s.gv) v.gv = true;
       if (s.gres) v.gres = true;
@@ -5499,6 +5596,7 @@
       pending,
       domain: st.domain ? { seat: st.domain.p, left: Math.min(2, Math.max(0, 2 - (elapsed(st, st.domain.t0)))), nm: st.domain.nm || 'de Sukuna', dn: st.domain.dn || 'Relicario Demoníaco', noST: !!st.domain.noST, min: st.domain.min || 10 } : null,
       marks: (st.marks || []).map(k => ({ by: k.by, vs: k.vs, z: k.z })),
+      cmarks: (st.cmarks || []).filter(k => k.by === seat).map(k => ({ vs: k.vs, z: k.z })),      // marcas ocultas de Chamber: sólo las ve quien las puso
       chain: st.chain ? { p: st.chain.p, c: { uid: st.chain.inst.uid, id: st.chain.inst.id } } : null,
       atk: st.atk ? { p: st.atk.p, z: st.atk.z, target: st.atk.target, vs: st.atk.vs } : null,
       log: st.log.slice(-60),
