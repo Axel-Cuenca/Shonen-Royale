@@ -30,7 +30,7 @@ module.exports = function (T) {
     for (const id of Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id))) {
       const c = Cards.get(id);
       ok(c && c.img && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
-      for (const k of ['imgSung', 'imgDom', 'imgAlt', 'imgMed']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
+      for (const k of ['imgSung', 'imgDom', 'imgAlt', 'imgMed', 'img1']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
       for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k);
       for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': ' + a + ' tiene texto');
     }
@@ -176,5 +176,33 @@ module.exports = function (T) {
     act(st, 1, atkA(st, 1, 0, 0));
     ok(!st.pending || st.pending.ab !== 'meliodas', 'sin ventanas');
     ok(!st.players[1].mz[0], 'el atacante cae: sus bonificaciones se anularon (Goku base < 2000)');
+  }
+
+  section('Kakuzu');
+  {
+    let st = fresh(1); put(st, 0, 0, 'c_kakuzu'); put(st, 0, 1, 'c_goku'); put(st, 1, 0, 'c_popeye');
+    const k = () => st.players[0].mz[0];
+    ok(E.view(st, 0).players[0].mz[0].hearts === 2, 'empieza con 2 corazones');
+    E.destroyMonster && 0;
+    // un corazón por turno: dos ataques mortales en el mismo turno
+    st.players[1].mz[0].atkMod = 2100; st.phase = 'battle'; st.turn = 7; st.current = 1;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    ok(k() && E.view(st, 0).players[0].mz[0].hearts === 1, 'sobrevive gastando un corazón');
+    ok(E.view(st, 0).players[0].mz[0].art === Cards.get('c_kakuzu').img1, 'con 1 corazón muestra su otra ilustración');
+    // Hilos de Costura: salva a un aliado, pero no en el mismo turno
+    st.players[1].mz[0].attacked = false; st.players[1].mz[0].atkN = 0;
+    act(st, 1, atkA(st, 1, 0, 1)); no(st);
+    ok(!st.players[0].mz[1], 'el límite de 1 corazón por turno impide salvar también al aliado');
+    // turno siguiente: Hilos salva al aliado y salta el Último Corazón
+    put(st, 0, 1, 'c_goku'); st.turn = 9; st.current = 1; st.players[1].mz[0].attacked = false; st.players[1].mz[0].atkN = 0;
+    act(st, 1, atkA(st, 1, 0, 1)); no(st);
+    ok(st.players[0].mz[1], 'Hilos de Costura salva al aliado');
+    eq(E.view(st, 0).players[0].mz[0].hearts, 0, 'sin corazones');
+    eq(stat(st, 0, 0)[0], 2600, 'Último Corazón: +600 ATK');
+    // máscaras
+    st = fresh(0); put(st, 0, 0, 'c_kakuzu'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_death_note', { down: true });
+    act(st, 0, pw(st, 0, 'kzrayo'));
+    ok(!st.players[1].st[0], 'Rayo destruye una carta boca abajo');
+    ok(!pw(st, 0, 'kzfuego'), 'una máscara por turno');
   }
 };

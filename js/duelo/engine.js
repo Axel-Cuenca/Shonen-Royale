@@ -736,8 +736,32 @@
 
   // ---------------- destruir ----------------
   /** Yoriichi es inmune a los efectos enemigos mientras ataca en el turno de su controlador (no al combate). */
-  const yoriFast = (st, p, z) => { const m = st.players[p].mz[z]; return !!m && !!st.atk && st.atk.p === p && st.atk.z === z && st.current === p && has(st, m, 'yoriichi'); };
+  const yoriFast = (st, p, z) => { const m = st.players[p].mz[z]; return !!m && !!st.atk && st.atk.p === p && st.atk.z === z && st.current === p && (has(st, m, 'yoriichi') || m.kzwater === st.turn); };      // Yoriichi y la máscara de Agua de Kakuzu: sin efectos enemigos durante su ataque
   /** Destruir un monstruo. ctx = { src: 'combat'|'spell'|'trap'|'power'|'mark', by: {p, uid}, bp: jugador que causa el efecto, ignoreSix }. Devuelve true si salió del campo. */
+  // ---------- Kakuzu: corazones (por copia de la carta; los conserva aunque salga del campo) ----------
+  const KZ_H = 2;
+  const heartsOf = m => (m.c.kzh == null ? KZ_H : m.c.kzh);
+  /** Gasta un corazón de Kakuzu (máx. 1 por turno entre Cinco Corazones e Hilos de Costura). true = se evitó la destrucción. */
+  function kzSpend(st, k, why) {
+    const km = k.m;
+    if (heartsOf(km) <= 0 || km.c.kzT === st.turn) return false;
+    km.c.kzh = heartsOf(km) - 1; km.c.kzT = st.turn;
+    log(st, k.p, `${mdef(km).name}: ${why} (le quedan ${km.c.kzh} corazón(es) adicional(es))`);
+    if (km.c.kzh === 0) {
+      addMod(st, km, 'kzult', 600, 0, 0);
+      km.xtra = { t: st.turn, n: (km.xtra && km.xtra.t === st.turn ? km.xtra.n : 0) + 1 };
+      log(st, k.p, `${mdef(km).name}: Último Corazón, +600 ATK y un ataque adicional este turno`);
+    }
+    return true;
+  }
+  function kzSave(st, p, z, m) {
+    if (rawAbil(m).includes('kzcor') && !m.down && !blocked(m, 'ab')) { const r = kzSpend(st, { p, m }, 'Cinco Corazones evita su destrucción'); if (r) return true; }
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive || st.team[q] !== st.team[p]) continue;
+      for (const x of st.players[q].mz) if (x && x !== m && !x.down && has(st, x, 'kzhilos') && !blocked(x, 'ab') && kzSpend(st, { p: q, m: x }, `Hilos de Costura salvan a ${mdef(m).name}`)) return true;
+    }
+    return false;
+  }
   function destroyMonster(st, p, z, ctx) {
     ctx = ctx || { src: 'effect' };
     const P = st.players[p], m = P.mz[z];
@@ -751,6 +775,7 @@
       if (!ak || atkOf(st, st.players[ak.p], ak.z) <= 2800) { log(st, p, `${nm} resiste el combate: sólo lo derrota un ataque con más de 2800 ATK`); noteSaved(st, nm); return false; }
     }
     if (cloakOn(P, z) && ctx.src !== 'spell') { log(st, p, `${nm} es invisible: sólo las cartas mágicas pueden destruirlo`); return false; }      // Capa de Invisibilidad
+    if (!(ctx.src === 'mark') && kzSave(st, p, z, m)) return false;
     {   // Minions: Sacrificio protector (no ante magias)
       const ms = ctx.src !== 'spell' ? minionsOf(P, z) : null;
       if (ms && (ctx.src === 'combat' || ctx.src === 'trap' || ctx.src === 'power')) {
@@ -2480,9 +2505,9 @@
     return false;
   }
   const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
-    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería' };
+    astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza' });
+  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -2674,6 +2699,7 @@
     if (m && m.mods && m.mods.some(x => x.k === 'ras')) { dropMods(m, 'ras'); log(st, a.p, `${mdef(m).name} gasta su Rasengan`); }
     if (m && m.mods && m.mods.some(x => x.k === 'kame')) { dropMods(m, 'kame'); log(st, a.p, `${mdef(m).name} gasta su Kamehameha`); }
     if (m && m.mods && m.mods.some(x => x.k === 'caza')) dropMods(m, 'caza');
+    if (m && m.mods && m.mods.some(x => x.k === 'kzviento')) dropMods(m, 'kzviento');
     for (const Q of st.players) for (const x of Q.mz) if (x && x.mods && x.mods.some(y => y.k === 'unico')) dropMods(x, 'unico');      // El Único: sólo ese combate
     if (m && m.ghost) { log(st, a.p, `${mdef(m).name} es desterrado tras el ataque`); removeMonster(st, a.p, a.z, 'banish'); }
   }
@@ -2740,6 +2766,9 @@
         return continueAttack(st);
       }
     }
+    {   const a = st.atk, at = a && st.players[a.p].mz[a.z];
+      if (at && at.kzwater === st.turn && st.current === a.p) { a.meli = true; a.boomX = 1; a.shR = 1; return continueAttack(st); }      // Kakuzu, máscara de Agua: ni magias, trampas ni habilidades enemigas durante este ataque
+    }
     if (uiCounter(st, p)) return;
     if (openWindow(st, 'attack', { k: 'attack', by: p })) return;
     continueAttack(st);
@@ -2751,7 +2780,7 @@
     const at0 = st.players[a.p].mz[a.z];
     if (at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && conejosEvade(st, a.vs, a.target)) { galandHit(st, a, a.vs, a.target); atkDone(st, a); return; }      // Megumi evade el ataque
     if (at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p] && tobiEvade(st, a.vs, a.target)) { galandHit(st, a, a.vs, a.target); atkDone(st, a); return; }        // Tobi: Kamui
-    if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && has(st, at0, 'yoriichi'))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
+    if (!a.meli && at0 && st.team[a.vs] !== st.team[a.p] && !(st.current === a.p && (has(st, at0, 'yoriichi') || at0.kzwater === st.turn))) {      // Total Counter (Yoriichi es inmune a las habilidades enemigas en sus ataques)
       const mm = meliFor(st, a.p, a.vs);
       if (mm) { st.pending = { k: 'ability', ab: 'meliodas', kind: 'attack', player: mm.q, mz: mm.z, stage: 'ask', a, nm: mdef(at0).name }; return; }
     }
@@ -3439,6 +3468,12 @@
         for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz) && !blocked(st.players[e].mz[tz], 'atk')) push({ pw: 'rred', target: { vs: e, z: tz } });
       }
       if (ab.includes('rengarcaza') && !m.fly && (u.rcT0 == null || elapsed(st, u.rcT0) >= 2)) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) { const tm = st.players[e].mz[tz]; if (!tm.down && canTarget(st, p, e, tz)) push({ pw: 'rcaza', target: { vs: e, z: tz } }); }
+      if (ab.includes('kzmask') && u.kzmT !== st.turn) {
+        for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (canTarget(st, p, e, tz)) push({ pw: 'kzfuego', target: { vs: e, z: tz } });
+        push({ pw: 'kzviento' });
+        for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'kzrayo', target: { vs: e, z: tz, area: 'st' } });
+        push({ pw: 'kzagua' });
+      }
       // ----- tanda 6 -----
       const hand = id => P.hand.map((c, i) => (c.id === id ? i : -1)).filter(i => i >= 0);
       if (m.c.id === 'c_asta' && ab.includes('astaneg') && m.astaW) for (const i of hand('c_asta_negra').slice(0, 1)) if (spot(P, def(P.hand[i]), [z]) >= 0) push({ pw: 'astaneg', hand: i });
@@ -4348,6 +4383,25 @@
         if (multi(st)) st.log[st.log.length - 1].q = e;
         break;
       }
+      case 'kzfuego': {
+        u.kzmT = st.turn;
+        const e = a.target.vs, tm = st.players[e].mz[a.target.z];
+        if (!tm) break;
+        addMod(st, tm, 'kzfuego', -400, 0, 0);
+        log(st, p, `${nm} usa la máscara de Fuego: ${tm.down ? 'un personaje boca abajo' : mdef(tm).name} pierde 400 ATK`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        break;
+      }
+      case 'kzviento': u.kzmT = st.turn; addMod(st, m, 'kzviento', 500, 0, 0); log(st, p, `${nm} usa la máscara de Viento: +500 ATK durante su próximo combate`); break;
+      case 'kzrayo': {
+        u.kzmT = st.turn;
+        const e = a.target.vs, sx = st.players[e].st[a.target.z];
+        log(st, p, `${nm} usa la máscara de Rayo contra ${sx && !sx.down ? def(sx.c).name : 'una carta de magia/trampa'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = e;
+        if (sx) removeST(st, e, a.target.z);
+        break;
+      }
+      case 'kzagua': u.kzmT = st.turn; m.kzwater = st.turn; log(st, p, `${nm} usa la máscara de Agua: ningún efecto enemigo lo afecta en su ataque de este turno`); break;
       case 'kameha':
         markOnce(u, 'kame'); addMod(st, m, 'kame', 300, 0, 0);
         log(st, p, `${nm} usa Kamehameha: +300 ATK en su próximo ataque`);
@@ -5116,6 +5170,7 @@
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
       if (s.camu) v.camu = true;
       if (s.prey && own) v.prey = true;
+      if (rawAbil(s).includes('kzcor')) { v.hearts = heartsOf(s); if (v.hearts === 1 && mdef(s).img1) v.art = mdef(s).img1; }
       if (rawAbil(s).includes('rengarfer')) v.fer = uOf(s).fer || 0;
       if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, n: b.n }));
       if (s.pub != null) v.pub = true;
