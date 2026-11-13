@@ -88,6 +88,7 @@
     if (st.domain && lvl(m) < (st.domain.min || 10) && st.domain.uid !== m.c.uid) return [];
     if (m.price) return [];                                                  // Guantelete del Infinito: el precio del poder
     let a = rawAbil(m);
+    if (a.includes('shisusa') && !susOf(m).on) a = a.filter(x => x === 'shisusa');      // Shisui sin Susanoo: sólo conserva la pasiva
     if (m.sealed && m.sealed.length) a = a.filter(x => !m.sealed.some(q => q.ab === x));
     if (m.spentAb && m.spentAb.length) a = a.filter(x => !m.spentAb.includes(x));      // X: habilidades consumidas para siempre
     { const cb = st.atk || st.cmb; if (cb && cb.wpn && cb.wpnU === m.c.uid) { if (cb.wpn === 'nube') return []; if (cb.wpn === 'lanza') a = a.filter(x => POWER_IDS.includes(x)); } }      // Maki: Nube Juguetona / Lanza Invertida del Cielo
@@ -95,6 +96,20 @@
     // Gogeta: Resistencia absoluta = inmune a las magias y trampas
   }
   const has = (st, m, id) => abil(st, m).includes(id);
+  // ---------------- tanda 7: Shisui Uchiha (Susanoo) ----------------
+  const SHISUI_SH = 2200;
+  /** Estado del Susanoo de Shisui: on (activo), sh (escudo), vuln (escudo roto), ch (cargas), dead (destruido), away/awayT (retirado por Desaparición Instantánea). */
+  const susOf = m => m.sus || (m.sus = { on: false, sh: 0, vuln: false, ch: 0, dead: false, away: false, awayT: -1, used: false });
+  /** Shisui con el Susanoo activo (sus habilidades dependen de él). */
+  const susOn = (st, m) => !!m && !m.down && rawAbil(m).includes('shisusa') && !!susOf(m).on;
+  /** El Susanoo de Shisui se destruye (para siempre): pierde el resto de habilidades. */
+  function susDestroy(st, p, z) {
+    const m = st.players[p].mz[z];
+    if (!m || !m.sus) return;
+    m.sus = { on: false, sh: 0, vuln: false, ch: 0, dead: true, away: false, awayT: -1, used: true };
+    delete m.drill;
+    log(st, p, `El Susanoo de ${mdef(m).name} es destruido: se queda sin escudo y pierde sus habilidades`);
+  }
   // ---------------- tanda 6 (05-11-2026): utilidades compartidas ----------------
   /** Criaturas de tinta de Sai: fichas, no cartas (no van a ninguna pila, no se cuentan, no se sacrifican). */
   const isInk = m => !!m && !!m.c && !!(C().get(m.c.id) || {}).ink;
@@ -563,6 +578,7 @@
     const m = P.mz[z];
     if (!m) return null;
     if (m.shen && m.shen.sh > 0) return { kind: 'shen', cur: m.shen.sh, max: SHEN_SH, set: v => { m.shen.sh = v; } };
+    if (m.sus && m.sus.on && m.sus.sh > 0 && has(st, m, 'shisusa')) return { kind: 'shisui', cur: m.sus.sh, max: SHISUI_SH, m, set: v => { m.sus.sh = v; } };      // Susanoo de Shisui
     if (!stOff(st)) for (const s of P.st) if (s && !s.down && s.equipTo === z && s.susano && s.susano.awake && s.susano.sh > 0) return { kind: 'susano', cur: s.susano.sh, max: SUSANO_SH, slot: s, set: v => { s.susano.sh = v; } };
     if (has(st, m, 'escudo') && shieldOf(m) > 0) return { kind: 'vegeta', cur: shieldOf(m), max: SHIELD_MAX, set: v => { uOf(m).sh = v; } };
     return null;
@@ -987,6 +1003,11 @@
       }
       if ((kmm.mods || []).some(x => x.k === 'caza')) { addMod(st, kmm, 'cazap', 400, 0, 0); log(st, killer.p, `Caza Implacable: ${mdef(kmm).name} conserva los +400 ATK para siempre`); }
       if (has(st, kmm, 'galco')) { const gu = uOf(kmm); gu.gco = (gu.gco || 0) + 1; log(st, killer.p, `Critical Over: ${mdef(kmm).name} acumula una carga (${gu.gco})`); }
+      if (st.current === killer.p && st.team[killer.p] !== st.team[p] && susOn(st, kmm) && has(st, kmm, 'shisiete') && uOf(kmm).ssT !== st.turn) {      // Shisui: Espada de los Siete Cortes
+        uOf(kmm).ssT = st.turn; kmm.orgT = st.turn;
+        kmm.xtra = { t: st.turn, n: (kmm.xtra && kmm.xtra.t === st.turn ? kmm.xtra.n : 0) + 1 };
+        log(st, killer.p, `Espada de los Siete Cortes: ${mdef(kmm).name} puede atacar a otro personaje enemigo`);
+      }
       if (has(st, kmm, 'belorg') && uOf(kmm).boT !== st.turn) {                                          // Bellion: Espada Orgánica
         uOf(kmm).boT = st.turn; kmm.orgT = st.turn;
         kmm.xtra = { t: st.turn, n: (kmm.xtra && kmm.xtra.t === st.turn ? kmm.xtra.n : 0) + 1 };
@@ -2235,7 +2256,7 @@
   function combatDeaths(st, a) {
     if (a.target === 'direct') return [];
     const me = st.players[a.p], op = st.players[a.vs], at = me.mz[a.z], dm = op.mz[a.target];
-    if (!at || !dm || shieldInfo(st, op, a.target) || boomReady(st, at) || boomReady(st, dm)) return [];
+    if (!at || !dm || a.susInt || shieldInfo(st, op, a.target) || boomReady(st, at) || boomReady(st, dm)) return [];
     const A = atkOf(st, me, a.z), out = [];
     if (dm.pos === 'atk') {
       const B = atkOf(st, op, a.target);
@@ -2460,6 +2481,7 @@
       if (d.kind !== 'trap' || !(d.trigger === trigger || (d.triggers && d.triggers.includes(trigger)))) return;
       if (trigger === 'spell' && st.chain && st.chain.unstop && d.fx !== 'xcancel') return;      // Gokumonkyo no se puede anular… salvo con la X
       if (trigger === 'attack' && !st.atk) return;
+      if ((trigger === 'attack' && st.atk && st.atk.drill) || (trigger === 'destroy' && cont && cont.a && cont.a.drill)) return;      // Taladro de Chakra: el ataque perforante ignora las trampas
       if (trigger === 'spell' && !st.chain) return;
       if (trigger === 'summon' && !(st.summon && st.players[st.summon.p].mz[st.summon.z])) return;
       if (trigger === 'summon' && d.maxLevel && lvl(st.players[st.summon.p].mz[st.summon.z]) > d.maxLevel) return;      // Infarto Inesperado: sólo 4★ o menos
@@ -2862,10 +2884,10 @@
     if (PW_RED.includes(a.pw) || (a.pw === 'tinta' && a.opt === 'serp')) return realityWindow(st, 'reduce', p, t.vs, { k: 'gpower', pa: a }, txt);
     return false;
   }
-  const PWL = { majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
+  const PWL = { susact: 'Susanoo', taladro: 'Taladro de Chakra', koto: 'Kotoamatsukami', majinex: 'Explosión final', armin: 'Transformación en Titán Colosal', manto: 'Manto de Kyuubi', rasengan: 'Rasengan', kaiox10: 'Kaioken x10', odinvida: 'Cargas de vida', odinrev: 'Revelación divina', odinbend: 'Bendición de poder', tgmente: 'Gema de la Mente', tgtiempo: 'Gema del Tiempo', tq: '¡Quieto!', td: '¡Debilítate!', tm: '¡Muere!', rojo: 'Rojo', azul: 'Azul', purpura: 'Púrpura', xform: 'Transformación', kform: 'Transformación', avpred: 'Depredador de Magia', kaioken6: 'Kaio-ken', genki: 'Genkidama', ydominio: 'Amor Mutuo y Verdadero', dominio: 'Ataúd de la Montaña de Hierro', marca: 'Marca de Cazador', conc: 'Respiración de Concentración Total', conc2: 'Respiración de Concentración Total', desp: 'Despertar del Poder Oculto', teach: 'Maestro de las Artes', eren: 'Transformación en Titán de Ataque', punos: 'Endurecimiento de los puños', semilla: 'Semilla del Hermitaño', armadura: 'Armadura de Iron Man', jkmove: 'Transformación en equipo', simb: 'Simbiosis', robo: 'Robo de habilidades', kurama: 'Chakra de Kurama', dslobos: 'Lobos', dsnue: 'Nue', dselef: 'Elefante', dssapo: 'Sapo', dsserp: 'Serpiente', dsmaho: 'Invocación del General Mahoraga',
     astaneg: 'Transformación en Asta Forma Negra', astauni: 'Transformación en Asta Unión Demoníaca', astacausa: 'Espada Destructora de Causas', sjarmy: 'Ejército de las sombras', sjigris: 'Caballero de las sombras: Igris', sjberu: 'Beru, el Rey Hormiga', sjbellion: 'Bellion, Gran Mariscal', sjmon: 'Monarca de las Sombras', kameha: 'Kamehameha', bulmagen: 'Genio científico', satanpub: 'Publicidad engañosa', elizluz: 'Luz purificadora', galco: 'Critical Over', galcaza: 'Caza Implacable', higudom: 'Sentencia Mortal', tobidim: 'Dimensión Kamui', tinta: 'Súper Bestias de Tinta', shikasomb: 'Posesión de sombras', liukang: 'Patadas Continuas', misaojos: 'Ojos de Shinigami', misadn: 'Portadora de la Death Note', katana: 'Katana de la Antimagia', kaisel: 'Montura de las Sombras', kaiselvuelo: 'Vuelo Dracónico', rsalv: 'Salvajismo', rrug: 'Rugido de Batalla', rcam: 'Camuflaje', rred: 'Bola de Red', rcaza: 'Emoción de la Cacería', hanunion: 'Unión de Emociones', tkmet: 'Meteorito', tkgrav: 'Gravedad', tkbar: 'Barrera', tklegion: 'Gran Magia: Legión de Meteoritos', viegoabil: 'Habilidad del cuerpo poseído', viegoniebla: 'Niebla Negra', ginyu: '¡CAMBIO!', dofhilo: 'Parasite: Hilos de Control', dofjaula: 'Jaula de Pájaros', gyuhoz: 'Hoz de Sangre', gyudanza: 'Danza de Hoces Giratorias', dakibelt: 'Cinturón de carne', dakimove: 'Mover un cinturón', mcubo: 'Cubo Perfecto', mrompe: 'Romper el cubo', chtour: 'Tour de Force', yoclon: 'Engaño Dimensional', yoviaje: 'Viaje Dimensional', salaf: 'Entrenamiento físico', salar: 'Resistencia extrema', salad: 'Dominio de combate', nearmira: 'Sucesor de L', hakdom: 'Expansión de Dominio: Apuesta Mortal', hruleta: 'Girar la ruleta', kzfuego: 'Máscara de Fuego', kzviento: 'Máscara de Viento', kzrayo: 'Máscara de Rayo', kzagua: 'Máscara de Agua' };
   /** Habilidad (id) a la que pertenece cada poder, para que X la consuma. */
-  const PW_ABID = Object.assign({}, PW_AB, { eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', hanunion: 'hanunion', tkmet: 'tuskmagia', tkgrav: 'tuskmagia', tkbar: 'tuskmagia', tklegion: 'tuskgran', viegoabil: 'viegodom', viegoniebla: 'viegoniebla', ginyu: 'ginyucambio', dofhilo: 'dofhilo', dofjaula: 'dofjaula', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', mcubo: 'merlincubo', mrompe: 'merlincubo', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
+  const PW_ABID = Object.assign({}, PW_AB, { susact: 'shisusa', taladro: 'shitaladro', koto: 'shikoto', eren: 'transtitan', punos: 'punos', semilla: 'semilla', armadura: 'tonyarm', jkmove: 'jake', simb: 'symb', robo: 'sylas', kurama: 'kurama', ydominio: 'yutadom', bite: 'bite', copy: 'copy', majinex: 'majinex', armin: 'armin', manto: 'manto', rasengan: 'rasengan', odinvida: 'odincarga', odinrev: 'odinrev', odinbend: 'odinbend', astacausa: 'astacausa', sjarmy: 'sjarmy', sjigris: 'sjigris', sjberu: 'sjberu', sjbellion: 'sjbellion', kameha: 'kameha', bulmagen: 'bulmagen', satanpub: 'satanpub', elizluz: 'elizluz', galco: 'galco', galcaza: 'galcaza', higudom: 'higudom', tobidim: 'tobidim', tinta: 'tinta', shikasomb: 'shikasomb', liukang: 'liukang', misaojos: 'misaojos', misadn: 'misadn', kaisel: 'sjdom', kaiselvuelo: 'kaivuelo', rsalv: 'rengarmax', rrug: 'rengarmax', rcam: 'rengarmax', rred: 'rengarmax', rcaza: 'rengarcaza', hanunion: 'hanunion', tkmet: 'tuskmagia', tkgrav: 'tuskmagia', tkbar: 'tuskmagia', tklegion: 'tuskgran', viegoabil: 'viegodom', viegoniebla: 'viegoniebla', ginyu: 'ginyucambio', dofhilo: 'dofhilo', dofjaula: 'dofjaula', gyuhoz: 'gyuhoz', gyudanza: 'gyudanza', dakibelt: 'dakibelt', dakimove: 'dakibelt', mcubo: 'merlincubo', mrompe: 'merlincubo', chtour: 'chtour', yoclon: 'yoclon', yoviaje: 'yoviaje', salaf: 'saladum', salar: 'saladum', salad: 'saladum', nearmira: 'nearmira', hakdom: 'hakdom', hruleta: 'hakdom', kzfuego: 'kzmask', kzviento: 'kzmask', kzrayo: 'kzmask', kzagua: 'kzmask' });
   const PW_FLAG = { tq: 'tq', td: 'td', tm: 'tm', rojo: 'rojo', azul: 'azul', purpura: 'purpura', kaioken6: 'kk6', genki: 'gen', canon: 'canon' };
   /** Marca el poder como gastado: lo que habría gastado su uso normal. (X: para siempre, esa instancia del personaje.) */
   function consumePower(st, p, a, forever) {
@@ -3001,6 +3023,7 @@
     st.atk = { p, z, target, vs, negated: false };
     if (m.wpn) { const dmw = target !== 'direct' && st.players[vs].mz[target]; st.atk.wpn = m.wpn; if (dmw) st.atk.wpnU = dmw.c.uid; delete m.wpn; }      // Maki: arma elegida para este ataque
     if (extra && extra.length) st.atk.extra = extra;      // Puño del Dragón: otras casillas atravesadas en el mismo ataque
+    if (m.drill) { st.atk.drill = true; delete m.drill; }      // Taladro de Chakra: este ataque ignora magias y trampas
     log(st, p, target === 'direct' ? `${mdef(m).name} ataca directamente` : `${mdef(m).name} ataca`);
     if (multi(st)) st.log[st.log.length - 1].q = vs;
     ferocidad(st, p, m, 'ataca');
@@ -3195,9 +3218,37 @@
       if (cr) { a.boomX = 1; if (nextWindow(st, 'power', { k: 'boom', by: cr.p, a, cr, uid: st.players[cr.p].mz[cr.z].c.uid, info: { boom: 1, txt: `${mdef(st.players[cr.p].mz[cr.z]).name} va a explotar al terminar el combate: los dos personajes serían desterrados.` } }, foes(st, cr.p))) return; }
     }
     if (a.strip && !a.stripped && at0 && a.target !== 'direct' && st.players[a.vs].mz[a.target]) { a.stripped = 1; stripBoosts(st, a.p, a.vs, a.target); }      // Anulación de aumentos
+    if (!a.shiP && at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p]) {        // Shisui: Cuerpo Parpadeante
+      a.shiP = 1;
+      const tm = st.players[a.vs].mz[a.target];
+      if (tm && !tm.down && has(st, tm, 'shiparp') && !blocked(tm, 'ab') && uOf(tm).parT !== st.turn && !tm.wide && !tm.huge && !tm.fused && !isInk(tm)) {
+        const cands = st.players[a.vs].mz.map((x, i) => (x && i !== a.target && !x.down && !x.wide && !x.huge && !x.fused && !isInk(x) && !(x.c && x.c.virt) ? { vs: a.vs, z: i } : null)).filter(Boolean);
+        if (cands.length) { st.pending = { k: 'ability', ab: 'shiparp', player: a.vs, stage: 'ask', zy: a.target, a, cands, nm: mdef(at0).name }; return; }
+      }
+    }
+    if (!a.shiV && at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p]) {        // Shisui con el Susanoo vulnerable: el ataque lo destruye
+      const tm = st.players[a.vs].mz[a.target];
+      if (tm && !tm.down && has(st, tm, 'shisusa') && tm.sus && tm.sus.on && tm.sus.vuln && !(tm.sus.sh > 0)) {
+        a.shiV = 1;
+        if (has(st, tm, 'shidesap') && !tm.c.sdp && !blocked(tm, 'ab')) { st.pending = { k: 'ability', ab: 'shidesap', player: a.vs, stage: 'ask', zy: a.target, a, nm: mdef(at0).name }; return; }
+        susDestroy(st, a.vs, a.target); atkDone(st, a); return;
+      }
+    }
     if (!a.shR && at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p]) {        // Sung Jin-Woo: Intercambio de sombras / Igris: Caballero Protector
       const o = shadowOpts(st, a.vs, a.target, a.p);
       if (o.length) { a.shR = 1; st.pending = { k: 'ability', ab: 'shadowred', kind: 'attack', player: a.vs, stage: 'ask', a, opts: o, nm: mdef(st.players[a.vs].mz[a.target]).name }; return; }
+    }
+    if (!a.susQ && at0 && a.target !== 'direct' && st.team[a.vs] !== st.team[a.p]) {        // Shisui: el Susanoo recibe el ataque que iba contra un aliado
+      a.susQ = 1;
+      const tm = st.players[a.vs].mz[a.target];
+      if (tm && !isInk(tm) && !has(st, tm, 'shisusa')) {
+        for (let i = 0; i < st.n; i++) {
+          const q = (a.vs + i) % st.n, Q = st.players[q];
+          if (!Q.alive || st.team[q] !== st.team[a.vs]) continue;
+          const sz = Q.mz.findIndex(x => x && !x.down && has(st, x, 'shisusa') && x.sus && x.sus.on && x.sus.sh > 0 && !blocked(x, 'ab') && uOf(x).susT !== st.turn);
+          if (sz >= 0) { st.pending = { k: 'ability', ab: 'shisusa', player: q, stage: 'ask', zy: sz, a, nm: mdef(tm).name }; return; }
+        }
+      }
     }
     const deaths = combatDeaths(st, a);
     if (!a.noBulma) for (const v of deaths) {                                                // Bulma: Inventora de emergencia
@@ -3288,7 +3339,11 @@
     // y después los dos monstruos son desterrados (no importa quién ganara el combate)
     const boom = boomReady(st, at) || boomReady(st, dm);
     const boomName = boomReady(st, at) ? ad.name : dd.name;
-    const shd = shieldInfo(st, op, a.target), shielded = !!shd;
+    let shd = null;
+    if (a.susInt) { const sm = st.players[a.susInt.q].mz[a.susInt.z]; if (sm && sm.sus && sm.sus.on && sm.sus.sh > 0) shd = { kind: 'shisui', cur: sm.sus.sh, max: SHISUI_SH, m: sm, prot: true, set: v => { sm.sus.sh = v; } }; }      // el Susanoo de Shisui recibe el golpe
+    if (!shd) shd = shieldInfo(st, op, a.target);
+    if (shd && a.drill && shd.kind === 'susano') shd = null;      // Taladro de Chakra: ignora el escudo de una magia
+    const shielded = !!shd;
     const kill = (pl, z, nm, by, defn) => { if (!boom) { if (destroyMonster(st, pl, z, { src: 'combat', by, defn })) log(st, -1, `${nm} es destruido`); } };
     // Escudo Blue Evolution activo: el combate se resuelve sólo contra el escudo. El ATK/DEF de Vegeta no cuentan,
     // nadie sufre daño de diferencia y lo que sobre no pasa a Vegeta.
@@ -3318,7 +3373,8 @@
     if (shielded && op.mz[a.target] === dm) {
       const left = Math.max(0, shd.cur - A);
       shd.set(left);
-      log(st, vs, left > 0 ? `El escudo de ${dd.name} recibe ${A} de daño (${left}/${shd.max})` : `El escudo de ${dd.name} se destruye`);
+      if (shd.prot) log(st, vs, left > 0 ? `El Susanoo de ${mdef(shd.m).name} recibe ${A} de daño en lugar de ${dd.name} (${left}/${shd.max})` : `El Susanoo de ${mdef(shd.m).name} recibe el golpe en lugar de ${dd.name} y su escudo se agota`);
+      else log(st, vs, left > 0 ? `El escudo de ${dd.name} recibe ${A} de daño (${left}/${shd.max})` : `El escudo de ${dd.name} se destruye`);
       if (!left) shieldBroken(st, vs, a.target, shd);
     }
     if (boom) {
@@ -3374,6 +3430,7 @@
         if (!s.binds.length) delete s.binds;
       }
       if (s.tobiNA && st.turn > s.tobiNA.t) delete s.tobiNA;
+      if (s.drill) delete s.drill;      // Taladro de Chakra: sólo vale para el siguiente ataque de este turno
     }
     for (let i = 0; i < ZONES; i++) { const is = P.st[i]; if (is && is.iza && is.iza.armed === st.turn) { P.st[i] = null; P.grave.push(is.c); log(st, st.current, 'Izanagi: no se usó la devolución a tiempo; la oportunidad se pierde'); } }
     for (const Q of st.players) for (const x of Q.mz) if (x) {          // Intercambio de Almas y Hilos del Destino
@@ -3791,11 +3848,30 @@
     for (const e of foes(st, p)) if (!zonesWith(st.players[e].mz).length) out.push(mu ? { t: 'attack', zone: z, vs: e, target: 'direct' } : { t: 'attack', zone: z, target: 'direct' });
     return out;
   }
-  /** Zonas de Rika que deben atacar este turno (Maldición Incontrolable). */
+  /** Kotoamatsukami (Traición): el personaje manipulado debe atacar a otro personaje de su propio bando. */
+  const traiOf = m => !!m && (m.binds || []).some(b => b.trai);
+  function traiOptions(st, p, z) {
+    const mu = multi(st), out = [];
+    for (let q = 0; q < st.n; q++) {
+      if (!st.players[q].alive || st.team[q] !== st.team[p]) continue;
+      for (const tz of zonesWith(st.players[q].mz)) {
+        const x = st.players[q].mz[tz];
+        if ((q === p && tz === z) || x.six || isInk(x) || (x.c && x.c.virt)) continue;
+        out.push({ t: 'attack', zone: z, vs: q, target: tz });
+      }
+    }
+    return out;
+  }
+  /** Zonas de Rika que deben atacar este turno (Maldición Incontrolable) y las del Kotoamatsukami (Traición). */
   function forcedRika(st, p) {
     const P = st.players[p], out = [];
-    if (st.current !== p || st.pending || !canAttackNow(st) || rikaState(st).happy) return out;
-    P.mz.forEach((m, z) => { if (m && !m.down && has(st, m, 'rikamal') && canAttackSlot(st, m) && rikaOptions(st, p, z).length) out.push(z); });
+    if (st.current !== p || st.pending || !canAttackNow(st)) return out;
+    const happy = rikaState(st).happy;
+    P.mz.forEach((m, z) => {
+      if (!m || m.down || !canAttackSlot(st, m)) return;
+      if (traiOf(m)) { if (traiOptions(st, p, z).length) out.push(z); return; }
+      if (!happy && has(st, m, 'rikamal') && rikaOptions(st, p, z).length) out.push(z);
+    });
     return out;
   }
   /** Poderes de los monstruos del jugador: [{ t:'power', zone, pw, ... }]. */
@@ -3936,6 +4012,13 @@
           if (!u.td) push({ pw: 'td', target: t });
           if (!u.tm && lvl(tm) <= 4) push({ pw: 'tm', target: t });
         }
+      }
+      if (ab.includes('shisusa')) { const su = susOf(m); if (!su.on && !su.dead && (!su.away || st.turn > su.awayT)) push({ pw: 'susact' }); }      // Shisui: activar (o volver a activar) el Susanoo
+      if (ab.includes('shitaladro') && susOn(st, m) && susOf(m).ch > 0 && !m.drill) push({ pw: 'taladro' });
+      if (ab.includes('shikoto') && susOn(st, m) && u.kotT !== st.turn) for (const t of foeChars(st, p)) {
+        const tm = st.players[t.vs].mz[t.z];
+        if (tm.down || isInk(tm)) continue;
+        push({ pw: 'koto', target: t, opt: 'trai' }); push({ pw: 'koto', target: t, opt: 'desob' });
       }
       if (ab.includes('semilla') && (u.sdT !== st.turn || (u.sdN || 0) < g)) for (const t of allyChars(st, p)) if (seedList(st, t.vs, t.z, false).length) push({ pw: 'semilla', target: t });
       if (ab.includes('tonyarm') && m.tony && m.tony.mat > 0 && m.tony.t !== st.turn) push({ pw: 'armadura' });
@@ -4281,7 +4364,7 @@
       const mu = multi(st), fl = foes(st, p), fr = forcedRika(st, p);
       P.mz.forEach((m, z) => {
         if (!canAttackSlot(st, m)) return;
-        if (fr.includes(z)) { out.push(...rikaOptions(st, p, z)); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
+        if (fr.includes(z)) { out.push(...(traiOf(m) ? traiOptions(st, p, z) : rikaOptions(st, p, z))); return; }       // Rika obligada: sólo sus objetivos (aliados o enemigos)
         const org = m.orgT === st.turn && atkCount(m) >= 1;      // Espada Orgánica: el ataque extra va contra otro personaje enemigo
         for (const e of fl) {
           const all = zonesWith(st.players[e].mz).filter(tz => !isInk(st.players[e].mz[tz]) || isClone(st.players[e].mz[tz])), targets = all.filter(tz => atkOk(st, m, e, tz) && !(m.escHit && m.escHit.t === st.turn && m.escHit.u.includes(st.players[e].mz[tz].c.uid)));
@@ -4795,6 +4878,31 @@
         log(st, p, `${nm} usa ¡Muere!: ${mdef(tm).name}`);
         if (multi(st)) st.log[st.log.length - 1].q = tq;
         destroyMonster(st, tq, a.target.z, ctx);
+        break;
+      }
+      case 'susact': {
+        const su = susOf(m);
+        if (su.on || su.dead) break;
+        su.on = true;
+        if (!su.used) { su.used = true; su.sh = SHISUI_SH; log(st, p, `${nm} activa su Susanoo: escudo de ${SHISUI_SH} puntos`); }
+        else log(st, p, `${nm} vuelve a activar su Susanoo (escudo ${su.sh}${su.vuln ? ', vulnerable' : ''})`);
+        su.away = false;
+        break;
+      }
+      case 'taladro': {
+        const su = susOf(m);
+        if (!su.on || su.ch < 1 || m.drill) break;
+        su.ch--; m.drill = true;
+        log(st, p, `${nm} gasta 1 carga: Taladro de Chakra, su próximo ataque es perforante e ignora las magias y trampas rivales (${su.ch} carga(s) restantes)`);
+        break;
+      }
+      case 'koto': {
+        const tq = a.target.vs, tm = st.players[tq].mz[a.target.z];
+        if (!tm || tm.down || u.kotT === st.turn) break;
+        u.kotT = st.turn;
+        (tm.binds = tm.binds || []).push(a.opt === 'trai' ? { trai: true, n: 2, t0: st.turn, nm: 'el Kotoamatsukami (Traición)' } : { atk: true, ab: true, n: 2, t0: st.turn, nm: 'el Kotoamatsukami (Desobediencia)' });
+        log(st, p, `${nm} usa Kotoamatsukami sobre ${mdef(tm).name}: ${a.opt === 'trai' ? 'Traición, deberá atacar a otro personaje de su bando durante 2 turnos' : 'Desobediencia, no puede atacar ni activar habilidades durante 2 turnos'}`);
+        if (multi(st)) st.log[st.log.length - 1].q = tq;
         break;
       }
       case 'semilla': {
@@ -5314,6 +5422,7 @@
     const P = st.players[p], m = P.mz[z];
     if (sh.kind === 'susano') { const i = P.st.indexOf(sh.slot); if (i >= 0) { P.st[i] = null; P.grave.push(sh.slot.c); log(st, p, 'Susano se destruye'); } }
     else if (sh.kind === 'shen' && m) m.shen = null;
+    else if (sh.kind === 'shisui' && sh.m && sh.m.sus) { sh.m.sus.vuln = true; log(st, st.players.findIndex(Q => Q.mz.includes(sh.m)), `El Susanoo de ${mdef(sh.m).name} queda vulnerable: el próximo ataque contra Shisui lo destruirá`); }
   }
   /** Transformación con vínculo: la carta de la mano ocupa el sitio del monstruo, que queda vinculado a ella. */
   function transformInto(st, p, z, hi, anchor) {
@@ -5743,6 +5852,46 @@
       else trapResolve(st, pd.tp, C().get(pd.tid), pd.rp, (pd.done || []).concat('uidef'));
       return;
     }
+    if (pd.ab === 'shisusa') {                                 // Shisui: su Susanoo recibe el ataque dirigido a un aliado
+      const sm = P.mz[pd.zy];
+      if (a.use && sm && susOn(st, sm) && sm.sus.sh > 0 && pd.a) {
+        const u = uOf(sm); u.susT = st.turn; sm.sus.ch++;
+        log(st, p, `${mdef(sm).name}: su Susanoo recibe el ataque en lugar de ${pd.nm} (+1 carga: ${sm.sus.ch})`);
+        st.atk = Object.assign({}, pd.a, { susInt: { q: p, z: pd.zy } });
+      } else st.atk = Object.assign({}, pd.a);
+      continueAttack(st);
+      return;
+    }
+    if (pd.ab === 'shiparp') {                                 // Shisui: Cuerpo Parpadeante
+      const sm = P.mz[pd.zy];
+      if (pd.stage === 'ask') { if (a.use && sm && pd.cands.length) { st.pending = Object.assign({}, pd, { stage: 'target' }); return; } }
+      else if (sm) {
+        const c = pd.cands.find(x => x.z === a.z), x = c && P.mz[c.z];
+        if (x) {
+          const z = pd.zy, i = c.z;
+          P.mz[z] = x; P.mz[i] = sm;
+          for (const sl of P.st) if (sl && sl.equipTo === z) sl.equipTo = i; else if (sl && sl.equipTo === i) sl.equipTo = z;
+          uOf(sm).parT = st.turn;
+          log(st, p, `${mdef(sm).name} usa Cuerpo Parpadeante: cambia de posición con ${mdef(x).name} y el ataque sigue contra la zona original`);
+          if (multi(st)) st.log[st.log.length - 1].q = pd.a.p;
+        }
+      }
+      st.atk = Object.assign({}, pd.a);
+      continueAttack(st);
+      return;
+    }
+    if (pd.ab === 'shidesap') {                                // Shisui: Desaparición Instantánea
+      const sm = P.mz[pd.zy], a0 = pd.a;
+      if (a.use && sm && sm.sus && sm.sus.on && !sm.c.sdp) {
+        sm.c.sdp = true; sm.sus.on = false; sm.sus.away = true; sm.sus.awayT = st.turn;
+        log(st, p, `${mdef(sm).name} usa Desaparición Instantánea: retira su Susanoo (conserva su estado) y el ataque de ${pd.nm} falla`);
+        galandHit(st, a0, p, pd.zy); atkDone(st, a0);
+        return;
+      }
+      if (sm) susDestroy(st, p, pd.zy);
+      atkDone(st, a0);
+      return;
+    }
     if (pd.ab === 'galio') {                                   // Galio: Protección heroica
       const gm = P.mz[pd.zy], vm = pd.victim ? st.players[pd.victim.p].mz[pd.victim.z] : null;
       if (a.use && gm && has(st, gm, 'galprot') && vm) {
@@ -6133,6 +6282,11 @@
       if (s.shadowCopy) v.shadowCopy = true;      // Robo de Sombras
       if (s.thread) v.thread = true;      // Hilos del Destino
       if (s.puppet) v.puppet = true;
+      if (rawAbil(s).includes('shisusa')) {      // Shisui: Susanoo, cargas y usos
+        const su = susOf(s), su0 = uOf(s);
+        v.sus = { on: !!su.on, sh: su.sh, max: SHISUI_SH, vuln: !!su.vuln, ch: su.ch, dead: !!su.dead, away: !!su.away, drill: !!s.drill, desU: !!s.c.sdp, parT: su0.parT === st.turn, susT: su0.susT === st.turn, kotT: su0.kotT === st.turn, ssT: su0.ssT === st.turn };
+        if (su.on && mdef(s).imgSus) v.art = mdef(s).imgSus;
+      }
       if (s.soulOff) v.soulOff = true;      // Intercambio de Almas
       if (s.loans && s.loans.length) v.loans = s.loans.map(l => l.ab);
       if (s.fly) v.fly = true;                                                          // Kaisel / Rengar: no se le puede atacar
@@ -6149,7 +6303,7 @@
       if (rawAbil(s).includes('hakdom')) { v.hl = s.hl || 0; v.hk = (s.mods || []).filter(x => x.k === 'hk').map(x => Math.max(0, x.n - elapsed(st, x.t0))); }
       if (rawAbil(s).includes('kzcor')) { v.hearts = heartsOf(s); if (v.hearts === 1 && mdef(s).img1) v.art = mdef(s).img1; }
       if (rawAbil(s).includes('rengarfer')) v.fer = uOf(s).fer || 0;
-      if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, n: b.n }));
+      if (s.binds && s.binds.length) v.binds = s.binds.map(b => ({ nm: b.nm, atk: !!b.atk, ab: !!b.ab, trai: !!b.trai, n: b.n }));
       if (s.pub != null) v.pub = true;
       if (s.tobiNA) v.tobiNA = true;
       if (s.sjc) v.sjc = s.sjc;

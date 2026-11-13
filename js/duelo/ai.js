@@ -246,6 +246,9 @@
             case 'misaojos': return 35;
             case 'misadn': return tm ? 50 + (tm.atk || 0) / 150 : -1;
             case 'katana': return tm ? 40 + (tm.atk || 0) / 400 : -1;
+            case 'susact': return 64;
+            case 'taladro': return v.phase === 'battle' && allFoes.some(q => q.st.some(x => x)) ? 57 : -1;
+            case 'koto': return tm && v.team[a.target.vs] !== v.team[v.seat] ? (a.opt === 'trai' ? (v.players[a.target.vs].mz.filter(Boolean).length >= 2 ? 53 : -1) : 52) + (tm.atk || 0) / 200 : -1;
           }
           return -1;
         }

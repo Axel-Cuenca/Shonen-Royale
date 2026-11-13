@@ -234,6 +234,12 @@
     kzmask: ['Máscaras Elementales', 'Una vez por turno, elige una máscara: Fuego (un enemigo pierde 400 ATK), Viento (+500 ATK en su próximo combate), Rayo (destruye una magia o trampa rival, aunque esté boca abajo) o Agua (ningún efecto enemigo lo afecta durante su ataque).'],
     kzhilos: ['Hilos de Costura', 'Cuando un aliado iba a ser destruido, Kakuzu puede gastar un corazón adicional para evitarlo (comparte el límite de un corazón por turno).'],
     kzult: ['Último Corazón', 'Al perder todos sus corazones adicionales gana +600 ATK y un ataque adicional ese turno (una sola vez).'],
+    shisusa: ['Susanoo', 'Pasiva del Susano, pero la activa cuando quiere (acción de tu turno): aparece su Susanoo con un escudo de 2200 que funciona como su vida. Una vez por turno, cuando un aliado es atacado, el Susanoo puede recibir TODO el daño del ataque en su lugar (el aliado no recibe nada) y Shisui gana 1 carga. Si el escudo llega a 0 queda vulnerable: el siguiente ataque enemigo contra Shisui destruye el Susanoo sin importar ATK ni DEF. Sin Susanoo, Shisui pierde el resto de habilidades.'],
+    shitaladro: ['Taladro de Chakra', 'Gasta 1 carga: su siguiente ataque con el Susanoo es perforante y el rival no puede responder con magias ni trampas.'],
+    shisiete: ['Espada de los Siete Cortes', 'Una vez por turno, cuando Shisui destruye a un personaje enemigo en combate con el Susanoo activo, puede atacar otra vez a otro personaje enemigo.'],
+    shidesap: ['Desaparición Instantánea', 'Una vez por duelo, cuando el Susanoo vulnerable iba a ser destruido por un ataque, lo retira temporalmente (conserva su estado y su escudo): puede volver a activarse en un turno posterior de Shisui.'],
+    shikoto: ['Kotoamatsukami', 'Una vez por turno, manipula a un personaje enemigo durante 2 turnos suyos. Traición: está obligado a atacar a otro personaje de su bando si hay un objetivo válido. Desobediencia: no puede atacar ni activar habilidades.'],
+    shiparp: ['Cuerpo Parpadeante', 'Una vez por turno, cuando Shisui es elegido como objetivo de un ataque, puede intercambiar su posición con otro aliado de su campo: el ataque sigue contra la zona original.'],
     hakdom: ['Expansión de Dominio: Apuesta Mortal', 'Abre su dominio (reglas normales de los dominios: 2 turnos, sólo usan habilidades los de igual o más estrellas, sin magias ni trampas). Mientras dure, una vez por turno gira una ruleta (1/3 cada resultado): Sin premio 1 carga, Casi Jackpot 2, Jackpot 3. Cada carga da 1 vida extra (evita una destrucción) y +500 ATK durante 2 turnos; cada carga cuenta su propia duración.'],
     nearmira: ['Sucesor de L', 'Una vez por turno, Near mira en privado una carta boca abajo del campo rival (sigue boca abajo para el rival). Si es una trampa, le deja un contador de investigación.'],
     nearn: ['Estrategia de N', 'Cuando el rival activa una trampa con un contador de Near, Near puede revelarla y elegir (una vez por turno): Previsión (cancela la activación) o Manipulación (cambia su objetivo por otro válido, si la trampa permite elegirlo).'],
@@ -1131,6 +1137,11 @@
       sfx: { ability: V('hakari-dominio') }
     }),
     mon({
+      id: 'c_shisui', name: 'Shisui Uchiha', type: 'naruto', level: 9, atk: 2200, def: 2200, img: I('shisui'), imgSus: I('shisui_susano'), ab: ['shisusa', 'shitaladro', 'shisiete', 'shidesap', 'shikoto', 'shiparp'],
+      lore: 'Shisui Uchiha es conocido por su velocidad extraordinaria y por el poder de su Mangekyō Sharingan. Su Susanoo le permite proteger a sus aliados mientras manipula la voluntad de sus enemigos con el temido Kotoamatsukami. Es un ninja que puede cambiar el rumbo de una batalla sin necesidad de enfrentarse directamente a todos sus oponentes.',
+      text: 'Susanoo (lo activa cuando quiere): escudo de 2200 que protege a los aliados atacados (1 vez por turno, +1 carga). Con Susanoo: Taladro de Chakra, Espada de los Siete Cortes, Desaparición Instantánea, Kotoamatsukami y Cuerpo Parpadeante.'
+    }),
+    mon({
       id: 'c_near', name: 'Near', type: 'deathnote', level: 2, atk: 200, def: 200, img: I('near'), ab: ['nearmira', 'nearn'],
       lore: 'Near es un investigador brillante y meticuloso que continúa el legado de L. Analiza los movimientos de sus enemigos, reúne información en secreto y utiliza su capacidad deductiva para anticiparse a sus estrategias.',
       text: 'Sucesor de L: una vez por turno mira en privado una carta boca abajo rival; si es una trampa, le deja un contador de investigación. Estrategia de N: si el rival activa esa trampa, Near puede cancelarla (Previsión) o cambiar su objetivo (Manipulación), una vez por turno.'
@@ -1250,7 +1261,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi', 'robo_sombras']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas', 'izanagi', 'robo_sombras', 'shisui']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

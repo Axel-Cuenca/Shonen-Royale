@@ -31,7 +31,7 @@ module.exports = function (T) {
     for (const id of Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id))) {
       const c = Cards.get(id);
       ok(c && c.img && fs.existsSync(path.join(root, c.img)), id + ' tiene imagen');
-      for (const k of ['imgSung', 'imgDom', 'imgAlt', 'imgMed', 'img1']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
+      for (const k of ['imgSung', 'imgDom', 'imgAlt', 'imgMed', 'img1', 'imgSus']) if (c[k]) ok(fs.existsSync(path.join(root, c[k])), id + ' imagen alternativa');
       for (const k in (c.sfx || {})) ok(fs.existsSync(path.join(root, c.sfx[k])), id + ' sonido ' + k);
       for (const a of (c.ab || [])) ok(Cards.AB[a], id + ': ' + a + ' tiene texto');
     }
@@ -903,6 +903,115 @@ module.exports = function (T) {
     if (cn) { act(st, 0, cn); ok(st.pending && st.pending.k === 'respond', 'ante un cañón que destruye también se puede'); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st); ok(st.players[1].mz[0], 'Goku se salva'); }
   }
 
+  section('Shisui Uchiha');
+  {
+    const sus = (st, p, z, o) => { const m = put(st, p, z, 'c_shisui'); Object.assign(m, { sus: Object.assign({ on: true, sh: 2200, vuln: false, ch: 0, dead: false, away: false, awayT: -1, used: true }, o || {}) }); return m; };
+    // activar el Susanoo
+    let st = fresh(0); put(st, 0, 0, 'c_shisui');
+    ok(pw(st, 0, 'susact') && !pw(st, 0, 'koto') && !pw(st, 0, 'taladro'), 'sin Susanoo sólo puede activarlo');
+    ok(!(E.view(st, 0).players[0].mz[0].sus || {}).on, 'el Susanoo empieza apagado');
+    act(st, 0, pw(st, 0, 'susact'));
+    let v = E.view(st, 0).players[0].mz[0];
+    ok(v.sus.on && v.sus.sh === 2200 && v.sh && v.sh.kind === 'shisui' && v.art === Cards.get('c_shisui').imgSus, 'Susanoo con 2200 de escudo y su imagen');
+    st = fresh(1); put(st, 1, 0, 'c_goku'); put(st, 0, 0, 'c_shisui'); st.current = 0; st.turn = 6; st.phase = 'main';
+    act(st, 0, pw(st, 0, 'susact'));
+    ok(pw(st, 0, 'koto', a => a.opt === 'trai') && pw(st, 0, 'koto', a => a.opt === 'desob') && !pw(st, 0, 'taladro'), 'con Susanoo: Kotoamatsukami sí, Taladro sin cargas no');
+    // el Susanoo protege a un aliado
+    st = fresh(1); sus(st, 0, 0); put(st, 0, 1, 'c_goku'); put(st, 1, 0, 'c_vegeta', { atkMod: 3000 }); st.players[1].mz[0].atkMod = 1000 - stat(st, 1, 0)[0] + 3000;
+    const n0 = cnt(st), lp0 = st.players[0].lp;
+    battle(st); act(st, 1, atkA(st, 1, 0, 1));
+    ok(st.pending && st.pending.ab === 'shisusa' && st.pending.player === 0, 'Shisui pregunta si el Susanoo interviene');
+    yes(st);
+    ok(st.players[0].mz[1] && st.players[0].mz[1].c.id === 'c_goku', 'el aliado sobrevive');
+    ok(st.players[0].lp === lp0, 'sin daño al aliado ni a su dueño');
+    const atkV = stat(st, 1, 0)[0];
+    eq(st.players[0].mz[0].sus.sh, Math.max(0, 2200 - atkV), 'el escudo recibe todo el ATK del atacante');
+    eq(st.players[0].mz[0].sus.ch, 1, '+1 carga');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    // una vez por turno
+    put(st, 1, 1, 'c_goku', { atkMod: 3000 });
+    act(st, 1, atkA(st, 1, 1, 1));
+    ok(!st.pending || st.pending.ab !== 'shisusa', 'no vuelve a preguntar el mismo turno');
+    ok(!st.players[0].mz[1], 'el segundo ataque sí destruye al aliado');
+    // rechazar
+    st = fresh(1); sus(st, 0, 0); put(st, 0, 1, 'c_goku'); put(st, 1, 0, 'c_vegeta', { atkMod: 3000 });
+    battle(st); act(st, 1, atkA(st, 1, 0 + 0, 1)); no(st);
+    ok(!st.players[0].mz[1] && st.players[0].mz[0].sus.sh === 2200 && st.players[0].mz[0].sus.ch === 0, 'si dice que no, el aliado recibe el golpe normal');
+    // escudo roto: vulnerable; el siguiente ataque destruye el Susanoo
+    st = fresh(1); sus(st, 0, 0, { sh: 100 }); put(st, 1, 0, 'c_vegeta', { atkMod: 3000, summonedTurn: 0 });
+    put(st, 1, 1, 'c_goku', { atkMod: -500 });
+    const lpS = st.players[0].lp;
+    battle(st); act(st, 1, atkA(st, 1, 0, 0));
+    ok(st.players[0].mz[0] && st.players[0].mz[0].sus.vuln && st.players[0].mz[0].sus.sh === 0 && st.players[0].lp === lpS, 'el escudo llega a 0 y queda vulnerable (sin daño a Shisui)');
+    act(st, 1, atkA(st, 1, 1, 0));
+    ok(st.pending && st.pending.ab === 'shidesap', 'con Desaparición disponible pregunta');
+    no(st);
+    ok(st.players[0].mz[0].sus.dead && !st.players[0].mz[0].sus.on && st.players[0].lp === lpS, 'sin usarla, el Susanoo se destruye sin tocar a Shisui');
+    ok(!pw(st, 0, 'susact'), 'un Susanoo destruido no vuelve');
+    // Desaparición Instantánea
+    st = fresh(1); sus(st, 0, 0, { sh: 0, vuln: true }); put(st, 1, 0, 'c_goku');
+    const lpD = st.players[0].lp;
+    battle(st); act(st, 1, atkA(st, 1, 0, 0)); yes(st);
+    let sm = st.players[0].mz[0];
+    ok(sm && !sm.sus.on && sm.sus.away && !sm.sus.dead && sm.c.sdp, 'el Susanoo se retira y conserva su estado');
+    ok(st.players[1].mz[0] && st.players[0].lp === lpD, 'el ataque falla: nadie sufre daño');
+    ok(!E.legal(st, 0).some(a => a.pw === 'susact'), 'no se reactiva en el mismo turno');
+    pass(st, 2); ready(st, 0, st.turn + 2); 
+    ok(pw(st, 0, 'susact'), 'en un turno posterior de Shisui puede volver a activarlo');
+    act(st, 0, pw(st, 0, 'susact'));
+    ok(st.players[0].mz[0].sus.on && st.players[0].mz[0].sus.vuln, 'vuelve con su estado');
+    // Taladro de Chakra
+    st = fresh(0); sus(st, 0, 0, { ch: 1 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 1, 0, 'c_mandamiento_amor', { down: true });
+    battle(st); act(st, 0, atkA(st, 0, 0, 0));
+    ok(st.pending && st.pending.k === 'respond', 'sin Taladro el rival puede responder con su trampa');
+    st = fresh(0); sus(st, 0, 0, { ch: 1 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 1, 0, 'c_mandamiento_amor', { down: true });
+    act(st, 0, pw(st, 0, 'taladro'));
+    ok(st.players[0].mz[0].sus.ch === 0 && st.players[0].mz[0].drill, 'gasta 1 carga');
+    ok(!pw(st, 0, 'taladro'), 'sin cargas no se repite');
+    battle(st); act(st, 0, atkA(st, 0, 0, 0));
+    ok(!st.pending, 'el ataque perforante ignora la trampa');
+    // Espada de los Siete Cortes
+    st = fresh(0); sus(st, 0, 0); put(st, 1, 0, 'c_inosuke', { pos: 'atk', atkMod: -900 }); put(st, 1, 1, 'c_sylas', { pos: 'atk', atkMod: -900 });
+    st.players[0].mz[0].atkMod = 3000; battle(st);
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(!st.players[1].mz[0], 'destruye al primero');
+    ok(atkA(st, 0, 0, 1), 'puede atacar otra vez a otro personaje enemigo');
+    act(st, 0, atkA(st, 0, 0, 1)); no(st);
+    ok(!atkA(st, 0, 0, 1) && !L(st, 0).some(a => a.t === 'attack' && a.zone === 0), 'sólo un ataque extra por turno');
+    // sin Susanoo no hay segundo ataque
+    st = fresh(0); put(st, 0, 0, 'c_shisui', { atkMod: 3000 }); put(st, 1, 0, 'c_inosuke', { atkMod: -900 }); put(st, 1, 1, 'c_sylas', { atkMod: -900 }); battle(st);
+    act(st, 0, atkA(st, 0, 0, 0)); no(st);
+    ok(!L(st, 0).some(a => a.t === 'attack' && a.zone === 0), 'sin Susanoo no hay ataque extra');
+    // Kotoamatsukami: Desobediencia
+    st = fresh(0); sus(st, 0, 0); put(st, 1, 0, 'c_goku');
+    act(st, 0, pw(st, 0, 'koto', a => a.opt === 'desob'));
+    ok(!pw(st, 0, 'koto'), 'una vez por turno');
+    pass(st, 1);
+    ok(st.players[1].mz[0].binds && st.players[1].mz[0].binds.some(b => b.atk && b.ab), 'el personaje queda sin atacar ni usar habilidades');
+    st.phase = 'battle'; ok(!L(st, 1).some(a => a.t === 'attack'), 'no puede atacar');
+    // Kotoamatsukami: Traición
+    st = fresh(0); sus(st, 0, 0); put(st, 1, 0, 'c_goku'); put(st, 1, 1, 'c_vegeta');
+    act(st, 0, pw(st, 0, 'koto', a => a.opt === 'trai' && a.target.z === 0));
+    pass(st, 1);
+    ok(st.current === 1 && !L(st, 1).some(a => a.t === 'endTurn'), 'está obligado: no puede terminar el turno sin atacar');
+    st.phase = 'battle';
+    const ta = L(st, 1).filter(a => a.t === 'attack' && a.zone === 0);
+    ok(ta.length >= 1 && ta.every(a => a.target === 1), 'sólo puede atacar a otro personaje de su bando');
+    const nTr = cnt(st); act(st, 1, ta[0]); no(st);
+    eq(cnt(st), nTr, 'sin pérdida de cartas');
+    // Cuerpo Parpadeante
+    st = fresh(1); sus(st, 0, 0); put(st, 0, 1, 'c_kratos'); put(st, 1, 0, 'c_vegeta', { atkMod: 3000 });
+    battle(st); act(st, 1, atkA(st, 1, 0, 0));
+    ok(st.pending && st.pending.ab === 'shiparp', 'Shisui puede cambiar de posición al ser atacado');
+    act(st, 0, { t: 'ability', use: true });
+    act(st, 0, L(st, 0).find(a => a.t === 'ability' && a.z === 1));
+    ok(st.players[0].mz[0] && st.players[0].mz[0].c.id === 'c_kratos' && st.players[0].mz[1].c.id === 'c_shisui', 'intercambian posiciones');
+    no(st);
+    ok(!st.players[0].mz[0] && grave(st, 0, 'c_kratos'), 'el ataque se resolvió contra la zona original: cayó quien la ocupaba');
+    ok(st.players[0].mz[1] && st.players[0].mz[1].c.id === 'c_shisui' && st.players[0].mz[1].sus.sh === 2200, 'Shisui no recibió el golpe');
+    eq(cnt(st), [E.countCards(st, 0), E.countCards(st, 1)], 'recuento estable');
+  }
+
   section('Robo de Sombras');
   {
     let st = fresh(0); put(st, 0, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 0, 'c_kratos', { pos: 'def' }); putST(st, 0, 0, 'c_robo_sombras', { down: true });
@@ -942,5 +1051,32 @@ module.exports = function (T) {
     st.phase = 'battle'; st.players[0].mz[0].atkMod = 0; st.players[1].mz[0].pos = 'atk'; st.players[1].mz[0].atkMod = -3000;
     act(st, 0, atkA(st, 0, 0, 0));
     ok(!st.pending || st.pending.trigger !== 'kill' || true, 'comprobación de combate');
+  }
+
+  section('tanda 7: partidas al azar con todas las cartas nuevas');
+  {
+    const NEW = Cards.inTanda(7).concat(Cards.custom.filter(c => c.hidden && Cards.tandaOf(c.id) === 7).map(c => c.id)).filter(i => Cards.get(i) && !Cards.get(i).hidden);
+    let bad = '', done = 0, seed = 7077; const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    const rest = Cards.custom.filter(c => !c.hidden).map(c => c.id);
+    for (let g = 0; g < 80 && !bad; g++) {
+      const mk = () => { const d = []; for (const id of NEW) if (rnd() < .8) d.push(id); if (rnd() < .9) d.unshift('c_shisui'); while (d.length < 30) { const id = rest[Math.floor(rnd() * rest.length)]; if (d.filter(x => x === id).length < 2) d.push(id); } return Array.from(new Set(d.slice(0, 30).concat([]))).length >= 15 ? d.slice(0, 30) : d; };
+      const d0 = mk(), d1 = mk();
+      const st = E.newGame([d0, d1], { seed: 2300 + g, first: g % 2 });
+      let n = 0;
+      try {
+        while (st.winner === null && n++ < 1800) {
+          const p = E.actor(st), Ls = E.legal(st, p);
+          if (!Ls.length) { bad = 'sin acciones legales (partida ' + g + ')'; break; }
+          const pref = Ls.filter(a => a.t !== 'endTurn'), pool = rnd() < 0.85 && pref.length ? pref : Ls;
+          const a = pool[Math.floor(rnd() * pool.length)];
+          const r = E.apply(st, p, a);
+          if (!r.ok) { bad = 'rechazada ' + JSON.stringify(a) + ' ' + r.error; break; }
+          for (let q = 0; q < 2; q++) if (E.countCards(st, q) !== 30) { bad = `partida ${g}: jugador ${q} tiene ${E.countCards(st, q)} cartas tras ${JSON.stringify(a)}`; break; }
+          if (bad) break;
+        }
+        if (st.winner !== null) done++;
+      } catch (e) { bad = 'excepción: ' + (e.stack || e.message).split('\n').slice(0, 3).join(' | '); }
+    }
+    ok(!bad, bad || 'partidas con las cartas de la tanda 7 sin errores'); ok(done >= 30, done + ' de 80 partidas terminaron');
   }
 };
