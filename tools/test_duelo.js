@@ -286,7 +286,7 @@ section('tablero 3+3 y catálogo');
   ok(E.ZONES === 3, 'ZONES = 3');
   ok(typeof Cards.canPlay === 'function', 'Cards.canPlay existe');
   // el catálogo de producción (sin el legado de pruebas) sólo tiene las cartas propias
-  ok(Cards.custom.length === 176 && Cards.custom.filter(c => !c.hidden).length === 166 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 176 (166 visibles + 2 formas de Kayn + Armadura de Tony + 3 criaturas de tinta)');
+  ok(Cards.custom.length === 178 && Cards.custom.filter(c => !c.hidden).length === 168 && !Cards.all().some(c => c.hidden) && Cards.custom.some(c => c.id === 'c_popeye') && Cards.custom.some(c => c.id === 'c_creeper'), 'las cartas propias son 178 (168 visibles + 2 formas de Kayn + Armadura de Tony + 3 criaturas de tinta)');
   const v = E.view(st, 0);
   ok(typeof v.opp.handCount === 'number' && v.opp.handCount === 5, 'la vista dice cuántas cartas tiene el rival en la mano');
 }

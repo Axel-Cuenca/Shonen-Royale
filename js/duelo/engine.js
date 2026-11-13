@@ -1322,7 +1322,7 @@
     return out;
   }
   /** Rika Orimoto (Protección Absoluta): las magias y trampas no pueden elegirla ni afectarla. */
-  const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot') && !isInk(P.mz[z]));
+  const rikaOwn = (st, P) => zonesUp(P).filter(z => !has(st, P.mz[z], 'rikaprot') && !isInk(P.mz[z]) && !P.mz[z].c.virt);      // los personajes virtuales (clones, copias de sombra) no son cartas: ninguna magia propia los elige
   const rikaUp = (st, m) => !!m && !m.down && has(st, m, 'rikaprot');
   const PERM = { equip: 1, karma: 1, gem: 1, storm: 1, gokumon: 1, guerrero: 1, alma: 1, capsulas: 1 };
   /** Gema del Tiempo: hay una instantánea del campo propio de hace un turno propio. */
@@ -1336,7 +1336,7 @@
     const lockedMz = s => s && ((s.owner != null && s.owner !== p) || s.abs || s.fused || (s.gemsIdle && s.gemsIdle.length));      // Thanos con gemas robadas guardadas tampoco se toca
     const lockedSt = s => s && (s.prison || s.gem || s.karma || s.c.id === 'c_gema_tiempo');      // ninguna Gema del Tiempo vuelve del cementerio (la usada se queda en él)
     const pool = {};
-    const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) pool[c.uid] = c; };
+    const grab = (s) => { pool[s.c.uid] = s.c; for (const c of (s.link || [])) { if (c.by != null && c.by !== p) st.players[c.by].grave.push(c); else pool[c.uid] = c; } };      // lo equipado por otro jugador (Viego, Jake, Venom) vuelve a SU cementerio, no a mi mano
     P.mz.forEach((s, z) => { if (s && !lockedMz(s)) { grab(s); P.mz[z] = null; } });
     P.st.forEach((s, z) => { if (s && !lockedSt(s)) { grab(s); P.st[z] = null; } });
     const find = (uid) => {
@@ -2462,7 +2462,8 @@
       if (d.fx === 'kamui' && !(cont && cont.vic && st.players[cont.vic.p].mz[cont.vic.z] && st.team[cont.vic.p] === st.team[resp])) return;
       if (d.fx === 'contrato' && !(zonesWith(R.mz).length && !isInk(st.players[st.summon.p].mz[st.summon.z]) && !st.players[st.summon.p].mz[st.summon.z].ghost)) return;      // Contrato de la Muerte: necesita un personaje propio en el campo
       if (d.fx === 'hilos' && !hilosOpts(st, resp).length) return;
-      if ((d.fx === 'unico' || d.fx === 'tsukuyomi') && !(st.atk && st.atk.target !== 'direct' && st.players[st.atk.vs].mz[st.atk.target])) return;
+      if (d.fx === 'sello' && !(cont && cont.k === 'power' && cont.pa && PW_ABID[cont.pa.pw] && st.players[cont.by].mz[cont.pa.zone])) return;      // Sello de Ocho Trigramas: sólo ante una habilidad enemiga conocida
+      if ((d.fx === 'unico' || d.fx === 'tsukuyomi' || d.fx === 'amor') && !(st.atk && st.atk.target !== 'direct' && st.players[st.atk.vs].mz[st.atk.target])) return;
       r.push(z);
     });
     return r;
@@ -2481,6 +2482,14 @@
       }
     }
     return out.length ? out : [{ cancel: true }];
+  }
+  /** Mandamiento del Amor: cancelar el ataque (siempre) o, con Estarossa, redirigirlo a otro personaje del atacante. */
+  function amorOpts(st, resp) {
+    const out = [{ cancel: true }], a = st.atk;
+    if (!a || a.target === 'direct') return [];
+    const R = st.players[resp];
+    if (R.mz.some(m => m && !m.down && mdef(m).name === 'Estarossa')) for (const o of hilosOpts(st, resp)) if (o.vs != null) out.push(o);
+    return out;
   }
   /** Saca de golpe del cementerio la trampa recién activada y la deja boca arriba en el campo (contadores / hilo). */
   function keepTrap(st, p, uid, extra) {
@@ -2681,6 +2690,34 @@
         }
         const k = keepTrap(st, resp, pd.tuid, { thr: { tu: at.c.uid } });
         if (k) { at.thread = { by: resp }; log(st, resp, `Hilos Persistentes: ${nmA} queda conectado a los hilos`); }
+        break;
+      }
+      case 'amor': {                      // Mandamiento del Amor (y Amor Prohibido con Estarossa)
+        const a = st.atk, at = a && st.players[a.p].mz[a.z], dm = a && a.target !== 'direct' && st.players[a.vs].mz[a.target], o = pd && pd.opt;
+        if (!a || !at || !dm) break;
+        if (o && o.vs != null) {
+          const tm = st.players[o.vs] && st.players[o.vs].mz[o.z];
+          if (!tm) break;
+          a.vs = o.vs; a.target = o.z;
+          log(st, resp, `Amor Prohibido: el ataque de ${mdef(at).name} cambia de objetivo y cae sobre ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
+          if (multi(st)) st.log[st.log.length - 1].q = o.vs;
+          break;
+        }
+        const A = atkOf(st, st.players[a.p], a.z), D = atkOf(st, st.players[a.vs], a.target);
+        a.negated = true;
+        log(st, resp, `Mandamiento del Amor: ${mdef(at).name} debe cancelar su ataque`);
+        if (A > D) {
+          for (const x of [at, dm]) (x.binds = x.binds || []).push({ atk: true, abt: true, n: 1, t0: st.turn, nm: 'el Mandamiento del Amor' });
+          log(st, resp, `${mdef(at).name} (${A} ATK) supera a ${dm.down ? 'su objetivo' : mdef(dm).name} (${D} ATK): ambos quedan inmovilizados 1 turno completo (no atacan ni usan habilidades contra otros personajes)`);
+        }
+        break;
+      }
+      case 'sello': {                     // Sello de Ocho Trigramas: contiene la habilidad enemiga
+        const c = pd && pd.cont, um = c && c.pa && st.players[c.by].mz[c.pa.zone];
+        if (!c || !um) break;
+        c.cancel = true;
+        const k = keepTrap(st, resp, pd.tuid, { seal: { pw: c.pa.pw, ab: PW_ABID[c.pa.pw], from: mdef(um).name, t0: st.turn } });
+        log(st, resp, `Sello de Ocho Trigramas: contiene ${PWL[c.pa.pw] || c.pa.pw} de ${mdef(um).name}${k ? ' y la guarda en el sello' : ''}`);
         break;
       }
       case 'negateAttack': if (st.atk) st.atk.negated = true; log(st, resp, 'el ataque es negado'); break;
@@ -3722,7 +3759,11 @@
   const CAGE_PW = ['cellperf', 'eren', 'armin', 'bite', 'manto', 'kform', 'dtrig', 'astaneg', 'astauni', 'sjmon', 'xform', 'yoviaje', 'rhaast', 'sombra'];      // Jaula de Pájaros: transformaciones y escapes
   function powerActs(st, p) {
     abMode = true;
-    try { const r = powerActs0(st, p); return caged(st, p) ? r.filter(x => !CAGE_PW.includes(x.pw)) : r; } finally { abMode = false; }
+    try {
+      let r = powerActs0(st, p);
+      if (caged(st, p)) r = r.filter(x => !CAGE_PW.includes(x.pw));
+      return r.filter(x => !(x.target && (st.players[p].mz[x.zone] || {}).binds && st.players[p].mz[x.zone].binds.some(b => b.abt)));      // Mandamiento del Amor: sin habilidades que apunten a otro personaje
+    } finally { abMode = false; }
   }
   function powerActs0(st, p) {
     const P = st.players[p], out = [], fl = foes(st, p);
@@ -4058,6 +4099,16 @@
       if (def(s.c).fx === 'capsulas' && s.capT !== st.turn && P.mz.some(x => !x)) {      // Cápsulas Hoi-Poi: libera una
         for (const e of (st.limbo || [])) if (e.kind === 'cap' && e.cap === s.c.uid && e.p === p && spot(P, mdef(e.m)) >= 0) out.push({ t: 'spow', zone: z, pw: 'capliberar', u: e.m.c.uid });
       }
+      if (s.seal && s.seal.ab && st.current === p && st.phase === 'main') {      // Sello de Ocho Trigramas: libera la habilidad con uno de tus personajes
+        P.mz.forEach((m, mz) => {
+          if (!m || m.down || m.c.virt) return;
+          const had = rawAbil(m).includes(s.seal.ab);
+          if (!had) m.ext = (m.ext || []).concat([s.seal.ab]);
+          let acts = [];
+          try { acts = powerActs(st, p).filter(x => x.pw === s.seal.pw && x.zone === mz); } finally { if (!had) { const i = m.ext.lastIndexOf(s.seal.ab); if (i >= 0) m.ext.splice(i, 1); if (!m.ext.length) delete m.ext; } }
+          for (const x of acts) out.push({ t: 'spow', zone: z, pw: 'sellolib', mz, act: x });
+        });
+      }
       if (s.alma && s.alma.usedTurn !== st.turn) {      // Gema del Alma: libera uno de los efectos guardados
         s.alma.eff.forEach((id, idx) => {
           const cd = C().get(id), fx = cd && FX[cd.fx];
@@ -4089,7 +4140,7 @@
       if (pd.k === 'respond') {
         out.push({ t: 'respond', activate: false });
         for (const z of pd.cands) {
-          const rd = def(P.st[z].c), os = rd.fx === 'realidad' ? realityOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'fullcounter' ? fcOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'kyoka' ? kyokaOpts(st, p, pd.cont) : rd.fx === 'contrato' ? zonesWith(P.mz).map(z => ({ az: z })) : rd.fx === 'hilos' ? hilosOpts(st, p) : [null];
+          const rd = def(P.st[z].c), os = rd.fx === 'realidad' ? realityOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'fullcounter' ? fcOpts(st, p, pd.trigger, pd.cont) : rd.fx === 'kyoka' ? kyokaOpts(st, p, pd.cont) : rd.fx === 'contrato' ? zonesWith(P.mz).map(z => ({ az: z })) : rd.fx === 'hilos' ? hilosOpts(st, p) : rd.fx === 'amor' ? amorOpts(st, p) : [null];
           for (const o of os) out.push(o ? { t: 'respond', activate: true, zone: z, opt: o } : { t: 'respond', activate: true, zone: z });
         }
       } else if (pd.k === 'pick') {
@@ -5244,6 +5295,15 @@
       entered(st, p, z);
       return;
     }
+    if (a.pw === 'sellolib') {
+      const sl = s.seal, m = P.mz[a.mz];
+      if (!sl || !m || !a.act) return;
+      if (!rawAbil(m).includes(sl.ab)) { m.ext = (m.ext || []).concat([sl.ab]); m.extFrom = Object.assign({}, m.extFrom); m.extFrom[sl.ab] = sl.from; (m.loans = m.loans || []).push({ ab: sl.ab, eu: m.c.uid, by: p, t0: st.turn, next: false }); }
+      P.st[a.zone] = null; P.grave.push(s.c);
+      log(st, p, `${nm}: libera ${PWL[sl.pw] || sl.pw} de ${sl.from} y ${mdef(m).name} la usa como propia`);
+      runPower(st, p, a.act);
+      return;
+    }
     if (a.pw === 'almaus') {
       const id = s.alma.eff.splice(a.idx, 1)[0], cd = C().get(id);
       s.alma.usedTurn = st.turn;
@@ -6061,6 +6121,7 @@
     const v = { down: !!s.down, c: { uid: s.c.uid, id: s.c.id }, setTurn: s.setTurn, equipTo: s.equipTo };
     if (s.inv) v.inv = true;      // contador de investigación de Near
     if (s.con) v.con = { n: s.con.n, tn: s.con.tn };      // Contrato de la Muerte
+    if (s.seal) v.seal = { pw: s.seal.pw, from: s.seal.from };      // Sello de Ocho Trigramas
     if (s.thr) { const th = findByUid(st, s.thr.tu); v.thr = { id: th ? th.m.c.id : null }; }      // Hilos del Destino
     if (s.gem) v.gem = { left: 2 - s.gem.uses, ready: s.gem.usedTurn !== st.turn };
     if (s.storm) v.storm = { ready: s.storm.usedTurn !== st.turn };

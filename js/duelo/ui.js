@@ -1966,6 +1966,7 @@
       if (s.min) return `Ejército de Minions: ${s.min.n} contador(es). Cada victoria en combate suma uno; cada contador salva al portador de una derrota en combate.`;
       if (s.beast) return s.beast.done ? 'La Bestia ya despertó.' : 'Espera la muerte de otro aliado.';
       if (s.guerrero) return s.guerrero.waiting ? 'Esperando al próximo personaje que entre en tu campo.' : 'Seis Ojos concedidos.';
+      if (s.seal) return `Sello de Ocho Trigramas: guarda ${(typeof PWN !== 'undefined' && PWN[s.seal.pw]) || s.seal.pw} de ${s.seal.from || 'un enemigo'}. En tu turno puedes liberarla con uno de tus personajes (una vez; después el sello va al cementerio).`;
       if (s.con) return `Contrato de la Muerte: el nombre de ${s.con.tn} está escrito. Faltan ${s.con.n} contador(es) de tiempo (se retira uno al empezar el turno de su dueño); al retirar el último, ese personaje es destruido. Si deja el campo antes, el contrato se descarta.`;
       if (s.thr) return `Hilos del Destino: ${s.thr.id ? nameId(s.thr.id) : 'el personaje'} sigue conectado a los hilos. La próxima vez que use una habilidad, su dueño puede retirar el hilo para anularla.`;
       if (s.prison) return `Tiene sellado a ${nameId(s.prison.c)}: vuelve en ${s.prison.left} turno(s).`;
@@ -1984,6 +1985,15 @@
         if (alm.length) acts.push({ label: 'Liberar un efecto guardado…', desc: 'Usa uno de los efectos guardados (1 por turno).', run: () => modal(h('div', { class: 'box' }, h('h2', null, '👻 Gema del Alma'), h('p', { class: 'sub' }, 'Elige el efecto y el objetivo.'),
           h('div', { class: 'acts' }, alm.map(a => { const t = a.target; const tl = !t ? '' : t.u != null ? ' · ' + ((v.me.hand.find(c => c.uid === t.u) || {}).id ? nameId(v.me.hand.find(c => c.uid === t.u).id) : 'carta') : t.z != null ? ' · ' + (t.vs != null ? nameOf(t.vs) + ' ' : '') + 'zona ' + (t.z + 1) : ''; return btn(nameId(s.alma.eff[a.idx]) + tl, () => { closeModal(); act(a); }, 'gold'); }), btn('Cancelar', closeModal, 'ghost')))) });
         for (const a of sw.filter(a => a.pw === 'capliberar')) { const e = (v.me.limbo || []).find(x => x.uid === a.u); acts.push({ label: 'Liberar a ' + (e && e.id ? nameId(e.id) : 'un personaje'), desc: 'Invocación especial sin tributos. Una vez por turno.', run: () => act(a) }); }
+        const sel = sw.filter(a => a.pw === 'sellolib');
+        if (sel.length) acts.push({ label: 'Liberar la habilidad sellada…', desc: 'Úsala con uno de tus personajes como si fuera suya (una vez).', run: () => {
+          const zs = [...new Set(sel.map(a => a.mz))];
+          pickTargets(zs.map(z => ({ seat: v.seat, area: 'mz', z })), t1 => {
+            const sub = sel.filter(a => a.mz === t1.z), tg = sub.filter(a => a.act.target && a.act.target.vs != null);
+            if (!tg.length) return act(sub[0]);
+            pickTargets(tg.map(a => ({ seat: a.act.target.vs, area: a.act.target.area || 'mz', z: a.act.target.z })), t2 => act(tg.find(a => a.act.target.vs === t2.seat && a.act.target.z === t2.z && (a.act.target.area || 'mz') === t2.area)), 'Elige el objetivo de la habilidad');
+          }, 'Elige qué personaje usa la habilidad sellada');
+        } });
         const sto = sw.filter(a => a.pw === 'storm1' || a.pw === 'storm2');
         if (sto.length) acts.push({ label: 'Usar la tormenta…', run: () => stormFlow(sto) });
         const os = L().filter(a => a.t === 'activateSet' && a.zone === z);
@@ -2040,7 +2050,7 @@
             const lb = d.fx === 'fullcounter' ? (pd.trigger === 'attack' ? 'Devolver el ataque a' : 'Devolver el efecto a') : d.fx === 'kyoka' ? 'Que la habilidad caiga sobre' : pd.trigger === 'attack' ? 'Redirigir el ataque a' : 'Destruir en su lugar a';
             return h('div', { class: 'optbox' }, h('b', null, `${d.icon} ${d.name}`), h('div', { style: 'font-size:12px;margin:2px 0 6px' }, d.text),
               os.map(a => {
-                if (a.opt.cancel) return h('button', { class: 'btn gold', onclick: () => act(a) }, 'Cancelar el ataque y cambiar de posición al atacante');
+                if (a.opt.cancel) return h('button', { class: 'btn gold', onclick: () => act(a) }, d.fx === 'amor' ? 'Cancelar el ataque (si el atacante tiene más ATK, ambos quedan inmovilizados)' : 'Cancelar el ataque y cambiar de posición al atacante');
                 if (a.opt.az != null) { const mm = v.me.mz[a.opt.az]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `Escribir el nombre desde ${mm && mm.c ? nameId(mm.c.id) : 'tu personaje'} · zona ${a.opt.az + 1}`); }
                 const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
           })),
@@ -2288,6 +2298,7 @@
         if (area === 'st' && s.equipTo != null && s.c) el.append(h('span', { class: 'eqm' }, '🎗️'));
         if (area === 'st' && s.c && (s.prison || s.ring || s.susano || s.beast || s.guerrero || s.min || s.alma)) el.append(h('span', { class: 'eqm' }, s.alma ? '👻' + s.alma.eff.length : s.min ? '🍌' + s.min.n : s.prison ? '⛓️' : s.ring ? '💍' : s.susano ? '👹' : s.beast ? '🐺' : s.guerrero && s.guerrero.waiting ? '⏳' : '👁️'));
         if (area === 'st' && s.c && s.con) el.append(h('span', { class: 'eqm', title: `Contrato de la Muerte: ${s.con.n} contador(es) de tiempo sobre ${s.con.tn}` }, '⏳' + s.con.n));
+        if (area === 'st' && s.c && s.seal) el.append(h('span', { class: 'eqm', title: 'Sello de Ocho Trigramas: tiene una habilidad sellada' }, '☯️'));
         if (area === 'st' && s.c && s.thr) el.append(h('span', { class: 'eqm', title: 'Hilos del Destino: el personaje sigue conectado a los hilos' }, '🧵'));
         cur = curOf(s, area); if (art) cur.art = art;
         if (fresh && !firstView && (!old || old.uid !== cur.uid || (old.down && !cur.down))) {

@@ -1161,6 +1161,16 @@
       lore: 'Mediante hilos malditos, el usuario puede manipular los movimientos de sus enemigos como si fueran marionetas. Incluso después de perder el control, el personaje afectado continúa conectado a los hilos, permitiendo interrumpir su próxima técnica.',
       text: 'Manipulación de Marionetas: cuando un enemigo declare un ataque, tomas el control del atacante hasta el final del turno y lo obligas a atacar a otro personaje de su bando (con su misma potencia); si no hay otro objetivo, el ataque se cancela y cambia de posición. Hilos Persistentes: la trampa queda en el campo y, la próxima vez que ese personaje use una habilidad, puedes retirar el hilo para anularla (y la trampa va al cementerio).'
     },
+    {
+      kind: 'trap', id: 'c_mandamiento_amor', name: 'Mandamiento del Amor', icon: '💘', img: I('mandamiento_amor'), trigger: 'attack', fx: 'amor',
+      lore: 'El Mandamiento del Amor castiga a quienes luchan movidos por el odio. Quien se atreve a atacar bajo su influencia puede terminar perdiendo la capacidad de combatir, convirtiendo su agresividad en una desventaja.',
+      text: 'Mandamiento del Amor: cuando un enemigo ataque a uno de tus personajes, su ataque se cancela. Si el atacante tenía más ATK que tu personaje, ambos quedan inmovilizados 1 turno completo (no atacan ni usan habilidades que apunten a otro personaje). Amor Prohibido: si controlas a Estarossa, en lugar de cancelarlo puedes cambiar el objetivo del ataque a otro personaje enemigo (sin inmovilizar).'
+    },
+    {
+      kind: 'trap', id: 'c_sello_trigramas', name: 'Sello de Ocho Trigramas', icon: '☯️', img: I('sello_trigramas'), trigger: 'power', fx: 'sello',
+      lore: 'Mediante el Sello de Ocho Trigramas, el usuario puede contener el chakra de una técnica enemiga, impidiendo que su ejecutor vuelva a utilizarla. Posteriormente, puede liberar la técnica sellada y aprovechar su poder en beneficio propio.',
+      text: 'Contención de chakra: cuando un enemigo active una habilidad, la sellas: no se resuelve, ese personaje no puede volver a usarla durante esta invocación y el sello queda en el campo. Liberación: una vez, usa esa habilidad con uno de tus personajes como si fuera suya (si cumple sus condiciones y objetivos); después la carta va al cementerio.'
+    },
     spell({
       id: 'c_ojos_shinigami', name: 'Ojos de Shinigami', icon: '👁️', img: I('ojos_shinigami'), fx: 'equip', sub: 'equip', eyesAll: true,
       lore: 'Los Ojos de Shinigami permiten ver más allá de las apariencias y descubrir la verdadera identidad de quienes intentan ocultarse.',
@@ -1172,10 +1182,10 @@
     dbz: ['c_pothala', 'c_esferas', 'c_kaioken', 'c_mafuba', 'c_despertar_bestia', 'c_camara_gravedad', 'c_sala_tiempo', 'c_capsulas'],
     jjk: ['c_anillo_promesa', 'c_voto', 'c_gokumonkyo', 'c_guerrero', 'c_intercambio_almas', 'c_hilos_destino'],
     marvel: ['c_gema', 'c_gema_poder', 'c_gema_alma', 'c_gema_tiempo', 'c_gema_realidad', 'c_guantelete', 'c_mark1'],
-    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei'],
+    naruto: ['c_susano', 'c_kamui', 'c_tsukuyomi', 'c_karma', 'c_edo_tensei', 'c_sello_trigramas'],
     deathnote: ['c_death_note', 'c_ojos_shinigami', 'c_contrato_muerte'],
     blackclover: ['c_espada_antimagia', 'c_katana_antimagia', 'c_espada_causas', 'c_espada_demonios'],
-    pecados: ['c_full_counter', 'c_el_unico'],
+    pecados: ['c_full_counter', 'c_el_unico', 'c_mandamiento_amor'],
     zodiaco: ['c_armadura'], anillos: ['c_anillo_unico'], hp: ['c_capa'], lol: ['c_espada'],
     pokemon: ['c_pokeball', 'c_superball'], villano: ['c_minions'], hxh: ['c_cana_gon'], bleach: ['c_kyoka'],
     normal: ['c_ola_fuego', 'c_infarto', 'c_seleccion_magia', 'c_tormenta', 'c_uno_dos', 'c_ultratumba', 'c_invitacion', 'c_x', 'c_rayo_solar', 'c_botiquin']
@@ -1228,7 +1238,7 @@
     5: ['pokeball', 'mark1', 'seleccion_magia', 'invitacion', 'kuriboh', 'kuriboh_mo', 'bugs_bunny', 'warwick', 'vegeta_ssj', 'freezer', 'freezer2', 'goku_dios', 'dexter', 'vegeta_dios', 'bruce_banner', 'hulk', 'capa', 'minions', 'reyna_flama', 'sasuke', 'sasuke_marca', 'gema_alma', 'cell_perfecto', 'sukuna50', 'voldemort', 'dante', 'dante_dt', 'gogeta', 'carnage', 'goku_ssj3', 'megumi'],
     6: ['asta', 'asta_negra', 'asta_union', 'sung', 'sung_monarca', 'igris', 'beru', 'bellion', 'goku_ssj', 'bulma', 'mr_satan', 'elizabeth', 'galand', 'higuruma', 'inosuke', 'tobi', 'sai', 'shikamaru', 'liu_kang', 'misa',
       'espada_antimagia', 'katana_antimagia', 'espada_causas', 'espada_demonios', 'mafuba', 'el_unico', 'full_counter', 'kamui', 'kyoka', 'tsukuyomi'],
-    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino']
+    7: ['kaisel', 'rengar', 'escanor', 'kakuzu', 'hakari', 'near', 'camara_gravedad', 'sala_tiempo', 'capsulas', 'chamber', 'yoru', 'daki', 'gyutaro', 'merlin', 'maki', 'doflamingo', 'ginyu', 'viego', 'tusk', 'hantengu', 'edo_tensei', 'ojos_shinigami', 'intercambio_almas', 'contrato_muerte', 'hilos_destino', 'mandamiento_amor', 'sello_trigramas']
   };
   const TANDAS = [1, 2, 3, 4, 5, 6, 7], PACK_TANDAS = [2, 3, 4, 5, 6];
   const TANDA_OF = {};

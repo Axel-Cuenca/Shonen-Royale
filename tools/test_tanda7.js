@@ -801,4 +801,63 @@ module.exports = function (T) {
     act(st, 1, { t: 'ability', use: false });
     ok(st.players[0].mz[0].thread && st.players[1].st[0], 'si no se retira el hilo, sigue conectado');
   }
+
+  section('Mandamiento del Amor');
+  {
+    // el atacante con más ATK: se cancela y ambos quedan inmovilizados
+    let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_near'); putST(st, 1, 0, 'c_mandamiento_amor', { down: true });
+    st.phase = 'battle'; const n0 = cnt(st), lp = st.players[1].lp;
+    act(st, 0, atkA(st, 0, 0, 0));
+    const ac = L(st, 1).filter(a => a.t === 'respond' && a.activate);
+    ok(ac.length === 1 && ac[0].opt.cancel, 'sin Estarossa sólo se puede cancelar el ataque');
+    act(st, 1, ac[0]); no(st);
+    ok(st.players[1].mz[0] && st.players[0].mz[0] && st.players[1].lp === lp, 'nadie sufre daño ni muere');
+    ok(st.players[0].mz[0].binds && st.players[1].mz[0].binds, 'ambos quedan inmovilizados');
+    ok(grave(st, 1, 'c_mandamiento_amor') && !st.players[1].st[0], 'la trampa va al cementerio');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    ok(!L(st, 0).some(a => a.t === 'attack' && a.zone === 0), 'el atacante no vuelve a atacar');
+    pass(st, 1);
+    ok(!L(st, 1).some(a => a.t === 'attack' && a.zone === 0), 'el defensor tampoco ataca en su turno');
+    pass(st, 2);
+    ok(!st.players[0].mz[0].binds && !st.players[1].mz[0].binds, 'pasado el turno completo se liberan');
+    // atacante con menos ATK: sólo se cancela
+    st = fresh(0); put(st, 0, 0, 'c_near'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_mandamiento_amor', { down: true });
+    st.phase = 'battle'; act(st, 0, atkA(st, 0, 0, 0)); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    ok(!st.players[0].mz[0].binds && !st.players[1].mz[0].binds, 'con menos ATK no hay inmovilización');
+    // inmovilizado: sin habilidades con objetivo
+    st = fresh(0); put(st, 0, 0, 'c_merlin', { binds: [{ atk: true, abt: true, n: 1, t0: 5, nm: 'x' }] }); put(st, 1, 0, 'c_goku');
+    ok(!pw(st, 0, 'mcubo'), 'inmovilizado no usa habilidades que apunten a otros');
+  }
+  section('Sello de Ocho Trigramas');
+  {
+    let st = fresh(1); put(st, 0, 0, 'c_merlin'); put(st, 1, 0, 'c_kratos'); put(st, 1, 1, 'c_merlin'); putST(st, 1, 0, 'c_sello_trigramas', { down: true });
+    st.current = 0; st.turn = 6;
+    const n0 = cnt(st);
+    act(st, 0, pw(st, 0, 'mcubo', a => a.target.vs === 1 && a.target.z === 0));
+    ok(st.pending && st.pending.k === 'respond' && st.pending.player === 1, 'el rival puede sellar la habilidad');
+    act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    ok(!st.players[1].mz[0].cube, 'la habilidad no se resolvió');
+    const sl = st.players[1].st[0];
+    ok(sl && !sl.down && sl.seal && sl.seal.pw === 'mcubo', 'el sello queda en el campo con la habilidad guardada');
+    ok(!pw(st, 0, 'mcubo'), 'el personaje afectado no vuelve a usarla en esta invocación');
+    eq(cnt(st), n0, 'sin pérdida de cartas');
+    // liberación
+    st.current = 1; st.turn = 7; st.phase = 'main'; st.pending = null;
+    const rel = L(st, 1).filter(a => a.t === 'spow' && a.pw === 'sellolib');
+    ok(rel.length && rel.every(a => a.mz === 1 || a.mz === 0), 'puede liberarla con sus personajes');
+    const mine = rel.find(a => a.mz === 1 && a.act.target.vs === 0);
+    ok(mine, 'con su Merlin y un objetivo válido');
+    act(st, 1, mine); no(st);
+    ok(st.players[0].mz[0].cube, 'la habilidad se usa como propia contra el objetivo');
+    ok(grave(st, 1, 'c_sello_trigramas') && !st.players[1].st[0], 'después el sello va al cementerio');
+    eq(cnt(st), n0, 'sigue sin faltar ninguna carta');
+    // sin personaje que cumpla: no se puede liberar
+    st = fresh(1); put(st, 0, 0, 'c_merlin'); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_sello_trigramas', { down: true });
+    st.current = 0; st.turn = 6; act(st, 0, pw(st, 0, 'mcubo', a => a.target.vs === 1)); act(st, 1, L(st, 1).find(a => a.t === 'respond' && a.activate)); no(st);
+    st.current = 1; st.turn = 7; st.phase = 'main'; st.pending = null;
+    ok(L(st, 1).some(a => a.t === 'spow' && a.pw === 'sellolib'), 'el cubo se puede usar con cualquier personaje que lo pueda apuntar');
+    st.players[1].mz[0].down = true;
+    ok(!L(st, 1).some(a => a.t === 'spow' && a.pw === 'sellolib'), 'sin un personaje que cumpla las condiciones no se libera (y no se consume)');
+    ok(st.players[1].st[0] && st.players[1].st[0].seal, 'el sello sigue ahí');
+  }
 };
