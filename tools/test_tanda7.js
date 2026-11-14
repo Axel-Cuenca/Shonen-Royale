@@ -466,6 +466,7 @@ module.exports = function (T) {
     const nc = E.countCards(st, 0);
     act(st, 0, pw(st, 0, 'dakibelt', a => a.target.vs === 1 && a.target.z === 2));
     eq(E.view(st, 0).belts.length, 1, 'el dueño ve su cinturón');
+    { const b = JSON.parse(JSON.stringify(st)); b.belts = [{ by: 0, vs: 1, z: 0 }, { by: 0, vs: 1, z: 1 }]; ok(!pw(b, 0, 'dakibelt'), 'Daki sólo puede tener 2 cinturones'); b.belts.pop(); ok(!!pw(b, 0, 'dakibelt'), 'con 1 todavía puede dejar otro'); }
     ok(!(E.view(st, 1).belts || []).length, 'el rival no ve los cinturones');
     eq(E.countCards(st, 0), nc, 'los cinturones no son cartas');
     st.current = 1; st.turn = 7; st.phase = 'battle'; put(st, 1, 0, 'c_goku');

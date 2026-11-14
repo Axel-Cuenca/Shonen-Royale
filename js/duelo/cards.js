@@ -249,7 +249,7 @@
     yoclon: ['Engaño Dimensional', 'Una vez por turno crea un clon ilusorio en una zona libre. Si el rival lo ataca o le aplica una habilidad, el clon desaparece y el ataque o la habilidad no hacen nada. Se desvanece al empezar tu siguiente turno. No ataca ni usa habilidades.'],
     yocambio: ['Cambio Dimensional', 'Una vez por duelo, antes de recibir un ataque, Yoru intercambia su posición con su clon o con otro aliado; el ataque continúa contra la zona original.'],
     yoviaje: ['Viaje Dimensional', 'Una vez por invocación, desaparece del campo hasta el comienzo de su siguiente turno (no ataca, no usa habilidades y nada lo afecta). Vuelve a una zona libre; si no hay, espera.'],
-    dakibelt: ['Cinturones de Carne', 'Hasta 3 cinturones ocultos en zonas del campo (no ocupan casillas ni se pueden atacar). Una vez por turno mueve uno. Cuando un enemigo ataca a un personaje aliado, Daki puede redirigir el ataque a un cinturón: contra el personaje de esa zona o, si está libre, contra los puntos de vida del dueño de la zona. El cinturón usado desaparece.'],
+    dakibelt: ['Cinturones de Carne', 'Hasta 2 cinturones ocultos en zonas del campo (no ocupan casillas ni se pueden atacar). Una vez por turno mueve uno. Cuando un enemigo ataca a un personaje aliado, Daki puede redirigir el ataque a un cinturón: contra el personaje de esa zona o, si está libre, contra los puntos de vida del dueño de la zona. El cinturón usado desaparece.'],
     dakivinc: ['Vínculo con Gyutaro', 'Si Daki va a ser destruida por cualquier medio, invoca especialmente a Gyutaro desde la mano o el mazo (sin gastar la invocación normal) y la destrucción se cancela.'],
     dakidest: ['Destino Compartido', 'Con Daki y Gyutaro en tu campo, sólo mueren de verdad si caen los dos en el mismo turno. Si cae uno y el otro sobrevive, vuelve al empezar tu siguiente turno (si hay zona libre).'],
     gyuhoz: ['Hoz de Sangre', 'Una vez por turno marca a un personaje enemigo: −200 ATK y −200 DEF por marca. Desde su segundo turno marcado, la sangre es venenosa: −500 ATK y −500 DEF al empezar cada turno de su dueño. Las marcas duran mientras Gyutaro siga en el campo.'],
@@ -1079,7 +1079,7 @@
     mon({
       id: 'c_daki', name: 'Daki', type: 'demonslayer', level: 4, atk: 1400, def: 1500, img: I('daki'), ab: ['dakibelt', 'dakivinc', 'dakidest'],
       lore: 'Daki utiliza sus cinturones de carne para controlar el campo de batalla, ocultar trampas y manipular los ataques enemigos. Su vínculo con Gyutaro es inseparable: ambos comparten un destino y no pueden ser derrotados definitivamente por separado.',
-      text: 'Cinturones de Carne: hasta 3 cinturones ocultos; redirigen un ataque enemigo (una vez por cinturón). Vínculo con Gyutaro: si va a morir, invoca a Gyutaro de la mano o el mazo y se cancela. Destino Compartido: con Gyutaro, sólo mueren si caen los dos el mismo turno.',
+      text: 'Cinturones de Carne: hasta 2 cinturones ocultos; redirigen un ataque enemigo (una vez por cinturón). Vínculo con Gyutaro: si va a morir, invoca a Gyutaro de la mano o el mazo y se cancela. Destino Compartido: con Gyutaro, sólo mueren si caen los dos el mismo turno.',
       sfx: { ability: V('daki-gyutaro') }
     }),
     mon({

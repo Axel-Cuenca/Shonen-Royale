@@ -4101,7 +4101,7 @@
       if (ab.includes('gyudanza') && u.gdT !== st.turn && canAttackNow(st) && atkCount(m) < maxAttacks(st, m) && !blocked(m, 'atk') && m.pos === 'atk' && hozCount(st, m) > 0) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!isInk(st.players[e].mz[tz]) && canTarget(st, p, e, tz)) push({ pw: 'gyudanza', target: { vs: e, z: tz } });
       if (ab.includes('dakibelt')) {
         const bl = (st.belts || []).filter(b => b.by === p);
-        if (bl.length < 3) for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (let tz = 0; tz < ZONES; tz++) if (!bl.some(b => b.vs === q && b.z === tz)) push({ pw: 'dakibelt', target: { vs: q, z: tz } });
+        if (bl.length < 2) for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (let tz = 0; tz < ZONES; tz++) if (!bl.some(b => b.vs === q && b.z === tz)) push({ pw: 'dakibelt', target: { vs: q, z: tz } });
         if (bl.length && u.dkT !== st.turn) bl.forEach((b, bi) => { for (let q = 0; q < st.n; q++) if (st.players[q].alive) for (let tz = 0; tz < ZONES; tz++) if (!bl.some(x => x.vs === q && x.z === tz)) push({ pw: 'dakimove', bi, from: { vs: b.vs, z: b.z }, target: { vs: q, z: tz } }); });
       }
       if (ab.includes('chtour') && !m.c.chU && !m.tour && canAttackNow(st) && canAttackSlot(st, m)) push({ pw: 'chtour' });
