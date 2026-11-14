@@ -315,6 +315,12 @@ module.exports = function (T) {
   }
   {
     // Meliodas: Total Counter
+    {
+      const st0 = fresh(); put(st0, 1, 0, 'c_meliodas', { snake: { uid: 9999 } }); put(st0, 0, 0, 'c_zenitsu'); put(st0, 1, 1, 'c_creeper');
+      give(st0, 0, ['s_beam']);
+      act(st0, 0, find(st0, 0, a => a.t === 'activate' && a.target.z === 1));
+      ok(!(st0.pending && st0.pending.ab === 'meliodas'), 'Meliodas inmovilizado por la Serpiente de Megumi no puede usar Total Counter');
+    }
     const st = fresh(); put(st, 1, 0, 'c_meliodas'); put(st, 0, 0, 'c_zenitsu'); put(st, 1, 1, 'c_creeper');
     give(st, 0, ['s_beam']);
     act(st, 0, find(st, 0, a => a.t === 'activate' && a.target.z === 1));

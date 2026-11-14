@@ -1914,7 +1914,7 @@
   function meliFor(st, byP, victimP) {
     for (const q of foes(st, byP)) {
       if (victimP != null && st.team[q] !== st.team[victimP]) continue;
-      const z = st.players[q].mz.findIndex(m => m && !m.down && has(st, m, 'counter') && uOf(m).cT !== st.turn);
+      const z = st.players[q].mz.findIndex(m => m && !m.down && !m.snake && has(st, m, 'counter') && uOf(m).cT !== st.turn);
       if (z >= 0) return { q, z };
     }
     return null;
