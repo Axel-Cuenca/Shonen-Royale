@@ -2100,6 +2100,7 @@
               os.map(a => {
                 if (a.opt.cancel) return h('button', { class: 'btn gold', onclick: () => act(a) }, d.fx === 'amor' ? 'Cancelar el ataque (si el atacante tiene más ATK, ambos quedan inmovilizados)' : 'Cancelar el ataque y cambiar de posición al atacante');
                 if (a.opt.az != null) { const mm = v.me.mz[a.opt.az]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `Escribir el nombre desde ${mm && mm.c ? nameId(mm.c.id) : 'tu personaje'} · zona ${a.opt.az + 1}`); }
+                if (a.opt.refl) return h('button', { class: 'btn gold', onclick: () => act(a) }, a.opt.z < 0 ? `Devolver el efecto contra su dueño (${nameOf(a.opt.vs)})` : a.opt.area === 'st' ? `Devolver el efecto contra la carta de magia/trampa de ${nameOf(a.opt.vs)} · zona ${a.opt.z + 1}` : `Devolver el efecto contra ${(v.players[a.opt.vs].mz[a.opt.z] || {}).c ? nameId(v.players[a.opt.vs].mz[a.opt.z].c.id) : 'una carta'} · ${nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`);
                 const sl = v.players[a.opt.vs] && v.players[a.opt.vs].mz[a.opt.z]; return h('button', { class: 'btn gold', onclick: () => act(a) }, `${lb} ${sl && sl.c ? nameId(sl.c.id) : 'una carta'} · ${a.opt.vs === v.seat ? 'tuyo' : nameOf(a.opt.vs)} · zona ${a.opt.z + 1}`); }));
           })),
           btn('No activar', () => act({ t: 'respond', activate: false }), 'ghost'));

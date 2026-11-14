@@ -412,6 +412,24 @@ module.exports = function (T) {
     act(st, 1, pw(st, 1, 'canon', a => a.target.vs === 0));
     answer(st, (s, q, l) => l.find(x => x.t === 'respond' && x.activate && x.opt && x.opt.vs === 1 && x.opt.z === 1));
     ok(!!st.players[0].mz[0] && !st.players[1].mz[1], 'el Cañón cae sobre el Goku rival');
+    // Full Counter = Total Counter de Meliodas: devuelve también Llamarada, Tornado y Azul
+    {
+      const mk = () => { const x = fresh(1); put(x, 0, 0, 'c_goku'); putST(x, 0, 0, 'c_full_counter', { down: true, setTurn: 1 }); return x; };
+      let s1 = mk(); hand(s1, 1, ['s_flame']); const lp0 = s1.players[0].lp, lp1 = s1.players[1].lp;
+      act(s1, 1, L(s1, 1).find(a => a.t === 'activate'));
+      ok(s1.pending && s1.pending.k === 'respond', 'Full Counter puede responder a la Llamarada');
+      yes(s1);
+      eq([s1.players[0].lp, s1.players[1].lp], [lp0, lp1 - 1000], 'Llamarada: el daño vuelve contra su dueño');
+      let s2 = mk(); putST(s2, 0, 1, 'c_tsukuyomi', { down: true, setTurn: 1 }); putST(s2, 1, 1, 'c_el_unico', { down: true, setTurn: 0 }); hand(s2, 1, ['s_twister']);
+      const t2 = L(s2, 1).find(a => a.t === 'activate');
+      ok(!!t2, 'Tornado sobre el campo de Full Counter');
+      act(s2, 1, t2); yes(s2);
+      ok(!s2.players[1].st[1] && !!s2.players[0].st[1], 'Tornado: destruye una carta de magia/trampa de su dueño y respeta la tuya');
+      let s3 = mk(); putST(s3, 0, 1, 'c_tsukuyomi', { down: true, setTurn: 1 }); put(s3, 1, 0, 'c_yuta', { six: { t0: 6 } }); putST(s3, 1, 1, 'c_el_unico', { down: true, setTurn: 0 });
+      act(s3, 1, pw(s3, 1, 'azul')); yes(s3);
+      ok(!s3.players[1].st[1], 'Azul: se devuelve y destruye las magias/trampas de su dueño');
+      ok(!!s3.players[0].st[1], 'Azul devuelto: tus otras magias/trampas siguen en el campo');
+    }
     // Kyoka Suigetsu
     st = fresh(1); put(st, 0, 0, 'c_goku'); put(st, 0, 1, 'c_creeper'); put(st, 1, 0, 'c_bardock_ssj'); putST(st, 0, 0, 'c_kyoka', { down: true, setTurn: 1 });
     act(st, 1, pw(st, 1, 'canon', a => a.target.z === 0));

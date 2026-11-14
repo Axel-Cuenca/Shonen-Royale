@@ -1922,6 +1922,8 @@
     }
     return null;
   }
+  /** Nombre del efecto en el registro: el Total Counter de Meliodas y la trampa Full Counter son la misma habilidad. */
+  const lbl = st => st.rlb || 'Total Counter';
   const meliUse = (st, q, z) => { const m = st.players[q].mz[z]; if (m) uOf(m).cT = st.turn; };
   /** Rika Orimoto de un Yuta del equipo de la víctima que aún puede interceptar: { q, z } o null. */
   function rikaGuard(st, victimP) {
@@ -1980,16 +1982,16 @@
     C.grave.push(ch.inst);
     if (d.fx === 'destroyOne') {
       const m = st.players[vs].mz[z];
-      log(st, q, `Total Counter: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
+      log(st, q, `${lbl(st)}: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
       if (multi(st)) st.log[st.log.length - 1].q = vs;
       if (m) destroyMonster(st, vs, z, { src: 'spell', bp: q });
       lose(st, ch.p, d.self, true);
     } else if (d.fx === 'destroyST') {
-      log(st, q, `Total Counter: ${d.name} se devuelve y destruye una carta de magia/trampa de su dueño`);
+      log(st, q, `${lbl(st)}: ${d.name} se devuelve y destruye una carta de magia/trampa de su dueño`);
       if (multi(st)) st.log[st.log.length - 1].q = vs;
       removeST(st, vs, z);
     } else if (d.fx === 'burn') {
-      log(st, q, `Total Counter: ${d.name} se devuelve (${d.n} de daño directo)`);
+      log(st, q, `${lbl(st)}: ${d.name} se devuelve (${d.n} de daño directo)`);
       if (multi(st)) st.log[st.log.length - 1].q = ch.p;
       lose(st, ch.p, d.n);
     }
@@ -2016,7 +2018,7 @@
     if (!m) return;
     const nm = mdef(m).name, u = uOf(m);
     blockPw(st, user, a);
-    log(st, q, `Total Counter: la habilidad de ${nm} se devuelve contra su dueño`);
+    log(st, q, `${lbl(st)}: la habilidad de ${nm} se devuelve contra su dueño`);
     if (multi(st)) st.log[st.log.length - 1].q = user;
     if (a.pw === 'azul') {
       u.azul = true;
@@ -2147,7 +2149,7 @@
   function trapAlts(st, resp, d, pd) {
     const os = d.fx === 'realidad' ? realityOpts(st, resp, pd.trigger, pd.cont) : d.fx === 'fullcounter' ? fcOpts(st, resp, pd.trigger, pd.cont) : d.fx === 'kyoka' ? kyokaOpts(st, resp, pd.cont) : [];
     const cur = pd.opt;
-    return os.filter(o => o && o.vs != null && !(cur && cur.vs === o.vs && cur.z === o.z)).map(o => ({ vs: o.vs, z: o.z }));
+    return os.filter(o => o && o.vs != null && !(cur && cur.vs === o.vs && cur.z === o.z)).map(o => Object.assign({ vs: o.vs, z: o.z }, o.refl ? { refl: true } : {}, o.area ? { area: o.area } : {}));
   }
   function trapResolve(st, resp, d, pd, done, invTeam) {
     const vict = (d.fx === 'destroyAttacker' || d.fx === 'mirror') && st.atk ? st.atk.p : ((d.fx === 'destroySummoned' || d.fx === 'infarto') && st.summon ? st.summon.p : null);
@@ -2232,10 +2234,10 @@
     if (k === 'spell') { reflectSpell(st, q, pd.ch, tgt ? tgt.vs : pd.ch.p, tgt ? tgt.z : 0); return; }
     if (k === 'trap') {
       const d = C().get(pd.tid);
-      if (d.fx === 'mirror') { log(st, q, `Total Counter: ${d.name} se devuelve (800 de daño directo)`); lose(st, pd.tp, 800); }
+      if (d.fx === 'mirror') { log(st, q, `${lbl(st)}: ${d.name} se devuelve (800 de daño directo)`); lose(st, pd.tp, 800); }
       else {
         const m = st.players[tgt.vs].mz[tgt.z];
-        log(st, q, `Total Counter: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
+        log(st, q, `${lbl(st)}: ${d.name} se devuelve${m ? ' y destruye a ' + mdef(m).name : ''}`);
         if (multi(st)) st.log[st.log.length - 1].q = tgt.vs;
         if (m) destroyMonster(st, tgt.vs, tgt.z, { src: 'trap', bp: q });
       }
@@ -2250,14 +2252,14 @@
       const nm = mdef(at).name;
       if (!tgt) {
         const dmg = atkOf(st, st.players[a.p], a.z);
-        log(st, q, `Total Counter: el ataque de ${nm} se devuelve (${dmg} de daño directo a su dueño)`);
+        log(st, q, `${lbl(st)}: el ataque de ${nm} se devuelve (${dmg} de daño directo a su dueño)`);
         if (multi(st)) st.log[st.log.length - 1].q = a.p;
         lose(st, a.p, dmg);
         atkDone(st, a);
         return;
       }
       const tm = st.players[tgt.vs].mz[tgt.z];
-      log(st, q, `Total Counter: el ataque de ${nm} se devuelve contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
+      log(st, q, `${lbl(st)}: el ataque de ${nm} se devuelve contra ${tm.down ? 'un personaje boca abajo' : mdef(tm).name}`);
       if (multi(st)) st.log[st.log.length - 1].q = tgt.vs;
       st.atk = { p: a.p, z: a.z, target: tgt.z, vs: tgt.vs, negated: false, meli: true };
       continueAttack(st);
@@ -2367,6 +2369,7 @@
     if (!ch) return;
     const P = st.players[ch.p], d = def(ch.inst);
     if (ch.negated) { P.grave.push(ch.inst); log(st, ch.p, `${d.name} es anulada`); return; }
+    if (ch.reflect) { st.rlb = 'Full Counter'; reflectSpell(st, ch.reflect.q, ch, ch.reflect.vs, ch.reflect.z); delete st.rlb; return; }
     if (PERM[d.fx]) {                                   // equipos y magias continuas: se quedan en el campo
       const z = firstFree(P.st), t = ch.target;
       const tz = (d.fx === 'equip' || d.fx === 'karma') ? (t && t.z) : null;
@@ -2574,6 +2577,8 @@
   }
   /** Magias y habilidades hostiles de un solo objetivo que Full Counter puede devolver. */
   const FC_SPELL = { destroyOne: 1, deathnote: 1, mafuba: 1 };
+  const FC_RSPELL = { destroyST: 1, burn: 1 };      // como Meliodas: se devuelven contra su dueño (sin elegir personaje)
+  const FC_RPOW = ['desmantelar', 'telar', 'azul', 'avpred', 'genki', 'supernova'];      // Púrpura NO se puede devolver
   const FC_POW = ['canon', 'tm', 'td', 'tq', 'bigbang1', 'cuerno', 'avada', 'brillo', 'dios', 'rojo', 'dsserp', 'misadn', 'shikasomb', 'tobidim', 'tinta'];
   /** ¿Puede la habilidad `a` de `user` caer sobre el personaje (q, z)? (las mismas condiciones que al elegirla). */
   function powValid(st, user, a, q, z) {
@@ -2601,19 +2606,32 @@
       return out;
     }
     if (trigger === 'spell') {
-      const ch = st.chain, v = ch && spellVictim(st, ch);
+      const ch = st.chain, v = ch && spellVictim(st, ch), rf = ch && FC_RSPELL[def(ch.inst).fx] ? def(ch.inst).fx : null;
+      if (rf) {
+        const tv = foeOf(st, ch.p, ch.target);
+        if (team(tv) !== team(resp) || team(ch.p) === team(resp)) return out;
+        if (rf === 'burn') return [{ vs: ch.p, z: -1, refl: true }];
+        for (const z of zonesWith(st.players[ch.p].st)) if (!st.players[ch.p].st[z].prison) out.push({ vs: ch.p, z, refl: true, area: 'st' });
+        return out;
+      }
       if (!v || !FC_SPELL[def(ch.inst).fx] || team(v.p) !== team(resp) || team(ch.p) === team(resp)) return out;
       for (const c of rivals(ch.p)) { const tm = st.players[c.vs].mz[c.z]; if (!isInk(tm) && !rikaUp(st, tm) && canTarget(st, resp, c.vs, c.z)) out.push(c); }
       return out;
     }
     if (trigger === 'power') {
       const pa = cont && cont.pa, t = pa && pa.target;
+      if (pa && FC_RPOW.includes(pa.pw) && team(cont.by) !== team(resp)) {
+        if (pa.pw === 'azul' || pa.pw === 'genki' || pa.pw === 'supernova') return [{ vs: cont.by, z: -1, refl: true }];
+        if (!t || t.vs == null || team(t.vs) !== team(resp)) return out;
+        return powerReflectCands(st, resp, cont.by, pa).map(c => Object.assign({}, c, { refl: true }, pa.pw === 'telar' ? {} : { area: 'st' }));
+      }
       if (!pa || !t || t.vs == null || t.z == null || t.area === 'st' || !FC_POW.includes(pa.pw) || team(t.vs) !== team(resp) || team(cont.by) === team(resp)) return out;
       for (const c of rivals(cont.by)) if (powValid(st, cont.by, pa, c.vs, c.z)) out.push(c);
       return out;
     }
     if (trigger === 'trap' && cont && cont.k === 'trapAct') {
       const d = C().get(cont.tid);
+      if (d.fx === 'mirror' && st.atk && team(st.atk.p) === team(resp) && team(cont.by) !== team(resp)) return [{ vs: cont.by, z: -1, refl: true }];
       const v = d.fx === 'destroyAttacker' && st.atk ? { p: st.atk.p, z: st.atk.z } : (d.fx === 'destroySummoned' || d.fx === 'infarto') && st.summon ? st.summon : null;
       if (!v || team(v.p) !== team(resp) || team(cont.by) === team(resp)) return out;
       for (const c of rivals(cont.by)) { const tm = st.players[c.vs].mz[c.z]; if (!isInk(tm) && !rikaUp(st, tm) && canTarget(st, resp, c.vs, c.z)) out.push(c); }
@@ -2815,6 +2833,14 @@
       }
       case 'fullcounter': case 'kyoka': {
         const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
+        if (o && o.refl && d.fx === 'fullcounter') {      // lo mismo que el Total Counter de Meliodas: el efecto se devuelve contra su dueño
+          const tg = o.z >= 0 ? { vs: o.vs, z: o.z } : null;
+          if (pd.trigger === 'spell' && st.chain) st.chain.reflect = { q: resp, vs: o.vs, z: o.z };
+          else if (pd.trigger === 'power' && pd.cont) pd.cont.reflect = { q: resp, tgt: tg };
+          else if (pd.trigger === 'trap' && pd.cont) pd.cont.redirect = { vs: o.vs, z: -1, refl: true };
+          if (pd.trigger !== 'trap') log(st, resp, 'Full Counter: el efecto se devuelve contra su dueño');
+          break;
+        }
         if (!tm) break;
         const who = tm.down ? 'un personaje boca abajo' : mdef(tm).name, lb = d.fx === 'kyoka' ? 'Kyoka Suigetsu' : 'Full Counter';
         if (pd.trigger === 'attack' && st.atk) { st.atk.vs = o.vs; st.atk.target = o.z; log(st, resp, `${lb}: el ataque se devuelve contra ${who}`); }
@@ -2856,6 +2882,11 @@
     else if (cont.k === 'trapAct') {                    // X pudo cancelar una trampa antes de que se resolviera
       const d = C().get(cont.tid);
       if (cont.cancel) { log(st, cont.by, `${d.name} es cancelada y destruida`); respondRest(st, cont.rp); }
+      else if (cont.redirect && cont.redirect.refl) {   // Full Counter contra un Espejo: devuelve los 800 de daño
+        log(st, cont.by, `Full Counter: ${d.name} se devuelve (800 de daño directo)`);
+        lose(st, cont.by, 800);
+        respondRest(st, cont.rp);
+      }
       else if (cont.redirect) {                         // Full Counter: la trampa destruye al personaje rival elegido
         const o = cont.redirect, tm = st.players[o.vs].mz[o.z];
         if (tm) destroyMonster(st, o.vs, o.z, { src: 'trap', bp: cont.by });
@@ -2864,7 +2895,8 @@
       }
       else trapResolve(st, cont.by, d, cont.rp, []);
     } else if (cont.k === 'power') {                    // X pudo cancelar una habilidad
-      if (cont.cancel) cancelPower(st, cont.by, cont.pa);
+      if (cont.reflect) { st.rlb = 'Full Counter'; powerReflect(st, cont.reflect.q, cont.by, cont.pa, cont.reflect.tgt); delete st.rlb; }
+      else if (cont.cancel) cancelPower(st, cont.by, cont.pa);
       else runPower(st, cont.by, Object.assign({}, cont.pa, { xd: 1 }));
     } else if (cont.k === 'gspell') {                   // Gema de la Realidad ante una magia que destruye
       const ch = cont.ch, P = st.players[ch.p];
