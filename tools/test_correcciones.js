@@ -54,6 +54,15 @@ module.exports = function (T) {
     act(st, 0, pw(st, 0, 'rojo'));
     eq(stat(st, 1, 0), [0, 0], 'Rojo: −1000 ATK y −1000 DEF (sin cambios en el efecto)');
     eq(E.view(st, 0).players[0].mz[0].sixU, { rojo: true, azul: false, purpura: false }, 'Rojo queda marcada como usada');
+    {
+      // Shang Tsung con el Guerrero del Infinito: cambiar de personaje no devuelve las técnicas ya usadas
+      const s2 = fresh(0); put(s2, 0, 0, 'c_shang', { summonedTurn: 3, six: { t0: 6 } }); put(s2, 1, 0, 'c_zenitsu'); put(s2, 1, 1, 'c_kratos_f');
+      act(s2, 0, pw(s2, 0, 'rojo'));
+      ok(E.view(s2, 0).players[0].mz[0].sixU.rojo, 'Shang usó Rojo');
+      act(s2, 0, pw(s2, 0, 'copy', x => x.target && x.target.vs === 1 && x.target.z === 1));
+      eq(E.view(s2, 0).players[0].mz[0].sixU, { rojo: true, azul: false, purpura: false }, 'al copiar a otro personaje Rojo sigue gastado');
+      ok(!pw(s2, 0, 'rojo') && !pw(s2, 0, 'purpura'), 'y no puede lanzar Rojo ni Púrpura de nuevo');
+    }
     ok(!pw(st, 0, 'purpura') && !!pw(st, 0, 'azul'), 'tras Rojo: Azul sigue disponible y Púrpura no');
     ok(!('sixU' in (E.view(st, 0).players[1].mz[0] || {})), 'sin Seis Ojos no se envía nada');
   }

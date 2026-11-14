@@ -76,6 +76,9 @@
   const mdef = m => C().get(eid(m));
   const lvl = m => mdef(m).level;
   /** Estado de uso de las habilidades de la forma actual (cada forma lleva el suyo). */
+  /** Las técnicas de los Seis Ojos (Rojo, Azul, Púrpura) ya lanzadas NO se recuperan al cambiar de forma (Shang Tsung, Viego): se pasan a la forma nueva. */
+  const sixKeep = m => { const u = uOf(m); return { rojo: !!u.rojo, azul: !!u.azul, purpura: !!u.purpura }; };
+  const sixPut = (m, k) => { const u = uOf(m); for (const x of ['rojo', 'azul', 'purpura']) if (k[x]) u[x] = true; };
   function uOf(m) { const k = eid(m), b = m.uBy || (m.uBy = {}); return b[k] || (b[k] = {}); }
   /** Todas las habilidades que tiene la carta, aunque estén apagadas (para robarlas o absorberlas). La fusión de Pothala suma las del compañero. */
   /** Habilidades de la forma actual (Viego poseído: las suyas + UNA del cuerpo poseído; Ginyu: las del cuerpo intercambiado). */
@@ -1134,8 +1137,8 @@
   }
   /** Shang Tsung transformado es derrotado: no muere, pierde la transformación y ya no puede volver a transformarse. */
   function revertCopy(st, m, p) {
-    const was = mdef(m).name;
-    m.copy = null; m.noCopy = true; m.bonus = null; m.ext = []; m.extFrom = null; m.cFury = null; m.cDom = null;
+    const was = mdef(m).name, six0 = sixKeep(m);
+    m.copy = null; sixPut(m, six0); m.noCopy = true; m.bonus = null; m.ext = []; m.extFrom = null; m.cFury = null; m.cDom = null;
     if (m.abs) releaseAbsorbed(st, m);
     log(st, p, `${was} es derrotado: Shang Tsung pierde la transformación y ya no puede transformarse`);
   }
@@ -3405,7 +3408,7 @@
     for (let z = 0; z < ZONES; z++) { const vm = P.mz[z]; if (vm && vm.poss && st.turn > vm.poss.t0) {      // Viego abandona el cuerpo poseído
       const nm0 = mdef(vm).name, k = (vm.link || []).findIndex(c => c.id === vm.copy && c.by != null);
       if (k >= 0) { const inst = vm.link.splice(k, 1)[0]; st.players[inst.by].grave.push(inst); }
-      vm.copy = null; delete vm.poss; log(st, st.current, `Viego abandona el cuerpo de ${nm0} y recupera su apariencia y estadísticas`);
+      { const k0 = sixKeep(vm); vm.copy = null; sixPut(vm, k0); } delete vm.poss; log(st, st.current, `Viego abandona el cuerpo de ${nm0} y recupera su apariencia y estadísticas`);
     } }
     for (let z = 0; z < ZONES; z++) { const sm = P.mz[z]; if (sm && sm.shadowCopy && sm.shadowCopy.by === st.current && st.turn > sm.shadowCopy.t0) { log(st, st.current, `La copia de sombra de ${mdef(sm).name} desaparece`); removeMonster(st, st.current, z, 'ink'); } }      // Robo de Sombras
     for (const Q of st.players) if (Q.hlock) Q.hlock = Q.hlock.filter(l => l.on !== st.turn);      // Merlin: la carta bloqueada se libera al final del turno de Merlin
@@ -5402,7 +5405,7 @@
         if (m.abs) releaseAbsorbed(st, m);
         m.bonus = null; m.cFury = null; m.cDom = null;
         m.ext = (tm.ext || []).slice(); m.extFrom = Object.assign({}, tm.extFrom || {});
-        m.copy = nd.id; m.copyTurn = st.turn;
+        { const k0 = sixKeep(m); m.copy = nd.id; sixPut(m, k0); } m.copyTurn = st.turn;
         const nat = { atk: atkOf(st, P, a.zone), def: defOf(st, P, a.zone) };      // lo que Shang ya tiene con esa forma (sus propios equipos, etc.)
         m.bonus = { atk: fin.atk - tmpF - tmpD - nat.atk, def: fin.def - tmpF - tmpD - nat.def };
         if (tmpF) m.cFury = st.turn;
@@ -5812,7 +5815,7 @@
         const inst = G.splice(gi, 1)[0];
         inst.by = pd.vo;
         (vg.m.link = vg.m.link || []).push(inst);
-        vg.m.copy = pd.id; vg.m.poss = { t0: st.turn, abs: Array.from(new Set(pd.abs || [])), pick: null };
+        { const k0 = sixKeep(vg.m); vg.m.copy = pd.id; sixPut(vg.m, k0); } vg.m.poss = { t0: st.turn, abs: Array.from(new Set(pd.abs || [])), pick: null };
         log(st, p, `Dominación Soberana: Viego posee el cuerpo de ${pd.nm} (su apariencia y estadísticas hasta el final de su próximo turno)`);
         if (multi(st)) st.log[st.log.length - 1].q = pd.vo;
       }
