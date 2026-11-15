@@ -1935,3 +1935,6 @@ html.fxbg .board3d .zone .eqm { transform: translateZ(2.4em); font-size: 1.3em; 
 .zone[data-shade], .zone[data-shade] .card, .box[data-shade] { --skf: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(.72) contrast(1.15); }
 .zone[data-shade] .card .cch, .zone[data-shade] .card .cimg, .box[data-shade] .card .cch, .box[data-shade] .card .cimg,
 .box[data-shade] .hin > img { filter: var(--skf) drop-shadow(0 0 .5em rgba(40, 80, 255, .75)); }
+
+/* Golpe de ataque (15-11-2026): la sacudida del golpeado empieza cuando el atacante llega (30 % de attackMove, 950 ms) */
+.zone.struck .holo:not(.enter) .hin, .zone.struck .holo .hin::after, .zone.struck .card.layered.onboard { animation-delay: .28s !important; }
