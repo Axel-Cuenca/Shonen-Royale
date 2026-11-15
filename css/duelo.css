@@ -1953,3 +1953,7 @@ html.fxbg .board3d .zone .eqm { transform: translateZ(2.4em); font-size: 1.3em; 
   .hmain { padding-top: 12px; padding-bottom: 60px; }
   .hdesc { margin-top: 8px; font-size: 15px; }
 }
+
+/* Sin barra de desplazamiento en el borde de la página, en todas las pantallas (15-11-2026): se sigue desplazando con la rueda, el trackpad o el dedo */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
