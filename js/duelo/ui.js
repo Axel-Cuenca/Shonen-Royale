@@ -1609,11 +1609,9 @@
       sel = null;
       if (zs.length < 2) return act(a);
       const wide = C.get(v.me.hand[a.hand].id).wide, name = nameId(v.me.hand[a.hand].id);
-      const lbl = o => (wide ? `Zonas ${o.z + 1} y ${o.z + 2}` : `Zona ${o.z + 1}`) + (a.tributes.some(t => t === o.z || (wide && t === o.z + 1)) ? ' (la del sacrificio)' : '');
-      render();
-      modal(h('div', { class: 'box' }, h('h2', null, '📍 ¿Dónde ' + (a.t === 'set' ? 'colocas' : 'invocas') + ' a ' + name + '?'),
-        h('div', { class: 'acts', style: 'flex-wrap:wrap' }, zs.map(o => btn(lbl(o), () => { closeModal(); act(o); }, 'gold'))),
-        h('div', { class: 'acts' }, btn('Cancelar', closeModal, 'ghost'))));
+      // La zona se elige tocándola en el tablero (las posibles se resaltan); un personaje ancho ocupa la zona tocada y la siguiente.
+      pickTargets(zs.map(o => ({ seat: v.seat, area: 'mz', z: o.z })), t => { sel = null; act(zs.find(o => o.z === t.z)); },
+        `📍 Toca la zona donde ${a.t === 'set' ? 'colocas' : 'invocas'} a ${name}` + (wide ? ' (ocupa esa zona y la siguiente)' : ''));
     }
     function startTribute(i, type, opts2) {
       const need = opts2[0].tributes.length;
@@ -1826,7 +1824,7 @@
       const groups = {};
       const tgtList = (g, area) => g.map(a => ({ seat: a.target.vs, area: area || a.target.area || 'mz', z: a.target.z }));
       const zoneLbl = t => { const m = v.players[t.vs] && v.players[t.vs].mz[t.z]; return `${nameOf(t.vs)} · zona ${t.z + 1}${m ? ' (' + (m.c ? nameId(m.c.id) : 'carta boca abajo') + ')' : ' (libre)'}`; };
-      const beltPick = (g, text) => modal(h('div', { class: 'box' }, h('h2', null, '🩸 ' + text), h('div', { class: 'acts', style: 'flex-wrap:wrap' }, g.map(a => btn(zoneLbl(a.target), () => { closeModal(); act(a); }, 'gold'))), h('div', { class: 'acts' }, btn('Cancelar', closeModal, 'ghost'))));
+      const beltPick = (g, text) => pickTargets(tgtList(g), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z)), text + ' (toca una zona resaltada)');
       const choose = (g, area, text) => pickTargets(tgtList(g, area), t => act(g.find(a => a.target.vs === t.seat && a.target.z === t.z && (area || a.target.area || 'mz') === t.area)), text || 'Elige el objetivo');
       if (myTurn() && !v.pending) {
         for (const a of L().filter(a => a.t === 'power' && a.zone === z)) (groups[a.pw] = groups[a.pw] || []).push(a);
