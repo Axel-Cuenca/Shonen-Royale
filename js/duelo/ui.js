@@ -2737,7 +2737,7 @@
         else if (/ataca/.test(t)) {
           const nm = /^(.+) ataca/.exec(t), d = nm && byName[nm[1]]; lastFam = famOf(d); snd = 'atk_' + lastFam;
           if (nm) atkFx.push({ name: nm[1], p: l.p, fam: lastFam });
-          if (l.a) atkTg.push(Object.assign({ p: l.p, who: nm && nm[1] }, l.a));
+          if (l.a) { atkTg.push(Object.assign({ p: l.p, who: nm && nm[1] }, l.a)); if (l.a.z != null && l.a.vs != null) moveQ.push({ key: 's' + l.p + '-mz-' + l.a.z, a: { vs: l.a.vs, target: l.a.tg === 'direct' ? -1 : l.a.tg } }); }      // el golpe sale del registro: un ataque sin respuestas se resuelve en una sola vista y v.atk ya no existe
           if (d && d.sfx) fileSfx(d.sfx.attack);
           if (d && d.voice && d.voice.say && d.type !== 'popeye') S.voice(d);      // sin ventana a pantalla completa: el atacante se lanza sobre el objetivo en el propio tablero (attackMove)
         }
@@ -2798,7 +2798,7 @@
     /** El atacante se lanza hacia su objetivo (casilla enemiga o el jugador) con curva elástica y vuelve. */
     function attackMove(m) {
       if (!D.CardFX || !D.CardFX.on3d()) return;
-      const zel = document.querySelector('.zone[data-k="' + m.key + '"]'); if (!zel) return;
+      const zel = document.querySelector('.zone[data-k="' + m.key + '"]'); if (!zel || zel.classList.contains('lunging')) return;
       const who = zel.querySelector('.holo') || zel.querySelector('.card'); if (!who || !who.animate) return;
       const a = m.a, r = zel.getBoundingClientRect();
       const tr = a.target != null && a.target >= 0 ? rectOf('s' + a.vs + '-mz-' + a.target)
