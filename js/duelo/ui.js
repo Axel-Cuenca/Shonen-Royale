@@ -951,7 +951,7 @@
     const ro = !!C.test, decks = myDecks();
     idx = Math.max(0, Math.min(idx | 0, decks.length - 1));
     const dk = decks[idx];
-    let q = '', kind = 'all', type = '', shown = 60, flash = '', flashT = 0, noClick = false;
+    let q = '', kind = 'all', type = '', lvr = null, shown = 60, poolList = [], io = null, flash = '', flashT = 0, noClick = false;
     const narrow = () => window.matchMedia && window.matchMedia('(max-width: 860px)').matches;
     const root = h('div', { class: 'scr ed2', 'data-tab': 'pool' });
     const headEl = h('div', { class: 'edhead' }), poolEl = h('div', { class: 'edgrid' }), listEl = h('div', { class: 'edlist' });
@@ -1067,17 +1067,32 @@
       drag(el, c.id, 'deck');
       return el;
     }
+    const BATCH = 40, LV_B = [['1-3', 1, 3], ['4', 4, 4], ['5', 5, 5], ['6-7', 6, 7], ['8-10', 8, 10]];
+    const moreEl = () => h('div', { class: 'edtail', 'aria-live': 'polite' }, `Mostrando ${Math.min(shown, poolList.length)} de ${poolList.length} · sigue bajando`);
+    /** Colección con scroll infinito: al llegar al final se añaden SÓLO las cartas siguientes (sin rehacer las que ya hay). */
+    function appendMore() {
+      const tail = poolEl.querySelector('.edtail'); if (!tail || shown >= poolList.length) return;
+      const next = poolList.slice(shown, shown + BATCH); shown += next.length;
+      next.forEach(c => poolEl.insertBefore(poolCard(c), tail));
+      if (shown >= poolList.length) { if (io) io.disconnect(); tail.remove(); } else { tail.textContent = moreEl().textContent; if (io) { io.unobserve(tail); io.observe(tail); } }      // re-observar: si el pie sigue a la vista, vuelve a avisar y se cargan más
+    }
     function renderPool() {
       const ql = q.trim().toLowerCase();
-      let list = C.all().filter(c => (kind === 'all' || c.kind === kind) && (!type || (c.types && c.types.includes(type))) && (!ql || c.name.toLowerCase().includes(ql)));
-      if (type) list = list.slice().sort((a, b) => (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((a.level || 0) - (b.level || 0)) || a.name.localeCompare(b.name, 'es'));      // dentro de un tipo: por nivel (de menor a mayor)
+      let list = C.all().filter(c => (kind === 'all' || c.kind === kind) && (!lvr || (c.kind === 'monster' && c.level >= lvr[0] && c.level <= lvr[1])) && (!type || (c.types && c.types.includes(type))) && (!ql || c.name.toLowerCase().includes(ql)));
+      if (type || lvr) list = list.slice().sort((a, b) => (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((a.level || 0) - (b.level || 0)) || a.name.localeCompare(b.name, 'es'));      // dentro de un tipo o nivel: por nivel (de menor a mayor)
       else if (!C.test) list = list.map((c, i) => [c, i]).sort((a, b) => (D.Shop.hasCard(b[0].id) - D.Shop.hasCard(a[0].id)) || a[1] - b[1]).map(x => x[0]);      // primero las que ya tienes
-      const total = list.length; list = list.slice(0, shown);
-      poolEl.replaceChildren(...list.map(poolCard), ...(total > shown ? [btn(`Ver más (${total - shown})`, () => { shown += 80; renderPool(); }, 'ghost')] : []), ...(!total ? [h('p', { class: 'sub' }, 'No hay cartas con ese filtro.')] : []));
+      poolList = list; if (io) io.disconnect();
+      const auto = typeof IntersectionObserver === 'function'; if (!auto) shown = Infinity;
+      const keep = poolEl.scrollTop, shownNow = Math.min(shown, list.length);
+      poolEl.replaceChildren(...list.slice(0, shownNow).map(poolCard), ...(shownNow < list.length ? [moreEl()] : []), ...(!list.length ? [h('p', { class: 'sub' }, 'No hay cartas con ese filtro.')] : []));
+      poolEl.scrollTop = keep;
+      const tail = poolEl.querySelector('.edtail');
+      if (tail && auto) { io = io || new IntersectionObserver(es => { if (es.some(e => e.isIntersecting) && root.isConnected) appendMore(); }, { rootMargin: '0px 0px 400px 0px' }); io.observe(tail); }
     }
     function renderChips() {
       chipsEl.replaceChildren(...[['all', 'Todas'], ['monster', 'Personajes'], ['spell', 'Magias'], ['trap', 'Trampas']].map(([v, t]) =>
-        h('button', { class: 'edchip' + (kind === v ? ' on' : ''), onclick: () => { kind = v; shown = 60; renderChips(); renderPool(); } }, t)));
+        h('button', { class: 'edchip' + (kind === v ? ' on' : ''), onclick: () => { kind = v; if (v !== 'all' && v !== 'monster') lvr = null; shown = 60; poolEl.scrollTop = 0; renderChips(); renderPool(); renderStatus(); } }, t)),
+        ...(lvr ? [h('button', { class: 'edchip on lv', 'aria-label': 'Quitar el filtro de nivel', onclick: () => { lvr = null; shown = 60; poolEl.scrollTop = 0; renderChips(); renderPool(); renderStatus(); } }, 'Nivel ' + lvr[2] + ' ✕')] : []));
     }
     function renderDeck() {
       const uniq = [...new Set(dk.ids)].map(i => C.get(i)).filter(Boolean).sort((a, b) => (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((b.level || 0) - (a.level || 0)) || a.name.localeCompare(b.name));
@@ -1089,9 +1104,12 @@
       cntEl.replaceChildren(String(inf.n), h('small', null, ' / ' + C.DECK_SIZE));
       barEl.className = 'edbar' + (okk ? ' ok' : ''); barEl.firstChild.style.width = Math.min(100, inf.n / C.DECK_SIZE * 100) + '%';
       statsEl.replaceChildren(h('span', null, h('b', null, String(inf.mon)), ' personajes'), h('span', null, h('b', null, String(inf.spl)), ' magias'), ...(inf.trp ? [h('span', null, h('b', null, String(inf.trp)), ' trampas')] : []));
-      const bk = [['1-3', 1, 3], ['4', 4, 4], ['5', 5, 5], ['6-7', 6, 7], ['8-10', 8, 10]].map(([l, a, b]) => ({ l, n: dk.ids.filter(i => { const c = C.get(i); return c && c.kind === 'monster' && c.level >= a && c.level <= b; }).length }));
+      const bk = LV_B.map(([l, a, b]) => ({ l, a, b, n: dk.ids.filter(i => { const c = C.get(i); return c && c.kind === 'monster' && c.level >= a && c.level <= b; }).length }));
       const mx = Math.max(1, ...bk.map(b => b.n));
-      curveEl.replaceChildren(...bk.map(b => h('div', { class: 'edcv' }, h('span', null, String(b.n)), h('i', { style: `height:${2 + Math.round(b.n / mx * 34)}px` }), h('small', null, b.l))));
+      curveEl.replaceChildren(...bk.map(b => { const on = lvr && lvr[0] === b.a && lvr[1] === b.b;
+        return h('button', { class: 'edcv' + (on ? ' on' : ''), type: 'button', title: on ? 'Quitar el filtro' : 'Ver en la colección las cartas de nivel ' + b.l, 'aria-pressed': String(!!on),
+          onclick: () => { lvr = on ? null : [b.a, b.b, b.l]; if (lvr) kind = 'monster'; shown = 60; poolEl.scrollTop = 0; if (root.dataset.tab === 'deck') tab('pool'); renderChips(); renderPool(); renderStatus(); } },
+          h('span', null, String(b.n)), h('i', { style: `height:${2 + Math.round(b.n / mx * 34)}px` }), h('small', null, b.l)); }));
       bar2El.replaceChildren(h('div', { class: 'edb2t' }, h('b', { class: okk ? 'ok' : 'bad' }, `${inf.n} / ${C.DECK_SIZE}`), h('small', null, txt)),
         btn(root.dataset.tab === 'pool' ? 'Ver mazo' : 'Colección', () => tab(root.dataset.tab === 'pool' ? 'deck' : 'pool'), 'gold sm'));
       tabDeck.textContent = `Tu mazo · ${inf.n}`;
@@ -1116,8 +1134,8 @@
     }
     function renderAll() { renderHead(); renderChips(); renderPool(); renderDeck(); renderStatus(); }
 
-    const search = h('input', { type: 'search', placeholder: 'Buscar carta…', 'aria-label': 'Buscar carta', oninput: () => { q = search.value; shown = 60; renderPool(); } });
-    const typeSel = h('select', { 'aria-label': 'Tipo', onchange: () => { type = typeSel.value; shown = 60; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(C.custom.map(c => c.type)).filter((t, i, a) => t && a.indexOf(t) === i).sort((a, b) => (C.TYPE_ES[a] || a).localeCompare(C.TYPE_ES[b] || b, 'es')).map(t => h('option', { value: t }, C.TYPE_ES[t] || t)));      // tipos en orden alfabético
+    const search = h('input', { type: 'search', placeholder: 'Buscar carta…', 'aria-label': 'Buscar carta', oninput: () => { q = search.value; shown = 60; poolEl.scrollTop = 0; renderPool(); } });
+    const typeSel = h('select', { 'aria-label': 'Tipo', onchange: () => { type = typeSel.value; shown = 60; poolEl.scrollTop = 0; renderPool(); } }, h('option', { value: '' }, 'Todos los tipos'), C.PRESET_TYPES.concat(C.custom.map(c => c.type)).filter((t, i, a) => t && a.indexOf(t) === i).sort((a, b) => (C.TYPE_ES[a] || a).localeCompare(C.TYPE_ES[b] || b, 'es')).map(t => h('option', { value: t }, C.TYPE_ES[t] || t)));      // tipos en orden alfabético
     root.append(h('div', { class: 'edtop' }, h('button', { class: 'back', onclick: deckBuilder }, '← Mis mazos'), headEl), h('h1', null, dk.name),
       h('div', { class: 'dktabs' }, tabPool, tabDeck),
       h('div', { class: 'edmain' },
