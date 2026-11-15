@@ -1938,3 +1938,18 @@ html.fxbg .board3d .zone .eqm { transform: translateZ(2.4em); font-size: 1.3em; 
 
 /* Golpe de ataque (15-11-2026): la sacudida del golpeado empieza cuando el atacante llega (30 % de attackMove, 950 ms) */
 .zone.struck .holo:not(.enter) .hin, .zone.struck .holo .hin::after, .zone.struck .card.layered.onboard { animation-delay: .28s !important; }
+
+/* Menú principal en pantallas bajas (15-11-2026): que quepa sin barra de desplazamiento */
+.home { scrollbar-width: none; }
+.home::-webkit-scrollbar { display: none; }
+@media (max-height: 900px) and (min-width: 861px) {
+  .hmain { padding-top: clamp(14px, 3vh, 60px); padding-bottom: 70px; }
+  .home .menu-btn { padding-top: 7px; padding-bottom: 7px; margin-bottom: 4px; }
+  .hdesc { margin-top: 12px; }
+}
+@media (max-height: 760px) and (min-width: 861px) {
+  .home .menu-btn { padding-top: 4px; padding-bottom: 4px; margin-bottom: 2px; font-size: 24px; }
+  .home .menu-btn.on:not(:disabled) { font-size: 27px; }
+  .hmain { padding-top: 12px; padding-bottom: 60px; }
+  .hdesc { margin-top: 8px; font-size: 15px; }
+}
