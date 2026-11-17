@@ -190,20 +190,21 @@ module.exports = function (T) {
     eq(view(s6, 0, 0), [1800, 1300], 'Warwick contra Warwick: sin bucles, el de menos ATK gana +500');
   }
 
-  section('correcciones 17-11: la X sólo anula ese uso de la habilidad');
+  section('correcciones 17-11: la X gasta el uso de la habilidad (según su límite normal)');
   {
-    for (const [id, pwn, tg] of [['c_bugs_bunny', 'agujero', a => a.target.z === 0], ['c_bardock_ssj', 'canon', a => a.target.z === 0]]) {
+    // [carta, poder, ¿es de una sola vez por invocación?]
+    for (const [id, pwn, once] of [['c_bugs_bunny', 'agujero', false], ['c_bardock_ssj', 'canon', true], ['c_goku_ssj', 'kameha', true]]) {
       const st = fresh(0); put(st, 0, 0, id); put(st, 1, 0, 'c_goku'); putST(st, 1, 0, 'c_x', { down: true, setTurn: 1 }); putST(st, 1, 1, 'c_botiquin', { down: true, setTurn: 1 });
-      const a = pw(st, 0, pwn, tg) || pw(st, 0, pwn);
+      const a = pw(st, 0, pwn, x => x.target && x.target.z === 0) || pw(st, 0, pwn);
       ok(!!a, id + ': tiene la habilidad ' + pwn);
       act(st, 0, a);
       let n = 0;
       while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond' && x.activate) || l.find(x => x.t === 'respond') || l[0]); }
       ok(st.players[1].grave.some(c => c.id === 'c_x'), id + ': la X se activó');
       ok(!pw(st, 0, pwn), id + ': tras la X no se puede repetir ESE turno');
-      ok(!(st.players[0].mz[0].spentAb || []).length, id + ': la X no la elimina para el resto de la partida');
       ready(st, 0, st.turn + 2);
-      ok(!!pw(st, 0, pwn), id + ': en su siguiente turno la habilidad vuelve a estar disponible');
+      if (once) ok(!pw(st, 0, pwn), id + ': de una vez por invocación: el uso queda gastado también en los turnos siguientes');
+      else ok(!!pw(st, 0, pwn), id + ': de una vez por turno: en su siguiente turno vuelve a estar disponible');
     }
   }
 

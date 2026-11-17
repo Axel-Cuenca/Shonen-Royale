@@ -892,7 +892,7 @@
     },
     {
       kind: 'trap', id: 'c_x', name: 'X', icon: '❌', img: I('x'), triggers: ['spell', 'power', 'trap'], fx: 'xcancel',
-      text: 'Cancelación absoluta: cancela una magia, trampa o habilidad de personaje del rival antes de que se resuelva. Si cancelas una magia o trampa, la destruyes; si cancelas una habilidad, esa habilidad no se puede volver a usar ese turno (después vuelve a estar disponible con sus reglas normales).'
+      text: 'Cancelación absoluta: cancela una magia, trampa o habilidad de personaje del rival antes de que se resuelva. Si cancelas una magia o trampa, la destruyes; si cancelas una habilidad, se gasta su uso como si se hubiera usado: no se puede repetir ese turno y, si era de una vez por invocación, queda gastada hasta que el personaje salga del campo.'
     },
     {
       kind: 'trap', id: 'c_rayo_solar', name: 'Rayo de Luz Solar', icon: '☀️', img: I('rayo_solar'), trigger: 'attack', fx: 'destroyAttacker',

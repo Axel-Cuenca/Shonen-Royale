@@ -2701,7 +2701,7 @@
       }
       case 'xcancel':                     // X: Cancelación absoluta
         if (pd && pd.trigger === 'spell') { if (st.chain) { st.chain.negated = true; log(st, resp, 'X cancela la magia: queda destruida'); } }
-        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.k === 'boom' ? 'X cancela la Explosión del Creeper' : 'X cancela la habilidad: no se puede volver a usar este turno')); }
+        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.k === 'boom' ? 'X cancela la Explosión del Creeper' : 'X cancela la habilidad: se gasta su uso')); }
         break;
       case 'realidad': {                  // Gema de la Realidad
         const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
@@ -2956,13 +2956,24 @@
     consumePower(st, p, a, false);
     log(st, p, `${mdef(m).name} usa ${PWL[a.pw] || a.pw}: el efecto fue sustituido`);
   }
-  /** X cancela una habilidad: no se resuelve y esa habilidad no se puede volver a intentar ESE turno (después vuelve a estar disponible según sus reglas normales). */
+  /** ¿El uso de esta habilidad es «de una sola vez» (por invocación / por duelo) o se renueva cada turno? Se lee del texto de la habilidad. */
+  function powerOnce(a) {
+    if (PW_FLAG[a.pw]) return true;
+    const id = PW_ABID[a.pw], ab = id && (C().AB[id] || [])[1];
+    if (!ab) return false;                                                    // sin texto o sin límite (p. ej. Kayn): sólo se pierde ese turno
+    const t = ab.toLowerCase();
+    if (/(por|cada) (turno|ronda)|cada \d+ (turnos|rondas)/.test(t)) return false;      // «una vez por turno», «cada 2 turnos»: se renueva
+    return /por invocaci[oó]n|por duelo|por partida|una vez/.test(t);
+  }
+  /** X cancela una habilidad: no se resuelve y su uso queda GASTADO como si se hubiera usado (17-11-2026, dueño): las de «una vez por turno» no se
+   *  pueden repetir ese turno y vuelven en el siguiente; las de «una vez por invocación» o «por duelo» quedan gastadas hasta que el personaje salga del campo. */
   function cancelPower(st, p, a) {
     const m = st.players[p].mz[a.zone];
     if (!m) return;
     blockPw(st, p, a);
-    const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw;
-    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada: no se puede volver a usar este turno`);      // 17-11-2026 (dueño): la X sólo anula ESE uso, no la habilidad para el resto de la partida
+    const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw, once = powerOnce(a);
+    consumePower(st, p, a, once);
+    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y ${once ? 'su uso queda gastado' : 'no se puede volver a usar este turno'}`);
     st.log[st.log.length - 1].xc = 1;
   }
 
