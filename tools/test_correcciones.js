@@ -190,6 +190,40 @@ module.exports = function (T) {
     eq(view(s6, 0, 0), [1800, 1300], 'Warwick contra Warwick: sin bucles, el de menos ATK gana +500');
   }
 
+  section('correcciones 17-11: Gema del Poder, el uso extra es una sola vez');
+  {
+    const st = fresh(0); put(st, 0, 0, 'c_spiderman'); putST(st, 0, 0, 'c_gema_poder', { equipTo: 0 });
+    put(st, 1, 0, 'c_sukuna60'); put(st, 1, 1, 'c_bardock_ssj'); put(st, 1, 2, 'c_goku');
+    const webs = () => L(st, 0).filter(x => x.t === 'power' && x.pw === 'telar' || x.pw === 'telar');
+    const seal = () => { const a = webs()[0]; if (!a) return false; act(st, 0, a); let n = 0; while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond') || l[0]); } return true; };
+    ok(seal() && seal(), 'con la gema, Telarañas se usa 2 veces en el mismo turno (el uso extra)');
+    ok(!webs().length, 'y no una tercera vez ese turno');
+    ready(st, 0, st.turn + 2);
+    ok(seal(), 'en un turno posterior se puede usar una vez');
+    ok(!webs().length, 'pero ya no una segunda vez ese turno: el uso extra de la gema era una sola vez');
+    ready(st, 0, st.turn + 2);
+    ok(!!webs().length, 'y en el turno siguiente vuelve a poder usarla (una vez por turno)');
+  }
+
+  section('correcciones 17-11: Telarañas sellan también las habilidades que se activan al morir');
+  {
+    const kill = (sealIt, spiderLeaves) => {
+      const st = fresh(0); put(st, 0, 0, 'c_spiderman'); put(st, 0, 1, 'c_goku'); put(st, 1, 0, 'c_kuriboh');
+      if (sealIt) { act(st, 0, pw(st, 0, 'telar', x => x.ab === 'kuriboh')); let n = 0; while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond') || l[0]); } }
+      if (spiderLeaves) st.players[0].mz[0] = null;
+      act(st, 0, { t: 'toBattle' });
+      act(st, 0, L(st, 0).find(x => x.t === 'attack' && x.zone === 1 && x.target === 0));
+      let n = 0; while (st.pending && n++ < 10) { const q = E.actor(st), l = L(st, q); act(st, q, l.find(x => x.t === 'respond') || l[0]); }
+      return st;
+    };
+    let st = kill(false, false);
+    ok(st.players[1].grave.some(c => c.id === 'c_kuriboh') && st.players[1].imm === st.turn, 'sin Telarañas, Kuriboh protege a su jugador al morir');
+    st = kill(true, false);
+    ok(st.players[1].grave.some(c => c.id === 'c_kuriboh') && st.players[1].imm !== st.turn, 'con la habilidad sellada, Kuriboh muere y NO protege a su jugador');
+    st = kill(true, true);
+    ok(st.players[1].imm === st.turn, 'si Spider-Man ya se fue, la habilidad vuelve y Kuriboh protege');
+  }
+
   section('correcciones 17-11: la X gasta el uso de la habilidad (según su límite normal)');
   {
     // [carta, poder, ¿es de una sola vez por invocación?]

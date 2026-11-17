@@ -699,7 +699,7 @@
   /** Una muerte real (cementerio, o desterrado por Mahoraga): La Muerte crece, la Bestia despierta, Susano despierta. */
   function onDeath(st, p, m, how) {
     const nm = mdef(m).name, type = mdef(m).type;
-    const dab = m.c ? rawAbil(m) : [];
+    const dab = m.c ? rawAbil(m).filter(x => !(m.sealed || []).some(q => q.ab === x) && !(m.spentAb || []).includes(x)) : [];      // las habilidades selladas por Telarañas tampoco se activan al morir (Kuriboh, Voldemort, Cell Perfecto…)
     const domOff = !!(m.c && st.domain && lvl(m) < (st.domain.min || 10) && st.domain.uid !== m.c.uid);      // un dominio activo apaga sus habilidades (también al morir)
     if (dab.includes('kuriboh') && !domOff) {                  // Kuriboh: su jugador es inmune a todo daño el resto del turno
       st.players[p].imm = st.turn;
@@ -4206,7 +4206,12 @@
         for (const x of Array.from(new Set(rawAbil(tm)))) if (!(tm.spentAb || []).includes(x)) push({ pw: 'katana', target: t, ab: x, stz: P.st.indexOf(s) });
       }
     });
-    return out.filter(a => { const m = P.mz[a.zone]; return !(m && m.cx && m.cx[a.pw] === st.turn); });      // habilidad evadida o cancelada: no se repite este turno
+    return out.filter(a => {
+      const m = P.mz[a.zone];
+      if (m && m.cx && m.cx[a.pw] === st.turn) return false;      // habilidad evadida o cancelada: no se repite este turno
+      if (m && gemOn(P, a.zone)) { const e = (uOf(m).gu || {})[a.pw]; if (e && e.t === st.turn && e.n >= 1 && e.ex) return false; }      // Gema del Poder: el uso extra ya se gastó
+      return true;
+    });
   }
   const SEEDN = { rojo: 'Rojo', debil: '¡Debilítate!', ola: 'Ola de Fuego' };
   /** Semilla del Hermitaño: efectos negativos que se pueden quitar de un aliado (con doIt, los quita). Devuelve sus nombres. */
@@ -4463,6 +4468,10 @@
   function doPower(st, p, a) {
     const P = st.players[p], m = P.mz[a.zone], u = uOf(m), nm = mdef(m).name;
     const ctx = { src: 'power', by: { p, uid: m.c.uid }, bp: p, pw: a.pw }, g = gx(P, a.zone);
+    if (gemOn(P, a.zone)) {      // Gema del Poder: el uso extra de cada habilidad es UNA sola vez por invocación (después se usa con normalidad)
+      const gu = (u.gu = u.gu || {}), e = gu[a.pw];
+      if (e && e.t === st.turn) { e.n++; e.ex = true; } else gu[a.pw] = { t: st.turn, n: 1, ex: !!(e && e.ex) };
+    }
     if (a.target && a.target.vs != null && a.target.z != null && a.target.area !== 'st' && st.team[a.target.vs] !== st.team[p]) {      // Cámara de Gravedad: Sobreexigencia
       const tm = st.players[a.target.vs].mz[a.target.z];
       if (tm && tm.gr && tm.gr.n > 0) { tm.gr.n = 0; log(st, a.target.vs, `Sobreexigencia: ${mdef(tm).name} pierde sus contadores de entrenamiento`); }

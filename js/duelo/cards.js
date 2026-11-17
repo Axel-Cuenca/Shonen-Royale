@@ -546,7 +546,7 @@
     }),
     spell({
       id: 'c_gema_poder', name: 'Gema del Poder', icon: '💎', img: I('gema_poder'), fx: 'equip', sub: 'equip', eAtk: 800, eDef: 800, pgem: true,
-      text: 'Equipa a un personaje tuyo: +800 ATK y DEF. Sus habilidades de «una vez» se pueden usar dos veces, las de un uso por turno dos veces por turno y sus aumentos se duplican. Si muere, el equipo se pierde.'
+      text: 'Equipa a un personaje tuyo: +800 ATK y DEF. Sus habilidades de «una vez» se pueden usar dos veces, las de un uso por turno tienen un único uso extra en toda la invocación (se puede usar dos veces en un solo turno, una sola vez) y sus aumentos se duplican. Si muere, el equipo se pierde.'
     }),
     spell({
       id: 'c_susano', name: 'Susano', icon: '🔥', img: I('susano'), fx: 'equip', sub: 'equip', susano: true,
