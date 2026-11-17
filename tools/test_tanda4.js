@@ -98,9 +98,11 @@ module.exports = function (T) {
 
   section('Galio');
   {
-    const st = fresh(); put(st, 0, 0, 'c_galio'); hand(st, 1, ['c_curacion'].filter(id => Cards.get(id))); hand(st, 0, ['c_gema_poder']);
-    ok(!L(st, 0).some(a => a.t === 'activate' || a.t === 'activateSet'), 'Campo de silencio: nadie activa magias');
-    ok(L(st, 0).some(a => a.t === 'setst'), 'se pueden colocar cartas boca abajo');
+    const st = fresh(); put(st, 0, 0, 'c_galio'); put(st, 0, 2, 'c_goku'); hand(st, 1, ['c_botiquin']); hand(st, 0, ['c_gema_poder']);
+    ok(L(st, 0).some(a => a.t === 'activate'), 'Campo de silencio: el dueño de Galio SÍ puede activar sus magias');
+    ready(st, 1);
+    ok(!L(st, 1).some(a => a.t === 'activate' || a.t === 'activateSet'), 'Campo de silencio: los rivales de Galio no activan magias');
+    ok(L(st, 1).some(a => a.t === 'setst'), 'el rival puede colocar cartas boca abajo');
     const sz = fresh(); put(sz, 0, 0, 'c_galio'); put(sz, 0, 2, 'c_goku'); put(sz, 1, 0, 'c_toge'); put(sz, 1, 1, 'c_goku'); ready(sz, 1);
     ok(!pw(sz, 1, 'td', a => a.target.z === 0 && a.target.vs === 0) && !!pw(sz, 1, 'td', a => a.target.z === 2), 'Resistencia mágica: las habilidades no pueden elegir a Galio');
     // Púrpura sí

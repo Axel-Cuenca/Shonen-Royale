@@ -122,7 +122,7 @@
     armin: ['Transformación en Titán Colosal', 'Una vez, pagando 1000 PV, invoca especialmente al Titán Colosal desde tu mano en su lugar. Armin queda vinculado al Titán. Necesita las 3 zonas de personaje libres.'],
     arminsac: ['Último sacrificio', 'Si Armin muere por el ataque de un personaje enemigo o por el efecto de una carta, puedes invocar al Titán Colosal desde tu mano sin pagar PV (necesita las 3 zonas libres). Armin queda vinculado a él.'],
     colosal: ['Explosión de transformación', 'Cuando entra al campo por la transformación de Armin, destruye a todos los demás personajes del campo (aliados y enemigos) de 10★ o menos. No se puede cancelar.'],
-    galsil: ['Campo de silencio', 'Mientras Galio esté en el campo, ningún jugador puede activar cartas mágicas. Las trampas sí se pueden activar.'],
+    galsil: ['Campo de silencio', 'Mientras Galio esté en el campo, los rivales de su dueño no pueden activar cartas mágicas. Su dueño (y sus aliados) sí pueden activarlas, y las trampas se pueden activar siempre.'],
     galres: ['Resistencia mágica', 'Es inmune a las habilidades de todos los personajes. La única excepción es Púrpura, que sí le afecta.'],
     galprot: ['Protección heroica', 'Cuando un personaje aliado vaya a morir por el ataque de un personaje enemigo, puede anular ese ataque y evitar su muerte. 2 usos por invocación, 1 por turno.'],
     uidef: ['Defensa instintiva', 'Una vez por turno, destruye una magia o trampa que intente destruir a Goku Ultra Instinto o a un personaje aliado (sólo las que tienen como objetivo destruir a un personaje aliado).'],
@@ -647,7 +647,7 @@
     }),
     mon({
       id: 'c_galio', name: 'Galio', type: 'lol', level: 8, atk: 2100, def: 2500, img: I('galio'), wide: true, ab: ['galsil', 'galres', 'galprot'],
-      text: 'Gigante colosal: ocupa 2 zonas contiguas. Campo de silencio: mientras esté en el campo, nadie puede activar cartas mágicas. ' +
+      text: 'Gigante colosal: ocupa 2 zonas contiguas. Campo de silencio: mientras esté en el campo, los rivales de su dueño no pueden activar cartas mágicas (su dueño sí). ' +
         'Resistencia mágica: inmune a las habilidades de todos los personajes, excepto Púrpura. ' +
         'Protección heroica: cuando un aliado vaya a morir por el ataque de un enemigo, puede anular ese ataque y evitar su muerte (2 usos por invocación, 1 por turno).',
       sfx: { summon: V('galio-summon'), attack: V('galio-attack') }

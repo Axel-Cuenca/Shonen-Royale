@@ -162,9 +162,9 @@
   }
   /** Dominio de Yuta: las magias y trampas que ya estaban en el campo quedan desactivadas mientras dure. */
   const stOff = st => !!(st.domain && st.domain.noST);
-  /** Galio: Campo de silencio. Mientras haya un Galio boca arriba en el campo, nadie activa magias. */
-  const galioOn = st => st.players.some(P => P.alive && P.mz.some(m => m && !m.down && abil(st, m).includes('galsil')));
-  const spellsOff = st => !!st.domain || galioOn(st);
+  /** Galio: Campo de silencio. Mientras haya un Galio boca arriba en el campo de un RIVAL de p, p no puede activar magias (el dueño de Galio y sus aliados sí). */
+  const galioOn = (st, p) => st.players.some((P, q) => P.alive && st.team[q] !== st.team[p] && P.mz.some(m => m && !m.down && abil(st, m).includes('galsil')));
+  const spellsOff = (st, p) => !!st.domain || galioOn(st, p);
   /** Las habilidades de personaje (no las magias ni las trampas) que eligen objetivo: Galio y Goku Ultra Instinto son inmunes a ellas (salvo Púrpura). */
   let abMode = false;
   /** Capa de Invisibilidad / Minions equipados a la casilla z del jugador P. */
@@ -4090,7 +4090,7 @@
           for (const x of Array.from(new Set(rawAbil(tm)))) if (STEALABLE.includes(x) && !rawAbil(m).includes(x) && !(tm.sealed || []).some(q => q.ab === x)) push({ pw: 'robo', target: t, ab: x });
         }
       }
-      if (m.gemsIdle && m.gemsIdle.length && !spellsOff(st) && st.current === p) {      // Thanos: gemas robadas que lleva consigo, usadas como habilidad (sin ocupar zona)
+      if (m.gemsIdle && m.gemsIdle.length && !spellsOff(st, p) && st.current === p) {      // Thanos: gemas robadas que lleva consigo, usadas como habilidad (sin ocupar zona)
         for (const gi of m.gemsIdle) {
           if (gi.fx === 'gem') { if (firstFree(P.st) >= 0) for (const c of zoneTargetsUp(st, p)) push({ pw: 'tgmente', gem: gi.uid, target: { vs: foeOf(st, p, c), z: c.z } }); }
           else if (gi.fx === 'tiempo' && canRewind(st, p)) push({ pw: 'tgtiempo', gem: gi.uid });
@@ -4266,7 +4266,7 @@
   /** Poderes de las magias continuas (Gema de la Mente y Tormenta Eléctrica). */
   function spowerActs(st, p) {
     const P = st.players[p], out = [];
-    if (spellsOff(st)) return out;
+    if (spellsOff(st, p)) return out;
     P.st.forEach((s, z) => {
       if (!s || s.down) return;
       if (s.gem && s.gem.uses < 2 && s.gem.usedTurn !== st.turn) {
@@ -4397,7 +4397,7 @@
             if (zs.length > 1) for (const z of zs) { out.push({ t: 'summon', hand: i, tributes: tr, z }); out.push({ t: 'set', hand: i, tributes: tr, z }); }
           }
         } else {
-          if (d.kind === 'spell' && !spellsOff(st)) {
+          if (d.kind === 'spell' && !spellsOff(st, p)) {
             const tg = spellTargets(st, p, card);
             const needsZone = !!PERM[d.fx];
             if (tg.length && (!needsZone || freeCount(P.st) > 0)) for (const t of tg) out.push(t ? { t: 'activate', hand: i, target: t } : { t: 'activate', hand: i });
@@ -4405,7 +4405,7 @@
           if (freeCount(P.st) > 0) out.push({ t: 'setst', hand: i });
         }
       });
-      if (!spellsOff(st)) P.st.forEach((s, z) => {
+      if (!spellsOff(st, p)) P.st.forEach((s, z) => {
         if (!s || !s.down) return;
         const d = def(s.c);
         if (d.kind !== 'spell') return;
