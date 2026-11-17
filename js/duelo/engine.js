@@ -837,8 +837,8 @@
       const ak = ctx.defn && ctx.by ? slotByUid(st, ctx.by.p, ctx.by.uid) : null;
       if (!ak || atkOf(st, st.players[ak.p], ak.z) <= 2800) { log(st, p, `${nm} resiste el combate: sólo lo derrota un ataque con más de 2800 ATK`); noteSaved(st, nm); return false; }
     }
-    if (m.c.id === 'c_hantengu' && !m.down && !m.hdiv && ctx.src !== 'mark' && has(st, m, 'handiv') && !(m.owner != null && m.owner !== p) && P.mz.filter(x => !x).length + 1 >= 2) {      // División Emocional
-      m.hdiv = true;
+    if (m.c.id === 'c_hantengu' && !m.down && !m.hdiv && !m.c.hdiv && ctx.src !== 'mark' && has(st, m, 'handiv') && !(m.owner != null && m.owner !== p) && P.mz.filter(x => !x).length + 1 >= 2) {      // División Emocional
+      m.hdiv = true; m.c.hdiv = true;      // una sola vez por partida: si vuelve al campo (de donde sea) no puede dividirse otra vez
       const hid = m.c.uid;
       if (toLimbo(st, p, z, 'han', 0, 'División Emocional')) {
         st.limbo[st.limbo.length - 1].hid = hid;

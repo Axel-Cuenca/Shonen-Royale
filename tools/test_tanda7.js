@@ -691,6 +691,34 @@ module.exports = function (T) {
     ok(st.players[0].mz.some(m => m && m.c.id === 'c_karaku') && !st.players[0].mz.some(m => m && m.c.id === 'c_hantengu'), 'con un clon vivo, Hantengu sigue fuera');
   }
 
+  section('Hantengu: tras volver al campo no puede dividirse otra vez');
+  {
+    const names = st => st.players[0].mz.map(m => m ? m.c.id : '-').join(' ');
+    // 1) vuelve cuando mueren los clones: cualquier destrucción posterior lo mata
+    let st = fresh(1); put(st, 0, 0, 'c_hantengu', { pos: 'def' }); put(st, 1, 0, 'c_goku', { atkMod: 5000 }); put(st, 1, 1, 'c_kratos', { atkMod: 5000 }); put(st, 1, 2, 'c_goku', { atkMod: 5000 });
+    st.phase = 'battle'; st.turn = 7;
+    act(st, 1, atkA(st, 1, 0, 0)); no(st);
+    const z1 = st.players[0].mz.findIndex(m => m && m.c.id === 'c_sekido'), z2 = st.players[0].mz.findIndex(m => m && m.c.id === 'c_karaku');
+    st.players[0].mz[z1].pos = 'def'; st.players[0].mz[z2].pos = 'def';
+    act(st, 1, atkA(st, 1, 1, z1)); no(st); act(st, 1, atkA(st, 1, 2, z2)); no(st);
+    const h = st.players[0].mz.findIndex(m => m && m.c.id === 'c_hantengu');
+    ok(h >= 0, 'Hantengu vuelve al campo cuando no quedan clones');
+    st.players[0].mz[h].pos = 'def'; st.turn = 9; st.current = 1; st.phase = 'battle';
+    for (const m of st.players[1].mz) if (m) { m.attacked = false; m.atkN = 0; }
+    act(st, 1, atkA(st, 1, 0, h)); no(st);
+    ok(grave(st, 0, 'c_hantengu') && !st.players[0].mz.some(m => m && m.c.id === 'c_sekido'), 'al volver, si lo superan en ATK muere (no se divide otra vez)');
+    // 2) vuelve de otra forma (resucitado desde el cementerio): tampoco puede dividirse
+    st.current = 0; st.turn = 10; st.phase = 'main'; st.pending = null; hand(st, 0, ['c_esferas']);
+    const gu = st.players[0].grave.find(c => c.id === 'c_hantengu').uid;
+    act(st, 0, L(st, 0).find(x => x.t === 'activate' && x.target && x.target.wish === 'revive' && x.target.u === gu && x.target.pos === 'atk')); no(st);
+    const h2 = st.players[0].mz.findIndex(m => m && m.c.id === 'c_hantengu');
+    ok(h2 >= 0, 'Hantengu resucitado vuelve al campo');
+    st.turn = 11; st.current = 1; st.phase = 'battle';
+    for (const m of st.players[1].mz) if (m) { m.attacked = false; m.atkN = 0; }
+    act(st, 1, atkA(st, 1, 0, h2)); no(st);
+    ok(grave(st, 0, 'c_hantengu') && !st.players[0].mz.some(m => m && (m.c.id === 'c_sekido' || m.c.id === 'c_karaku')), 'resucitado: no puede dividirse otra vez, muere y va al cementerio');
+  }
+
   section('Intercambio de Almas');
   {
     let st = fresh(0); put(st, 0, 0, 'c_goku'); put(st, 1, 0, 'c_merlin'); put(st, 1, 1, 'c_goku'); hand(st, 0, ['c_intercambio_almas']);
