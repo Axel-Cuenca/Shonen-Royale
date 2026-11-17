@@ -435,8 +435,8 @@ module.exports = function (T) {
     const ws = L(st, 0).filter(x => x.t === 'activate' && x.target && x.target.wish);
     ok(['revive', 'heal', 'summon'].every(w => ws.some(x => x.target.wish === w)), 'Esferas ofrece los tres deseos');
     const rv = ws.filter(x => x.target.wish === 'revive'), sm = ws.filter(x => x.target.wish === 'summon');
-    eq(rv.length, 1, 'resurrección: sólo el personaje de 7★ o menos del cementerio (Mahoraga, 10★, queda fuera)');
-    eq(sm.length, 1, 'invocación especial: sólo el personaje de 7★ o menos de la mano (Yoriichi, 11★, queda fuera)');
+    eq(rv.length, 2, 'resurrección: sólo el personaje de 7★ o menos del cementerio (Mahoraga, 10★, queda fuera), en ataque o en defensa');
+    eq(sm.length, 2, 'invocación especial: sólo el personaje de 7★ o menos de la mano (Yoriichi, 11★, queda fuera), en ataque o en defensa');
     act(st, 0, ws.find(x => x.target.wish === 'heal'));
     eq(st.players[0].lp, 9500, 'restaurar vida: exactamente +1500 PV');
     eq(st.players[0].grave.filter(c => c.id === 'c_esferas').length, 1, 'las Esferas van una sola vez al cementerio');
@@ -446,6 +446,16 @@ module.exports = function (T) {
     const st3 = fresh(); give(st3, 0, ['c_esferas', 'c_zenitsu']);
     act(st3, 0, L(st3, 0).find(x => x.t === 'activate' && x.target.wish === 'summon'));
     ok(st3.players[0].mz.some(m => m && m.c.id === 'c_zenitsu') && grave(st3, 0, 'c_esferas'), 'invocación especial: Zenitsu sale de la mano al campo');
+    // elegir posición (17-11): en ataque o en defensa, tanto al revivir como al invocar
+    const posOf = (st, id) => st.players[0].mz.find(m => m && m.c.id === id);
+    for (const pos of ['atk', 'def']) {
+      const sa = fresh(); give(sa, 0, ['c_esferas']); sa.players[0].grave.push({ uid: sa.nextUid++, id: 'c_goku' });
+      act(sa, 0, L(sa, 0).find(x => x.t === 'activate' && x.target.wish === 'revive' && x.target.pos === pos));
+      ok(posOf(sa, 'c_goku') && posOf(sa, 'c_goku').pos === pos && !posOf(sa, 'c_goku').down, 'resurrección en ' + pos + ': entra boca arriba en esa posición');
+      const sb = fresh(); give(sb, 0, ['c_esferas', 'c_zenitsu']);
+      act(sb, 0, L(sb, 0).find(x => x.t === 'activate' && x.target.wish === 'summon' && x.target.pos === pos));
+      ok(posOf(sb, 'c_zenitsu') && posOf(sb, 'c_zenitsu').pos === pos && !posOf(sb, 'c_zenitsu').down, 'invocación especial en ' + pos + ': entra boca arriba en esa posición');
+    }
   }
   {
     const st = fresh(); st.players[0].banish.push({ uid: 995, id: 'c_goku' }); give(st, 0, ['c_cana_gon']);

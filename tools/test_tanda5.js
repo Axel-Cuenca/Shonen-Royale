@@ -691,7 +691,7 @@ module.exports = function (T) {
     for (const a of c.ab) ok(Cards.AB[a], 'Megumi: la habilidad ' + a + ' tiene texto');
     eq([c.level, c.atk, c.def, c.type], [3, 1000, 1000, 'jjk'], 'estadísticas de Megumi');
     const s = fresh(); put(s, 0, 0, 'c_megumi'); put(s, 1, 0, 'c_goku'); putST(s, 1, 0, 'c_tormenta', { down: true }); putST(s, 1, 1, 'c_gema_poder', { down: false }); hand(s, 0, ['c_mahoraga']);
-    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: no sin usar 2 técnicas');
+    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: no sin usar 4 técnicas');
     // Lobos
     act(s, 0, pw(s, 0, 'dslobos'));
     ok((s.players[0].mz[0].mods || []).some(x => x.k === 'lobos' && x.atk === 400 && x.def === 400), 'Lobos: +400/+400');
@@ -703,7 +703,7 @@ module.exports = function (T) {
     ok(v0.players[1].st[0].peeked && v0.players[1].st[0].c.id === 'c_tormenta', 'Nue: el dueño de Megumi ve la carta');
     ok(v1.players[1].st[0].c && !v1.players[1].st[0].peeked, 'el rival ve la suya (es suya)');
     const v0b = E.view(s, 0); ok(!v0b.players[1].st[1].peeked, 'sólo la elegida');
-    ok(pw(s, 0, 'dsmaho'), 'Mahoraga: tras 2 técnicas se puede invocar');
+    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: con 2 técnicas todavía no (hacen falta 4 distintas)');
     ok(!pw(s, 0, 'dsserp') && !pw(s, 0, 'dselef') && !pw(s, 0, 'dssapo'), 'Megumi: máximo 2 técnicas por turno');
     ready(s, 0, 8); s.players[0].mz[0].attacked = false;
     ok(!!pw(s, 0, 'dsserp'), 'Megumi: al turno siguiente puede usar otra');
@@ -711,6 +711,7 @@ module.exports = function (T) {
     // Serpiente
     act(s, 0, pw(s, 0, 'dsserp'));
     ok(s.players[1].mz[0].snake, 'Serpiente: Goku inmovilizado');
+    ok(!pw(s, 0, 'dsmaho'), 'Mahoraga: con 3 técnicas todavía no');
     ready(s, 1); s.players[1].mz[0].attacked = false; s.players[1].mz[0].atkN = 0;
     ok(!L(s, 1).some(x => x.t === 'pos'), 'Serpiente: no cambia de posición');
     act(s, 1, { t: 'toBattle' }); ok(!L(s, 1).some(x => x.t === 'attack' && x.zone === 0), 'Serpiente: no ataca');
@@ -719,6 +720,7 @@ module.exports = function (T) {
     const n0 = cnt(s);
     act(s, 0, pw(s, 0, 'dselef', a => a.target.z === 1));
     ok(!s.players[1].st[1], 'Elefante: destruye la carta boca arriba');
+    ok(!!pw(s, 0, 'dsmaho'), 'Mahoraga: con 4 técnicas distintas ya se puede invocar');
     act(s, 0, pw(s, 0, 'dssapo', a => a.target.z === 0)); settle(s);
     ok(!s.players[1].st[0] && s.players[0].hand.some(x => x.id === 'c_tormenta'), 'Sapo: la carta pasa a la mano de Megumi');
     eq(cnt(s), n0, 'sin pérdida de cartas');

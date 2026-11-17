@@ -1738,14 +1738,22 @@
       return pickTargets(list.map(a => ({ seat: seatOfA(a), area, z: a.target.z })), t => act(list.find(a => seatOfA(a) === t.seat && a.target.z === t.z)), 'Elige el objetivo');
     }
     /** Esferas del Dragón: menú con los tres deseos. Los que no se pueden cumplir salen apagados y con el motivo. */
+    /** Esferas del Dragón: tras elegir el personaje, se elige si entra en ataque o en defensa (boca arriba). */
+    function wishPos(as, u, card) {
+      const atk = as.find(a => a.target.u === u && a.target.pos !== 'def'), def = as.find(a => a.target.u === u && a.target.pos === 'def');
+      if (!def) return act(atk);
+      modal(h('div', { class: 'box' }, h('h2', null, '¿Cómo entra ' + nameId(card.id) + '?'),
+        h('div', { class: 'acts' }, btn('⚔️ En ataque', () => { closeModal(); act(atk); }, 'gold'), btn('🛡️ En defensa', () => { closeModal(); act(def); }, 'gold')),
+        btn('Cancelar', closeModal, 'ghost')));
+    }
     function wishMenu(list) {
       const by = w => list.filter(a => a.target && a.target.wish === w);
       const opts = [
         { w: 'revive', title: 'Resurrección', text: 'Devuelve al campo un personaje tuyo del cementerio de hasta 7★.', why: 'No tienes en el cementerio un personaje de 7★ o menos, o no hay espacio libre en tu campo.',
-          run: as => chooseGrave(as.map(a => a.target.u), u => act(as.find(a => a.target.u === u)), 'Elige el personaje de tu cementerio') },
+          run: as => chooseGrave([...new Set(as.map(a => a.target.u))], u => wishPos(as, u, v.me.grave.find(c => c && c.uid === u)), 'Elige el personaje de tu cementerio') },
         { w: 'heal', title: 'Restaurar vida', text: 'Recuperas exactamente 1500 PV.', why: 'No se puede pedir este deseo ahora.', run: as => act(as[0]) },
         { w: 'summon', title: 'Invocación especial', text: 'Invoca de tu mano un personaje tuyo de hasta 7★.', why: 'No tienes en la mano un personaje de 7★ o menos que se pueda invocar, o no hay espacio libre en tu campo.',
-          run: as => chooseHand(as.map(a => a.target.u), u => act(as.find(a => a.target.u === u)), 'Elige el personaje de tu mano') }
+          run: as => chooseHand([...new Set(as.map(a => a.target.u))], u => wishPos(as, u, v.me.hand.find(c => c && c.uid === u)), 'Elige el personaje de tu mano') }
       ];
       modal(h('div', { class: 'box' }, h('h2', null, 'Esferas del Dragón: pide un deseo'),
         h('p', { class: 'sub' }, 'Sólo se cumple un deseo. La carta no se gasta hasta que el deseo se cumple.'),

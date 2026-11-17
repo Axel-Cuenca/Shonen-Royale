@@ -294,6 +294,7 @@
   /** Megumi: anota qué técnicas de Diez Sombras ha usado en esta invocación (distintas). */
   /** Megumi: máximo 2 técnicas activas por turno (los Conejos son automáticos y no cuentan). */
   function dsTick(st, u) { if (u.dsTT !== st.turn) { u.dsTT = st.turn; u.dsTn = 0; } u.dsTn++; }
+  const MAHO_MIN = 4;      // Megumi: técnicas distintas que debe haber usado (los Conejos cuentan) para sacrificarse e invocar a Mahoraga
   function dsUse(m, k) { const u = uOf(m); u.dsU = u.dsU || []; if (!u.dsU.includes(k)) u.dsU.push(k); }
   /** Dónde entra la forma transformada: los gigantes ocupan 2/3 zonas; Hulk entra en la casilla de Bruce. */
   function formAnchor(P, z, tid) { const hd = def({ id: tid }); return (hd.wide || hd.huge) ? titanAnchor(P, z, undefined, hd.huge) : (!P.mz[z] ? z : spot(P, hd)); }
@@ -1259,13 +1260,13 @@
     return null;
   }
   /** Revive una carta del cementerio al campo (en ataque). Devuelve la zona o -1. */
-  function reviveInst(st, p, inst, from) {
+  function reviveInst(st, p, inst, from, pos) {
     const P = st.players[p], d = def(inst), z = spot(P, d);
     if (z < 0) return -1;
     const i = (from || P.grave).findIndex(c => c.uid === inst.uid);
     if (i >= 0) (from || P.grave).splice(i, 1);
     inst.spent = false;
-    P.mz[z] = mkSlot(st, inst, { pos: 'atk', wide: !!d.wide });
+    P.mz[z] = mkSlot(st, inst, { pos: pos === 'def' ? 'def' : 'atk', wide: !!d.wide });
     log(st, p, `revive a ${d.name}`);
     onRevive(st, p, z);
     entered(st, p, z);
@@ -1688,9 +1689,9 @@
     esferas: {
       targets: (st, p) => {
         const P = st.players[p], out = [];
-        P.grave.forEach(i => { const c = def(i); if (c.kind === 'monster' && c.level <= 7 && spot(P, c) >= 0) out.push({ wish: 'revive', u: i.uid }); });
+        P.grave.forEach(i => { const c = def(i); if (c.kind === 'monster' && c.level <= 7 && spot(P, c) >= 0) ['atk', 'def'].forEach(pos => out.push({ wish: 'revive', u: i.uid, pos })); });
         out.push({ wish: 'heal' });
-        P.hand.forEach(i => { const c = def(i); if (c.kind === 'monster' && !c.sp && c.level <= 7 && spot(P, c) >= 0) out.push({ wish: 'summon', u: i.uid }); });
+        P.hand.forEach(i => { const c = def(i); if (c.kind === 'monster' && !c.sp && c.level <= 7 && spot(P, c) >= 0) ['atk', 'def'].forEach(pos => out.push({ wish: 'summon', u: i.uid, pos })); });      // cada uno, en ataque o en defensa (boca arriba)
         return out;
       },
       resolve: (st, p, d, t) => {
@@ -1700,14 +1701,14 @@
           const inst = P.grave.find(c => c.uid === t.u);
           if (!inst || def(inst).level > 7) { log(st, p, 'no tiene objetivo'); return; }
           log(st, p, 'pide el deseo de revivir a un personaje');
-          if (reviveInst(st, p, inst) < 0) log(st, p, 'no hay espacio en el campo');
+          if (reviveInst(st, p, inst, null, t.pos) < 0) log(st, p, 'no hay espacio en el campo');
           return;
         }
         if (t && t.wish === 'summon') {
           const i = P.hand.findIndex(c => c.uid === t.u);
           if (i < 0 || def(P.hand[i]).level > 7 || spot(P, def(P.hand[i])) < 0) { log(st, p, 'no tiene objetivo'); return; }
           log(st, p, 'pide el deseo de invocar a un personaje');
-          specialSummon(st, p, P.hand.splice(i, 1)[0], 'atk');
+          specialSummon(st, p, P.hand.splice(i, 1)[0], t.pos === 'def' ? 'def' : 'atk');
         }
       }
     },
@@ -2700,7 +2701,7 @@
       }
       case 'xcancel':                     // X: Cancelación absoluta
         if (pd && pd.trigger === 'spell') { if (st.chain) { st.chain.negated = true; log(st, resp, 'X cancela la magia: queda destruida'); } }
-        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.pa && pd.cont.pa.pw === 'kform' ? 'X cancela la habilidad: no se puede volver a usar este turno' : pd.cont.k === 'boom' ? 'X cancela la Explosión del Creeper' : 'X cancela la habilidad: queda consumida para siempre')); }
+        else if (pd && pd.cont) { pd.cont.cancel = true; log(st, resp, pd.trigger === 'trap' ? 'X cancela la trampa: queda destruida' : (pd.cont.k === 'boom' ? 'X cancela la Explosión del Creeper' : 'X cancela la habilidad: no se puede volver a usar este turno')); }
         break;
       case 'realidad': {                  // Gema de la Realidad
         const o = pd && pd.opt, tm = o && st.players[o.vs] && st.players[o.vs].mz[o.z];
@@ -2955,15 +2956,13 @@
     consumePower(st, p, a, false);
     log(st, p, `${mdef(m).name} usa ${PWL[a.pw] || a.pw}: el efecto fue sustituido`);
   }
-  /** X cancela una habilidad: no se resuelve y esa habilidad de esa invocación queda consumida para siempre. */
+  /** X cancela una habilidad: no se resuelve y esa habilidad no se puede volver a intentar ESE turno (después vuelve a estar disponible según sus reglas normales). */
   function cancelPower(st, p, a) {
     const m = st.players[p].mz[a.zone];
     if (!m) return;
     blockPw(st, p, a);
     const id = PW_ABID[a.pw], nmA = PWL[a.pw] || (id && (C().AB[id] || [])[0]) || a.pw;
-    consumePower(st, p, a, true);
-    const forever = !!(PW_FLAG[a.pw] || id);      // la transformación de Kayn sólo se pierde ese turno (decisión del dueño, 04-11-2026)
-    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada y ${forever ? 'queda consumida para siempre' : 'no se puede volver a usar este turno'}`);
+    log(st, p, `La habilidad ${nmA} de ${mdef(m).name} es cancelada: no se puede volver a usar este turno`);      // 17-11-2026 (dueño): la X sólo anula ESE uso, no la habilidad para el resto de la partida
     st.log[st.log.length - 1].xc = 1;
   }
 
@@ -3994,7 +3993,7 @@
         if (dsOk && !u.dsEle) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dselef', target: { vs: e, z: tz, area: 'st' } });
         if (dsOk && !u.dsSap) for (const e of fl) for (const tz of zonesWith(st.players[e].st)) if (!st.players[e].st[tz].prison) push({ pw: 'dssapo', target: { vs: e, z: tz, area: 'st' } });
         if (dsOk && !u.dsSer) for (const e of fl) for (const tz of zonesWith(st.players[e].mz)) if (!st.players[e].mz[tz].snake && canTarget(st, p, e, tz)) push({ pw: 'dsserp', target: { vs: e, z: tz } });
-        if ((u.dsU || []).length >= 2 && P.hand.some(c => c.id === 'c_mahoraga')) push({ pw: 'dsmaho' });
+        if ((u.dsU || []).length >= MAHO_MIN && P.hand.some(c => c.id === 'c_mahoraga')) push({ pw: 'dsmaho' });
       }
       // ----- Odin -----
       if (ab.includes('odincarga') && (u.odc || 0) >= 3) P.grave.forEach(i => { const cd = def(i); if (cd.kind === 'monster' && spot(P, cd) >= 0) push({ pw: 'odinvida', u: i.uid }); });
@@ -4693,7 +4692,7 @@
       }
       case 'dsmaho': {
         const hi = handIdx(P, 'c_mahoraga');
-        if (hi < 0 || (u.dsU || []).length < 2) break;
+        if (hi < 0 || (u.dsU || []).length < MAHO_MIN) break;
         const z0 = a.zone;
         log(st, p, `${nm} se sacrifica para invocar al General Mahoraga`);
         removeMonster(st, p, z0, 'grave');
